@@ -1,5 +1,5 @@
 /*
- * Copyright 1998-2025 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 1998-2026 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -16,6 +16,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <openssl/objects.h>
+#include "internal/e_os.h"
 #include "internal/comp.h"
 #include <openssl/err.h>
 #include "crypto/cryptlib.h"
@@ -60,16 +61,6 @@ static ZSTD_customMem zstd_mem_funcs = {
     zstd_free,
     NULL
 };
-#endif
-
-/*
- * When OpenSSL is built on Windows, we do not want to require that
- * the LIBZSTD.DLL be available in order for the OpenSSL DLLs to
- * work.  Therefore, all ZSTD routines are loaded at run time
- * and we do not link to a .LIB file when ZSTD_SHARED is set.
- */
-#if defined(OPENSSL_SYS_WINDOWS) || defined(OPENSSL_SYS_WIN32)
-#include <windows.h>
 #endif
 
 #ifdef ZSTD_SHARED
@@ -366,6 +357,7 @@ DEFINE_RUN_ONCE_STATIC(ossl_comp_zstd_init)
 #define LIBZSTD "zstd"
 #endif
 
+    ERR_set_mark();
     zstd_dso = DSO_load(NULL, LIBZSTD, NULL, 0);
     if (zstd_dso != NULL) {
         p_createCStream = (createCStream_ft)DSO_bind_func(zstd_dso, "ZSTD_createCStream");
@@ -392,9 +384,12 @@ DEFINE_RUN_ONCE_STATIC(ossl_comp_zstd_init)
         || p_freeDStream == NULL || p_decompressStream == NULL || p_decompress == NULL
         || p_isError == NULL || p_getErrorName == NULL || p_DStreamInSize == NULL
         || p_CStreamInSize == NULL) {
+        ERR_clear_last_mark();
         ossl_comp_zstd_cleanup();
         return 0;
     }
+    /* Do not leave errors behind on success. */
+    ERR_pop_to_mark();
 #endif
     return 1;
 }

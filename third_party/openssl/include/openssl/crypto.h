@@ -97,6 +97,10 @@ int CRYPTO_atomic_load(uint64_t *val, uint64_t *ret, CRYPTO_RWLOCK *lock);
 int CRYPTO_atomic_load_int(int *val, int *ret, CRYPTO_RWLOCK *lock);
 int CRYPTO_atomic_store(uint64_t *dst, uint64_t val, CRYPTO_RWLOCK *lock);
 int CRYPTO_atomic_store_int(int *dst, int val, CRYPTO_RWLOCK *lock);
+int CRYPTO_atomic_load_ptr(void **ptr, void **ret, CRYPTO_RWLOCK *lock);
+int CRYPTO_atomic_store_ptr(void **dst, void **val, CRYPTO_RWLOCK *lock);
+int CRYPTO_atomic_cmp_exch_ptr(void **ptr, void **expect, void *desire, CRYPTO_RWLOCK *lock,
+    int *lock_failed);
 
 /* No longer needed, so this is a no-op */
 #define OPENSSL_malloc_init() \
@@ -219,9 +223,30 @@ struct crypto_ex_data_st {
 SKM_DEFINE_STACK_OF_INTERNAL(void, void, void)
 #define sk_void_num(sk) OPENSSL_sk_num(ossl_check_const_void_sk_type(sk))
 #define sk_void_value(sk, idx) ((void *)OPENSSL_sk_value(ossl_check_const_void_sk_type(sk), (idx)))
-#define sk_void_new(cmp) ((STACK_OF(void) *)OPENSSL_sk_set_cmp_thunks(OPENSSL_sk_new(ossl_check_void_compfunc_type(cmp)), sk_void_cmpfunc_thunk))
-#define sk_void_new_null() ((STACK_OF(void) *)OPENSSL_sk_set_thunks(OPENSSL_sk_new_null(), sk_void_freefunc_thunk))
-#define sk_void_new_reserve(cmp, n) ((STACK_OF(void) *)OPENSSL_sk_set_cmp_thunks(OPENSSL_sk_new_reserve(ossl_check_void_compfunc_type(cmp), (n)), sk_void_cmpfunc_thunk))
+#define sk_void_new(cmp) \
+    ((STACK_OF(void) *)OPENSSL_sk_set_thunks( \
+        OPENSSL_sk_set_copy_thunks( \
+            OPENSSL_sk_set_cmp_thunks( \
+                OPENSSL_sk_new(ossl_check_void_compfunc_type(cmp)), \
+                sk_void_cmpfunc_thunk), \
+            sk_void_copyfunc_thunk), \
+        sk_void_freefunc_thunk))
+#define sk_void_new_null() \
+    ((STACK_OF(void) *)OPENSSL_sk_set_thunks( \
+        OPENSSL_sk_set_copy_thunks( \
+            OPENSSL_sk_set_cmp_thunks( \
+                OPENSSL_sk_new_null(), \
+                sk_void_cmpfunc_thunk), \
+            sk_void_copyfunc_thunk), \
+        sk_void_freefunc_thunk))
+#define sk_void_new_reserve(cmp, n) \
+    ((STACK_OF(void) *)OPENSSL_sk_set_thunks( \
+        OPENSSL_sk_set_copy_thunks( \
+            OPENSSL_sk_set_cmp_thunks( \
+                OPENSSL_sk_new_reserve(ossl_check_void_compfunc_type(cmp), (n)), \
+                sk_void_cmpfunc_thunk), \
+            sk_void_copyfunc_thunk), \
+        sk_void_freefunc_thunk))
 #define sk_void_reserve(sk, n) OPENSSL_sk_reserve(ossl_check_void_sk_type(sk), (n))
 #define sk_void_free(sk) OPENSSL_sk_free(ossl_check_void_sk_type(sk))
 #define sk_void_zero(sk) OPENSSL_sk_zero(ossl_check_void_sk_type(sk))
@@ -239,8 +264,25 @@ SKM_DEFINE_STACK_OF_INTERNAL(void, void, void)
 #define sk_void_find_all(sk, ptr, pnum) OPENSSL_sk_find_all(ossl_check_void_sk_type(sk), ossl_check_void_type(ptr), pnum)
 #define sk_void_sort(sk) OPENSSL_sk_sort(ossl_check_void_sk_type(sk))
 #define sk_void_is_sorted(sk) OPENSSL_sk_is_sorted(ossl_check_const_void_sk_type(sk))
-#define sk_void_dup(sk) ((STACK_OF(void) *)OPENSSL_sk_dup(ossl_check_const_void_sk_type(sk)))
-#define sk_void_deep_copy(sk, copyfunc, freefunc) ((STACK_OF(void) *)OPENSSL_sk_deep_copy(ossl_check_const_void_sk_type(sk), ossl_check_void_copyfunc_type(copyfunc), ossl_check_void_freefunc_type(freefunc)))
+#define sk_void_dup(sk) \
+    ((STACK_OF(void) *)OPENSSL_sk_set_thunks( \
+        OPENSSL_sk_set_copy_thunks( \
+            OPENSSL_sk_set_cmp_thunks( \
+                OPENSSL_sk_dup(ossl_check_const_void_sk_type(sk)), \
+                sk_void_cmpfunc_thunk), \
+            sk_void_copyfunc_thunk), \
+        sk_void_freefunc_thunk))
+#define sk_void_deep_copy(sk, copyfunc, freefunc) \
+    ((STACK_OF(void) *)OPENSSL_sk_set_thunks( \
+        OPENSSL_sk_set_copy_thunks( \
+            OPENSSL_sk_set_cmp_thunks( \
+                OPENSSL_sk_deep_copy( \
+                    ossl_check_const_void_sk_type(sk), \
+                    ossl_check_void_copyfunc_type(copyfunc), \
+                    ossl_check_void_freefunc_type(freefunc)), \
+                sk_void_cmpfunc_thunk), \
+            sk_void_copyfunc_thunk), \
+        sk_void_freefunc_thunk))
 #define sk_void_set_cmp_func(sk, cmp) ((sk_void_compfunc)OPENSSL_sk_set_cmp_func(ossl_check_void_sk_type(sk), ossl_check_void_compfunc_type(cmp)))
 
 /* clang-format on */

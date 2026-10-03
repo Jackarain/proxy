@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2025 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2018-2026 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -171,7 +171,7 @@ static int hmac_setkey(struct hmac_data_st *macctx,
         if (!approved) {
             if (!OSSL_FIPS_IND_ON_UNAPPROVED(macctx, OSSL_FIPS_IND_SETTABLE0,
                     libctx, "HMAC", "keysize",
-                    ossl_fips_config_hmac_key_check)) {
+                    FIPS_CONFIG_HMAC_KEY_CHECK)) {
                 ERR_raise(ERR_LIB_PROV, PROV_R_INVALID_KEY_LENGTH);
                 return 0;
             }
@@ -239,8 +239,7 @@ static int hmac_update(void *vmacctx, const unsigned char *data,
             datalen,
             macctx->tls_data_size,
             macctx->key,
-            macctx->keylen,
-            0);
+            macctx->keylen);
     }
 
     return HMAC_Update(macctx->ctx, data, datalen);

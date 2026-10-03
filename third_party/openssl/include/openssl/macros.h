@@ -11,7 +11,7 @@
 #define OPENSSL_MACROS_H
 #pragma once
 
-#include <openssl/opensslconf.h>
+#include <openssl/configuration.h>
 #include <openssl/opensslv.h>
 
 /* Helper macros for CPP string composition */
@@ -42,7 +42,7 @@
 #define OSSL_DEPRECATED(since) \
     __declspec(deprecated("Since OpenSSL " #since))
 #define OSSL_DEPRECATED_FOR(since, message) \
-    __declspec(deprecated("Since OpenSSL " #since ";" message))
+    __declspec(deprecated("Since OpenSSL " #since "; " message))
 #define OSSL_DEPRECATED_MESSAGE(message) __declspec(deprecated(message))
 #elif _MSC_VER >= 1310
 #define OSSL_DEPRECATED(since) __declspec(deprecated)
@@ -53,21 +53,11 @@
     __pragma(warning(push)) __pragma(warning(disable : 4996))
 #define OSSL_END_ALLOW_DEPRECATED __pragma(warning(pop))
 #elif defined(__GNUC__)
-/*
- * According to GCC documentation, deprecations with message appeared in
- * GCC 4.5.0
- */
-#if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 5)
 #define OSSL_DEPRECATED(since) \
     __attribute__((deprecated("Since OpenSSL " #since)))
 #define OSSL_DEPRECATED_FOR(since, message) \
-    __attribute__((deprecated("Since OpenSSL " #since ";" message)))
+    __attribute__((deprecated("Since OpenSSL " #since "; " message)))
 #define OSSL_DEPRECATED_MESSAGE(message) __attribute__((deprecated(message)))
-#elif __GNUC__ > 3 || (__GNUC__ == 3 && __GNUC_MINOR__ > 0)
-#define OSSL_DEPRECATED(since) __attribute__((deprecated))
-#define OSSL_DEPRECATED_FOR(since, message) __attribute__((deprecated))
-#define OSSL_DEPRECATED_MESSAGE(message) __attribute__((deprecated))
-#endif
 #define OSSL_BEGIN_ALLOW_DEPRECATED \
     _Pragma("GCC diagnostic push")  \
         _Pragma("GCC diagnostic ignored \"-Wdeprecated-declarations\"")
@@ -187,6 +177,8 @@
  * 'no-deprecated'.
  */
 
+#undef OPENSSL_NO_DEPRECATED_4_2
+#undef OPENSSL_NO_DEPRECATED_4_1
 #undef OPENSSL_NO_DEPRECATED_4_0
 #undef OPENSSL_NO_DEPRECATED_3_6
 #undef OPENSSL_NO_DEPRECATED_3_5
@@ -200,6 +192,28 @@
 #undef OPENSSL_NO_DEPRECATED_1_0_0
 #undef OPENSSL_NO_DEPRECATED_0_9_8
 
+#if OPENSSL_API_LEVEL >= 40200
+#ifndef OPENSSL_NO_DEPRECATED
+#define OSSL_DEPRECATEDIN_4_2 OSSL_DEPRECATED(4.2)
+#define OSSL_DEPRECATEDIN_4_2_FOR(msg) OSSL_DEPRECATED_FOR(4.2, msg)
+#else
+#define OPENSSL_NO_DEPRECATED_4_2
+#endif
+#else
+#define OSSL_DEPRECATEDIN_4_2
+#define OSSL_DEPRECATEDIN_4_2_FOR(msg)
+#endif
+#if OPENSSL_API_LEVEL >= 40100
+#ifndef OPENSSL_NO_DEPRECATED
+#define OSSL_DEPRECATEDIN_4_1 OSSL_DEPRECATED(4.1)
+#define OSSL_DEPRECATEDIN_4_1_FOR(msg) OSSL_DEPRECATED_FOR(4.1, msg)
+#else
+#define OPENSSL_NO_DEPRECATED_4_1
+#endif
+#else
+#define OSSL_DEPRECATEDIN_4_1
+#define OSSL_DEPRECATEDIN_4_1_FOR(msg)
+#endif
 #if OPENSSL_API_LEVEL >= 40000
 #ifndef OPENSSL_NO_DEPRECATED
 #define OSSL_DEPRECATEDIN_4_0 OSSL_DEPRECATED(4.0)
@@ -364,7 +378,7 @@
 #if defined(__STDC_VERSION__)
 #if __STDC_VERSION__ >= 199901L
 #define OPENSSL_FUNC __func__
-#elif defined(__GNUC__) && __GNUC__ >= 2
+#elif defined(__GNUC__)
 #define OPENSSL_FUNC __FUNCTION__
 #endif
 #elif defined(_MSC_VER)

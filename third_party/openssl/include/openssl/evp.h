@@ -7,6 +7,10 @@
  * https://www.openssl.org/source/license.html
  */
 
+/* clang-format off */
+
+/* clang-format on */
+
 #ifndef OPENSSL_EVP_H
 #define OPENSSL_EVP_H
 #pragma once
@@ -17,6 +21,7 @@
 #endif
 
 #include <stdarg.h>
+#include <string.h>
 
 #ifndef OPENSSL_NO_STDIO
 #include <stdio.h>
@@ -117,10 +122,79 @@
 extern "C" {
 #endif
 
+/* clang-format off */
+SKM_DEFINE_STACK_OF_INTERNAL(EVP_SKEY, EVP_SKEY, EVP_SKEY)
+#define sk_EVP_SKEY_num(sk) OPENSSL_sk_num(ossl_check_const_EVP_SKEY_sk_type(sk))
+#define sk_EVP_SKEY_value(sk, idx) ((EVP_SKEY *)OPENSSL_sk_value(ossl_check_const_EVP_SKEY_sk_type(sk), (idx)))
+#define sk_EVP_SKEY_new(cmp) \
+    ((STACK_OF(EVP_SKEY) *)OPENSSL_sk_set_thunks( \
+        OPENSSL_sk_set_copy_thunks( \
+            OPENSSL_sk_set_cmp_thunks( \
+                OPENSSL_sk_new(ossl_check_EVP_SKEY_compfunc_type(cmp)), \
+                sk_EVP_SKEY_cmpfunc_thunk), \
+            sk_EVP_SKEY_copyfunc_thunk), \
+        sk_EVP_SKEY_freefunc_thunk))
+#define sk_EVP_SKEY_new_null() \
+    ((STACK_OF(EVP_SKEY) *)OPENSSL_sk_set_thunks( \
+        OPENSSL_sk_set_copy_thunks( \
+            OPENSSL_sk_set_cmp_thunks( \
+                OPENSSL_sk_new_null(), \
+                sk_EVP_SKEY_cmpfunc_thunk), \
+            sk_EVP_SKEY_copyfunc_thunk), \
+        sk_EVP_SKEY_freefunc_thunk))
+#define sk_EVP_SKEY_new_reserve(cmp, n) \
+    ((STACK_OF(EVP_SKEY) *)OPENSSL_sk_set_thunks( \
+        OPENSSL_sk_set_copy_thunks( \
+            OPENSSL_sk_set_cmp_thunks( \
+                OPENSSL_sk_new_reserve(ossl_check_EVP_SKEY_compfunc_type(cmp), (n)), \
+                sk_EVP_SKEY_cmpfunc_thunk), \
+            sk_EVP_SKEY_copyfunc_thunk), \
+        sk_EVP_SKEY_freefunc_thunk))
+#define sk_EVP_SKEY_reserve(sk, n) OPENSSL_sk_reserve(ossl_check_EVP_SKEY_sk_type(sk), (n))
+#define sk_EVP_SKEY_free(sk) OPENSSL_sk_free(ossl_check_EVP_SKEY_sk_type(sk))
+#define sk_EVP_SKEY_zero(sk) OPENSSL_sk_zero(ossl_check_EVP_SKEY_sk_type(sk))
+#define sk_EVP_SKEY_delete(sk, i) ((EVP_SKEY *)OPENSSL_sk_delete(ossl_check_EVP_SKEY_sk_type(sk), (i)))
+#define sk_EVP_SKEY_delete_ptr(sk, ptr) ((EVP_SKEY *)OPENSSL_sk_delete_ptr(ossl_check_EVP_SKEY_sk_type(sk), ossl_check_EVP_SKEY_type(ptr)))
+#define sk_EVP_SKEY_push(sk, ptr) OPENSSL_sk_push(ossl_check_EVP_SKEY_sk_type(sk), ossl_check_EVP_SKEY_type(ptr))
+#define sk_EVP_SKEY_unshift(sk, ptr) OPENSSL_sk_unshift(ossl_check_EVP_SKEY_sk_type(sk), ossl_check_EVP_SKEY_type(ptr))
+#define sk_EVP_SKEY_pop(sk) ((EVP_SKEY *)OPENSSL_sk_pop(ossl_check_EVP_SKEY_sk_type(sk)))
+#define sk_EVP_SKEY_shift(sk) ((EVP_SKEY *)OPENSSL_sk_shift(ossl_check_EVP_SKEY_sk_type(sk)))
+#define sk_EVP_SKEY_pop_free(sk, freefunc) OPENSSL_sk_pop_free(ossl_check_EVP_SKEY_sk_type(sk), ossl_check_EVP_SKEY_freefunc_type(freefunc))
+#define sk_EVP_SKEY_insert(sk, ptr, idx) OPENSSL_sk_insert(ossl_check_EVP_SKEY_sk_type(sk), ossl_check_EVP_SKEY_type(ptr), (idx))
+#define sk_EVP_SKEY_set(sk, idx, ptr) ((EVP_SKEY *)OPENSSL_sk_set(ossl_check_EVP_SKEY_sk_type(sk), (idx), ossl_check_EVP_SKEY_type(ptr)))
+#define sk_EVP_SKEY_find(sk, ptr) OPENSSL_sk_find(ossl_check_EVP_SKEY_sk_type(sk), ossl_check_EVP_SKEY_type(ptr))
+#define sk_EVP_SKEY_find_ex(sk, ptr) OPENSSL_sk_find_ex(ossl_check_EVP_SKEY_sk_type(sk), ossl_check_EVP_SKEY_type(ptr))
+#define sk_EVP_SKEY_find_all(sk, ptr, pnum) OPENSSL_sk_find_all(ossl_check_EVP_SKEY_sk_type(sk), ossl_check_EVP_SKEY_type(ptr), pnum)
+#define sk_EVP_SKEY_sort(sk) OPENSSL_sk_sort(ossl_check_EVP_SKEY_sk_type(sk))
+#define sk_EVP_SKEY_is_sorted(sk) OPENSSL_sk_is_sorted(ossl_check_const_EVP_SKEY_sk_type(sk))
+#define sk_EVP_SKEY_dup(sk) \
+    ((STACK_OF(EVP_SKEY) *)OPENSSL_sk_set_thunks( \
+        OPENSSL_sk_set_copy_thunks( \
+            OPENSSL_sk_set_cmp_thunks( \
+                OPENSSL_sk_dup(ossl_check_const_EVP_SKEY_sk_type(sk)), \
+                sk_EVP_SKEY_cmpfunc_thunk), \
+            sk_EVP_SKEY_copyfunc_thunk), \
+        sk_EVP_SKEY_freefunc_thunk))
+#define sk_EVP_SKEY_deep_copy(sk, copyfunc, freefunc) \
+    ((STACK_OF(EVP_SKEY) *)OPENSSL_sk_set_thunks( \
+        OPENSSL_sk_set_copy_thunks( \
+            OPENSSL_sk_set_cmp_thunks( \
+                OPENSSL_sk_deep_copy( \
+                    ossl_check_const_EVP_SKEY_sk_type(sk), \
+                    ossl_check_EVP_SKEY_copyfunc_type(copyfunc), \
+                    ossl_check_EVP_SKEY_freefunc_type(freefunc)), \
+                sk_EVP_SKEY_cmpfunc_thunk), \
+            sk_EVP_SKEY_copyfunc_thunk), \
+        sk_EVP_SKEY_freefunc_thunk))
+#define sk_EVP_SKEY_set_cmp_func(sk, cmp) ((sk_EVP_SKEY_compfunc)OPENSSL_sk_set_cmp_func(ossl_check_EVP_SKEY_sk_type(sk), ossl_check_EVP_SKEY_compfunc_type(cmp)))
+
+/* clang-format on */
+
 int EVP_set_default_properties(OSSL_LIB_CTX *libctx, const char *propq);
 char *EVP_get1_default_properties(OSSL_LIB_CTX *libctx);
 int EVP_default_properties_is_fips_enabled(OSSL_LIB_CTX *libctx);
 int EVP_default_properties_enable_fips(OSSL_LIB_CTX *libctx, int enable);
+#define FIPS_mode() EVP_default_properties_is_fips_enabled(NULL)
 
 #define EVP_PKEY_MO_SIGN 0x0001
 #define EVP_PKEY_MO_VERIFY 0x0002
@@ -152,6 +226,8 @@ int EVP_default_properties_enable_fips(OSSL_LIB_CTX *libctx, int enable);
 
 /* Note if suitable for use in FIPS mode */
 #define EVP_MD_FLAG_FIPS 0x0400
+
+#define EVP_MD_FLAG_NO_STORE 0x0800
 
 /* Digest ctrls */
 
@@ -265,6 +341,8 @@ int EVP_default_properties_enable_fips(OSSL_LIB_CTX *libctx, int enable);
 #define EVP_CIPH_FLAG_GET_WRAP_CIPHER 0x4000000
 #define EVP_CIPH_FLAG_INVERSE_CIPHER 0x8000000
 #define EVP_CIPH_FLAG_ENC_THEN_MAC 0x10000000
+/* flag to indicate that this cipher isn't cached, and so should be refcounted*/
+#define EVP_CIPH_FLAG_NO_STORE 0x20000000
 
 /*
  * Cipher context flag to indicate we can handle wrap mode: if allowed in
@@ -552,9 +630,12 @@ int EVP_CIPHER_CTX_get_original_iv(EVP_CIPHER_CTX *ctx, void *buf, size_t len);
 OSSL_DEPRECATEDIN_3_0
 unsigned char *EVP_CIPHER_CTX_buf_noconst(EVP_CIPHER_CTX *ctx);
 #endif
-int EVP_CIPHER_CTX_get_num(const EVP_CIPHER_CTX *ctx);
+#ifndef OPENSSL_NO_DEPRECATED_4_1
+OSSL_DEPRECATEDIN_4_1 int EVP_CIPHER_CTX_get_num(const EVP_CIPHER_CTX *ctx);
 #define EVP_CIPHER_CTX_num EVP_CIPHER_CTX_get_num
-int EVP_CIPHER_CTX_set_num(EVP_CIPHER_CTX *ctx, int num);
+OSSL_DEPRECATEDIN_4_1 int EVP_CIPHER_CTX_set_num(EVP_CIPHER_CTX *ctx, int num);
+#endif
+
 EVP_CIPHER_CTX *EVP_CIPHER_CTX_dup(const EVP_CIPHER_CTX *in);
 int EVP_CIPHER_CTX_copy(EVP_CIPHER_CTX *out, const EVP_CIPHER_CTX *in);
 void *EVP_CIPHER_CTX_get_app_data(const EVP_CIPHER_CTX *ctx);
@@ -1941,6 +2022,24 @@ const char *EVP_SKEY_get0_skeymgmt_name(const EVP_SKEY *skey);
 const char *EVP_SKEY_get0_provider_name(const EVP_SKEY *skey);
 EVP_SKEY *EVP_SKEY_to_provider(EVP_SKEY *skey, OSSL_LIB_CTX *libctx,
     OSSL_PROVIDER *prov, const char *propquery);
+int EVP_SKEY_get0_local_keyid(const EVP_SKEY *skey,
+    const unsigned char **id, size_t *len);
+int EVP_SKEY_get0_algorithm_id(const EVP_SKEY *skey,
+    const unsigned char **oid, size_t *oid_len,
+    const unsigned char **params, size_t *params_len);
+
+/*
+ * The seemingly redundant expression (char *)(strstr(curve, "")) serves to
+ * cast const char * to char *, while avoiding accidental casting of improper
+ * (non-string) types.
+ * The direct cast of the result of strstr() to char * is necessary in C++,
+ * where strstr can return const char *.
+ */
+#define EVP_EC_gen(curve)               \
+    EVP_PKEY_Q_keygen(NULL, NULL, "EC", \
+        (curve) ? (char *)(strstr(curve, "")) : NULL)
+int EVP_EC_affine2oct(const BIGNUM *x, const BIGNUM *y, size_t field_len,
+    unsigned char **pbuf, size_t *pbsize);
 
 #ifdef __cplusplus
 }

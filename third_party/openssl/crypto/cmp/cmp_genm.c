@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2025 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2022-2026 The OpenSSL Project Authors. All Rights Reserved.
  * Copyright Siemens AG 2022
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
@@ -112,7 +112,8 @@ static OSSL_CMP_ITAV *get_genm_itav(OSSL_CMP_CTX *ctx,
     req = NULL;
     itavs = OSSL_CMP_exec_GENM_ses(ctx);
     if (itavs == NULL) {
-        if (OSSL_CMP_CTX_get_status(ctx) != OSSL_CMP_PKISTATUS_request)
+        if (OSSL_CMP_CTX_get_status(ctx) != OSSL_CMP_PKISTATUS_request
+            && OSSL_CMP_CTX_get_status(ctx) != OSSL_CMP_PKISTATUS_rejection)
             ERR_raise_data(ERR_LIB_CMP, CMP_R_GETTING_GENP,
                 "with infoType %s", desc);
         return NULL;
@@ -132,8 +133,7 @@ static OSSL_CMP_ITAV *get_genm_itav(OSSL_CMP_CTX *ctx,
     for (i = 0; i < n; i++) {
         OSSL_CMP_ITAV *itav = sk_OSSL_CMP_ITAV_shift(itavs);
         ASN1_OBJECT *obj = OSSL_CMP_ITAV_get0_type(itav);
-        char name[128] = "genp contains InfoType '";
-        size_t offset = strlen(name);
+        char name[128];
 
         if (OBJ_obj2nid(obj) == expected) {
             for (i++; i < n; i++)
@@ -142,13 +142,15 @@ static OSSL_CMP_ITAV *get_genm_itav(OSSL_CMP_CTX *ctx,
             return itav;
         }
 
-        if (OBJ_obj2txt(name + offset, (int)(sizeof(name) - offset), obj, 0) < 0)
-            strcat(name, "<unknown>");
-        ossl_cmp_log2(WARN, ctx, "%s' while expecting 'id-it-%s'", name, desc);
+        if (OBJ_obj2txt(name, sizeof(name), obj, 0) < 0)
+            name[0] = '\0';
+        ossl_cmp_log2(WARN, ctx,
+            "genp contains InfoType '%s' while expecting 'id-it-%s'",
+            name[0] == '\0' ? "<unknown>" : name, desc);
         OSSL_CMP_ITAV_free(itav);
     }
     ERR_raise_data(ERR_LIB_CMP, CMP_R_INVALID_GENP,
-        "could not find any ITAV for %s", desc);
+        "could not find any suitable ITAV for %s", desc);
 
 err:
     sk_OSSL_CMP_ITAV_free(itavs);
@@ -221,7 +223,7 @@ static int selfsigned_verify_cb(int ok, X509_STORE_CTX *store_ctx)
         for (i = 0; i < sk_X509_num(trust); i++) {
             issuer = sk_X509_value(trust, i);
             if ((*check_issued)(store_ctx, cert, issuer)) {
-                if (X509_add_cert(chain, cert, X509_ADD_FLAG_UP_REF))
+                if (X509_add_cert(chain, issuer, X509_ADD_FLAG_UP_REF))
                     ok = 1;
                 break;
             }
@@ -254,6 +256,7 @@ static int verify_ss_cert(OSSL_LIB_CTX *libctx, const char *propq,
     if ((csc = X509_STORE_CTX_new_ex(libctx, propq)) == NULL
         || !X509_STORE_CTX_init(csc, ts, target, untrusted))
         goto err;
+    X509_STORE_CTX_set_flags(csc, X509_V_FLAG_CHECK_SS_SIGNATURE);
     X509_STORE_CTX_set_verify_cb(csc, selfsigned_verify_cb);
     ok = X509_verify_cert(csc) > 0;
 
@@ -272,7 +275,8 @@ verify_ss_cert_trans(OSSL_CMP_CTX *ctx, X509 *trusted /* may be NULL */,
     int res = 0;
 
     if (trusted != NULL) {
-        X509_VERIFY_PARAM *vpm = X509_STORE_get0_param(ts);
+        X509_VERIFY_PARAM *vpm = (ts == NULL) ? NULL
+                                              : X509_STORE_get0_param(ts);
 
         if ((ts = X509_STORE_new()) == NULL)
             return 0;
@@ -335,11 +339,14 @@ int OSSL_CMP_get1_rootCaKeyUpdate(OSSL_CMP_CTX *ctx,
         ERR_raise(ERR_LIB_CMP, CMP_R_INVALID_ROOTCAKEYUPDATE);
         goto end;
     }
-    if (oldWithOld != NULL && my_oldWithNew != NULL
-        && !verify_ss_cert_trans(ctx, *newWithNew, my_oldWithNew,
-            oldWithOld_copy, "oldWithOld")) {
-        ERR_raise(ERR_LIB_CMP, CMP_R_INVALID_ROOTCAKEYUPDATE);
-        goto end;
+    if (my_oldWithNew != NULL) {
+        if (oldWithOld == NULL) {
+            ossl_cmp_log(WARN, ctx, "oldWithNew certificate received in genp for verifying oldWithOld, but oldWithOld was not provided");
+        } else if (!verify_ss_cert_trans(ctx, *newWithNew, my_oldWithNew,
+                       oldWithOld_copy, "oldWithOld")) {
+            ERR_raise(ERR_LIB_CMP, CMP_R_INVALID_ROOTCAKEYUPDATE);
+            goto end;
+        }
     }
 
     if (!X509_up_ref(*newWithNew))

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2025 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2020-2026 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -22,16 +22,13 @@
  * be removed.
  */
 #ifndef OPENSSL_NO_DEPRECATED_3_0
-int ssl_hmac_old_new(SSL_HMAC *ret)
+SSL_HMAC *ssl_hmac_old_construct(SSL_HMAC *ret)
 {
     ret->old_ctx = HMAC_CTX_new();
-    if (ret->old_ctx == NULL)
-        return 0;
-
-    return 1;
+    return ret->old_ctx != NULL ? ret : NULL;
 }
 
-void ssl_hmac_old_free(SSL_HMAC *ctx)
+void ssl_hmac_old_destruct(SSL_HMAC *ctx)
 {
     HMAC_CTX_free(ctx->old_ctx);
 }

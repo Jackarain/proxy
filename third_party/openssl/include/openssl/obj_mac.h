@@ -10,9 +10,10 @@
  */
 
 #ifndef OPENSSL_OBJ_MAC_H
-# define OPENSSL_OBJ_MAC_H
-# pragma once
+#define OPENSSL_OBJ_MAC_H
+#pragma once
 
+/* clang-format off */
 #define SN_undef                        "UNDEF"
 #define LN_undef                        "undefined"
 #define NID_undef                       0
@@ -1516,6 +1517,10 @@
 #define NID_id_ppl              662
 #define OBJ_id_ppl              OBJ_id_pkix,21L
 
+#define SN_id_rdna_unsigned             "id-rdna-unsigned"
+#define NID_id_rdna_unsigned            1502
+#define OBJ_id_rdna_unsigned            OBJ_id_pkix,25L,1L
+
 #define SN_id_ad                "id-ad"
 #define NID_id_ad               176
 #define OBJ_id_ad               OBJ_id_pkix,48L
@@ -1963,6 +1968,10 @@
 #define SN_id_alg_dh_pop                "id-alg-dh-pop"
 #define NID_id_alg_dh_pop               326
 #define OBJ_id_alg_dh_pop               OBJ_id_alg,4L
+
+#define SN_id_alg_unsigned              "id-alg-unsigned"
+#define NID_id_alg_unsigned             1503
+#define OBJ_id_alg_unsigned             OBJ_id_alg,36L
 
 #define SN_id_cmc_statusInfo            "id-cmc-statusInfo"
 #define NID_id_cmc_statusInfo           327
@@ -3095,6 +3104,10 @@
 #define OBJ_nistAlgorithms              OBJ_csor,4L
 
 #define OBJ_aes         OBJ_nistAlgorithms,1L
+
+#define SN_id_aes               "id-aes"
+#define NID_id_aes              1504
+#define OBJ_id_aes              OBJ_nistAlgorithms,1L
 
 #define SN_aes_128_ecb          "AES-128-ECB"
 #define LN_aes_128_ecb          "aes-128-ecb"
@@ -6649,6 +6662,7 @@
 #define LN_ML_KEM_1024          "ML-KEM-1024"
 #define NID_ML_KEM_1024         1456
 #define OBJ_ML_KEM_1024         OBJ_nistKems,3L
+/* clang-format on */
 
 #endif /* OPENSSL_OBJ_MAC_H */
 

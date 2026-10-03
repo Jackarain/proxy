@@ -26,6 +26,7 @@
 #include <openssl/bio.h>
 #include <openssl/core.h>
 #include <openssl/x509.h>
+#include <openssl/evp.h>
 #include <openssl/pkcs12err.h>
 #ifndef OPENSSL_NO_STDIO
 #include <stdio.h>
@@ -74,9 +75,30 @@ typedef struct PKCS12_SAFEBAG_st PKCS12_SAFEBAG;
 SKM_DEFINE_STACK_OF_INTERNAL(PKCS12_SAFEBAG, PKCS12_SAFEBAG, PKCS12_SAFEBAG)
 #define sk_PKCS12_SAFEBAG_num(sk) OPENSSL_sk_num(ossl_check_const_PKCS12_SAFEBAG_sk_type(sk))
 #define sk_PKCS12_SAFEBAG_value(sk, idx) ((PKCS12_SAFEBAG *)OPENSSL_sk_value(ossl_check_const_PKCS12_SAFEBAG_sk_type(sk), (idx)))
-#define sk_PKCS12_SAFEBAG_new(cmp) ((STACK_OF(PKCS12_SAFEBAG) *)OPENSSL_sk_set_cmp_thunks(OPENSSL_sk_new(ossl_check_PKCS12_SAFEBAG_compfunc_type(cmp)), sk_PKCS12_SAFEBAG_cmpfunc_thunk))
-#define sk_PKCS12_SAFEBAG_new_null() ((STACK_OF(PKCS12_SAFEBAG) *)OPENSSL_sk_set_thunks(OPENSSL_sk_new_null(), sk_PKCS12_SAFEBAG_freefunc_thunk))
-#define sk_PKCS12_SAFEBAG_new_reserve(cmp, n) ((STACK_OF(PKCS12_SAFEBAG) *)OPENSSL_sk_set_cmp_thunks(OPENSSL_sk_new_reserve(ossl_check_PKCS12_SAFEBAG_compfunc_type(cmp), (n)), sk_PKCS12_SAFEBAG_cmpfunc_thunk))
+#define sk_PKCS12_SAFEBAG_new(cmp) \
+    ((STACK_OF(PKCS12_SAFEBAG) *)OPENSSL_sk_set_thunks( \
+        OPENSSL_sk_set_copy_thunks( \
+            OPENSSL_sk_set_cmp_thunks( \
+                OPENSSL_sk_new(ossl_check_PKCS12_SAFEBAG_compfunc_type(cmp)), \
+                sk_PKCS12_SAFEBAG_cmpfunc_thunk), \
+            sk_PKCS12_SAFEBAG_copyfunc_thunk), \
+        sk_PKCS12_SAFEBAG_freefunc_thunk))
+#define sk_PKCS12_SAFEBAG_new_null() \
+    ((STACK_OF(PKCS12_SAFEBAG) *)OPENSSL_sk_set_thunks( \
+        OPENSSL_sk_set_copy_thunks( \
+            OPENSSL_sk_set_cmp_thunks( \
+                OPENSSL_sk_new_null(), \
+                sk_PKCS12_SAFEBAG_cmpfunc_thunk), \
+            sk_PKCS12_SAFEBAG_copyfunc_thunk), \
+        sk_PKCS12_SAFEBAG_freefunc_thunk))
+#define sk_PKCS12_SAFEBAG_new_reserve(cmp, n) \
+    ((STACK_OF(PKCS12_SAFEBAG) *)OPENSSL_sk_set_thunks( \
+        OPENSSL_sk_set_copy_thunks( \
+            OPENSSL_sk_set_cmp_thunks( \
+                OPENSSL_sk_new_reserve(ossl_check_PKCS12_SAFEBAG_compfunc_type(cmp), (n)), \
+                sk_PKCS12_SAFEBAG_cmpfunc_thunk), \
+            sk_PKCS12_SAFEBAG_copyfunc_thunk), \
+        sk_PKCS12_SAFEBAG_freefunc_thunk))
 #define sk_PKCS12_SAFEBAG_reserve(sk, n) OPENSSL_sk_reserve(ossl_check_PKCS12_SAFEBAG_sk_type(sk), (n))
 #define sk_PKCS12_SAFEBAG_free(sk) OPENSSL_sk_free(ossl_check_PKCS12_SAFEBAG_sk_type(sk))
 #define sk_PKCS12_SAFEBAG_zero(sk) OPENSSL_sk_zero(ossl_check_PKCS12_SAFEBAG_sk_type(sk))
@@ -94,8 +116,25 @@ SKM_DEFINE_STACK_OF_INTERNAL(PKCS12_SAFEBAG, PKCS12_SAFEBAG, PKCS12_SAFEBAG)
 #define sk_PKCS12_SAFEBAG_find_all(sk, ptr, pnum) OPENSSL_sk_find_all(ossl_check_PKCS12_SAFEBAG_sk_type(sk), ossl_check_PKCS12_SAFEBAG_type(ptr), pnum)
 #define sk_PKCS12_SAFEBAG_sort(sk) OPENSSL_sk_sort(ossl_check_PKCS12_SAFEBAG_sk_type(sk))
 #define sk_PKCS12_SAFEBAG_is_sorted(sk) OPENSSL_sk_is_sorted(ossl_check_const_PKCS12_SAFEBAG_sk_type(sk))
-#define sk_PKCS12_SAFEBAG_dup(sk) ((STACK_OF(PKCS12_SAFEBAG) *)OPENSSL_sk_dup(ossl_check_const_PKCS12_SAFEBAG_sk_type(sk)))
-#define sk_PKCS12_SAFEBAG_deep_copy(sk, copyfunc, freefunc) ((STACK_OF(PKCS12_SAFEBAG) *)OPENSSL_sk_deep_copy(ossl_check_const_PKCS12_SAFEBAG_sk_type(sk), ossl_check_PKCS12_SAFEBAG_copyfunc_type(copyfunc), ossl_check_PKCS12_SAFEBAG_freefunc_type(freefunc)))
+#define sk_PKCS12_SAFEBAG_dup(sk) \
+    ((STACK_OF(PKCS12_SAFEBAG) *)OPENSSL_sk_set_thunks( \
+        OPENSSL_sk_set_copy_thunks( \
+            OPENSSL_sk_set_cmp_thunks( \
+                OPENSSL_sk_dup(ossl_check_const_PKCS12_SAFEBAG_sk_type(sk)), \
+                sk_PKCS12_SAFEBAG_cmpfunc_thunk), \
+            sk_PKCS12_SAFEBAG_copyfunc_thunk), \
+        sk_PKCS12_SAFEBAG_freefunc_thunk))
+#define sk_PKCS12_SAFEBAG_deep_copy(sk, copyfunc, freefunc) \
+    ((STACK_OF(PKCS12_SAFEBAG) *)OPENSSL_sk_set_thunks( \
+        OPENSSL_sk_set_copy_thunks( \
+            OPENSSL_sk_set_cmp_thunks( \
+                OPENSSL_sk_deep_copy( \
+                    ossl_check_const_PKCS12_SAFEBAG_sk_type(sk), \
+                    ossl_check_PKCS12_SAFEBAG_copyfunc_type(copyfunc), \
+                    ossl_check_PKCS12_SAFEBAG_freefunc_type(freefunc)), \
+                sk_PKCS12_SAFEBAG_cmpfunc_thunk), \
+            sk_PKCS12_SAFEBAG_copyfunc_thunk), \
+        sk_PKCS12_SAFEBAG_freefunc_thunk))
 #define sk_PKCS12_SAFEBAG_set_cmp_func(sk, cmp) ((sk_PKCS12_SAFEBAG_compfunc)OPENSSL_sk_set_cmp_func(ossl_check_PKCS12_SAFEBAG_sk_type(sk), ossl_check_PKCS12_SAFEBAG_compfunc_type(cmp)))
 
 /* clang-format on */
@@ -148,6 +187,9 @@ X509 *PKCS12_SAFEBAG_get1_cert_ex(const PKCS12_SAFEBAG *bag, OSSL_LIB_CTX *libct
 X509 *PKCS12_SAFEBAG_get1_cert(const PKCS12_SAFEBAG *bag);
 X509_CRL *PKCS12_SAFEBAG_get1_crl_ex(const PKCS12_SAFEBAG *bag, OSSL_LIB_CTX *libctx, const char *propq);
 X509_CRL *PKCS12_SAFEBAG_get1_crl(const PKCS12_SAFEBAG *bag);
+EVP_SKEY *PKCS8_PRIV_KEY_INFO_get1_skey(const PKCS8_PRIV_KEY_INFO *p8inf,
+    OSSL_LIB_CTX *libctx, const char *propq,
+    const OSSL_PARAM *extra_params, int strict);
 const STACK_OF(PKCS12_SAFEBAG) *
 PKCS12_SAFEBAG_get0_safes(const PKCS12_SAFEBAG *bag);
 const PKCS8_PRIV_KEY_INFO *PKCS12_SAFEBAG_get0_p8inf(const PKCS12_SAFEBAG *bag);
@@ -186,6 +228,9 @@ PKCS8_PRIV_KEY_INFO *PKCS12_decrypt_skey_ex(const PKCS12_SAFEBAG *bag,
     const char *pass, int passlen,
     OSSL_LIB_CTX *ctx,
     const char *propq);
+PKCS8_PRIV_KEY_INFO *PKCS12_decrypt_secretbag(const PKCS12_SAFEBAG *bag,
+    const char *pass, int passlen,
+    OSSL_LIB_CTX *ctx, const char *propq);
 X509_SIG *PKCS8_encrypt(int pbe_nid, const EVP_CIPHER *cipher,
     const char *pass, int passlen, unsigned char *salt,
     int saltlen, int iter, PKCS8_PRIV_KEY_INFO *p8);
@@ -323,6 +368,19 @@ DECLARE_ASN1_ITEM(PKCS12_SAFEBAGS)
 DECLARE_ASN1_ITEM(PKCS12_AUTHSAFES)
 
 void PKCS12_PBE_add(void);
+
+typedef struct pkcs12_parse_ctx_st PKCS12_PARSE_CTX;
+PKCS12_PARSE_CTX *PKCS12_PARSE_CTX_new(void);
+void PKCS12_PARSE_CTX_free(PKCS12_PARSE_CTX *ctx);
+void PKCS12_PARSE_CTX_set_pkey(PKCS12_PARSE_CTX *ctx, EVP_PKEY **pkey);
+void PKCS12_PARSE_CTX_set_cert(PKCS12_PARSE_CTX *ctx, X509 **cert);
+void PKCS12_PARSE_CTX_set_ca(PKCS12_PARSE_CTX *ctx, STACK_OF(X509) **ca);
+void PKCS12_PARSE_CTX_set_skeys(PKCS12_PARSE_CTX *ctx, STACK_OF(EVP_SKEY) **skeys);
+
+int PKCS12_parse_ex(PKCS12 *p12, const char *pass,
+    PKCS12_PARSE_CTX *ctx,
+    OSSL_LIB_CTX *libctx, const char *propq);
+
 int PKCS12_parse(PKCS12 *p12, const char *pass, EVP_PKEY **pkey, X509 **cert,
     STACK_OF(X509) **ca);
 typedef int PKCS12_create_cb(PKCS12_SAFEBAG *bag, void *cbarg);

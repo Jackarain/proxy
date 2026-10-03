@@ -14,6 +14,7 @@
 #include <openssl/err.h>
 #include <openssl/proverr.h>
 #include "internal/common.h"
+#include "internal/constant_time.h"
 #include "ml_dsa_local.h"
 #include "ml_dsa_key.h"
 #include "ml_dsa_matrix.h"
@@ -163,16 +164,19 @@ static int ml_dsa_sign_internal(const ML_DSA_KEY *priv,
     uint8_t *out_sig)
 {
     int ret = 0;
+    const OSSL_ML_DSA_SAMPLE_OPS *sample_ops = ossl_ml_dsa_sample_ops();
     const ML_DSA_PARAMS *params = priv->params;
     EVP_MD_CTX *md_ctx = NULL;
     uint32_t k = (uint32_t)params->k, l = (uint32_t)params->l;
     uint32_t gamma1 = params->gamma1, gamma2 = params->gamma2;
-    uint8_t *alloc = NULL, *w1_encoded;
+    uint8_t *alloc = NULL, *w1_encoded = NULL;
+    void *alloc_freeptr = NULL;
     size_t alloc_len, w1_encoded_len;
     size_t num_polys_sig_k = 2 * k;
     size_t num_polys_k = 5 * k;
     size_t num_polys_l = 3 * l;
     size_t num_polys_k_by_l = k * l;
+    size_t poly_count;
     POLY *p, *c_ntt;
     VECTOR s1_ntt, s2_ntt, t0_ntt, w, w1, cs1, cs2, y;
     MATRIX a_ntt;
@@ -187,23 +191,25 @@ static int ml_dsa_sign_internal(const ML_DSA_KEY *priv,
         return 0;
     }
 
-    /*
-     * Allocate a single blob for most of the variable size temporary variables.
-     * Mostly used for VECTOR POLYNOMIALS (every POLY is 1K).
-     */
+    /* Allocate w1_encoded buffer */
     w1_encoded_len = k * (gamma2 == ML_DSA_GAMMA2_Q_MINUS1_DIV88 ? 192 : 128);
-    alloc_len = w1_encoded_len
-        + sizeof(*p) * (1 + num_polys_k + num_polys_l + num_polys_k_by_l + num_polys_sig_k);
-    alloc = OPENSSL_malloc(alloc_len);
-    if (alloc == NULL)
+    w1_encoded = OPENSSL_malloc(w1_encoded_len);
+    if (w1_encoded == NULL)
         return 0;
+
+    /* Allocate aligned POLY array */
+    poly_count = 1 + num_polys_k + num_polys_l + num_polys_k_by_l + num_polys_sig_k;
+    alloc_len = sizeof(*p) * poly_count;
+    alloc = OPENSSL_aligned_alloc(alloc_len, 16, &alloc_freeptr);
+    if (alloc == NULL)
+        goto err;
+
     md_ctx = EVP_MD_CTX_new();
     if (md_ctx == NULL)
         goto err;
 
-    w1_encoded = alloc;
-    /* Init the temp vectors to point to the allocated polys blob */
-    p = (POLY *)(w1_encoded + w1_encoded_len);
+    /* Init the temp vectors to point to the aligned polys blob */
+    p = (POLY *)alloc;
     c_ntt = p++;
     matrix_init(&a_ntt, p, k, l);
     p += num_polys_k_by_l;
@@ -220,9 +226,26 @@ static int ml_dsa_sign_internal(const ML_DSA_KEY *priv,
     signature_init(&sig, p, k, p + k, l, c_tilde, c_tilde_len);
     /* End of the allocated blob setup */
 
-    if (!matrix_expand_A(md_ctx, priv->shake128_md, priv->rho, &a_ntt))
+    /*
+     * Mark the private key material as secret before we start computing with
+     * it.  Any control-flow branch or memory-index that transitively depends
+     * on these bytes will be flagged by Valgrind when the library is built
+     * with enable-ct-validation.
+     */
+    CONSTTIME_SECRET(priv->K, sizeof(priv->K));
+    CONSTTIME_SECRET_VECTOR(priv->s1);
+    CONSTTIME_SECRET_VECTOR(priv->s2);
+    CONSTTIME_SECRET_VECTOR(priv->t0);
+
+    if (!sample_ops->matrix_expand_A(md_ctx, priv->shake128_md, priv->rho, &a_ntt))
         goto err;
 
+    /*
+     * rho_prime is derived from the secret K and must remain tainted
+     * throughout the rejection loop: knowing it would let an attacker
+     * reconstruct every mask y and recover c*s1 = z - y from the final
+     * signature.  Do NOT declassify it.
+     */
     if (!shake_xof_3(md_ctx, priv->shake256_md, priv->K, sizeof(priv->K),
             rnd, rnd_len, mu, mu_len,
             rho_prime, sizeof(rho_prime)))
@@ -245,8 +268,8 @@ static int ml_dsa_sign_internal(const ML_DSA_KEY *priv,
         VECTOR *ct0 = &w1;
         uint32_t z_max, r0_max, ct0_max, h_ones;
 
-        vector_expand_mask(&y, rho_prime, sizeof(rho_prime), (uint32_t)kappa,
-            gamma1, md_ctx, priv->shake256_md);
+        sample_ops->vector_expand_mask(&y, rho_prime,
+            (uint32_t)kappa, gamma1, md_ctx, priv->shake256_md);
         vector_copy(y_ntt, &y);
         vector_ntt(y_ntt);
 
@@ -276,12 +299,17 @@ static int ml_dsa_sign_internal(const ML_DSA_KEY *priv,
         vector_low_bits(r0, gamma2, r0);
 
         /*
-         * Leaking that the signature is rejected is fine as the next attempt at a
-         * signature will be (indistinguishable from) independent of this one.
+         * Leaking that the signature is rejected is fine: the next attempt
+         * is (indistinguishable from) independent of this one, so an
+         * observer learns nothing about the secret key beyond the number of
+         * iterations, which is itself safe to reveal.
+         * Declassify the bound-check output so that Valgrind does not flag
+         * these intentional leaks.
          */
         z_max = vector_max(&sig.z);
         r0_max = vector_max_signed(r0);
-        if (value_barrier_32(constant_time_ge(z_max, gamma1 - params->beta)
+        if (constant_time_declassify_u32(
+                constant_time_ge(z_max, gamma1 - params->beta)
                 | constant_time_ge(r0_max, gamma2 - params->beta)))
             continue;
 
@@ -292,16 +320,58 @@ static int ml_dsa_sign_internal(const ML_DSA_KEY *priv,
         ct0_max = vector_max(ct0);
         h_ones = (uint32_t)vector_count_ones(&sig.hint);
         /* Same reasoning applies to the leak as above */
-        if (value_barrier_32(constant_time_ge(ct0_max, gamma2)
+        if (constant_time_declassify_u32(
+                constant_time_ge(ct0_max, gamma2)
                 | constant_time_lt(params->omega, h_ones)))
             continue;
+
+        /*
+         * The iteration has passed both rejection tests: the signature is
+         * accepted.  Declassify all three public outputs before encoding.
+         *
+         * sig.z and sig.hint were computed from secret key material (s1,
+         * s2, t0) and carry taint, but the rejection checks above have
+         * verified they lie within the ranges required by the security
+         * proof, so they reveal nothing about the key.
+         *
+         * c_tilde = H(mu || w1) carries taint that propagated from the
+         * secret rho_prime through y → w → w1.  It is the Fiat-Shamir
+         * challenge commitment and is published as part of the signature.
+         * We defer its declassification to here (rather than immediately
+         * after the SHAKE call) so that Valgrind can check that
+         * poly_sample_in_ball_ntt and the NTT challenge arithmetic are
+         * data-oblivious with respect to their tainted inputs.
+         */
+        CONSTTIME_DECLASSIFY(c_tilde, c_tilde_len);
+        CONSTTIME_DECLASSIFY_VECTOR(sig.z);
+        CONSTTIME_DECLASSIFY_VECTOR(sig.hint);
+
         ret = ossl_ml_dsa_sig_encode(&sig, params, out_sig);
         break;
     }
 err:
     EVP_MD_CTX_free(md_ctx);
-    OPENSSL_clear_free(alloc, alloc_len);
+    if (alloc_freeptr != NULL) {
+        /* Clear the actual sensitive buffer */
+        if (alloc != NULL)
+            OPENSSL_cleanse(alloc, alloc_len);
+        OPENSSL_free(alloc_freeptr);
+    }
+    if (w1_encoded != NULL)
+        OPENSSL_clear_free(w1_encoded, w1_encoded_len);
     OPENSSL_cleanse(rho_prime, sizeof(rho_prime));
+    OPENSSL_cleanse(c_tilde, sizeof(c_tilde));
+    /*
+     * Declassify the private key material before returning.  The key struct
+     * is not owned here, so we do not free it, but we must remove the
+     * "secret" taint so that the caller does not inherit spurious Valgrind
+     * "uninitialised" state.  The polynomial data in |alloc| was already
+     * zeroed and freed above; rho_prime is stack-allocated and cleansed.
+     */
+    CONSTTIME_DECLASSIFY(priv->K, sizeof(priv->K));
+    CONSTTIME_DECLASSIFY_VECTOR(priv->s1);
+    CONSTTIME_DECLASSIFY_VECTOR(priv->s2);
+    CONSTTIME_DECLASSIFY_VECTOR(priv->t0);
     return ret;
 }
 
@@ -323,7 +393,9 @@ static int ml_dsa_verify_internal(const ML_DSA_KEY *pub,
     const uint8_t *sig_enc, size_t sig_enc_len)
 {
     int ret = 0;
-    uint8_t *alloc = NULL, *w1_encoded;
+    const OSSL_ML_DSA_SAMPLE_OPS *sample_ops = ossl_ml_dsa_sample_ops();
+    uint8_t *alloc = NULL, *w1_encoded = NULL;
+    void *alloc_freeptr = NULL;
     POLY *p, *c_ntt;
     MATRIX a_ntt;
     VECTOR az_ntt, ct1_ntt, *z_ntt, *w1, *w_approx;
@@ -337,6 +409,8 @@ static int ml_dsa_verify_internal(const ML_DSA_KEY *pub,
     size_t num_polys_k = 2 * k;
     size_t num_polys_l = 1 * l;
     size_t num_polys_k_by_l = k * l;
+    size_t poly_count;
+    size_t alloc_len;
     uint8_t c_tilde[ML_DSA_MAX_LAMBDA / 4];
     uint8_t c_tilde_sig[ML_DSA_MAX_LAMBDA / 4];
     EVP_MD_CTX *md_ctx = NULL;
@@ -349,19 +423,25 @@ static int ml_dsa_verify_internal(const ML_DSA_KEY *pub,
         return 0;
     }
 
-    /* Allocate space for all the POLYNOMIALS used by temporary VECTORS */
+    /* Allocate w1_encoded buffer */
     w1_encoded_len = k * (gamma2 == ML_DSA_GAMMA2_Q_MINUS1_DIV88 ? 192 : 128);
-    alloc = OPENSSL_malloc(w1_encoded_len
-        + sizeof(*p) * (1 + num_polys_k + num_polys_l + num_polys_k_by_l + num_polys_sig));
-    if (alloc == NULL)
+    w1_encoded = OPENSSL_malloc(w1_encoded_len);
+    if (w1_encoded == NULL)
         return 0;
+
+    /* Allocate aligned POLY array */
+    poly_count = 1 + num_polys_k + num_polys_l + num_polys_k_by_l + num_polys_sig;
+    alloc_len = sizeof(*p) * poly_count;
+    alloc = OPENSSL_aligned_alloc(alloc_len, 16, &alloc_freeptr);
+    if (alloc == NULL)
+        goto err;
+
     md_ctx = EVP_MD_CTX_new();
     if (md_ctx == NULL)
         goto err;
 
-    w1_encoded = alloc;
-    /* Init the temp vectors to point to the allocated polys blob */
-    p = (POLY *)(w1_encoded + w1_encoded_len);
+    /* Init the temp vectors to point to the aligned polys blob */
+    p = (POLY *)alloc;
     c_ntt = p++;
     matrix_init(&a_ntt, p, k, l);
     p += num_polys_k_by_l;
@@ -371,7 +451,7 @@ static int ml_dsa_verify_internal(const ML_DSA_KEY *pub,
     vector_init(&ct1_ntt, p + k, k);
 
     if (!ossl_ml_dsa_sig_decode(&sig, sig_enc, sig_enc_len, pub->params)
-        || !matrix_expand_A(md_ctx, pub->shake128_md, pub->rho, &a_ntt))
+        || !sample_ops->matrix_expand_A(md_ctx, pub->shake128_md, pub->rho, &a_ntt))
         goto err;
 
     /* Compute verifiers challenge c_ntt = NTT(SampleInBall(c_tilde)) */
@@ -406,7 +486,9 @@ static int ml_dsa_verify_internal(const ML_DSA_KEY *pub,
     ret = (z_max < (uint32_t)(params->gamma1 - params->beta))
         && memcmp(c_tilde, sig.c_tilde, c_tilde_len) == 0;
 err:
-    OPENSSL_free(alloc);
+    if (alloc_freeptr != NULL)
+        OPENSSL_free(alloc_freeptr);
+    OPENSSL_free(w1_encoded);
     EVP_MD_CTX_free(md_ctx);
     return ret;
 }
@@ -459,6 +541,7 @@ int ossl_ml_dsa_sign(const ML_DSA_KEY *priv,
 
 err:
     EVP_MD_CTX_free(md_ctx);
+    OPENSSL_cleanse(mu, sizeof(mu));
     return ret;
 }
 
@@ -498,5 +581,6 @@ int ossl_ml_dsa_verify(const ML_DSA_KEY *pub,
     ret = ml_dsa_verify_internal(pub, mu_ptr, mu_len, sig, sig_len);
 err:
     EVP_MD_CTX_free(md_ctx);
+    OPENSSL_cleanse(mu, sizeof(mu));
     return ret;
 }

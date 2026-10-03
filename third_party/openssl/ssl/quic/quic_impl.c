@@ -307,8 +307,10 @@ static int expect_quic_as(const SSL *s, QCTX *ctx, uint32_t flags)
     case SSL_TYPE_QUIC_CONNECTION:
         qc = (QUIC_CONNECTION *)s;
         ctx->obj = &qc->obj;
-        ctx->qd = qc->domain;
-        ctx->ql = qc->listener; /* never changes, so can be read without lock */
+        ctx->qd = qc->domain != NULL
+            ? qc->domain
+            : (qc->listener != NULL ? qc->listener->domain : NULL);
+        ctx->ql = qc->listener;
         ctx->qc = qc;
 
         if ((flags & QCTX_AUTO_S) != 0) {
@@ -357,7 +359,11 @@ static int expect_quic_as(const SSL *s, QCTX *ctx, uint32_t flags)
 
         xso = (QUIC_XSO *)s;
         ctx->obj = &xso->obj;
-        ctx->qd = xso->conn->domain;
+        ctx->qd = xso->conn->domain != NULL
+            ? xso->conn->domain
+            : (xso->conn->listener != NULL
+                      ? xso->conn->listener->domain
+                      : NULL);
         ctx->ql = xso->conn->listener;
         ctx->qc = xso->conn;
         ctx->xso = xso;
@@ -413,6 +419,11 @@ static int expect_quic_cs(const SSL *s, QCTX *ctx)
 static int expect_quic_c(const SSL *s, QCTX *ctx)
 {
     return expect_quic_as(s, ctx, QCTX_C);
+}
+
+static int expect_quic_cl(const SSL *s, QCTX *ctx)
+{
+    return expect_quic_as(s, ctx, QCTX_C | QCTX_L);
 }
 
 static int expect_quic_csl(const SSL *s, QCTX *ctx)
@@ -685,6 +696,9 @@ QUIC_NEEDS_LOCK
 static void quic_unref_port_bios(QUIC_PORT *port)
 {
     BIO *b;
+
+    if (port == NULL)
+        return;
 
     b = ossl_quic_port_get_net_rbio(port);
     BIO_free_all(b);
@@ -1866,6 +1880,7 @@ static int create_channel(QUIC_CONNECTION *qc, SSL_CTX *ctx)
     if (qc->port == NULL) {
         QUIC_RAISE_NON_NORMAL_ERROR(NULL, ERR_R_INTERNAL_ERROR, NULL);
         ossl_quic_engine_free(qc->engine);
+        qc->engine = NULL;
         return 0;
     }
 
@@ -1873,7 +1888,9 @@ static int create_channel(QUIC_CONNECTION *qc, SSL_CTX *ctx)
     if (qc->ch == NULL) {
         QUIC_RAISE_NON_NORMAL_ERROR(NULL, ERR_R_INTERNAL_ERROR, NULL);
         ossl_quic_port_free(qc->port);
+        qc->port = NULL;
         ossl_quic_engine_free(qc->engine);
+        qc->engine = NULL;
         return 0;
     }
 
@@ -2139,6 +2156,23 @@ struct quic_wait_for_stream_args {
 };
 
 QUIC_NEEDS_LOCK
+static QUIC_STREAM *quic_get_incoming_default_stream(QUIC_CONNECTION *qc,
+    uint64_t expect_id)
+{
+    QUIC_STREAM_MAP *qsm = ossl_quic_channel_get_qsm(qc->ch);
+    QUIC_STREAM *qs;
+
+    qs = ossl_quic_stream_map_get_by_id(qsm,
+        expect_id | QUIC_STREAM_DIR_BIDI);
+    if (qs == NULL)
+        qs = ossl_quic_stream_map_get_by_id(qsm,
+            expect_id | QUIC_STREAM_DIR_UNI);
+
+    /* Auto-rejected streams remain in the map until garbage collection. */
+    return qs != NULL && qs->accept_node.next != NULL ? qs : NULL;
+}
+
+QUIC_NEEDS_LOCK
 static int quic_wait_for_stream(void *arg)
 {
     struct quic_wait_for_stream_args *args = arg;
@@ -2149,11 +2183,7 @@ static int quic_wait_for_stream(void *arg)
         return -1;
     }
 
-    args->qs = ossl_quic_stream_map_get_by_id(ossl_quic_channel_get_qsm(args->qc->ch),
-        args->expect_id | QUIC_STREAM_DIR_BIDI);
-    if (args->qs == NULL)
-        args->qs = ossl_quic_stream_map_get_by_id(ossl_quic_channel_get_qsm(args->qc->ch),
-            args->expect_id | QUIC_STREAM_DIR_UNI);
+    args->qs = quic_get_incoming_default_stream(args->qc, args->expect_id);
 
     if (args->qs != NULL)
         return 1; /* stream now exists */
@@ -2190,17 +2220,12 @@ static int qc_wait_for_default_xso_for_read(QCTX *ctx, int peek)
         ? QUIC_STREAM_INITIATOR_CLIENT
         : QUIC_STREAM_INITIATOR_SERVER;
 
-    qs = ossl_quic_stream_map_get_by_id(ossl_quic_channel_get_qsm(qc->ch),
-        expect_id | QUIC_STREAM_DIR_BIDI);
-    if (qs == NULL)
-        qs = ossl_quic_stream_map_get_by_id(ossl_quic_channel_get_qsm(qc->ch),
-            expect_id | QUIC_STREAM_DIR_UNI);
+    qs = quic_get_incoming_default_stream(qc, expect_id);
 
     if (qs == NULL) {
         qctx_maybe_autotick(ctx);
 
-        qs = ossl_quic_stream_map_get_by_id(ossl_quic_channel_get_qsm(qc->ch),
-            expect_id);
+        qs = quic_get_incoming_default_stream(qc, expect_id);
     }
 
     if (qs == NULL) {
@@ -3480,83 +3505,6 @@ int ossl_quic_set_default_stream_mode(SSL *s, uint32_t mode)
 }
 
 /*
- * SSL_detach_stream
- * -----------------
- */
-QUIC_TAKES_LOCK
-SSL *ossl_quic_detach_stream(SSL *s)
-{
-    QCTX ctx;
-    QUIC_XSO *xso = NULL;
-
-    if (!expect_quic_conn_only(s, &ctx))
-        return NULL;
-
-    qctx_lock(&ctx);
-
-    /* Calling this function inhibits default XSO autocreation. */
-    /* QC ref to any default XSO is transferred to us and to caller. */
-    qc_set_default_xso_keep_ref(ctx.qc, NULL, /*touch=*/1, &xso);
-
-    qctx_unlock(&ctx);
-
-    return xso != NULL ? &xso->obj.ssl : NULL;
-}
-
-/*
- * SSL_attach_stream
- * -----------------
- */
-QUIC_TAKES_LOCK
-int ossl_quic_attach_stream(SSL *conn, SSL *stream)
-{
-    QCTX ctx;
-    QUIC_XSO *xso;
-    int nref;
-
-    if (!expect_quic_conn_only(conn, &ctx))
-        return 0;
-
-    if (stream == NULL || stream->type != SSL_TYPE_QUIC_XSO)
-        return QUIC_RAISE_NON_NORMAL_ERROR(&ctx, ERR_R_PASSED_NULL_PARAMETER,
-            "stream to attach must be a valid QUIC stream");
-
-    xso = (QUIC_XSO *)stream;
-
-    qctx_lock(&ctx);
-
-    if (ctx.qc->default_xso != NULL) {
-        qctx_unlock(&ctx);
-        return QUIC_RAISE_NON_NORMAL_ERROR(&ctx, ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED,
-            "connection already has a default stream");
-    }
-
-    /*
-     * It is a caller error for the XSO being attached as a default XSO to have
-     * more than one ref.
-     */
-    if (!CRYPTO_GET_REF(&xso->obj.ssl.references, &nref)) {
-        qctx_unlock(&ctx);
-        return QUIC_RAISE_NON_NORMAL_ERROR(&ctx, ERR_R_INTERNAL_ERROR,
-            "ref");
-    }
-
-    if (nref != 1) {
-        qctx_unlock(&ctx);
-        return QUIC_RAISE_NON_NORMAL_ERROR(&ctx, ERR_R_PASSED_INVALID_ARGUMENT,
-            "stream being attached must have "
-            "only 1 reference");
-    }
-
-    /* Caller's reference to the XSO is transferred to us. */
-    /* Calling this function inhibits default XSO autocreation. */
-    qc_set_default_xso(ctx.qc, xso, /*touch=*/1);
-
-    qctx_unlock(&ctx);
-    return 1;
-}
-
-/*
  * SSL_set_incoming_stream_policy
  * ------------------------------
  */
@@ -3633,7 +3581,9 @@ static int qc_getset_idle_timeout(QCTX *ctx, uint32_t class_,
 
     switch (class_) {
     case SSL_VALUE_CLASS_FEATURE_REQUEST:
-        value_out = ossl_quic_channel_get_max_idle_timeout_request(ctx->qc->ch);
+        value_out = ctx->is_listener
+            ? ossl_quic_port_get_max_idle_timeout(ctx->ql->port)
+            : ossl_quic_channel_get_max_idle_timeout_request(ctx->qc->ch);
 
         if (p_value_in != NULL) {
             value_in = *p_value_in;
@@ -3643,19 +3593,27 @@ static int qc_getset_idle_timeout(QCTX *ctx, uint32_t class_,
                 goto err;
             }
 
-            if (ossl_quic_channel_have_generated_transport_params(ctx->qc->ch)) {
-                QUIC_RAISE_NON_NORMAL_ERROR(ctx, SSL_R_FEATURE_NOT_RENEGOTIABLE,
-                    NULL);
-                goto err;
+            if (ctx->is_listener) {
+                ossl_quic_port_set_max_idle_timeout(ctx->ql->port, value_in);
+            } else {
+                if (!ossl_quic_channel_set_max_idle_timeout_request(ctx->qc->ch, value_in)) {
+                    QUIC_RAISE_NON_NORMAL_ERROR(ctx, SSL_R_FEATURE_NOT_RENEGOTIABLE,
+                        NULL);
+                    goto err;
+                }
             }
-
-            ossl_quic_channel_set_max_idle_timeout_request(ctx->qc->ch, value_in);
         }
         break;
 
     case SSL_VALUE_CLASS_FEATURE_PEER_REQUEST:
     case SSL_VALUE_CLASS_FEATURE_NEGOTIATED:
         if (p_value_in != NULL) {
+            QUIC_RAISE_NON_NORMAL_ERROR(ctx, SSL_R_UNSUPPORTED_CONFIG_VALUE_OP,
+                NULL);
+            goto err;
+        }
+
+        if (ctx->is_listener) {
             QUIC_RAISE_NON_NORMAL_ERROR(ctx, SSL_R_UNSUPPORTED_CONFIG_VALUE_OP,
                 NULL);
             goto err;
@@ -3681,6 +3639,393 @@ static int qc_getset_idle_timeout(QCTX *ctx, uint32_t class_,
     ret = 1;
 err:
     qctx_unlock(ctx);
+    if (ret && p_value_out != NULL)
+        *p_value_out = value_out;
+
+    return ret;
+}
+
+QUIC_TAKES_LOCK
+static int qc_getset_max_udp_payload_size(QCTX *ctx, uint32_t class_,
+    uint64_t *p_value_out, uint64_t *p_value_in)
+{
+    int ret = 0;
+    uint64_t value_out = 0, value_in;
+
+    qctx_lock(ctx);
+
+    switch (class_) {
+    case SSL_VALUE_CLASS_FEATURE_REQUEST:
+        value_out = ctx->is_listener
+            ? ossl_quic_port_get_max_udp_payload_size(ctx->ql->port)
+            : ossl_quic_channel_get_max_udp_payload_size_request(ctx->qc->ch);
+
+        if (p_value_in != NULL) {
+            value_in = *p_value_in;
+            if (value_in > QUIC_DEFAULT_MAX_UDP_PAYLOAD_SIZE || value_in < QUIC_MIN_INITIAL_DGRAM_LEN) {
+                QUIC_RAISE_NON_NORMAL_ERROR(ctx, ERR_R_PASSED_INVALID_ARGUMENT,
+                    NULL);
+                goto err;
+            }
+
+            if (ctx->is_listener) {
+                ossl_quic_port_set_max_udp_payload_size(ctx->ql->port, value_in);
+            } else {
+                if (!ossl_quic_channel_set_max_udp_payload_size_request(ctx->qc->ch, value_in)) {
+                    QUIC_RAISE_NON_NORMAL_ERROR(ctx, SSL_R_FEATURE_NOT_RENEGOTIABLE,
+                        NULL);
+                    goto err;
+                }
+            }
+        }
+        break;
+
+    case SSL_VALUE_CLASS_FEATURE_PEER_REQUEST:
+        if (p_value_in != NULL) {
+            QUIC_RAISE_NON_NORMAL_ERROR(ctx, SSL_R_UNSUPPORTED_CONFIG_VALUE_OP,
+                NULL);
+            goto err;
+        }
+
+        if (ctx->is_listener) {
+            QUIC_RAISE_NON_NORMAL_ERROR(ctx, SSL_R_UNSUPPORTED_CONFIG_VALUE_OP,
+                NULL);
+            goto err;
+        }
+
+        if (!ossl_quic_channel_is_handshake_complete(ctx->qc->ch)) {
+            QUIC_RAISE_NON_NORMAL_ERROR(ctx, SSL_R_FEATURE_NEGOTIATION_NOT_COMPLETE,
+                NULL);
+            goto err;
+        }
+
+        value_out = ossl_quic_channel_get_max_udp_payload_size_peer_request(ctx->qc->ch);
+        break;
+
+    default:
+        QUIC_RAISE_NON_NORMAL_ERROR(ctx, SSL_R_UNSUPPORTED_CONFIG_VALUE_CLASS,
+            NULL);
+        goto err;
+    }
+
+    ret = 1;
+err:
+    qctx_unlock(ctx);
+    if (ret && p_value_out != NULL)
+        *p_value_out = value_out;
+
+    return ret;
+}
+
+QUIC_TAKES_LOCK
+static int qc_getset_max_data(QCTX *ctx, uint32_t class_,
+    uint64_t *p_value_out, uint64_t *p_value_in)
+{
+    int ret = 0;
+    uint64_t value_out = 0, value_in;
+
+    qctx_lock(ctx);
+
+    switch (class_) {
+    case SSL_VALUE_CLASS_FEATURE_REQUEST:
+        value_out = ctx->is_listener
+            ? ossl_quic_port_get_init_max_data(ctx->ql->port)
+            : ossl_quic_channel_get_max_data_request(ctx->qc->ch);
+
+        if (p_value_in != NULL) {
+            value_in = *p_value_in;
+            if (value_in > OSSL_QUIC_VLINT_MAX) {
+                QUIC_RAISE_NON_NORMAL_ERROR(ctx, ERR_R_PASSED_INVALID_ARGUMENT,
+                    NULL);
+                goto err;
+            }
+
+            if (ctx->is_listener) {
+                ossl_quic_port_set_init_max_data(ctx->ql->port, value_in);
+            } else {
+                if (!ossl_quic_channel_set_max_data_request(ctx->qc->ch, value_in)) {
+                    QUIC_RAISE_NON_NORMAL_ERROR(ctx, SSL_R_FEATURE_NOT_RENEGOTIABLE,
+                        NULL);
+                    goto err;
+                }
+            }
+        }
+        break;
+
+    case SSL_VALUE_CLASS_FEATURE_PEER_REQUEST:
+        if (p_value_in != NULL) {
+            QUIC_RAISE_NON_NORMAL_ERROR(ctx, SSL_R_UNSUPPORTED_CONFIG_VALUE_OP,
+                NULL);
+            goto err;
+        }
+
+        if (ctx->is_listener) {
+            QUIC_RAISE_NON_NORMAL_ERROR(ctx, SSL_R_UNSUPPORTED_CONFIG_VALUE_OP,
+                NULL);
+            goto err;
+        }
+
+        if (!ossl_quic_channel_is_handshake_complete(ctx->qc->ch)) {
+            QUIC_RAISE_NON_NORMAL_ERROR(ctx, SSL_R_FEATURE_NEGOTIATION_NOT_COMPLETE,
+                NULL);
+            goto err;
+        }
+
+        value_out = ossl_quic_channel_get_max_data_peer_request(ctx->qc->ch);
+        break;
+
+    default:
+        QUIC_RAISE_NON_NORMAL_ERROR(ctx, SSL_R_UNSUPPORTED_CONFIG_VALUE_CLASS,
+            NULL);
+        goto err;
+    }
+
+    ret = 1;
+err:
+    qctx_unlock(ctx);
+    if (ret && p_value_out != NULL)
+        *p_value_out = value_out;
+
+    return ret;
+}
+
+QUIC_TAKES_LOCK
+static int qc_getset_max_stream_data(QCTX *ctx, uint32_t class_,
+    uint64_t *p_value_out, int is_uni, int is_remote, uint64_t *p_value_in)
+{
+    int ret = 0;
+    uint64_t value_out = 0, value_in;
+
+    qctx_lock(ctx);
+
+    switch (class_) {
+    case SSL_VALUE_CLASS_FEATURE_REQUEST:
+        value_out = ctx->is_listener
+            ? ossl_quic_port_get_init_max_stream_data(ctx->ql->port, is_uni, is_remote)
+            : ossl_quic_channel_get_max_stream_data_request(ctx->qc->ch, is_uni, is_remote);
+
+        if (p_value_in != NULL) {
+            value_in = *p_value_in;
+            if (value_in > OSSL_QUIC_VLINT_MAX) {
+                QUIC_RAISE_NON_NORMAL_ERROR(ctx, ERR_R_PASSED_INVALID_ARGUMENT,
+                    NULL);
+                goto err;
+            }
+
+            if (ctx->is_listener) {
+                ossl_quic_port_set_init_max_stream_data(ctx->ql->port, value_in, is_uni, is_remote);
+            } else {
+                if (!ossl_quic_channel_set_max_stream_data_request(ctx->qc->ch, value_in, is_uni, is_remote)) {
+                    QUIC_RAISE_NON_NORMAL_ERROR(ctx, SSL_R_FEATURE_NOT_RENEGOTIABLE,
+                        NULL);
+                    goto err;
+                }
+            }
+        }
+        break;
+
+    case SSL_VALUE_CLASS_FEATURE_PEER_REQUEST:
+        if (p_value_in != NULL) {
+            QUIC_RAISE_NON_NORMAL_ERROR(ctx, SSL_R_UNSUPPORTED_CONFIG_VALUE_OP,
+                NULL);
+            goto err;
+        }
+
+        if (ctx->is_listener) {
+            QUIC_RAISE_NON_NORMAL_ERROR(ctx, SSL_R_UNSUPPORTED_CONFIG_VALUE_OP,
+                NULL);
+            goto err;
+        }
+
+        if (!ossl_quic_channel_is_handshake_complete(ctx->qc->ch)) {
+            QUIC_RAISE_NON_NORMAL_ERROR(ctx, SSL_R_FEATURE_NEGOTIATION_NOT_COMPLETE,
+                NULL);
+            goto err;
+        }
+
+        value_out = ossl_quic_channel_get_max_stream_data_peer_request(ctx->qc->ch, is_uni, is_remote);
+        break;
+
+    default:
+        QUIC_RAISE_NON_NORMAL_ERROR(ctx, SSL_R_UNSUPPORTED_CONFIG_VALUE_CLASS,
+            NULL);
+        goto err;
+    }
+
+    ret = 1;
+err:
+    qctx_unlock(ctx);
+    if (ret && p_value_out != NULL)
+        *p_value_out = value_out;
+
+    return ret;
+}
+
+QUIC_TAKES_LOCK
+static int qc_getset_ack_delay_exponent(QCTX *ctx, uint32_t class_,
+    uint64_t *p_value_out, uint64_t *p_value_in)
+{
+    int ret = 0;
+    uint64_t value_out = 0, value_in;
+
+    qctx_lock(ctx);
+
+    switch (class_) {
+    case SSL_VALUE_CLASS_FEATURE_REQUEST:
+        value_out = ctx->is_listener
+            ? ossl_quic_port_get_ack_delay_exponent(ctx->ql->port)
+            : ossl_quic_channel_get_ack_delay_exponent_request(ctx->qc->ch);
+
+        if (p_value_in != NULL) {
+            value_in = *p_value_in;
+            if (value_in > QUIC_MAX_ACK_DELAY_EXP) {
+                QUIC_RAISE_NON_NORMAL_ERROR(ctx, ERR_R_PASSED_INVALID_ARGUMENT,
+                    NULL);
+                goto err;
+            }
+
+            if (ctx->is_listener) {
+                ossl_quic_port_set_ack_delay_exponent(ctx->ql->port, value_in);
+            } else {
+                if (!ossl_quic_channel_set_ack_delay_exponent_request(ctx->qc->ch, value_in)) {
+                    QUIC_RAISE_NON_NORMAL_ERROR(ctx, SSL_R_FEATURE_NOT_RENEGOTIABLE,
+                        NULL);
+                    goto err;
+                }
+            }
+        }
+        break;
+
+    case SSL_VALUE_CLASS_FEATURE_PEER_REQUEST:
+        if (p_value_in != NULL) {
+            QUIC_RAISE_NON_NORMAL_ERROR(ctx, SSL_R_UNSUPPORTED_CONFIG_VALUE_OP,
+                NULL);
+            goto err;
+        }
+
+        if (ctx->is_listener) {
+            QUIC_RAISE_NON_NORMAL_ERROR(ctx, SSL_R_UNSUPPORTED_CONFIG_VALUE_OP,
+                NULL);
+            goto err;
+        }
+
+        if (!ossl_quic_channel_is_handshake_complete(ctx->qc->ch)) {
+            QUIC_RAISE_NON_NORMAL_ERROR(ctx, SSL_R_FEATURE_NEGOTIATION_NOT_COMPLETE,
+                NULL);
+            goto err;
+        }
+
+        value_out = ossl_quic_channel_get_ack_delay_exponent_peer_request(ctx->qc->ch);
+        break;
+
+    default:
+        QUIC_RAISE_NON_NORMAL_ERROR(ctx, SSL_R_UNSUPPORTED_CONFIG_VALUE_CLASS,
+            NULL);
+        goto err;
+    }
+
+    ret = 1;
+err:
+    qctx_unlock(ctx);
+    if (ret && p_value_out != NULL)
+        *p_value_out = value_out;
+
+    return ret;
+}
+
+QUIC_TAKES_LOCK
+static int qc_getset_max_ack_delay(QCTX *ctx, uint32_t class_,
+    uint64_t *p_value_out, uint64_t *p_value_in)
+{
+    int ret = 0;
+    uint64_t value_out = 0, value_in;
+
+    qctx_lock(ctx);
+
+    switch (class_) {
+    case SSL_VALUE_CLASS_FEATURE_REQUEST:
+        value_out = ctx->is_listener
+            ? ossl_quic_port_get_max_ack_delay(ctx->ql->port)
+            : ossl_quic_channel_get_max_ack_delay_request(ctx->qc->ch);
+
+        if (p_value_in != NULL) {
+            value_in = *p_value_in;
+            if (value_in > QUIC_MAX_MAX_ACK_DELAY) {
+                QUIC_RAISE_NON_NORMAL_ERROR(ctx, ERR_R_PASSED_INVALID_ARGUMENT,
+                    NULL);
+                goto err;
+            }
+
+            if (ctx->is_listener) {
+                ossl_quic_port_set_max_ack_delay(ctx->ql->port, value_in);
+            } else {
+                if (!ossl_quic_channel_set_max_ack_delay_request(ctx->qc->ch, value_in)) {
+                    QUIC_RAISE_NON_NORMAL_ERROR(ctx, SSL_R_FEATURE_NOT_RENEGOTIABLE,
+                        NULL);
+                    goto err;
+                }
+            }
+        }
+        break;
+
+    case SSL_VALUE_CLASS_FEATURE_PEER_REQUEST:
+        if (p_value_in != NULL) {
+            QUIC_RAISE_NON_NORMAL_ERROR(ctx, SSL_R_UNSUPPORTED_CONFIG_VALUE_OP,
+                NULL);
+            goto err;
+        }
+
+        if (ctx->is_listener) {
+            QUIC_RAISE_NON_NORMAL_ERROR(ctx, SSL_R_UNSUPPORTED_CONFIG_VALUE_OP,
+                NULL);
+            goto err;
+        }
+
+        if (!ossl_quic_channel_is_handshake_complete(ctx->qc->ch)) {
+            QUIC_RAISE_NON_NORMAL_ERROR(ctx, SSL_R_FEATURE_NEGOTIATION_NOT_COMPLETE,
+                NULL);
+            goto err;
+        }
+
+        value_out = ossl_quic_channel_get_max_ack_delay_peer_request(ctx->qc->ch);
+        break;
+
+    default:
+        QUIC_RAISE_NON_NORMAL_ERROR(ctx, SSL_R_UNSUPPORTED_CONFIG_VALUE_CLASS,
+            NULL);
+        goto err;
+    }
+
+    ret = 1;
+err:
+    qctx_unlock(ctx);
+    if (ret && p_value_out != NULL)
+        *p_value_out = value_out;
+
+    return ret;
+}
+
+QUIC_TAKES_LOCK
+static int qc_getset_max_pending_channels(QCTX *ctx, uint32_t class_,
+    uint64_t *p_value_out, uint64_t *p_value_in)
+{
+    int ret = 0;
+    uint64_t value_out = 0;
+
+    qctx_lock(ctx);
+
+    if (class_ == SSL_VALUE_CLASS_GENERIC && ctx->is_listener) {
+        value_out = ossl_quic_port_get_max_pending_channels(ctx->ql->port);
+        if (p_value_in != NULL)
+            ossl_quic_port_set_max_pending_channels(ctx->ql->port, *p_value_in);
+        ret = 1;
+    } else {
+        QUIC_RAISE_NON_NORMAL_ERROR(ctx, SSL_R_UNSUPPORTED_CONFIG_VALUE_CLASS, NULL);
+        ret = 0;
+    }
+
+    qctx_unlock(ctx);
+
     if (ret && p_value_out != NULL)
         *p_value_out = value_out;
 
@@ -3822,6 +4167,15 @@ static int expect_quic_for_value(SSL *s, QCTX *ctx, uint32_t id)
     case SSL_VALUE_STREAM_WRITE_BUF_USED:
     case SSL_VALUE_STREAM_WRITE_BUF_AVAIL:
         return expect_quic_cs(s, ctx);
+    case SSL_VALUE_QUIC_IDLE_TIMEOUT:
+    case SSL_VALUE_QUIC_UDP_PAYLOAD_SIZE_MAX:
+    case SSL_VALUE_QUIC_WINDOWCON:
+    case SSL_VALUE_QUIC_WINDOWBSTR:
+    case SSL_VALUE_QUIC_WINDOWUSTR:
+    case SSL_VALUE_QUIC_ACK_DELAY_EXPONENT:
+    case SSL_VALUE_QUIC_ACK_DELAY_MAX:
+    case SSL_VALUE_QUIC_MAX_PENDING_CONNS:
+        return expect_quic_cl(s, ctx);
     default:
         return expect_quic_conn_only(s, ctx);
     }
@@ -3843,6 +4197,20 @@ int ossl_quic_get_value_uint(SSL *s, uint32_t class_, uint32_t id,
     switch (id) {
     case SSL_VALUE_QUIC_IDLE_TIMEOUT:
         return qc_getset_idle_timeout(&ctx, class_, value, NULL);
+    case SSL_VALUE_QUIC_UDP_PAYLOAD_SIZE_MAX:
+        return qc_getset_max_udp_payload_size(&ctx, class_, value, NULL);
+    case SSL_VALUE_QUIC_WINDOWCON:
+        return qc_getset_max_data(&ctx, class_, value, NULL);
+    case SSL_VALUE_QUIC_WINDOWBSTR:
+        return qc_getset_max_stream_data(&ctx, class_, value, /*uni=*/0, /*remote=*/0, NULL);
+    case SSL_VALUE_QUIC_WINDOWUSTR:
+        return qc_getset_max_stream_data(&ctx, class_, value, /*uni=*/1, /*remote=*/1, NULL);
+    case SSL_VALUE_QUIC_ACK_DELAY_EXPONENT:
+        return qc_getset_ack_delay_exponent(&ctx, class_, value, NULL);
+    case SSL_VALUE_QUIC_ACK_DELAY_MAX:
+        return qc_getset_max_ack_delay(&ctx, class_, value, NULL);
+    case SSL_VALUE_QUIC_MAX_PENDING_CONNS:
+        return qc_getset_max_pending_channels(&ctx, class_, value, NULL);
 
     case SSL_VALUE_QUIC_STREAM_BIDI_LOCAL_AVAIL:
         return qc_get_stream_avail(&ctx, class_, /*uni=*/0, /*remote=*/0, value);
@@ -3884,11 +4252,25 @@ int ossl_quic_set_value_uint(SSL *s, uint32_t class_, uint32_t id,
         return 0;
 
     switch (id) {
-    case SSL_VALUE_QUIC_IDLE_TIMEOUT:
-        return qc_getset_idle_timeout(&ctx, class_, NULL, &value);
-
     case SSL_VALUE_EVENT_HANDLING_MODE:
         return qc_getset_event_handling(&ctx, class_, NULL, &value);
+
+    case SSL_VALUE_QUIC_IDLE_TIMEOUT:
+        return qc_getset_idle_timeout(&ctx, class_, NULL, &value);
+    case SSL_VALUE_QUIC_UDP_PAYLOAD_SIZE_MAX:
+        return qc_getset_max_udp_payload_size(&ctx, class_, NULL, &value);
+    case SSL_VALUE_QUIC_WINDOWCON:
+        return qc_getset_max_data(&ctx, class_, NULL, &value);
+    case SSL_VALUE_QUIC_WINDOWBSTR:
+        return qc_getset_max_stream_data(&ctx, class_, NULL, /*uni=*/0, /*remote=*/0, &value);
+    case SSL_VALUE_QUIC_WINDOWUSTR:
+        return qc_getset_max_stream_data(&ctx, class_, NULL, /*uni=*/1, /*remote=*/1, &value);
+    case SSL_VALUE_QUIC_ACK_DELAY_EXPONENT:
+        return qc_getset_ack_delay_exponent(&ctx, class_, NULL, &value);
+    case SSL_VALUE_QUIC_ACK_DELAY_MAX:
+        return qc_getset_max_ack_delay(&ctx, class_, NULL, &value);
+    case SSL_VALUE_QUIC_MAX_PENDING_CONNS:
+        return qc_getset_max_pending_channels(&ctx, class_, NULL, &value);
 
     default:
         return QUIC_RAISE_NON_NORMAL_ERROR(&ctx,
@@ -4066,14 +4448,14 @@ static void quic_classify_stream(QUIC_CONNECTION *qc,
     uint64_t *app_error_code)
 {
     int local_init;
-    uint64_t final_size;
+    uint64_t scratch_pad; /* throw away value */
 
     local_init = (ossl_quic_stream_is_server_init(qs) == qc->as_server);
 
     if (app_error_code != NULL)
         *app_error_code = UINT64_MAX;
     else
-        app_error_code = &final_size; /* throw away value */
+        app_error_code = &scratch_pad;
 
     if (!ossl_quic_stream_is_bidi(qs) && local_init != is_write) {
         /*
@@ -4106,7 +4488,7 @@ static void quic_classify_stream(QUIC_CONNECTION *qc,
         *app_error_code = !is_write
             ? qs->peer_reset_stream_aec
             : qs->peer_stop_sending_aec;
-    } else if (is_write && ossl_quic_sstream_get_final_size(qs->sstream, &final_size)) {
+    } else if (is_write && qs->have_final_size) {
         /*
          * Stream has been finished. Stream reset takes precedence over this for
          * the write case as peer may not have received all data.
@@ -4325,9 +4707,8 @@ int ossl_quic_get_key_update_type(const SSL *s)
  *
  * @return Pointer to the SSL object on success, or NULL on failure.
  */
-static SSL *alloc_port_user_ssl(QUIC_CHANNEL *ch, void *arg)
+static SSL *alloc_port_user_ssl(QUIC_CHANNEL *ch, QUIC_LISTENER *ql)
 {
-    QUIC_LISTENER *ql = arg;
     QUIC_CONNECTION *qc = create_qc_from_incoming_conn(ql, ch);
 
     return (qc == NULL) ? NULL : &qc->obj.ssl;
@@ -4350,7 +4731,7 @@ SSL *ossl_quic_new_listener(SSL_CTX *ctx, uint64_t flags)
 
     if ((ql = OPENSSL_zalloc(sizeof(*ql))) == NULL) {
         QUIC_RAISE_NON_NORMAL_ERROR(NULL, ERR_R_CRYPTO_LIB, NULL);
-        goto err;
+        return NULL;
     }
 
 #if defined(OPENSSL_THREADS)
@@ -4377,7 +4758,7 @@ SSL *ossl_quic_new_listener(SSL_CTX *ctx, uint64_t flags)
     port_args.channel_ctx = ctx;
     port_args.is_multi_conn = 1;
     port_args.get_conn_user_ssl = alloc_port_user_ssl;
-    port_args.user_ssl_arg = ql;
+    port_args.ql = ql;
     if ((flags & SSL_LISTENER_FLAG_NO_VALIDATE) == 0)
         port_args.do_addr_validation = 1;
     ql->port = ossl_quic_engine_create_port(ql->engine, &port_args);
@@ -4398,8 +4779,8 @@ SSL *ossl_quic_new_listener(SSL_CTX *ctx, uint64_t flags)
     return &ql->obj.ssl;
 
 err:
-    if (ql != NULL)
-        ossl_quic_engine_free(ql->engine);
+    ossl_quic_port_free(ql->port);
+    ossl_quic_engine_free(ql->engine);
 
 #if defined(OPENSSL_THREADS)
     ossl_crypto_mutex_free(&ql->mutex);
@@ -4434,7 +4815,7 @@ SSL *ossl_quic_new_listener_from(SSL *ssl, uint64_t flags)
     port_args.channel_ctx = ssl->ctx;
     port_args.is_multi_conn = 1;
     port_args.get_conn_user_ssl = alloc_port_user_ssl;
-    port_args.user_ssl_arg = ql;
+    port_args.ql = ql;
     if ((flags & SSL_LISTENER_FLAG_NO_VALIDATE) == 0)
         port_args.do_addr_validation = 1;
     ql->port = ossl_quic_engine_create_port(ctx.qd->engine, &port_args);
@@ -4546,7 +4927,7 @@ SSL *ossl_quic_new_from_listener(SSL *ssl, uint64_t flags)
 #endif
 
     /* Create the handshake layer. */
-    qc->tls = ossl_ssl_connection_new_int(ql->obj.ssl.ctx, NULL, TLS_method());
+    qc->tls = ossl_ssl_connection_new_int(ql->obj.ssl.ctx, &qc->obj.ssl, TLS_method());
     if (qc->tls == NULL || (sc = SSL_CONNECTION_FROM_SSL(qc->tls)) == NULL) {
         QUIC_RAISE_NON_NORMAL_ERROR(NULL, ERR_R_INTERNAL_ERROR, NULL);
         goto err;
@@ -4571,7 +4952,7 @@ SSL *ossl_quic_new_from_listener(SSL *ssl, uint64_t flags)
     ossl_quic_channel_set_msg_callback_arg(qc->ch, ql->obj.ssl.ctx->msg_callback_arg);
 
     /*
-     * We deliberately pass NULL for engine and port, because we don't want to
+     * We deliberately pass NULL for engine and port, because we don't want
      * to turn QCSO we create here into an event leader, nor port leader.
      * Both those roles are occupied already by listener (`ssl`) we use
      * to create a new QCSO here.
@@ -4644,10 +5025,16 @@ int ossl_quic_peeloff_conn(SSL *listener, SSL *new_conn)
 {
     QCTX lctx;
     QCTX cctx;
-    QUIC_CHANNEL *new_ch;
+    QUIC_CHANNEL *new_ch, *old_ch, *popped_ch;
+    QUIC_PORT *old_port;
+    QUIC_ENGINE *old_engine;
+#if defined(OPENSSL_THREADS)
+    CRYPTO_MUTEX *old_mutex = NULL;
+#endif
     QUIC_CONNECTION *qc = NULL;
     QUIC_LISTENER *ql = NULL;
     SSL *tls = NULL;
+    SSL_CONNECTION *tls_conn = NULL;
     int ret = 0;
 
     if (!expect_quic_listener(listener, &lctx))
@@ -4655,6 +5042,30 @@ int ossl_quic_peeloff_conn(SSL *listener, SSL *new_conn)
 
     if (!expect_quic_c(new_conn, &cctx))
         return -1;
+
+#if !defined(OPENSSL_NO_QUIC_THREAD_ASSIST)
+    if (cctx.qc->is_thread_assisted) {
+        QUIC_RAISE_NON_NORMAL_ERROR(NULL, ERR_R_PASSED_INVALID_ARGUMENT,
+            "SSL_listen_ex requires new_conn without thread assistance");
+        return -1;
+    }
+#endif
+
+    /* The standalone transport is replaced, so new_conn must be unused. */
+    if (cctx.qc->started || cctx.qc->shutting_down
+        || cctx.qc->num_xso != 0
+        || cctx.qc->default_xso_created
+        || cctx.qc->listener != NULL
+        || ossl_quic_port_get_net_rbio(cctx.qc->port) != NULL
+        || ossl_quic_port_get_net_wbio(cctx.qc->port) != NULL
+        || ossl_quic_channel_is_active(cctx.qc->ch)
+        || ossl_quic_channel_is_term_any(cctx.qc->ch)
+        || !cctx.obj->is_event_leader || !cctx.obj->is_port_leader
+        || cctx.obj->parent_obj != NULL) {
+        QUIC_RAISE_NON_NORMAL_ERROR(NULL, ERR_R_PASSED_INVALID_ARGUMENT,
+            "SSL_listen_ex requires a fresh connection created by SSL_new()");
+        return -1;
+    }
 
     qctx_lock_for_io(&lctx);
 
@@ -4665,53 +5076,109 @@ int ossl_quic_peeloff_conn(SSL *listener, SSL *new_conn)
         goto out;
     }
 
-    new_ch = ossl_quic_port_pop_incoming(lctx.ql->port);
-    if (new_ch != NULL) {
-        tls = ossl_ssl_connection_new_int(ossl_quic_port_get_channel_ctx(lctx.ql->port),
-            new_conn, TLS_method());
-        if (tls == NULL)
-            goto out;
+    /* Do all fallible setup before consuming the queued channel. */
+    new_ch = ossl_quic_port_peek_incoming(lctx.ql->port);
+    if (new_ch == NULL)
+        goto out;
 
-        qc = cctx.qc;
-        ql = lctx.ql;
-        /*
-         * Need to ensure that we take a reference on our new listener
-         * so that we don't free it before this connection
-         */
-        if (!SSL_up_ref(&ql->obj.ssl))
-            goto out;
+    qc = cctx.qc;
+    ql = lctx.ql;
 
-        ossl_quic_channel_free(qc->ch);
-        ossl_quic_port_free(qc->port);
-        ossl_quic_engine_free(qc->engine);
-        /*
-         * Ensure that we point to our listener so we can drop
-         * the above refcount when this SSL object is freed
-         */
-        qc->listener = ql;
-        qc->obj.engine = ql->engine;
-        qc->engine = ql->engine;
-        qc->port = ql->port;
-        qc->pending = 1;
-#if defined(OPENSSL_THREADS)
-        ossl_crypto_mutex_free(&qc->mutex);
-        qc->mutex = ql->mutex;
-#endif
-        qc->ch = new_ch;
-        SSL_free(qc->tls);
-        ossl_quic_channel_set0_tls(new_ch, tls);
-        qc->tls = tls;
-        ossl_quic_channel_get_peer_addr(new_ch, &qc->init_peer_addr); /* best effort */
-        qc->started = 1;
-        qc->as_server = 1;
-        qc->as_server_state = 1;
-        qc->default_stream_mode = SSL_DEFAULT_STREAM_MODE_AUTO_BIDI;
-        qc->default_ssl_options = ql->obj.ssl.ctx->options & OSSL_QUIC_PERMITTED_OPTIONS;
-        qc->incoming_stream_policy = SSL_INCOMING_STREAM_POLICY_AUTO;
-        qc->last_error = SSL_ERROR_NONE;
-        qc_update_reject_policy(qc);
-        ret = 1;
+    tls = ossl_ssl_connection_new_int(
+        ossl_quic_port_get_channel_ctx(ql->port), new_conn, TLS_method());
+    if (tls == NULL) {
+        /* An internal failure is not "no connection available" */
+        ret = -1;
+        goto out;
     }
+
+    tls_conn = SSL_CONNECTION_FROM_SSL(tls);
+    if (tls_conn == NULL) {
+        QUIC_RAISE_NON_NORMAL_ERROR(NULL, ERR_R_INTERNAL_ERROR, NULL);
+        SSL_free(tls);
+        ret = -1;
+        goto out;
+    }
+
+    tls_conn->s3.flags |= TLS1_FLAGS_QUIC | TLS1_FLAGS_QUIC_INTERNAL;
+    tls_conn->options &= OSSL_QUIC_PERMITTED_OPTIONS_CONN;
+    tls_conn->pha_enabled = 0;
+
+    /* The connection keeps its listener alive. */
+    if (!SSL_up_ref(&ql->obj.ssl)) {
+        QUIC_RAISE_NON_NORMAL_ERROR(NULL, ERR_R_INTERNAL_ERROR, NULL);
+        SSL_free(tls);
+        ret = -1;
+        goto out;
+    }
+
+    /* Bind TLS before adopting the deferred incoming channel. */
+    if (!ossl_quic_channel_set0_tls(new_ch, tls)) {
+        QUIC_RAISE_NON_NORMAL_ERROR(NULL, ERR_R_INTERNAL_ERROR, NULL);
+        SSL_free(tls);
+        SSL_free(&ql->obj.ssl);
+        ret = -1;
+        goto out;
+    }
+
+    ossl_quic_channel_set_msg_callback(new_ch,
+        ql->obj.ssl.ctx->msg_callback, new_conn);
+    ossl_quic_channel_set_msg_callback_arg(new_ch,
+        ql->obj.ssl.ctx->msg_callback_arg);
+
+    /* The listener lock guarantees that the queue head has not changed. */
+    popped_ch = ossl_quic_port_pop_incoming(ql->port);
+    assert(popped_ch == new_ch);
+    (void)popped_ch;
+
+    old_ch = qc->ch;
+    old_port = qc->port;
+    old_engine = qc->engine;
+#if defined(OPENSSL_THREADS)
+    old_mutex = qc->mutex;
+#endif
+
+    /* Ensure that SSL_free() drops the listener reference. */
+    qc->listener = ql;
+    qc->engine = ql->engine;
+    qc->port = ql->port;
+    /* The connection is handed to the caller, as in SSL_accept_connection() */
+    qc->pending = 0;
+    /* Demote the standalone object into the listener's hierarchy. */
+    ossl_quic_obj_reparent(&qc->obj, &ql->obj);
+
+    /* Release the resources the connection owned as a standalone object. */
+    ossl_quic_channel_free(old_ch);
+    quic_unref_port_bios(old_port);
+    ossl_quic_port_free(old_port);
+    ossl_quic_engine_free(old_engine);
+#if defined(OPENSSL_THREADS)
+    /* The standalone mutex was borrowed by all three resources above. */
+    qc->mutex = ql->mutex;
+    ossl_crypto_mutex_free(&old_mutex);
+#endif
+
+    qc->ch = new_ch;
+    SSL_free(qc->tls);
+    qc->tls = tls;
+    ossl_quic_channel_get_peer_addr(new_ch,
+        &qc->init_peer_addr); /* best effort */
+    qc->started = 1;
+    qc->as_server = 1;
+    qc->as_server_state = 1;
+    /* Reinitialise configuration to the accepted-connection defaults. */
+    qc->default_stream_mode = SSL_DEFAULT_STREAM_MODE_AUTO_BIDI;
+    qc->default_ssl_mode = ql->obj.ssl.ctx->mode;
+    qc->default_ssl_options
+        = ql->obj.ssl.ctx->options & OSSL_QUIC_PERMITTED_OPTIONS;
+    qc->incoming_stream_policy = SSL_INCOMING_STREAM_POLICY_AUTO;
+    qc->incoming_stream_aec = 0;
+    qc->last_error = SSL_ERROR_NONE;
+    ossl_quic_obj_set_blocking_mode(&qc->obj, QUIC_BLOCKING_MODE_INHERIT);
+    qc->obj.event_handling_mode = SSL_VALUE_EVENT_HANDLING_MODE_INHERIT;
+    qc_update_reject_policy(qc);
+    ret = 1;
+
 out:
     qctx_unlock(&lctx);
     return ret;
@@ -4856,7 +5323,6 @@ static QUIC_CONNECTION *create_qc_from_incoming_conn(QUIC_LISTENER *ql, QUIC_CHA
 #if defined(OPENSSL_THREADS)
     qc->mutex = ql->mutex;
 #endif
-    qc->tls = ossl_quic_channel_get0_tls(ch);
     qc->started = 1;
     qc->as_server = 1;
     qc->as_server_state = 1;
@@ -4865,6 +5331,27 @@ static QUIC_CONNECTION *create_qc_from_incoming_conn(QUIC_LISTENER *ql, QUIC_CHA
     qc->incoming_stream_policy = SSL_INCOMING_STREAM_POLICY_AUTO;
     qc->last_error = SSL_ERROR_NONE;
     qc_update_reject_policy(qc);
+
+    /*
+     * Detach the channel from the freshly-built qc before handing it back.
+     *
+     * qc->ch was set to @p ch above so the in-function initialisers
+     * (e.g. qc_update_reject_policy()) can reach the channel during setup.
+     * Once setup is done we clear it again because, at this point, the qc
+     * does NOT yet own the channel: @p ch is still owned by the caller of
+     * port_new_handshake_layer(), which only commits ownership (by setting
+     * qc->ch = ch on the success path) after the rest of channel
+     * construction has succeeded.
+     *
+     * Leaving qc->ch set here would mean any error path that does
+     * SSL_free(user_ssl) before the commit point cascades into
+     * qc_cleanup() -> ossl_quic_channel_free(qc->ch) and frees a channel
+     * the caller is still using -- the use-after-free / double-free class
+     * of bug we hit before. Resetting to NULL makes SSL_free(user_ssl)
+     * safe at any point until the caller explicitly hands ch over.
+     */
+    qc->ch = NULL;
+
     return qc;
 
 err:
@@ -5050,6 +5537,11 @@ int ossl_quic_set_peer_token(SSL_CTX *ctx, BIO_ADDR *peer,
         ossl_quic_free_peer_token(old);
     }
     lh_QUIC_TOKEN_insert(c->cache, tok);
+    if (lh_QUIC_TOKEN_error(c->cache)) {
+        ossl_quic_free_peer_token(tok);
+        ossl_crypto_mutex_unlock(c->mutex);
+        return 0;
+    }
 
     ossl_crypto_mutex_unlock(c->mutex);
     return 1;
@@ -5073,9 +5565,8 @@ int ossl_quic_get_peer_token(SSL_CTX *ctx, BIO_ADDR *peer,
 
     ossl_crypto_mutex_lock(c->mutex);
     tok = lh_QUIC_TOKEN_retrieve(c->cache, key);
-    if (tok != NULL) {
+    if (tok != NULL && CRYPTO_UP_REF(&tok->references, &ret)) {
         *token = tok;
-        CRYPTO_UP_REF(&tok->references, &ret);
         rc = 1;
     }
 
@@ -5228,7 +5719,6 @@ long ossl_quic_callback_ctrl(SSL *s, int cmd, void (*fp)(void))
             &ctx.qc->obj.ssl);
         /* This callback also needs to be set on the internal SSL object */
         return ssl3_callback_ctrl(ctx.qc->tls, cmd, fp);
-        ;
 
     default:
         /* Probably a TLS related ctrl. Defer to our internal SSL object */
@@ -5556,6 +6046,19 @@ QUIC_CHANNEL *ossl_quic_conn_get_channel(SSL *s)
         return NULL;
 
     return ctx.qc->ch;
+}
+
+QUIC_PORT *ossl_quic_listener_get_port(SSL *s)
+{
+    QCTX ctx;
+
+    /*
+     * expect listerner only
+     */
+    if (!expect_quic_listener(s, &ctx))
+        return NULL;
+
+    return ctx.ql->port;
 }
 
 int ossl_quic_set_diag_title(SSL_CTX *ctx, const char *title)

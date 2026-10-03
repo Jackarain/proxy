@@ -347,7 +347,7 @@ int i2o_SCT_LIST(const STACK_OF(SCT) *a, unsigned char **pp)
             if ((sct_len = i2o_SCT(sk_SCT_value(a, i), NULL)) == -1)
                 goto err;
         }
-        len2 += 2 + sct_len;
+        len2 += (size_t)sct_len + 2;
     }
 
     if (len2 > MAX_SCT_LIST_SIZE)
@@ -381,7 +381,7 @@ STACK_OF(SCT) *d2i_SCT_LIST(STACK_OF(SCT) **a, const unsigned char **pp,
         return NULL;
 
     p = ASN1_STRING_get0_data(oct);
-    if ((sk = o2i_SCT_LIST(a, &p, ASN1_STRING_length(oct))) != NULL)
+    if ((sk = o2i_SCT_LIST(a, &p, ASN1_STRING_get_length(oct))) != NULL)
         *pp += len;
 
     ASN1_OCTET_STRING_free(oct);

@@ -63,7 +63,6 @@ extern OSSL_FUNC_core_thread_start_fn *c_thread_start;
  */
 
 /* Functions provided by the core */
-static OSSL_FUNC_core_gettable_params_fn *c_gettable_params;
 static OSSL_FUNC_core_get_params_fn *c_get_params;
 OSSL_FUNC_core_thread_start_fn *c_thread_start;
 static OSSL_FUNC_core_new_error_fn *c_new_error;
@@ -89,29 +88,22 @@ static OSSL_FUNC_self_test_cb_fn *c_stcbfn = NULL;
 static OSSL_FUNC_indicator_cb_fn *c_indcbfn = NULL;
 static OSSL_FUNC_core_get_libctx_fn *c_get_libctx = NULL;
 
-typedef struct {
-    const char *option;
-    unsigned char enabled;
-} FIPS_OPTION;
+#include "providers/fips/fipsparams.inc"
 
 typedef struct fips_global_st {
     const OSSL_CORE_HANDLE *handle;
     SELF_TEST_POST_PARAMS selftest_params;
 
-#define OSSL_FIPS_PARAM(structname, paramname, initvalue) \
-    FIPS_OPTION fips_##structname;
-#include "fips_indicator_params.inc"
-#undef OSSL_FIPS_PARAM
+    FIPS_PARAMS fips_params;
 
     /* Guards access to deferred self-test */
     CRYPTO_RWLOCK *deferred_lock;
 
 } FIPS_GLOBAL;
 
-static void init_fips_option(FIPS_OPTION *opt, int enabled)
+static ossl_inline FIPS_PARAMS *get_fips_params(FIPS_GLOBAL *fgbl)
 {
-    opt->enabled = enabled;
-    opt->option = enabled ? "1" : "0";
+    return &fgbl->fips_params;
 }
 
 void *ossl_fips_prov_ossl_ctx_new(OSSL_LIB_CTX *libctx)
@@ -121,10 +113,7 @@ void *ossl_fips_prov_ossl_ctx_new(OSSL_LIB_CTX *libctx)
     if (fgbl == NULL)
         return NULL;
 
-#define OSSL_FIPS_PARAM(structname, paramname, initvalue) \
-    init_fips_option(&fgbl->fips_##structname, initvalue);
-#include "fips_indicator_params.inc"
-#undef OSSL_FIPS_PARAM
+    init_fips_params(&fgbl->fips_params);
 
     return fgbl;
 }
@@ -150,43 +139,6 @@ static int fips_random_bytes(ossl_unused void *vprov, int which,
     return RAND_bytes_ex(libctx, buf, n, strength);
 }
 
-/*
- * Parameters to retrieve from the core provider
- * NOTE: inside core_get_params() these will be loaded from config items
- * stored inside prov->parameters
- */
-static int fips_get_params_from_core(FIPS_GLOBAL *fgbl)
-{
-    OSSL_PARAM core_params[33], *p = core_params;
-
-#define OSSL_FIPS_PARAM(structname, paramname)                 \
-    *p++ = OSSL_PARAM_construct_utf8_ptr(                      \
-        paramname, (char **)&fgbl->selftest_params.structname, \
-        sizeof(fgbl->selftest_params.structname));
-
-/* Parameters required for self testing */
-#include "fips_selftest_params.inc"
-#undef OSSL_FIPS_PARAM
-
-/* FIPS indicator options can be enabled or disabled independently */
-#define OSSL_FIPS_PARAM(structname, paramname, initvalue) \
-    *p++ = OSSL_PARAM_construct_utf8_ptr(                 \
-        OSSL_PROV_PARAM_##paramname,                      \
-        (char **)&fgbl->fips_##structname.option,         \
-        sizeof(fgbl->fips_##structname.option));
-#include "fips_indicator_params.inc"
-#undef OSSL_FIPS_PARAM
-
-    *p = OSSL_PARAM_construct_end();
-
-    if (!c_get_params(fgbl->handle, core_params)) {
-        ERR_raise(ERR_LIB_PROV, PROV_R_FAILED_TO_GET_PARAMETER);
-        return 0;
-    }
-
-    return 1;
-}
-
 static const OSSL_PARAM *fips_gettable_params(void *provctx)
 {
     /* Parameters we provide to the core */
@@ -195,12 +147,7 @@ static const OSSL_PARAM *fips_gettable_params(void *provctx)
         OSSL_PARAM_DEFN(OSSL_PROV_PARAM_VERSION, OSSL_PARAM_UTF8_PTR, NULL, 0),
         OSSL_PARAM_DEFN(OSSL_PROV_PARAM_BUILDINFO, OSSL_PARAM_UTF8_PTR, NULL, 0),
         OSSL_PARAM_DEFN(OSSL_PROV_PARAM_STATUS, OSSL_PARAM_INTEGER, NULL, 0),
-
-#define OSSL_FIPS_PARAM(structname, paramname, initvalue) \
-    OSSL_PARAM_DEFN(OSSL_PROV_PARAM_##paramname, OSSL_PARAM_INTEGER, NULL, 0),
-#include "fips_indicator_params.inc"
-#undef OSSL_FIPS_PARAM
-
+        OSSL_FIPS_PARAMS_DEFN_TYPES,
         OSSL_PARAM_END
     };
     return fips_param_types;
@@ -225,14 +172,7 @@ static int fips_get_params(void *provctx, OSSL_PARAM params[])
     if (p != NULL && !OSSL_PARAM_set_int(p, ossl_prov_is_running()))
         return 0;
 
-#define OSSL_FIPS_PARAM(structname, paramname, initvalue)                     \
-    p = OSSL_PARAM_locate(params, OSSL_PROV_PARAM_##paramname);               \
-    if (p != NULL && !OSSL_PARAM_set_int(p, fgbl->fips_##structname.enabled)) \
-        return 0;
-#include "fips_indicator_params.inc"
-#undef OSSL_FIPS_PARAM
-
-    return 1;
+    return return_fips_params(params, &fgbl->fips_params);
 }
 
 static void set_self_test_cb(FIPS_GLOBAL *fgbl)
@@ -440,6 +380,9 @@ static const OSSL_ALGORITHM fips_macs_internal[] = {
  */
 static const OSSL_ALGORITHM fips_kdfs[] = {
     FIPS_KDFS_COMMON(),
+#ifndef OPENSSL_NO_IKEV2KDF
+    { PROV_NAMES_IKEV2KDF, FIPS_DEFAULT_PROPERTIES, ossl_kdf_ikev2kdf_functions },
+#endif
 #ifndef OPENSSL_NO_SSKDF
     { PROV_NAMES_SSKDF, FIPS_DEFAULT_PROPERTIES, ossl_kdf_sskdf_functions },
 #endif
@@ -467,6 +410,9 @@ static const OSSL_ALGORITHM fips_kdfs[] = {
 
 static const OSSL_ALGORITHM fips_kdfs_internal[] = {
     FIPS_KDFS_COMMON(),
+#ifndef OPENSSL_NO_IKEV2KDF
+    { PROV_NAMES_IKEV2KDF, FIPS_DEFAULT_PROPERTIES, ossl_kdf_ikev2kdf_functions },
+#endif
 #ifndef OPENSSL_NO_SSKDF
     { PROV_NAMES_SSKDF, FIPS_DEFAULT_PROPERTIES, ossl_kdf_sskdf_functions },
 #endif
@@ -639,10 +585,12 @@ static const OSSL_ALGORITHM fips_asym_kem[] = {
     { PROV_NAMES_ML_KEM_768, FIPS_DEFAULT_PROPERTIES, ossl_ml_kem_asym_kem_functions },
     { PROV_NAMES_ML_KEM_1024, FIPS_DEFAULT_PROPERTIES, ossl_ml_kem_asym_kem_functions },
 #if !defined(OPENSSL_NO_ECX)
+    { PROV_NAMES_MLKEM512X25519, FIPS_DEFAULT_PROPERTIES, ossl_mlx_kem_asym_kem_functions },
     { PROV_NAMES_X25519MLKEM768, FIPS_DEFAULT_PROPERTIES, ossl_mlx_kem_asym_kem_functions },
-    { PROV_NAMES_X448MLKEM1024, FIPS_DEFAULT_PROPERTIES, ossl_mlx_kem_asym_kem_functions },
+    { PROV_NAMES_X448MLKEM1024, FIPS_UNAPPROVED_PROPERTIES, ossl_mlx_kem_asym_kem_functions },
 #endif
 #if !defined(OPENSSL_NO_EC)
+    { PROV_NAMES_SecP256r1MLKEM512, FIPS_DEFAULT_PROPERTIES, ossl_mlx_kem_asym_kem_functions },
     { PROV_NAMES_SecP256r1MLKEM768, FIPS_DEFAULT_PROPERTIES, ossl_mlx_kem_asym_kem_functions },
     { PROV_NAMES_SecP384r1MLKEM1024, FIPS_DEFAULT_PROPERTIES, ossl_mlx_kem_asym_kem_functions },
 #endif
@@ -709,12 +657,16 @@ static const OSSL_ALGORITHM fips_keymgmt[] = {
     { PROV_NAMES_ML_KEM_1024, FIPS_DEFAULT_PROPERTIES, ossl_ml_kem_1024_keymgmt_functions,
         PROV_DESCS_ML_KEM_1024 },
 #if !defined(OPENSSL_NO_ECX)
+    { PROV_NAMES_MLKEM512X25519, FIPS_DEFAULT_PROPERTIES, ossl_mlx_x25519_512_kem_kmgmt_functions,
+        PROV_DESCS_MLKEM512X25519 },
     { PROV_NAMES_X25519MLKEM768, FIPS_DEFAULT_PROPERTIES, ossl_mlx_x25519_kem_kmgmt_functions,
         PROV_DESCS_X25519MLKEM768 },
-    { PROV_NAMES_X448MLKEM1024, FIPS_DEFAULT_PROPERTIES, ossl_mlx_x448_kem_kmgmt_functions,
+    { PROV_NAMES_X448MLKEM1024, FIPS_UNAPPROVED_PROPERTIES, ossl_mlx_x448_kem_kmgmt_functions,
         PROV_DESCS_X448MLKEM1024 },
 #endif
 #if !defined(OPENSSL_NO_EC)
+    { PROV_NAMES_SecP256r1MLKEM512, FIPS_DEFAULT_PROPERTIES, ossl_mlx_p256_512_kem_kmgmt_functions,
+        PROV_DESCS_SecP256r1MLKEM512 },
     { PROV_NAMES_SecP256r1MLKEM768, FIPS_DEFAULT_PROPERTIES, ossl_mlx_p256_kem_kmgmt_functions,
         PROV_DESCS_SecP256r1MLKEM768 },
     { PROV_NAMES_SecP384r1MLKEM1024, FIPS_DEFAULT_PROPERTIES, ossl_mlx_p384_kem_kmgmt_functions,
@@ -893,9 +845,6 @@ int OSSL_provider_init_int(const OSSL_CORE_HANDLE *handle,
         case OSSL_FUNC_CORE_GET_LIBCTX:
             set_func(c_get_libctx, OSSL_FUNC_core_get_libctx(in));
             break;
-        case OSSL_FUNC_CORE_GETTABLE_PARAMS:
-            set_func(c_gettable_params, OSSL_FUNC_core_gettable_params(in));
-            break;
         case OSSL_FUNC_CORE_GET_PARAMS:
             set_func(c_get_params, OSSL_FUNC_core_get_params(in));
             break;
@@ -1023,41 +972,35 @@ int OSSL_provider_init_int(const OSSL_CORE_HANDLE *handle,
     if (!ossl_provider_activate_fallbacks(libctx))
         goto err;
 
+    /* Retrieve all FIPS parameters from core so they can be used later */
+    if (!fips_get_params_from_core(fgbl->handle, &fgbl->fips_params)) {
+        ERR_raise(ERR_LIB_PROV, PROV_R_FAILED_TO_GET_PARAMETER);
+        goto err;
+    }
+
+    /* disable security_checks if needed */
+#ifdef OPENSSL_NO_FIPS_SECURITYCHECKS
+    fgbl->fips_params.security_checks = 0;
+#endif
+
     /*
      * We did initial set up of selftest_params in a local copy, because we
      * could not create fgbl until c_CRYPTO_zalloc was defined in the loop
      * above.
      */
     fgbl->selftest_params = selftest_params;
-
+    fgbl->selftest_params.module_filename = fgbl->fips_params.module_filename;
+    fgbl->selftest_params.module_checksum_data = fgbl->fips_params.module_checksum_data;
+    fgbl->selftest_params.defer_tests = fgbl->fips_params.defer_tests;
     fgbl->selftest_params.libctx = libctx;
 
     set_self_test_cb(fgbl);
-
-    if (!fips_get_params_from_core(fgbl)) {
-        /* Error already raised */
-        goto err;
-    }
     /*
      * Disable the conditional error check if it's disabled in the fips config
      * file.
      */
-    if (fgbl->selftest_params.conditional_error_check != NULL
-        && strcmp(fgbl->selftest_params.conditional_error_check, "0") == 0)
+    if (fgbl->fips_params.conditional_error_check == 0)
         SELF_TEST_disable_conditional_error_state();
-
-    /* Enable or disable FIPS provider options */
-#define OSSL_FIPS_PARAM(structname, paramname, unused)             \
-    if (fgbl->fips_##structname.option != NULL) {                  \
-        if (strcmp(fgbl->fips_##structname.option, "1") == 0)      \
-            fgbl->fips_##structname.enabled = 1;                   \
-        else if (strcmp(fgbl->fips_##structname.option, "0") == 0) \
-            fgbl->fips_##structname.enabled = 0;                   \
-        else                                                       \
-            goto err;                                              \
-    }
-#include "fips_indicator_params.inc"
-#undef OSSL_FIPS_PARAM
 
     ossl_prov_cache_exported_algorithms(fips_ciphers, exported_fips_ciphers);
 
@@ -1253,6 +1196,17 @@ void *CRYPTO_aligned_alloc(size_t num, size_t align, void **freeptr,
     return ossl_malloc_align(num, align, freeptr, file, line);
 }
 
+/*
+ * The public BIO_snprintf() prototype is hidden when the public headers
+ * are built with OPENSSL_NO_DEPRECATED_4_1, but the FIPS module still
+ * defines and exports the symbol for callers compiled into the module.
+ * Provide a local prototype in that configuration so the definition is
+ * well-formed.
+ */
+#ifdef OPENSSL_NO_DEPRECATED_4_1
+int BIO_snprintf(char *buf, size_t n, const char *format, ...);
+#endif
+
 int BIO_snprintf(char *buf, size_t n, const char *format, ...)
 {
     va_list args;
@@ -1263,16 +1217,6 @@ int BIO_snprintf(char *buf, size_t n, const char *format, ...)
     va_end(args);
     return ret;
 }
-
-#define OSSL_FIPS_PARAM(structname, paramname, unused)                                   \
-    int ossl_fips_config_##structname(OSSL_LIB_CTX *libctx)                              \
-    {                                                                                    \
-        FIPS_GLOBAL *fgbl = ossl_lib_ctx_get_data(libctx, OSSL_LIB_CTX_FIPS_PROV_INDEX); \
-                                                                                         \
-        return fgbl->fips_##structname.enabled;                                          \
-    }
-#include "fips_indicator_params.inc"
-#undef OSSL_FIPS_PARAM
 
 void OSSL_SELF_TEST_get_callback(OSSL_LIB_CTX *libctx, OSSL_CALLBACK **cb,
     void **cbarg)
@@ -1483,7 +1427,7 @@ int ossl_deferred_self_test(OSSL_LIB_CTX *libctx, self_test_id_t id)
      * and then it will recheck this value and immediately exit.
      */
 
-    TSAN_BENIGN(st_all_tests[id].state, "Fails safe, avoids contention")
+    TSAN_BENIGN(&st_all_tests[id].state, "Fails safe, avoids contention")
     if (st_all_tests[id].state == SELF_TEST_STATE_PASSED)
         return 1;
 

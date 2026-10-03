@@ -20,6 +20,7 @@
 #include "internal/cryptlib.h"
 #include "internal/sizes.h"
 #include "internal/fips.h"
+#include "fips/fipsindicator.h"
 #include "providers/implementations/signature/slh_dsa_sig.inc"
 
 #define SLH_DSA_MAX_ADD_RANDOM_LEN 32
@@ -80,7 +81,7 @@ static void slh_dsa_freectx(void *vctx)
 
     ossl_slh_dsa_hash_ctx_free(ctx->hash_ctx);
     OPENSSL_free(ctx->propq);
-    OPENSSL_cleanse(ctx->add_random, ctx->add_random_len);
+    OPENSSL_cleanse(ctx->add_random, sizeof(ctx->add_random));
     OPENSSL_free(ctx);
 }
 
@@ -241,8 +242,9 @@ static int slh_dsa_sign(void *vctx, unsigned char *sig, size_t *siglen,
         ctx->context_string, ctx->context_string_len,
         opt_rand, ctx->msg_encode,
         sig, siglen, sigsize);
-    if (opt_rand != add_rand)
-        OPENSSL_cleanse(opt_rand, n);
+    /* Only cleanse the temporary buffer generated for this signature. */
+    if (opt_rand == add_rand)
+        OPENSSL_cleanse(add_rand, sizeof(add_rand));
     return ret;
 }
 
@@ -337,6 +339,10 @@ static int slh_dsa_get_ctx_params(void *vctx, OSSL_PARAM *params)
         && !OSSL_PARAM_set_octet_string(p.algid,
             ctx->aid_len == 0 ? NULL : ctx->aid_buf,
             ctx->aid_len))
+        return 0;
+
+    if (!OSSL_FIPS_IND_GET_PARAM_CONDITIONAL(p.ind,
+            ctx->add_random_len == 0))
         return 0;
 
     return 1;

@@ -10,6 +10,12 @@
  * https://www.openssl.org/source/license.html
  */
 
+#if !defined(OSSL_LIBCRYPTO_OBJECTS_OBJ_XREF_H)
+#define OSSL_LIBCRYPTO_OBJECTS_OBJ_XREF_H
+
+/* clang-format off */
+
+#include <openssl/objects.h>
 
 typedef struct {
     int sign_id;
@@ -75,6 +81,8 @@ static const nid_triple sigoid_srt[] = {
      NID_id_GostR3410_2012_512},
     {NID_ED25519, NID_undef, NID_ED25519},
     {NID_ED448, NID_undef, NID_ED448},
+    {NID_dsa_with_SHA384, NID_sha384, NID_dsa},
+    {NID_dsa_with_SHA512, NID_sha512, NID_dsa},
     {NID_ecdsa_with_SHA3_224, NID_sha3_224, NID_X9_62_id_ecPublicKey},
     {NID_ecdsa_with_SHA3_256, NID_sha3_256, NID_X9_62_id_ecPublicKey},
     {NID_ecdsa_with_SHA3_384, NID_sha3_384, NID_X9_62_id_ecPublicKey},
@@ -83,6 +91,8 @@ static const nid_triple sigoid_srt[] = {
     {NID_RSA_SHA3_256, NID_sha3_256, NID_rsaEncryption},
     {NID_RSA_SHA3_384, NID_sha3_384, NID_rsaEncryption},
     {NID_RSA_SHA3_512, NID_sha3_512, NID_rsaEncryption},
+    {NID_sha512_224WithRSAEncryption, NID_sha512_224, NID_rsaEncryption},
+    {NID_sha512_256WithRSAEncryption, NID_sha512_256, NID_rsaEncryption},
     {NID_SM2_with_SM3, NID_sm3, NID_sm2},
     {NID_ML_DSA_44, NID_undef, NID_ML_DSA_44},
     {NID_ML_DSA_65, NID_undef, NID_ML_DSA_65},
@@ -123,10 +133,12 @@ static const nid_triple *const sigoid_srt_xref[] = {
     &sigoid_srt[32],
     &sigoid_srt[37],
     &sigoid_srt[14],
+    &sigoid_srt[44],
     &sigoid_srt[21],
     &sigoid_srt[33],
     &sigoid_srt[38],
     &sigoid_srt[15],
+    &sigoid_srt[45],
     &sigoid_srt[22],
     &sigoid_srt[34],
     &sigoid_srt[39],
@@ -141,13 +153,18 @@ static const nid_triple *const sigoid_srt_xref[] = {
     &sigoid_srt[28],
     &sigoid_srt[40],
     &sigoid_srt[41],
-    &sigoid_srt[48],
-    &sigoid_srt[44],
-    &sigoid_srt[49],
-    &sigoid_srt[45],
+    &sigoid_srt[54],
+    &sigoid_srt[55],
     &sigoid_srt[50],
     &sigoid_srt[46],
     &sigoid_srt[51],
     &sigoid_srt[47],
     &sigoid_srt[52],
+    &sigoid_srt[48],
+    &sigoid_srt[53],
+    &sigoid_srt[49],
+    &sigoid_srt[56],
 };
+/* clang-format on */
+
+#endif /* !defined(OSSL_LIBCRYPTO_OBJECTS_OBJ_XREF_H) */

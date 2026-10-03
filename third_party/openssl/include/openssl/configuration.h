@@ -28,7 +28,7 @@ extern "C" {
  */
 
 /* clang-format off */
-# define OPENSSL_CONFIGURED_API 40000
+# define OPENSSL_CONFIGURED_API 40200
 # ifndef OPENSSL_RAND_SEED_OS
 #  define OPENSSL_RAND_SEED_OS
 # endif
@@ -47,8 +47,8 @@ extern "C" {
 # ifndef OPENSSL_NO_ASAN
 #  define OPENSSL_NO_ASAN
 # endif
-# ifndef OPENSSL_NO_ASM
-#  define OPENSSL_NO_ASM
+# ifndef OPENSSL_NO_ATEXIT
+#  define OPENSSL_NO_ATEXIT
 # endif
 # ifndef OPENSSL_NO_BLAKE2
 #  define OPENSSL_NO_BLAKE2
@@ -61,6 +61,9 @@ extern "C" {
 # endif
 # ifndef OPENSSL_NO_CRYPTO_MDEBUG
 #  define OPENSSL_NO_CRYPTO_MDEBUG
+# endif
+# ifndef OPENSSL_NO_CT_VALIDATION
+#  define OPENSSL_NO_CT_VALIDATION
 # endif
 # ifndef OPENSSL_NO_DEMOS
 #  define OPENSSL_NO_DEMOS
@@ -188,6 +191,9 @@ extern "C" {
 # ifndef OPENSSL_NO_UNIT_TEST
 #  define OPENSSL_NO_UNIT_TEST
 # endif
+# ifndef OPENSSL_NO_UNIT_TESTS
+#  define OPENSSL_NO_UNIT_TESTS
+# endif
 # ifndef OPENSSL_NO_UPLINK
 #  define OPENSSL_NO_UPLINK
 # endif
@@ -255,34 +261,37 @@ extern "C" {
 #undef OPENSSL_NO_COMP_ALG
 #endif
 
-/* Cross-platform word size definitions */
+/* gen_cmake: patch begin */
+/* 跨平台字长与 RC4 类型，覆盖 Configure 在本机生成的值 */
 #undef THIRTY_TWO_BIT
 #undef SIXTY_FOUR_BIT
 #undef SIXTY_FOUR_BIT_LONG
+#undef BN_LLONG
 
-#if defined(_WIN64)                                      /* WIN64 */
+#if defined(_WIN64)
 #  define SIXTY_FOUR_BIT
-#  undef  SIXTY_FOUR_BIT_LONG
-#elif defined(_WIN32)                                    /* WIN32 */
-#  define THIRTY_TWO_BIT
-#elif defined(__x86_64__) || defined(__x86_64) || \
-      defined(__aarch64__)    || defined(_M_ARM64) || \
-      defined(__powerpc64__)  || defined(__ppc64__) || \
-      defined(__s390x__)      || \
-      defined(__mips64)       || defined(__mips64__) || \
-      defined(__riscv) && (__riscv_xlen == 64) || \
-      defined(__sparc64__)    || defined(__ia64__) || \
-      defined(__LP64__) && __LP64__
-#  define SIXTY_FOUR_BIT_LONG
-#  undef  SIXTY_FOUR_BIT
+#elif defined(__x86_64__) || defined(_M_X64) || defined(__aarch64__) || \
+      defined(_M_ARM64) || defined(__powerpc64__) || defined(__ppc64__) || \
+      defined(__s390x__) || defined(__mips64) || defined(__mips64__) || \
+      defined(__riscv) || defined(__sparc64__) || defined(__ia64__) || \
+      (defined(__LP64__) && __LP64__)
+#  if defined(_WIN32)
+#    define SIXTY_FOUR_BIT
+#  else
+#    define SIXTY_FOUR_BIT_LONG
+#  endif
 #else
 #  define THIRTY_TWO_BIT
+#  define BN_LLONG
 #endif
 
-#if defined(SIXTY_FOUR_BIT) + defined(SIXTY_FOUR_BIT_LONG) + defined(THIRTY_TWO_BIT) != 1
-#  error "Exactly one of THIRTY_TWO_BIT, SIXTY_FOUR_BIT, SIXTY_FOUR_BIT_LONG must be defined!"
+#undef RC4_INT
+#if (defined(__aarch64__) || defined(__arm__) || defined(_M_ARM)) && !defined(__APPLE__)
+#  define RC4_INT unsigned char
+#else
+#  define RC4_INT unsigned int
 #endif
-
+/* gen_cmake: patch end */
 #ifdef __cplusplus
 }
 #endif

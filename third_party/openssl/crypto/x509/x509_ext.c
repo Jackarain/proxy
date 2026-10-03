@@ -59,12 +59,20 @@ void *X509_CRL_get_ext_d2i(const X509_CRL *x, int nid, int *crit, int *idx)
 int X509_CRL_add1_ext_i2d(X509_CRL *x, int nid, void *value, int crit,
     unsigned long flags)
 {
+    /*
+     * Assume modified, sadly the underlying function does not tell us whether
+     * changes were made, or not.
+     */
+    x->crl.enc.modified = 1;
     return X509V3_add1_i2d(&x->crl.extensions, nid, value, crit, flags);
 }
 
 int X509_CRL_add_ext(X509_CRL *x, const X509_EXTENSION *ex, int loc)
 {
-    return (X509v3_add_ext(&(x->crl.extensions), ex, loc) != NULL);
+    if (X509v3_add_ext(&x->crl.extensions, ex, loc) == NULL)
+        return 0;
+    x->crl.enc.modified = 1;
+    return 1;
 }
 
 int X509_get_ext_count(const X509 *x)
@@ -84,7 +92,7 @@ int X509_get_ext_by_OBJ(const X509 *x, const ASN1_OBJECT *obj, int lastpos)
 
 int X509_get_ext_by_critical(const X509 *x, int crit, int lastpos)
 {
-    return (X509v3_get_ext_by_critical(x->cert_info.extensions, crit, lastpos));
+    return X509v3_get_ext_by_critical(x->cert_info.extensions, crit, lastpos);
 }
 
 const X509_EXTENSION *X509_get_ext(const X509 *x, int loc)

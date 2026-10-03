@@ -1,3 +1,12 @@
+/*
+ * Copyright 2023-2026 The OpenSSL Project Authors. All Rights Reserved.
+ *
+ * Licensed under the Apache License 2.0 (the "License").  You may not use
+ * this file except in compliance with the License.  You can obtain a copy
+ * in the file LICENSE in the source distribution or at
+ * https://www.openssl.org/source/license.html
+ */
+
 #ifndef OSSL_QUIC_CHANNEL_LOCAL_H
 #define OSSL_QUIC_CHANNEL_LOCAL_H
 
@@ -11,6 +20,28 @@
 #include "internal/quic_fc.h"
 #include "internal/quic_stream_map.h"
 #include "internal/quic_tls.h"
+
+/*
+ * This is a part of PATH_CHALLENGE flood [1] mitigation. This limits the
+ * number of PATH_CHALLENGE frames  QUIC stack is willing to process for
+ * connection. Local QUIC stack creates PATH_RESPONSE frame for PATH_CHALLENGE
+ * frame it receives from remote peer. The response frame is put Control Frame
+ * Queue waiting to be dispatched. The PATH_RESPONSE frame is removed from CFQ
+ * after it is dispatched. The QUIC_PATH_RESPONSE_QLEN limits the number of
+ * PATH_RESPONSE frames waiting to be dispatched. No new PATH_RESPONSE frames
+ * are inserted into CFQ if queue limit is exceeded.
+ *
+ * QUIC implementations use different limits for PATH_RESPONSE queue lengths:
+ *    quic-go defines maxPathResponses as 256
+ *    quiche from cloadflare sets DEFAULT_MAX_PATH_CHALLENGE_RX_QUEUE_LEN to 3
+ *    t-quic from tencent chooses MAX_PATH_CHALS_RECV to be 8
+ *
+ * OpenSSL here introduces QUIC_PATH_RESPONSE_QLEN as 32.
+ *
+ * [1] https://www.ietf.org/archive/id/draft-chen-quic-logical-vuln-mitigations-00.txt
+ *     (section 4.2)
+ */
+#define QUIC_PATH_RESPONSE_QLEN 32
 
 /*
  * QUIC Channel Structure
@@ -148,17 +179,27 @@ struct quic_channel_st {
     uint64_t cur_retire_prior_to;
 
     /* Transport parameter values we send to our peer. */
+    uint64_t tx_init_max_data;
     uint64_t tx_init_max_stream_data_bidi_local;
     uint64_t tx_init_max_stream_data_bidi_remote;
     uint64_t tx_init_max_stream_data_uni;
+    uint64_t tx_init_max_streams_bidi;
+    uint64_t tx_init_max_streams_uni;
     uint64_t tx_max_ack_delay; /* ms */
+    unsigned char tx_ack_delay_exp;
+    unsigned char tx_disable_active_migration;
+    uint64_t tx_active_conn_id_limit;
 
-    /* Transport parameter values received from server. */
+    /* Transport parameter values received from peer. */
+    uint64_t rx_init_max_data;
     uint64_t rx_init_max_stream_data_bidi_local;
     uint64_t rx_init_max_stream_data_bidi_remote;
     uint64_t rx_init_max_stream_data_uni;
+    uint64_t rx_init_max_streams_bidi;
+    uint64_t rx_init_max_streams_uni;
     uint64_t rx_max_ack_delay; /* ms */
     unsigned char rx_ack_delay_exp;
+    unsigned char rx_disable_active_migration;
 
     /* Diagnostic counters for testing purposes only. May roll over. */
     uint16_t diag_num_rx_ack; /* Number of ACK frames received */
@@ -188,6 +229,11 @@ struct quic_channel_st {
      * negotiated by transport parameters.
      */
     uint64_t rx_max_udp_payload_size;
+    /*
+     * Maximum payload size in bytes for datagrams received from our peer, as
+     * negotiated by transport parameters.
+     */
+    uint64_t tx_max_udp_payload_size;
     /* Maximum active CID limit, as negotiated by transport parameters. */
     uint64_t rx_active_conn_id_limit;
 
@@ -457,6 +503,18 @@ struct quic_channel_st {
 
     /* Has qlog been requested? */
     unsigned int is_tserver_ch : 1;
+    /*
+     * RFC 9000 Section 9.2.1 says:
+     *      However, an endpoint SHOULD NOT send multiple
+     *      PATH_CHALLENGE frames in a single packet.
+     * The counter here allows us to detect multiple presence
+     * of PATH_CHALLENGE frame in packet. We process only the
+     * first PATH_CHALLENGE frame found in packet. Remaining PATH_CHALLENGE
+     * frames are ignored.
+     * seen_path_challenge flag is always reset before
+     * ossl_quic_handle_frames() gets called.
+     */
+    unsigned int seen_path_challenge : 1;
 
     /* Saved error stack in case permanent error was encountered */
     ERR_STATE *err_state;
@@ -467,6 +525,21 @@ struct quic_channel_st {
 
     /* Title for qlog purposes. We own this copy. */
     char *qlog_title;
+
+    /*
+     * RX stream quality parameter.
+     */
+    QUIC_RSTREAM_QPARM *rsqp;
+
+    /*
+     * number of path responses waiting to be dispatched
+     * from control frame queue (CFQ)
+     */
+    unsigned int path_response_limit;
+    /* number of path challenge frames received */
+    unsigned int path_challenge_rx;
+    /* number of path response frames sent */
+    unsigned int path_response_tx;
 };
 
 #endif

@@ -1,23 +1,53 @@
+# 由 gen_cmake.py 自动生成，请勿手工修改
+# 支持架构: x86_64/x86/aarch64/arm，按平台选择汇编方案
 cmake_minimum_required(VERSION 3.10)
-
-project(openssl)
+project(openssl C)
 
 option(SHARED_OPENSSL "build shared openssl lib" OFF)
 
-# Include directories
+# ==================== 目标架构检测 ====================
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|amd64|AMD64)$")
+    set(OPENSSL_ARCH "x86_64")
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(i[3-6]86|x86)$")
+    set(OPENSSL_ARCH "x86")
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64|ARM64|ARMv8)$")
+    set(OPENSSL_ARCH "aarch64")
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm)$")
+    set(OPENSSL_ARCH "arm")
+else()
+    message(FATAL_ERROR "openssl: unsupported target architecture ${CMAKE_SYSTEM_PROCESSOR}")
+endif()
 
+# ==================== 平台系统宏 ====================
+if(WIN32 AND MSVC)
+    if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+        set(OPENSSL_SYS_DEFINES -DOPENSSL_SYS_WIN64A)
+    else()
+        set(OPENSSL_SYS_DEFINES -DOPENSSL_SYS_WIN32)
+    endif()
+elseif(WIN32)
+    if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+        set(OPENSSL_SYS_DEFINES -DOPENSSL_SYS_MINGW64)
+    else()
+        set(OPENSSL_SYS_DEFINES -DOPENSSL_SYS_MINGW32)
+    endif()
+elseif(APPLE)
+    set(OPENSSL_SYS_DEFINES -DOPENSSL_SYS_MACOSX)
+else()
+    set(OPENSSL_SYS_DEFINES "")
+endif()
+
+# ==================== 头文件目录 ====================
 set(OPENSSL_INCLUDES
     ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}/DEA
-    ${CMAKE_CURRENT_SOURCE_DIR}/DEA.7
-    ${CMAKE_CURRENT_SOURCE_DIR}/DEA.html
-    ${CMAKE_CURRENT_SOURCE_DIR}/DEA.pod
-    ${CMAKE_CURRENT_SOURCE_DIR}/NFO
-    ${CMAKE_CURRENT_SOURCE_DIR}/NTRODUCTION
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto
+    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/asn1
+    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/bn
+    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/conf
+    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/include
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/modes
+    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/objects
     ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/providers/common/der
     ${CMAKE_CURRENT_SOURCE_DIR}/providers/common/include
     ${CMAKE_CURRENT_SOURCE_DIR}/providers/common/include/prov
     ${CMAKE_CURRENT_SOURCE_DIR}/providers/fips/include
@@ -25,19 +55,19 @@ set(OPENSSL_INCLUDES
     ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/include
 )
 
-# crypto library
-set(crypto_SRCS
-    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/aes/aes_cbc.c
+# ==================== libcrypto 源文件 ====================
+set(OPENSSL_CRYPTO_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/aes/aes_cfb.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/aes/aes_core.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/aes/aes_ecb.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/aes/aes_ige.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/aes/aes_misc.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/aes/aes_ofb.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/aes/aes_vaes512_intrinsics.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/aes/aes_wrap.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/aligned_alloc.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/aria/aria.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/array_alloc.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/ascon/ascon_aead128.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/asn1/a_bitstr.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/asn1/a_d2i_fp.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/asn1/a_digest.c
@@ -103,6 +133,7 @@ set(crypto_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/asn1/x_spki.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/asn1/x_val.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/asn1_dsa.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/asprintf.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/async/arch/async_null.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/async/arch/async_posix.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/async/arch/async_win.c
@@ -111,7 +142,6 @@ set(crypto_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/async/async_wait.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/bf/bf_cfb64.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/bf/bf_ecb.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/bf/bf_enc.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/bf/bf_ofb64.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/bf/bf_skey.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/bio/bf_buff.c
@@ -143,7 +173,6 @@ set(crypto_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/bio/bss_sock.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/bio/ossl_core_bio.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/bn/bn_add.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/bn/bn_asm.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/bn/bn_blind.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/bn/bn_const.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/bn/bn_conv.c
@@ -178,19 +207,15 @@ set(crypto_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/bsearch.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/buffer/buf_err.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/buffer/buffer.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/camellia/camellia.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/camellia/cmll_cbc.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/camellia/cmll_cfb.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/camellia/cmll_ctr.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/camellia/cmll_ecb.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/camellia/cmll_misc.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/camellia/cmll_ofb.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/cast/c_cfb64.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/cast/c_ecb.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/cast/c_enc.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/cast/c_ofb64.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/cast/c_skey.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/chacha/chacha_enc.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/cmac/cmac.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/cmp/cmp_asn.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/cmp/cmp_client.c
@@ -291,6 +316,13 @@ set(crypto_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/dsa/dsa_prn.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/dsa/dsa_sign.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/dsa/dsa_vrf.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/dso/dso_dl.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/dso/dso_dlfcn.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/dso/dso_err.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/dso/dso_lib.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/dso/dso_openssl.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/dso/dso_vms.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/dso/dso_win32.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/ebcdic.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/ec/curve25519.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/ec/curve448/arch_32/f_impl32.c
@@ -324,6 +356,7 @@ set(crypto_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/ec/eck_prn.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/ec/ecp_mont.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/ec/ecp_nist.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/ec/ecp_nistz256.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/ec/ecp_oct.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/ec/ecp_smpl.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/ec/ecx_backend.c
@@ -354,6 +387,7 @@ set(crypto_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/evp/c_allc.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/evp/c_alld.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/evp/ctrl_params_translate.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/evp/dec_b64_avx2.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/evp/dh_ctrl.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/evp/dh_support.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/evp/digest.c
@@ -451,7 +485,6 @@ set(crypto_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/md5/md5_one.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/md5/md5_sha1.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/mem.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/mem_clr.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/mem_sec.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/ml_dsa/ml_dsa_encoders.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/ml_dsa/ml_dsa_key.c
@@ -547,6 +580,7 @@ set(crypto_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/rand/rand_pool.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/rand/rand_uniform.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/rand/randfile.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/rbtree/rbtree.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/ripemd/rmd_dgst.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/ripemd/rmd_one.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/rsa/rsa_ameth.c
@@ -575,7 +609,6 @@ set(crypto_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/rsa/rsa_x931.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/rsa/rsa_x931g.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/self_test_core.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/sha/keccak1600.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/sha/sha1_one.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/sha/sha1dgst.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/sha/sha256.c
@@ -786,13 +819,19 @@ set(crypto_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/ciphers/cipher_aes_cbc_hmac_sha_etm.c
     ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/ciphers/cipher_aes_ccm.c
     ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/ciphers/cipher_aes_ccm_hw.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/ciphers/cipher_aes_cfb_hw.c
     ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/ciphers/cipher_aes_gcm.c
     ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/ciphers/cipher_aes_gcm_hw.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/ciphers/cipher_aes_gcm_hw_ppc.c
     ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/ciphers/cipher_aes_gcm_siv.c
     ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/ciphers/cipher_aes_gcm_siv_hw.c
     ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/ciphers/cipher_aes_gcm_siv_polyval.c
     ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/ciphers/cipher_aes_hw.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/ciphers/cipher_aes_hw_aesni.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/ciphers/cipher_aes_hw_armv8.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/ciphers/cipher_aes_hw_rv32i.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/ciphers/cipher_aes_hw_rv64i.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/ciphers/cipher_aes_hw_s390x.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/ciphers/cipher_aes_hw_t4.c
     ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/ciphers/cipher_aes_ocb.c
     ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/ciphers/cipher_aes_ocb_hw.c
     ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/ciphers/cipher_aes_siv.c
@@ -807,6 +846,7 @@ set(crypto_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/ciphers/cipher_aria_gcm.c
     ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/ciphers/cipher_aria_gcm_hw.c
     ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/ciphers/cipher_aria_hw.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/ciphers/cipher_ascon_aead128.c
     ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/ciphers/cipher_camellia.c
     ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/ciphers/cipher_camellia_hw.c
     ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/ciphers/cipher_chacha20.c
@@ -861,6 +901,7 @@ set(crypto_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/kdfs/argon2.c
     ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/kdfs/hkdf.c
     ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/kdfs/hmacdrbg_kdf.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/kdfs/ikev2kdf.c
     ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/kdfs/kbkdf.c
     ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/kdfs/krb5kdf.c
     ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/kdfs/pbkdf2.c
@@ -901,7 +942,6 @@ set(crypto_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/rands/drbg_hmac.c
     ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/rands/seed_src.c
     ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/rands/seed_src_jitter.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/rands/seeding/rand_cpu_x86.c
     ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/rands/seeding/rand_tsc.c
     ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/rands/seeding/rand_unix.c
     ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/rands/seeding/rand_win.c
@@ -924,34 +964,58 @@ set(crypto_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/ssl/record/methods/tls_pad.c
 )
 
-if (WIN32)
-    set(dso_SRCS
-        ${CMAKE_CURRENT_SOURCE_DIR}/crypto/dso/dso_dl.c
-        # ${CMAKE_CURRENT_SOURCE_DIR}/crypto/dso/dso_dlfcn.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/crypto/dso/dso_err.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/crypto/dso/dso_lib.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/crypto/dso/dso_openssl.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/crypto/dso/dso_vms.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/crypto/dso/dso_win32.c
+if(OPENSSL_ARCH STREQUAL "x86_64")
+    list(APPEND OPENSSL_CRYPTO_SRCS
+        ${CMAKE_CURRENT_SOURCE_DIR}/crypto/bf/bf_enc.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/crypto/bn/asm/x86_64-gcc.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/crypto/bn/rsaz_exp.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/crypto/bn/rsaz_exp_x2.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/crypto/camellia/cmll_misc.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/crypto/sha/sha3_x4_avx512vl.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/rands/seeding/rand_cpu_x86.c
     )
-else()
-    set(dso_SRCS
-        ${CMAKE_CURRENT_SOURCE_DIR}/crypto/dso/dso_dl.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/crypto/dso/dso_dlfcn.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/crypto/dso/dso_err.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/crypto/dso/dso_lib.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/crypto/dso/dso_openssl.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/crypto/dso/dso_vms.c
-        # ${CMAKE_CURRENT_SOURCE_DIR}/crypto/dso/dso_win32.c
+elseif(OPENSSL_ARCH STREQUAL "x86")
+    list(APPEND OPENSSL_CRYPTO_SRCS
+        ${CMAKE_CURRENT_SOURCE_DIR}/crypto/sha/keccak1600.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/rands/seeding/rand_cpu_x86.c
+    )
+elseif(OPENSSL_ARCH STREQUAL "aarch64")
+    list(APPEND OPENSSL_CRYPTO_SRCS
+        ${CMAKE_CURRENT_SOURCE_DIR}/crypto/aes/aes_cbc.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/crypto/aes/aes_core.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/crypto/armcap.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/crypto/bf/bf_enc.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/crypto/bn/bn_asm.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/crypto/camellia/camellia.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/crypto/camellia/cmll_cbc.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/crypto/camellia/cmll_misc.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/crypto/ec/ecp_sm2p256.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/crypto/ec/ecp_sm2p256_table.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/rands/seeding/rand_cpu_arm64.c
+    )
+elseif(OPENSSL_ARCH STREQUAL "arm")
+    list(APPEND OPENSSL_CRYPTO_SRCS
+        ${CMAKE_CURRENT_SOURCE_DIR}/crypto/aes/aes_cbc.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/crypto/armcap.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/crypto/bf/bf_enc.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/crypto/bn/bn_asm.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/crypto/camellia/camellia.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/crypto/camellia/cmll_cbc.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/crypto/camellia/cmll_misc.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/rands/seeding/rand_cpu_x86.c
     )
 endif()
 
-# ssl library
-set(ssl_SRCS
+# ==================== libssl 源文件 ====================
+set(OPENSSL_SSL_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/ssl/bio_ssl.c
     ${CMAKE_CURRENT_SOURCE_DIR}/ssl/d1_lib.c
     ${CMAKE_CURRENT_SOURCE_DIR}/ssl/d1_msg.c
     ${CMAKE_CURRENT_SOURCE_DIR}/ssl/d1_srtp.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/ssl/d1_transcript.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/ssl/dgram_demux.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/ssl/dtls_conn_lookup.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/ssl/dtls_record_rx.c
     ${CMAKE_CURRENT_SOURCE_DIR}/ssl/ech/ech_helper.c
     ${CMAKE_CURRENT_SOURCE_DIR}/ssl/ech/ech_internal.c
     ${CMAKE_CURRENT_SOURCE_DIR}/ssl/ech/ech_ssl_apis.c
@@ -984,12 +1048,12 @@ set(ssl_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/ssl/quic/quic_record_util.c
     ${CMAKE_CURRENT_SOURCE_DIR}/ssl/quic/quic_rstream.c
     ${CMAKE_CURRENT_SOURCE_DIR}/ssl/quic/quic_rx_depack.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/ssl/quic/quic_sf_list.c
     ${CMAKE_CURRENT_SOURCE_DIR}/ssl/quic/quic_srt_gen.c
     ${CMAKE_CURRENT_SOURCE_DIR}/ssl/quic/quic_srtm.c
     ${CMAKE_CURRENT_SOURCE_DIR}/ssl/quic/quic_sstream.c
     ${CMAKE_CURRENT_SOURCE_DIR}/ssl/quic/quic_statm.c
     ${CMAKE_CURRENT_SOURCE_DIR}/ssl/quic/quic_stream_map.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/ssl/quic/quic_strm_reas.c
     ${CMAKE_CURRENT_SOURCE_DIR}/ssl/quic/quic_thread_assist.c
     ${CMAKE_CURRENT_SOURCE_DIR}/ssl/quic/quic_tls.c
     ${CMAKE_CURRENT_SOURCE_DIR}/ssl/quic/quic_tls_api.c
@@ -1047,30 +1111,414 @@ set(ssl_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/ssl/tls_srp.c
 )
 
+# ==================== 架构相关编译宏 ====================
+if(OPENSSL_ARCH STREQUAL "x86_64")
+    set(OPENSSL_CRYPTO_ASM_DEFINES
+        -DAES_ASM
+        -DBSAES_ASM
+        -DCMLL_ASM
+        -DECP_NISTZ256_ASM
+        -DGHASH_ASM
+        -DKECCAK1600_ASM
+        -DMD5_ASM
+        -DOPENSSL_BN_ASM_GF2m
+        -DOPENSSL_BN_ASM_MONT
+        -DOPENSSL_BN_ASM_MONT5
+        -DOPENSSL_CPUID_OBJ
+        -DOPENSSL_IA32_SSE2
+        -DOPENSSL_SM3_ASM
+        -DPOLY1305_ASM
+        -DSHA1_ASM
+        -DSHA256_ASM
+        -DSHA512_ASM
+        -DSM4_ASM
+        -DVPAES_ASM
+        -DX25519_ASM
+    )
+    set(OPENSSL_SSL_ASM_DEFINES
+        -DAES_ASM
+    )
+elseif(OPENSSL_ARCH STREQUAL "x86")
+    set(OPENSSL_CRYPTO_ASM_DEFINES
+        -DAES_ASM
+        -DCMLL_ASM
+        -DECP_NISTZ256_ASM
+        -DGHASH_ASM
+        -DMD5_ASM
+        -DOPENSSL_BN_ASM_GF2m
+        -DOPENSSL_BN_ASM_MONT
+        -DOPENSSL_BN_ASM_PART_WORDS
+        -DOPENSSL_CPUID_OBJ
+        -DOPENSSL_IA32_SSE2
+        -DPOLY1305_ASM
+        -DRMD160_ASM
+        -DSHA1_ASM
+        -DSHA256_ASM
+        -DSHA512_ASM
+        -DVPAES_ASM
+    )
+    set(OPENSSL_SSL_ASM_DEFINES
+        -DAES_ASM
+    )
+elseif(OPENSSL_ARCH STREQUAL "aarch64")
+    set(OPENSSL_CRYPTO_ASM_DEFINES
+        -DBSAES_ASM
+        -DECP_NISTZ256_ASM
+        -DECP_SM2P256_ASM
+        -DKECCAK1600_ASM
+        -DMD5_ASM
+        -DOPENSSL_BN_ASM_MONT
+        -DOPENSSL_CPUID_OBJ
+        -DOPENSSL_SM3_ASM
+        -DPOLY1305_ASM
+        -DSHA1_ASM
+        -DSHA256_ASM
+        -DSHA512_ASM
+        -DSM4_ASM
+        -DVPAES_ASM
+        -DVPSM4_ASM
+    )
+    set(OPENSSL_SSL_ASM_DEFINES "")
+elseif(OPENSSL_ARCH STREQUAL "arm")
+    set(OPENSSL_CRYPTO_ASM_DEFINES
+        -DAES_ASM
+        -DBSAES_ASM
+        -DECP_NISTZ256_ASM
+        -DGHASH_ASM
+        -DKECCAK1600_ASM
+        -DOPENSSL_BN_ASM_GF2m
+        -DOPENSSL_BN_ASM_MONT
+        -DOPENSSL_CPUID_OBJ
+        -DPOLY1305_ASM
+        -DSHA1_ASM
+        -DSHA256_ASM
+        -DSHA512_ASM
+    )
+    set(OPENSSL_SSL_ASM_DEFINES "")
+endif()
 
+# ==================== 汇编优化 ====================
+set(OPENSSL_CRYPTO_ASM_SRCS "")
+set(OPENSSL_SSL_ASM_SRCS "")
+
+if(OPENSSL_ARCH STREQUAL "x86_64")
+        if(WIN32 AND MSVC)
+            set(OPENSSL_PERLASM_SCHEME "nasm")
+            set(OPENSSL_ASM_LANG ASM_NASM)
+            find_program(OPENSSL_NASM_EXECUTABLE NAMES nasm nasm.exe)
+            if(NOT OPENSSL_NASM_EXECUTABLE)
+                message(FATAL_ERROR "openssl: nasm not found, required for MSVC assembly")
+            endif()
+            set(CMAKE_ASM_NASM_COMPILER "${OPENSSL_NASM_EXECUTABLE}")
+            set(CMAKE_ASM_NASM_FLAGS "${CMAKE_ASM_NASM_FLAGS} -Ox -f win64 -DNEAR")
+        elseif(WIN32)
+            set(OPENSSL_PERLASM_SCHEME "mingw64")
+            set(OPENSSL_ASM_LANG ASM)
+        elseif(APPLE)
+            set(OPENSSL_PERLASM_SCHEME "macosx")
+            set(OPENSSL_ASM_LANG ASM)
+        else()
+            set(OPENSSL_PERLASM_SCHEME "elf")
+            set(OPENSSL_ASM_LANG ASM)
+        endif()
+elseif(OPENSSL_ARCH STREQUAL "x86")
+        if(WIN32 AND MSVC)
+            set(OPENSSL_PERLASM_SCHEME "win32n")
+            set(OPENSSL_ASM_LANG ASM_NASM)
+            find_program(OPENSSL_NASM_EXECUTABLE NAMES nasm nasm.exe)
+            if(NOT OPENSSL_NASM_EXECUTABLE)
+                message(FATAL_ERROR "openssl: nasm not found, required for MSVC assembly")
+            endif()
+            set(CMAKE_ASM_NASM_COMPILER "${OPENSSL_NASM_EXECUTABLE}")
+            set(CMAKE_ASM_NASM_FLAGS "${CMAKE_ASM_NASM_FLAGS} -Ox -f win32")
+        elseif(WIN32)
+            set(OPENSSL_PERLASM_SCHEME "coff")
+            set(OPENSSL_ASM_LANG ASM)
+        elseif(APPLE)
+            set(OPENSSL_PERLASM_SCHEME "macosx")
+            set(OPENSSL_ASM_LANG ASM)
+        else()
+            set(OPENSSL_PERLASM_SCHEME "elf")
+            set(OPENSSL_ASM_LANG ASM)
+        endif()
+elseif(OPENSSL_ARCH STREQUAL "aarch64")
+        if(WIN32 AND MSVC)
+            message(FATAL_ERROR "openssl: assembly for aarch64 is not supported on this platform")
+        elseif(WIN32)
+            set(OPENSSL_PERLASM_SCHEME "win64")
+            set(OPENSSL_ASM_LANG ASM)
+        elseif(APPLE)
+            set(OPENSSL_PERLASM_SCHEME "ios64")
+            set(OPENSSL_ASM_LANG ASM)
+        else()
+            set(OPENSSL_PERLASM_SCHEME "linux64")
+            set(OPENSSL_ASM_LANG ASM)
+        endif()
+elseif(OPENSSL_ARCH STREQUAL "arm")
+        if(WIN32 AND MSVC)
+            message(FATAL_ERROR "openssl: assembly for arm is not supported on this platform")
+        elseif(WIN32)
+            message(FATAL_ERROR "openssl: assembly for arm is not supported on this platform")
+        elseif(APPLE)
+            message(FATAL_ERROR "openssl: assembly for arm is not supported on this platform")
+        else()
+            set(OPENSSL_PERLASM_SCHEME "linux32")
+            set(OPENSSL_ASM_LANG ASM)
+        endif()
+endif()
+
+enable_language(${OPENSSL_ASM_LANG})
+
+# 汇编源不参与 C 预处理，去掉 -MD/-MF 依赖参数，避免无用参数告警
+set(CMAKE_DEPFILE_FLAGS_ASM "")
+
+find_program(OPENSSL_PERL_EXECUTABLE NAMES perl perl.exe)
+if(NOT OPENSSL_PERL_EXECUTABLE)
+    message(FATAL_ERROR "openssl: perl not found, required to generate assembly")
+endif()
+
+if(OPENSSL_ARCH STREQUAL "x86_64")
+    set(OPENSSL_ASM_DEFINES
+        -DL_ENDIAN
+        -DAES_ASM
+        -DBSAES_ASM
+        -DCMLL_ASM
+        -DECP_NISTZ256_ASM
+        -DGHASH_ASM
+        -DKECCAK1600_ASM
+        -DMD5_ASM
+        -DOPENSSL_BN_ASM_GF2m
+        -DOPENSSL_BN_ASM_MONT
+        -DOPENSSL_BN_ASM_MONT5
+        -DOPENSSL_CPUID_OBJ
+        -DOPENSSL_IA32_SSE2
+        -DOPENSSL_SM3_ASM
+        -DPOLY1305_ASM
+        -DSHA1_ASM
+        -DSHA256_ASM
+        -DSHA512_ASM
+        -DSM4_ASM
+        -DVPAES_ASM
+        -DX25519_ASM
+    )
+elseif(OPENSSL_ARCH STREQUAL "x86")
+    set(OPENSSL_ASM_DEFINES
+        -DL_ENDIAN
+        -DAES_ASM
+        -DCMLL_ASM
+        -DECP_NISTZ256_ASM
+        -DGHASH_ASM
+        -DMD5_ASM
+        -DOPENSSL_BN_ASM_GF2m
+        -DOPENSSL_BN_ASM_MONT
+        -DOPENSSL_BN_ASM_PART_WORDS
+        -DOPENSSL_CPUID_OBJ
+        -DOPENSSL_IA32_SSE2
+        -DPOLY1305_ASM
+        -DRMD160_ASM
+        -DSHA1_ASM
+        -DSHA256_ASM
+        -DSHA512_ASM
+        -DVPAES_ASM
+    )
+elseif(OPENSSL_ARCH STREQUAL "aarch64")
+    set(OPENSSL_ASM_DEFINES
+        -DL_ENDIAN
+        -DBSAES_ASM
+        -DECP_NISTZ256_ASM
+        -DECP_SM2P256_ASM
+        -DKECCAK1600_ASM
+        -DMD5_ASM
+        -DOPENSSL_BN_ASM_MONT
+        -DOPENSSL_CPUID_OBJ
+        -DOPENSSL_SM3_ASM
+        -DPOLY1305_ASM
+        -DSHA1_ASM
+        -DSHA256_ASM
+        -DSHA512_ASM
+        -DSM4_ASM
+        -DVPAES_ASM
+        -DVPSM4_ASM
+    )
+elseif(OPENSSL_ARCH STREQUAL "arm")
+    set(OPENSSL_ASM_DEFINES
+        -DL_ENDIAN
+        -DAES_ASM
+        -DBSAES_ASM
+        -DECP_NISTZ256_ASM
+        -DGHASH_ASM
+        -DKECCAK1600_ASM
+        -DOPENSSL_BN_ASM_GF2m
+        -DOPENSSL_BN_ASM_MONT
+        -DOPENSSL_CPUID_OBJ
+        -DPOLY1305_ASM
+        -DSHA1_ASM
+        -DSHA256_ASM
+        -DSHA512_ASM
+    )
+endif()
+
+set(OPENSSL_ASM_DIR "${CMAKE_CURRENT_BINARY_DIR}/openssl_asm")
+set(OPENSSL_PERL_INCLUDES
+    "-I${CMAKE_CURRENT_SOURCE_DIR}"
+    "-I${CMAKE_CURRENT_SOURCE_DIR}/include"
+)
+
+macro(openssl_add_asm _list _base_rel _orig_ext _pl_rel)
+    if(WIN32 AND MSVC)
+        set(_asm_ext ".asm")
+    else()
+        set(_asm_ext "${_orig_ext}")
+    endif()
+    set(_asm_out "${OPENSSL_ASM_DIR}/${_base_rel}${_asm_ext}")
+    get_filename_component(_asm_dir "${_asm_out}" DIRECTORY)
+    add_custom_command(OUTPUT "${_asm_out}"
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${_asm_dir}"
+        COMMAND ${CMAKE_COMMAND} -E env "CC=${CMAKE_C_COMPILER}"
+                "${OPENSSL_PERL_EXECUTABLE}"
+                "${CMAKE_CURRENT_SOURCE_DIR}/${_pl_rel}"
+                ${OPENSSL_PERLASM_SCHEME}
+                ${OPENSSL_PERL_INCLUDES}
+                ${OPENSSL_ASM_DEFINES}
+                "${_asm_out}"
+        DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/${_pl_rel}"
+        COMMENT "Generating ASSEMBLY ${_base_rel}${_asm_ext}"
+        VERBATIM)
+    list(APPEND ${_list} "${_asm_out}")
+endmacro()
+
+if(OPENSSL_ARCH STREQUAL "x86_64")
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/aes/aes-cfb-avx512 .s crypto/aes/asm/aes-cfb-avx512.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/aes/aes-vaes-x86_64 .s crypto/aes/asm/aes-vaes-x86_64.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/aes/aes-x86_64 .s crypto/aes/asm/aes-x86_64.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/aes/aesni-mb-x86_64 .s crypto/aes/asm/aesni-mb-x86_64.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/aes/aesni-sha1-x86_64 .s crypto/aes/asm/aesni-sha1-x86_64.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/aes/aesni-sha256-x86_64 .s crypto/aes/asm/aesni-sha256-x86_64.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/aes/aesni-x86_64 .s crypto/aes/asm/aesni-x86_64.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/aes/aesni-xts-avx512 .s crypto/aes/asm/aesni-xts-avx512.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/aes/bsaes-x86_64 .s crypto/aes/asm/bsaes-x86_64.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/aes/vpaes-x86_64 .s crypto/aes/asm/vpaes-x86_64.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/bn/rsaz-2k-avx512 .s crypto/bn/asm/rsaz-2k-avx512.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/bn/rsaz-2k-avxifma .s crypto/bn/asm/rsaz-2k-avxifma.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/bn/rsaz-3k-avx512 .s crypto/bn/asm/rsaz-3k-avx512.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/bn/rsaz-3k-avxifma .s crypto/bn/asm/rsaz-3k-avxifma.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/bn/rsaz-4k-avx512 .s crypto/bn/asm/rsaz-4k-avx512.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/bn/rsaz-4k-avxifma .s crypto/bn/asm/rsaz-4k-avxifma.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/bn/rsaz-avx2 .s crypto/bn/asm/rsaz-avx2.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/bn/rsaz-x86_64 .s crypto/bn/asm/rsaz-x86_64.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/bn/x86_64-gf2m .s crypto/bn/asm/x86_64-gf2m.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/bn/x86_64-mont .s crypto/bn/asm/x86_64-mont.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/bn/x86_64-mont5 .s crypto/bn/asm/x86_64-mont5.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/camellia/cmll-x86_64 .s crypto/camellia/asm/cmll-x86_64.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/chacha/chacha-x86_64 .s crypto/chacha/asm/chacha-x86_64.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/ec/ecp_nistz256-x86_64 .s crypto/ec/asm/ecp_nistz256-x86_64.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/ec/x25519-x86_64 .s crypto/ec/asm/x25519-x86_64.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/md5/md5-x86_64 .s crypto/md5/asm/md5-x86_64.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/ml_dsa/ml_dsa_ntt-x86_64 .s crypto/ml_dsa/asm/ml_dsa_ntt-x86_64.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/modes/aes-gcm-avx512 .s crypto/modes/asm/aes-gcm-avx512.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/modes/aesni-gcm-x86_64 .s crypto/modes/asm/aesni-gcm-x86_64.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/modes/ghash-x86_64 .s crypto/modes/asm/ghash-x86_64.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/poly1305/poly1305-x86_64 .s crypto/poly1305/asm/poly1305-x86_64.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/sha/keccak1600-x86_64 .s crypto/sha/asm/keccak1600-x86_64.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/sha/keccak1600x4-avx512vl .s crypto/sha/asm/keccak1600x4-avx512vl.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/sha/sha1-mb-x86_64 .s crypto/sha/asm/sha1-mb-x86_64.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/sha/sha1-x86_64 .s crypto/sha/asm/sha1-x86_64.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/sha/sha256-mb-x86_64 .s crypto/sha/asm/sha256-mb-x86_64.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/sha/sha256-x86_64 .s crypto/sha/asm/sha512-x86_64.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/sha/sha512-x86_64 .s crypto/sha/asm/sha512-x86_64.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/sm3/sm3-x86_64 .S crypto/sm3/asm/sm3-x86_64.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/sm4/sm4-x86_64 .S crypto/sm4/asm/sm4-x86_64.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/x86_64cpuid .s crypto/x86_64cpuid.pl)
+elseif(OPENSSL_ARCH STREQUAL "x86")
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/aes/aes-586 .S crypto/aes/asm/aes-586.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/aes/aesni-x86 .S crypto/aes/asm/aesni-x86.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/aes/vpaes-x86 .S crypto/aes/asm/vpaes-x86.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/bf/bf-586 .S crypto/bf/asm/bf-586.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/bn/bn-586 .S crypto/bn/asm/bn-586.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/bn/co-586 .S crypto/bn/asm/co-586.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/bn/x86-gf2m .S crypto/bn/asm/x86-gf2m.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/bn/x86-mont .S crypto/bn/asm/x86-mont.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/camellia/cmll-x86 .S crypto/camellia/asm/cmll-x86.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/chacha/chacha-x86 .S crypto/chacha/asm/chacha-x86.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/ec/ecp_nistz256-x86 .S crypto/ec/asm/ecp_nistz256-x86.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/md5/md5-586 .S crypto/md5/asm/md5-586.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/modes/ghash-x86 .S crypto/modes/asm/ghash-x86.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/poly1305/poly1305-x86 .S crypto/poly1305/asm/poly1305-x86.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/ripemd/rmd-586 .S crypto/ripemd/asm/rmd-586.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/sha/sha1-586 .S crypto/sha/asm/sha1-586.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/sha/sha256-586 .S crypto/sha/asm/sha256-586.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/sha/sha512-586 .S crypto/sha/asm/sha512-586.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/x86cpuid .S crypto/x86cpuid.pl)
+elseif(OPENSSL_ARCH STREQUAL "aarch64")
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/aes/aes-sha1-armv8 .S crypto/aes/asm/aes-sha1-armv8.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/aes/aes-sha256-armv8 .S crypto/aes/asm/aes-sha256-armv8.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/aes/aes-sha512-armv8 .S crypto/aes/asm/aes-sha512-armv8.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/aes/aesv8-armx .S crypto/aes/asm/aesv8-armx.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/aes/bsaes-armv8 .S crypto/aes/asm/bsaes-armv8.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/aes/vpaes-armv8 .S crypto/aes/asm/vpaes-armv8.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/arm64cpuid .S crypto/arm64cpuid.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/bn/armv8-mont .S crypto/bn/asm/armv8-mont.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/chacha/chacha-armv8 .S crypto/chacha/asm/chacha-armv8.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/chacha/chacha-armv8-sve .S crypto/chacha/asm/chacha-armv8-sve.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/ec/ecp_nistz256-armv8 .S crypto/ec/asm/ecp_nistz256-armv8.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/ec/ecp_sm2p256-armv8 .S crypto/ec/asm/ecp_sm2p256-armv8.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/md5/md5-aarch64 .S crypto/md5/asm/md5-aarch64.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/modes/aes-gcm-armv8-unroll8_64 .S crypto/modes/asm/aes-gcm-armv8-unroll8_64.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/modes/aes-gcm-armv8_64 .S crypto/modes/asm/aes-gcm-armv8_64.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/modes/ghashv8-armx .S crypto/modes/asm/ghashv8-armx.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/poly1305/poly1305-armv8 .S crypto/poly1305/asm/poly1305-armv8.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/poly1305/poly1305-armv9-sve2 .S crypto/poly1305/asm/poly1305-armv9-sve2.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/sha/keccak1600-armv8 .S crypto/sha/asm/keccak1600-armv8.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/sha/sha1-armv8 .S crypto/sha/asm/sha1-armv8.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/sha/sha256-armv8 .S crypto/sha/asm/sha512-armv8.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/sha/sha512-armv8 .S crypto/sha/asm/sha512-armv8.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/sm3/sm3-armv8 .S crypto/sm3/asm/sm3-armv8.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/sm4/sm4-armv8 .S crypto/sm4/asm/sm4-armv8.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/sm4/vpsm4-armv8 .S crypto/sm4/asm/vpsm4-armv8.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/sm4/vpsm4_ex-armv8 .S crypto/sm4/asm/vpsm4_ex-armv8.pl)
+elseif(OPENSSL_ARCH STREQUAL "arm")
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/aes/aes-armv4 .S crypto/aes/asm/aes-armv4.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/aes/aesv8-armx .S crypto/aes/asm/aesv8-armx.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/aes/bsaes-armv7 .S crypto/aes/asm/bsaes-armv7.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/armv4cpuid .S crypto/armv4cpuid.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/bn/armv4-gf2m .S crypto/bn/asm/armv4-gf2m.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/bn/armv4-mont .S crypto/bn/asm/armv4-mont.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/chacha/chacha-armv4 .S crypto/chacha/asm/chacha-armv4.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/ec/ecp_nistz256-armv4 .S crypto/ec/asm/ecp_nistz256-armv4.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/modes/ghash-armv4 .S crypto/modes/asm/ghash-armv4.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/modes/ghashv8-armx .S crypto/modes/asm/ghashv8-armx.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/poly1305/poly1305-armv4 .S crypto/poly1305/asm/poly1305-armv4.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/sha/keccak1600-armv4 .S crypto/sha/asm/keccak1600-armv4.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/sha/sha1-armv4-large .S crypto/sha/asm/sha1-armv4-large.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/sha/sha256-armv4 .S crypto/sha/asm/sha256-armv4.pl)
+    openssl_add_asm(OPENSSL_CRYPTO_ASM_SRCS crypto/sha/sha512-armv4 .S crypto/sha/asm/sha512-armv4.pl)
+endif()
+
+# ==================== 目标 ====================
 if (SHARED_OPENSSL)
-    add_library(crypto SHARED ${crypto_SRCS} ${dso_SRCS})
-    add_library(ssl SHARED ${ssl_SRCS})
+    add_library(crypto SHARED ${OPENSSL_CRYPTO_SRCS} ${OPENSSL_CRYPTO_ASM_SRCS})
+    add_library(ssl SHARED ${OPENSSL_SSL_SRCS} ${OPENSSL_SSL_ASM_SRCS})
 else()
-    add_library(crypto STATIC ${crypto_SRCS} ${dso_SRCS})
-    add_library(ssl STATIC ${ssl_SRCS})
+    add_library(crypto STATIC ${OPENSSL_CRYPTO_SRCS} ${OPENSSL_CRYPTO_ASM_SRCS})
+    add_library(ssl STATIC ${OPENSSL_SSL_SRCS} ${OPENSSL_SSL_ASM_SRCS})
 endif()
 
 set_target_properties(crypto PROPERTIES FOLDER "third_party/openssl")
 set_target_properties(ssl PROPERTIES FOLDER "third_party/openssl")
 
-target_include_directories(crypto
-    PUBLIC
-        ${OPENSSL_INCLUDES}
-)
+target_include_directories(crypto PUBLIC ${OPENSSL_INCLUDES})
+target_include_directories(ssl PUBLIC ${OPENSSL_INCLUDES})
 
-target_include_directories(ssl
-    PUBLIC
-        ${OPENSSL_INCLUDES}
-)
+# 编译宏仅应用于 C 源：汇编源不参与 C 预处理，接收 -D 会触发
+# -Wunused-command-line-argument；INTERFACE 部分仍向下游使用者传播。
+function(openssl_target_defines _target)
+    if(ARGC GREATER 1)
+        target_compile_definitions(${_target} INTERFACE ${ARGN})
+        target_compile_definitions(${_target} PRIVATE "$<$<COMPILE_LANGUAGE:C>:${ARGN}>")
+    endif()
+endfunction()
 
-target_compile_definitions(crypto PUBLIC
-    -DOPENSSL_NO_ASM
+openssl_target_defines(crypto
     -DOPENSSL_NO_ASYNC
     -DOPENSSL_NO_ENGINE
     -DOPENSSL_NO_RC1
@@ -1086,48 +1534,41 @@ target_compile_definitions(crypto PUBLIC
     -DENGINESDIR=""
     -DMODULESDIR=""
     -DWIN32_LEAN_AND_MEAN
+    ${OPENSSL_SYS_DEFINES}
+    ${OPENSSL_CRYPTO_ASM_DEFINES}
 )
 
-# Define platform-specific macros
+openssl_target_defines(ssl -DOPENSSL_NO_ENGINE)
+openssl_target_defines(ssl ${OPENSSL_SSL_ASM_DEFINES})
 
-target_compile_definitions(ssl PUBLIC -DOPENSSL_NO_ENGINE)
-target_compile_definitions(ssl INTERFACE -DOPENSSL_NO_ENGINE)
-
-# 桌面端不支持 32 位构建, Android 32 位 (armeabi-v7a/x86) 仍然支持.
-if(CMAKE_SIZEOF_VOID_P EQUAL 4 AND NOT ANDROID)
-    message(FATAL_ERROR "32-bit builds are not supported !!!")
+# 上层目录级 add_definitions 注入的 -D 对纯汇编无意义，
+# clang 会报无用参数告警，这里只针对 ASM 语言屏蔽
+if(CMAKE_ASM_COMPILER_ID MATCHES "Clang")
+    target_compile_options(crypto PRIVATE $<$<COMPILE_LANGUAGE:ASM>:-Wno-unused-command-line-argument>)
+    target_compile_options(ssl PRIVATE $<$<COMPILE_LANGUAGE:ASM>:-Wno-unused-command-line-argument>)
 endif()
 
-if (APPLE)
-    target_compile_definitions(crypto PRIVATE -DASYNC_NULL)
+if(CMAKE_SIZEOF_VOID_P EQUAL 4 AND NOT ANDROID)
+    message(FATAL_ERROR "openssl: 32-bit builds are only supported on Android")
 endif()
 
 target_link_libraries(crypto ${CMAKE_THREAD_LIBS_INIT})
-
-if(NOT MSVC AND NOT APPLE)
-    target_link_libraries(crypto PUBLIC)
-endif()
-
 if(MINGW)
     target_link_libraries(crypto PUBLIC ws2_32)
 endif()
-
 if (MSVC)
-    target_compile_definitions(crypto PUBLIC -DDSO_WIN32 -DOPENSSL_SYS_WIN64 -DL_ENDIAN)
+    openssl_target_defines(crypto -DDSO_WIN32 -DOPENSSL_SYS_WIN64 -DL_ENDIAN)
     target_link_libraries(crypto PUBLIC bcrypt.lib crypt32.lib)
 endif()
 
 set(OPENSSL_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include PARENT_SCOPE)
-
 set(OPENSSL_LIBRARIES crypto ssl PARENT_SCOPE)
 set(OPENSSL_FOUND TRUE PARENT_SCOPE)
-
+set(OpenSSL_FOUND TRUE PARENT_SCOPE)
+set(OPENSSL_VERSION "4.2.0-dev" PARENT_SCOPE)
 set(LIB_EAY_LIBRARY crypto PARENT_SCOPE)
 set(SSL_EAY_LIBRARY ssl PARENT_SCOPE)
-
 set(OPENSSL_SSL_LIBRARY ssl PARENT_SCOPE)
 set(OPENSSL_CRYPTO_LIBRARY crypto PARENT_SCOPE)
-
 add_library(OpenSSL::Crypto ALIAS crypto)
 add_library(OpenSSL::SSL ALIAS ssl)
-

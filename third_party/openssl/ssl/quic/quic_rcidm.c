@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-2024 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2023-2026 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -191,7 +191,7 @@ struct quic_rcidm_st {
     uint64_t retire_prior_to;
 
     /* (SORT BY seq_num ASC) -> (RCID *) */
-    PRIORITY_QUEUE_OF(RCID) * rcids;
+    PRIORITY_QUEUE_OF(RCID) *rcids;
 
     /*
      * Current RCID object we are using. This may differ from the first item in
@@ -270,8 +270,11 @@ static void rcidm_check_rcid(QUIC_RCIDM *rcidm, RCID *rcid)
     assert(rcid->state != RCID_STATE_RETIRING || rcidm->num_retiring > 0);
 }
 
-static int rcid_cmp(const RCID *a, const RCID *b)
+static int rcid_cmp(const void *av, const void *bv)
 {
+    const RCID *a = av;
+    const RCID *b = bv;
+
     if (a->seq_num < b->seq_num)
         return -1;
     if (a->seq_num > b->seq_num)
@@ -311,8 +314,8 @@ void ossl_quic_rcidm_free(QUIC_RCIDM *rcidm)
     while ((rcid = ossl_pqueue_RCID_pop(rcidm->rcids)) != NULL)
         OPENSSL_free(rcid);
 
-    OSSL_LIST_FOREACH_DELSAFE(rcid, rnext, retiring, &rcidm->retiring_list)
-    OPENSSL_free(rcid);
+    OSSL_LIST_FOREACH_DELSAFE (rcid, rnext, retiring, &rcidm->retiring_list)
+        OPENSSL_free(rcid);
 
     ossl_pqueue_RCID_free(rcidm->rcids);
     OPENSSL_free(rcidm);

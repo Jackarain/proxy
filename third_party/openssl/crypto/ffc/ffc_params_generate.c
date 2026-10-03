@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2025 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2019-2026 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -46,7 +46,8 @@ static int ffc_validate_LN(size_t L, size_t N, int type, int verify)
         if (L == 2048 && (N == 224 || N == 256))
             return 112;
 #ifndef OPENSSL_NO_DH
-        ERR_raise(ERR_LIB_DH, DH_R_BAD_FFC_PARAMETERS);
+        ERR_raise_data(ERR_LIB_DH, DH_R_BAD_FFC_PARAMETERS,
+            "(L, N)=(%zu, %zu) should be (2048, 224) or (2048, 256)", L, N);
 #endif
     } else if (type == FFC_PARAM_TYPE_DSA) {
         /* Valid DSA L,N parameters from FIPS 186-4 Section 4.2 */
@@ -58,7 +59,10 @@ static int ffc_validate_LN(size_t L, size_t N, int type, int verify)
         if (L == 3072 && N == 256)
             return 128;
 #ifndef OPENSSL_NO_DSA
-        ERR_raise(ERR_LIB_DSA, DSA_R_BAD_FFC_PARAMETERS);
+        ERR_raise_data(ERR_LIB_DSA, DSA_R_BAD_FFC_PARAMETERS,
+            "(L, N)=(%zu, %zu) should be (1024, 160) (for verification only), "
+            "(2048, 224), (2048, 256), or (3072, 256)",
+            L, N);
 #endif
     }
     return 0;
@@ -74,9 +78,19 @@ static int ffc_validate_LN(size_t L, size_t N, int type, int verify)
         if (L == 2048 && (N == 224 || N == 256))
             return 112;
 #ifndef OPENSSL_NO_DH
-        ERR_raise(ERR_LIB_DH, DH_R_BAD_FFC_PARAMETERS);
+        ERR_raise_data(ERR_LIB_DH, DH_R_BAD_FFC_PARAMETERS,
+            "(L, N)=(%zu, %zu) should be (1024, 160), (2048, 224), or "
+            "(2048, 256)",
+            L, N);
 #endif
     } else if (type == FFC_PARAM_TYPE_DSA) {
+        if (N > 512) {
+#ifndef OPENSSL_NO_DSA
+            ERR_raise_data(ERR_LIB_DSA, DSA_R_BAD_FFC_PARAMETERS,
+                "N is %zu, but the maximum supported N is 512", N);
+#endif
+            return 0;
+        }
         if (L >= 3072 && N >= 256)
             return 128;
         if (L >= 2048 && N >= 224)
@@ -84,7 +98,8 @@ static int ffc_validate_LN(size_t L, size_t N, int type, int verify)
         if (L >= 1024 && N >= 160)
             return 80;
 #ifndef OPENSSL_NO_DSA
-        ERR_raise(ERR_LIB_DSA, DSA_R_BAD_FFC_PARAMETERS);
+        ERR_raise_data(ERR_LIB_DSA, DSA_R_BAD_FFC_PARAMETERS,
+            "(L, N)=(%zu, %zu) should be at least (1024, 160)", L, N);
 #endif
     }
     return 0;
@@ -259,7 +274,7 @@ static int generate_p(BN_CTX *ctx, const EVP_MD *evpmd, int max_counter, int n,
          * X = W + 2^(L-1) where W < 2^(L-1)
          */
         if (!BN_mask_bits(W, L - 1)
-            || !BN_copy(X, W)
+            || BN_copy(X, W) == NULL
             || !BN_add(X, X, test)
             /*
              * A.1.1.2 Step (11.4) AND

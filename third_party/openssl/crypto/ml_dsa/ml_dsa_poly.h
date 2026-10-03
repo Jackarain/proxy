@@ -1,18 +1,45 @@
 /*
- * Copyright 2024-2025 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2024-2026 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
  * in the file LICENSE in the source distribution or at
  * https://www.openssl.org/source/license.html
  */
+#if !defined(OSSL_LIBCRYPTO_ML_DSA_ML_DSA_POLY_H)
+#define OSSL_LIBCRYPTO_ML_DSA_ML_DSA_POLY_H
+
 #include <openssl/crypto.h>
+
+#include "internal/common.h"
+#include "ml_dsa_local.h"
 
 #define ML_DSA_NUM_POLY_COEFFICIENTS 256
 
-/* Polynomial object with 256 coefficients. The coefficients are unsigned 32 bits */
+/*
+ * Polynomial object with 256 coefficients.  The coefficients are unsigned
+ * 32-bit integers.
+ *
+ * ALIGN16 is applied unconditionally on s390x builds that include the VX
+ * vector object (OPENSSL_ML_DSA_S390X && __s390x__).  This matches the guard
+ * used in ml_dsa_local.h and ml_dsa_ntt.c so that every translation unit
+ * (including ml_dsa_matrix.c) sees _Alignof(POLY) == 16 and allocates stack
+ * objects (e.g. the local `product` in ossl_ml_dsa_matrix_mult_vector) with
+ * the correct 16-byte alignment required by ossl_poly_ntt_mult_scalar_vec128.
+ *
+ * Using VX_COMPILER_SUPPORT_VEC128 here was incorrect: that macro is only
+ * defined inside ml_dsa_ntt_vec128.c (a separate translation unit compiled
+ * with -march=z13), so baseline TUs would see _Alignof(POLY) == 4 and pass
+ * misaligned pointers to the vector implementation.
+ */
 struct poly_st {
+#if defined(OPENSSL_ML_DSA_S390X) && defined(__s390x__)
+    ALIGN16 uint32_t coeff[ML_DSA_NUM_POLY_COEFFICIENTS];
+#elif defined(_ARCH_PPC64)
+    ALIGN16 uint32_t coeff[ML_DSA_NUM_POLY_COEFFICIENTS];
+#else
     uint32_t coeff[ML_DSA_NUM_POLY_COEFFICIENTS];
+#endif
 };
 
 static ossl_inline ossl_unused void
@@ -182,3 +209,5 @@ poly_max_signed(const POLY *p, uint32_t *mx)
         *mx = maximum(*mx, abs);
     }
 }
+
+#endif /* !defined(OSSL_LIBCRYPTO_ML_DSA_ML_DSA_POLY_H) */

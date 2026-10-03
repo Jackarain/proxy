@@ -348,9 +348,8 @@ static int ec_asn1_group2curve(const EC_GROUP *group, X9_62_CURVE *curve)
                 ERR_raise(ERR_LIB_EC, ERR_R_ASN1_LIB);
                 goto err;
             }
-        ossl_asn1_string_set_bits_left(curve->seed, 0);
-        if (!ASN1_BIT_STRING_set(curve->seed, group->seed,
-                (int)group->seed_len)) {
+        if (!ASN1_BIT_STRING_set1(curve->seed, group->seed,
+                (int)group->seed_len, 0)) {
             ERR_raise(ERR_LIB_EC, ERR_R_ASN1_LIB);
             goto err;
         }
@@ -967,9 +966,10 @@ EC_KEY *d2i_ECPrivateKey(EC_KEY **a, const unsigned char **in, long len)
 
     if (priv_key->privateKey) {
         ASN1_OCTET_STRING *pkey = priv_key->privateKey;
-        if (EC_KEY_oct2priv(ret, ASN1_STRING_get0_data(pkey),
-                ASN1_STRING_length(pkey))
-            == 0)
+        size_t pkey_len = ASN1_STRING_get_length(pkey);
+        if (pkey_len > INT_MAX)
+            goto err;
+        if (EC_KEY_oct2priv(ret, ASN1_STRING_get0_data(pkey), (int)pkey_len) == 0)
             goto err;
     } else {
         ERR_raise(ERR_LIB_EC, EC_R_MISSING_PRIVATE_KEY);
@@ -988,11 +988,13 @@ EC_KEY *d2i_ECPrivateKey(EC_KEY **a, const unsigned char **in, long len)
 
     if (priv_key->publicKey) {
         const unsigned char *pub_oct;
-        int pub_oct_len;
+        size_t pub_oct_len;
 
         pub_oct = ASN1_STRING_get0_data(priv_key->publicKey);
-        pub_oct_len = ASN1_STRING_length(priv_key->publicKey);
-        if (!EC_KEY_oct2key(ret, pub_oct, pub_oct_len, NULL)) {
+        pub_oct_len = ASN1_STRING_get_length(priv_key->publicKey);
+        if (pub_oct_len > INT_MAX)
+            goto err;
+        if (!EC_KEY_oct2key(ret, pub_oct, (int)pub_oct_len, NULL)) {
             ERR_raise(ERR_LIB_EC, ERR_R_EC_LIB);
             goto err;
         }
@@ -1064,14 +1066,14 @@ int i2d_ECPrivateKey(const EC_KEY *a, unsigned char **out)
             goto err;
         }
 
-        publen = EC_KEY_key2buf(a, a->conv_form, &pub, NULL);
+        publen = EC_KEY_key2buf(a, EC_KEY_get_conv_form(a), &pub, NULL);
 
         if (publen == 0 || publen > INT_MAX) {
             ERR_raise(ERR_LIB_EC, ERR_R_EC_LIB);
             goto err;
         }
 
-        ossl_asn1_string_set_bits_left(priv_key->publicKey, 0);
+        ossl_asn1_bit_string_set_unused_bits(priv_key->publicKey, 0);
         ASN1_STRING_set0(priv_key->publicKey, pub, (int)publen);
         pub = NULL;
     }
@@ -1085,7 +1087,7 @@ err:
     OPENSSL_clear_free(priv, privlen);
     OPENSSL_free(pub);
     EC_PRIVATEKEY_free(priv_key);
-    return (ok ? ret : 0);
+    return ok ? ret : 0;
 }
 
 int i2d_ECParameters(const EC_KEY *a, unsigned char **out)
@@ -1165,7 +1167,7 @@ int i2o_ECPublicKey(const EC_KEY *a, unsigned char **out)
     }
 
     buf_len = EC_POINT_point2oct(a->group, a->pub_key,
-        a->conv_form, NULL, 0, NULL);
+        EC_KEY_get_conv_form(a), NULL, 0, NULL);
 
     if (buf_len > INT_MAX) {
         ERR_raise(ERR_LIB_EC, ERR_R_PASSED_INVALID_ARGUMENT);
@@ -1180,7 +1182,7 @@ int i2o_ECPublicKey(const EC_KEY *a, unsigned char **out)
             return 0;
         new_buffer = 1;
     }
-    if (!EC_POINT_point2oct(a->group, a->pub_key, a->conv_form,
+    if (!EC_POINT_point2oct(a->group, a->pub_key, EC_KEY_get_conv_form(a),
             *out, buf_len, NULL)) {
         ERR_raise(ERR_LIB_EC, ERR_R_EC_LIB);
         if (new_buffer) {

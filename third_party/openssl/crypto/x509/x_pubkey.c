@@ -1,5 +1,5 @@
 /*
- * Copyright 1995-2025 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 1995-2026 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -199,8 +199,19 @@ static int x509_pubkey_ex_d2i_ex(ASN1_VALUE **pval,
         }
         p = in_saved;
 
-        if (OBJ_obj2txt(txtoidname, sizeof(txtoidname),
-                pubkey->algor->algorithm, 0)
+        /*
+         * TPM 1.2 Endorsement Key certificates use NID_rsaesOaep in the
+         * SPKI AlgorithmIdentifier with a plain RSAPublicKey body, per
+         * TCG Credential Profiles V1.2 section 3.2.7.  Map the OID to
+         * "RSA" here so the provider decoder is selected; the OAEP
+         * AlgorithmIdentifier parameters are not interpreted.  Keep
+         * this in sync with x509_pubkey_decode() and
+         * ossl_spki2typespki_der_decode().
+         */
+        if (OBJ_obj2nid(pubkey->algor->algorithm) == NID_rsaesOaep) {
+            OPENSSL_strlcpy(txtoidname, "RSA", sizeof(txtoidname));
+        } else if (OBJ_obj2txt(txtoidname, sizeof(txtoidname),
+                       pubkey->algor->algorithm, 0)
             <= 0) {
             ERR_clear_last_mark();
             goto end;
@@ -222,7 +233,7 @@ static int x509_pubkey_ex_d2i_ex(ASN1_VALUE **pval,
                      * bytes.
                      */
                     ERR_clear_last_mark();
-                    ERR_raise(ERR_LIB_ASN1, EVP_R_DECODE_ERROR);
+                    ERR_raise(ERR_LIB_ASN1, ASN1_R_DECODE_ERROR);
                     goto end;
                 }
             }
@@ -269,7 +280,7 @@ X509_PUBKEY *X509_PUBKEY_new_ex(OSSL_LIB_CTX *libctx, const char *propq)
 {
     X509_PUBKEY *pubkey = NULL;
 
-    pubkey = (X509_PUBKEY *)ASN1_item_new_ex(X509_PUBKEY_it(), libctx, propq);
+    pubkey = (X509_PUBKEY *)ASN1_item_new_ex(ASN1_ITEM_rptr(X509_PUBKEY), libctx, propq);
     if (!x509_pubkey_set0_libctx(pubkey, libctx, propq)) {
         X509_PUBKEY_free(pubkey);
         pubkey = NULL;
@@ -295,9 +306,8 @@ X509_PUBKEY *X509_PUBKEY_dup(const X509_PUBKEY *a)
     }
     if ((pubkey->algor = X509_ALGOR_dup(a->algor)) == NULL
         || (pubkey->public_key = ASN1_BIT_STRING_new()) == NULL
-        || !ASN1_BIT_STRING_set(pubkey->public_key,
-            a->public_key->data,
-            a->public_key->length)) {
+        || !ASN1_BIT_STRING_set1(pubkey->public_key,
+            a->public_key->data, a->public_key->length, 0)) {
         x509_pubkey_ex_free((ASN1_VALUE **)&pubkey,
             ASN1_ITEM_rptr(X509_PUBKEY_INTERNAL));
         ERR_raise(ERR_LIB_X509, ERR_R_ASN1_LIB);
@@ -409,6 +419,16 @@ static int x509_pubkey_decode(EVP_PKEY **ppkey, const X509_PUBKEY *key)
     nid = OBJ_obj2nid(key->algor->algorithm);
     if (!key->flag_force_legacy)
         return 0;
+
+    /*
+     * NID_rsaesOaep uses the same underlying RSAPublicKey body as
+     * NID_rsaEncryption (TCG Credential Profiles V1.2 section 3.2.7).
+     * Remap so EVP_PKEY_set_type() below finds the RSA ameth.  Keep
+     * this in sync with x509_pubkey_ex_d2i_ex() and
+     * ossl_spki2typespki_der_decode().
+     */
+    if (nid == NID_rsaesOaep)
+        nid = NID_rsaEncryption;
 
     pkey = EVP_PKEY_new();
     if (pkey == NULL) {
@@ -999,7 +1019,7 @@ void X509_PUBKEY_set0_public_key(X509_PUBKEY *pub,
     unsigned char *penc, int penclen)
 {
     ASN1_STRING_set0(pub->public_key, penc, penclen);
-    ossl_asn1_string_set_bits_left(pub->public_key, 0);
+    ossl_asn1_bit_string_set_unused_bits(pub->public_key, 0);
 }
 
 int X509_PUBKEY_set0_param(X509_PUBKEY *pub, ASN1_OBJECT *aobj,

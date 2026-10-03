@@ -73,6 +73,20 @@ end:
     return ret;
 }
 
+/*
+ * @brief Fetch digest algorithms based on a propq.
+ * For the import case ossl_ml_dsa_key_new() gets passed a NULL propq,
+ * so the propq is optionally deferred to the import using OSSL_PARAM.
+ */
+int ossl_ml_dsa_key_fetch_digests(ML_DSA_KEY *key, const char *propq)
+{
+    EVP_MD_free(key->shake128_md);
+    EVP_MD_free(key->shake256_md);
+    key->shake128_md = EVP_MD_fetch(key->libctx, "SHAKE-128", propq);
+    key->shake256_md = EVP_MD_fetch(key->libctx, "SHAKE-256", propq);
+    return (key->shake128_md != NULL && key->shake256_md != NULL);
+}
+
 /**
  * @brief Create a new ML_DSA_KEY object
  *
@@ -95,9 +109,7 @@ ML_DSA_KEY *ossl_ml_dsa_key_new(OSSL_LIB_CTX *libctx, const char *propq,
         ret->libctx = libctx;
         ret->params = params;
         ret->prov_flags = ML_DSA_KEY_PROV_FLAGS_DEFAULT;
-        ret->shake128_md = EVP_MD_fetch(libctx, "SHAKE-128", propq);
-        ret->shake256_md = EVP_MD_fetch(libctx, "SHAKE-256", propq);
-        if (ret->shake128_md == NULL || ret->shake256_md == NULL)
+        if (!ossl_ml_dsa_key_fetch_digests(ret, propq))
             goto err;
     }
     return ret;
@@ -281,7 +293,7 @@ int ossl_ml_dsa_key_equal(const ML_DSA_KEY *key1, const ML_DSA_KEY *key2,
         if (!key_checked
             && (selection & OSSL_KEYMGMT_SELECT_PRIVATE_KEY) != 0) {
             if (key1->priv_encoding != NULL && key2->priv_encoding != NULL) {
-                if (memcmp(key1->priv_encoding, key2->priv_encoding,
+                if (CRYPTO_memcmp(key1->priv_encoding, key2->priv_encoding,
                         key1->params->sk_len)
                     != 0)
                     return 0;
@@ -320,26 +332,44 @@ int ossl_ml_dsa_key_has(const ML_DSA_KEY *key, int selection)
  * @returns 1 on success, or 0 on failure.
  */
 static int public_from_private(const ML_DSA_KEY *key, EVP_MD_CTX *md_ctx,
-    VECTOR *t1, VECTOR *t0)
+    const OSSL_ML_DSA_SAMPLE_OPS *sample_ops, VECTOR *t1, VECTOR *t0)
 {
     int ret = 0;
     const ML_DSA_PARAMS *params = key->params;
     uint32_t k = (uint32_t)params->k, l = (uint32_t)params->l;
     POLY *polys;
+    void *polys_freeptr;
     MATRIX a_ntt;
     VECTOR s1_ntt;
     VECTOR t;
+#if defined(OPENSSL_ML_DSA_S390X)
+#define POLY_ALIGN 16
+    size_t polys_bytes = (k + l + (size_t)k * l) * sizeof(*polys)
+        + sizeof(void *) + (POLY_ALIGN - 1);
+    uint8_t *raw = OPENSSL_malloc(polys_bytes);
+    uintptr_t addr;
 
-    polys = OPENSSL_malloc_array(k + l + k * l, sizeof(*polys));
+    if (raw == NULL)
+        return 0;
+    addr = ((uintptr_t)raw + sizeof(void *) + (POLY_ALIGN - 1))
+        & ~(uintptr_t)(POLY_ALIGN - 1);
+    *(void **)((uint8_t *)(void *)addr - sizeof(void *)) = raw;
+    polys = (POLY *)(void *)addr;
+    polys_freeptr = raw;
+#undef POLY_ALIGN
+#else
+    polys = OPENSSL_malloc_array(k + l + (size_t)k * l, sizeof(*polys));
+    polys_freeptr = polys;
     if (polys == NULL)
         return 0;
+#endif
 
     vector_init(&t, polys, k);
     vector_init(&s1_ntt, t.poly + k, l);
     matrix_init(&a_ntt, s1_ntt.poly + l, k, l);
 
     /* Using rho generate A' = A in NTT form */
-    if (!matrix_expand_A(md_ctx, key->shake128_md, key->rho, &a_ntt))
+    if (!sample_ops->matrix_expand_A(md_ctx, key->shake128_md, key->rho, &a_ntt))
         goto err;
 
     /* t = NTT_inv(A' * NTT(s1)) + s2 */
@@ -353,17 +383,23 @@ static int public_from_private(const ML_DSA_KEY *key, EVP_MD_CTX *md_ctx,
     /* Compress t */
     vector_power2_round(&t, t1, t0);
 
-    /* Zeroize secret */
-    vector_zero(&s1_ntt);
     ret = 1;
 err:
-    OPENSSL_free(polys);
+    /*
+     * The low bits of |t| are private and |s1_ntt| is secret, wipe both.
+     * The trailing |a_ntt| matrix is not wiped: per FIPS 204 section 3.6.3
+     * the matrix A is easily computed from the public key and does not
+     * require any special protections.
+     */
+    OPENSSL_cleanse(polys, (k + l) * sizeof(*polys));
+    OPENSSL_free(polys_freeptr);
     return ret;
 }
 
 int ossl_ml_dsa_key_public_from_private(ML_DSA_KEY *key)
 {
     int ret = 0;
+    const OSSL_ML_DSA_SAMPLE_OPS *sample_ops = ossl_ml_dsa_sample_ops();
     VECTOR t0;
     EVP_MD_CTX *md_ctx = NULL;
 
@@ -371,12 +407,13 @@ int ossl_ml_dsa_key_public_from_private(ML_DSA_KEY *key)
         return 0;
     ret = ((md_ctx = EVP_MD_CTX_new()) != NULL)
         && ossl_ml_dsa_key_pub_alloc(key) /* allocate space for t1 */
-        && public_from_private(key, md_ctx, &key->t1, &t0)
+        && public_from_private(key, md_ctx, sample_ops, &key->t1, &t0)
         && vector_equal(&t0, &key->t0) /* compare the generated t0 to the expected */
         && ossl_ml_dsa_pk_encode(key)
         && shake_xof(md_ctx, key->shake256_md,
             key->pub_encoding, key->params->pk_len,
             key->tr, sizeof(key->tr));
+    vector_zero(&t0);
     vector_free(&t0);
     EVP_MD_CTX_free(md_ctx);
     return ret;
@@ -385,30 +422,54 @@ int ossl_ml_dsa_key_public_from_private(ML_DSA_KEY *key)
 int ossl_ml_dsa_key_pairwise_check(const ML_DSA_KEY *key)
 {
     int ret = 0;
+    const OSSL_ML_DSA_SAMPLE_OPS *sample_ops = ossl_ml_dsa_sample_ops();
     VECTOR t1, t0;
     POLY *polys = NULL;
+    void *polys_freeptr = NULL;
     uint32_t k = (uint32_t)key->params->k;
     EVP_MD_CTX *md_ctx = NULL;
 
     if (key->pub_encoding == NULL || key->priv_encoding == 0)
         return 0;
 
+#if defined(OPENSSL_ML_DSA_S390X)
+#define POLY_ALIGN 16
+    {
+        size_t bytes = 2 * (size_t)k * sizeof(*polys)
+            + sizeof(void *) + (POLY_ALIGN - 1);
+        uint8_t *raw = OPENSSL_malloc(bytes);
+        uintptr_t addr;
+
+        if (raw == NULL)
+            return 0;
+        addr = ((uintptr_t)raw + sizeof(void *) + (POLY_ALIGN - 1))
+            & ~(uintptr_t)(POLY_ALIGN - 1);
+        *(void **)((uint8_t *)(void *)addr - sizeof(void *)) = raw;
+        polys = (POLY *)(void *)addr;
+        polys_freeptr = raw;
+    }
+#undef POLY_ALIGN
+#else
     polys = OPENSSL_malloc_array(2 * k, sizeof(*polys));
+    polys_freeptr = polys;
     if (polys == NULL)
         return 0;
+#endif
+
     md_ctx = EVP_MD_CTX_new();
     if (md_ctx == NULL)
         goto err;
 
     vector_init(&t1, polys, k);
     vector_init(&t0, polys + k, k);
-    if (!public_from_private(key, md_ctx, &t1, &t0))
+    if (!public_from_private(key, md_ctx, sample_ops, &t1, &t0))
         goto err;
 
     ret = vector_equal(&t1, &key->t1) && vector_equal(&t0, &key->t0);
 err:
     EVP_MD_CTX_free(md_ctx);
-    OPENSSL_free(polys);
+    OPENSSL_cleanse(polys, 2 * k * sizeof(*polys));
+    OPENSSL_free(polys_freeptr);
     return ret;
 }
 
@@ -423,6 +484,7 @@ err:
 static int keygen_internal(ML_DSA_KEY *out)
 {
     int ret = 0;
+    const OSSL_ML_DSA_SAMPLE_OPS *sample_ops = ossl_ml_dsa_sample_ops();
     uint8_t augmented_seed[ML_DSA_SEED_BYTES + 2];
     uint8_t expanded_seed[ML_DSA_RHO_BYTES + ML_DSA_PRIV_SEED_BYTES + ML_DSA_K_BYTES];
     const uint8_t *const rho = expanded_seed; /* p = Public Random Seed */
@@ -449,8 +511,9 @@ static int keygen_internal(ML_DSA_KEY *out)
     memcpy(out->rho, rho, sizeof(out->rho));
     memcpy(out->K, K, sizeof(out->K));
 
-    ret = vector_expand_S(md_ctx, out->shake256_md, params->eta, priv_seed, &out->s1, &out->s2)
-        && public_from_private(out, md_ctx, &out->t1, &out->t0)
+    ret = sample_ops->vector_expand_S(md_ctx, out->shake256_md, params->eta,
+              priv_seed, &out->s1, &out->s2)
+        && public_from_private(out, md_ctx, sample_ops, &out->t1, &out->t0)
         && ossl_ml_dsa_pk_encode(out)
         && shake_xof(md_ctx, out->shake256_md, out->pub_encoding, out->params->pk_len,
             out->tr, sizeof(out->tr))
@@ -484,6 +547,11 @@ int ossl_ml_dsa_generate_key(ML_DSA_KEY *out)
     if (sk == NULL) {
         ret = keygen_internal(out);
     } else {
+        /*
+         * A constant-time comparison is unnecessary here since this check
+         * is only performed during key generation and is not exposed to
+         * timing attacks.
+         */
         if ((ret = keygen_internal(out)) != 0
             && memcmp(out->priv_encoding, sk, out->params->sk_len) != 0) {
             ret = 0;

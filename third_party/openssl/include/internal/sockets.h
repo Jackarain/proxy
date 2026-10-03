@@ -37,17 +37,10 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 #include <netinet/tcp.h>
-#elif defined(_WIN32_WCE) && _WIN32_WCE < 410
-#define getservbyname _masked_declaration_getservbyname
 #endif
 #if !defined(IPPROTO_IP)
 /* winsock[2].h was included already? */
 #include "internal/e_winsock.h"
-#endif
-#ifdef getservbyname
-/* this is used to be wcecompat/include/winsock_extras.h */
-#undef getservbyname
-struct servent *PASCAL getservbyname(const char *, const char *);
 #endif
 
 #ifdef _WIN64
@@ -71,6 +64,15 @@ struct servent *PASCAL getservbyname(const char *, const char *);
 #endif
 #ifndef SHUT_RDWR
 #define SHUT_RDWR SD_BOTH
+#endif
+
+/*
+ * Recent MINGW versions use Windows-style unsigned INVALID_SOCKET.
+ * Since OpenSSL uses int, this only silences an already-ignored warning.
+ */
+#if defined(__MINGW32__) && defined(INVALID_SOCKET)
+#undef INVALID_SOCKET
+#define INVALID_SOCKET (INT_PTR)(~0)
 #endif
 
 #else
@@ -221,7 +223,7 @@ static ossl_inline int writesocket_ex(int s, const void *b, int n, int f)
 #endif
 
 /* also in apps/include/apps.h */
-#if defined(OPENSSL_SYS_WIN32) || defined(OPENSSL_SYS_WINCE)
+#if defined(OPENSSL_SYS_WIN32)
 #define openssl_fdset(a, b) FD_SET((unsigned int)(a), b)
 #else
 #define openssl_fdset(a, b) FD_SET(a, b)

@@ -1,52 +1,14 @@
 #include <openssl/evp.h>
 #include "enc_b64_scalar.h"
 #include "enc_b64_avx2.h"
-#include "internal/cryptlib.h"
-#include "crypto/evp.h"
-#include "evp_local.h"
+#include "b64_avx2_common.h"
 
-#if defined(__x86_64) || defined(__x86_64__) || defined(_M_AMD64) || defined(_M_X64)
-#if !defined(_M_ARM64EC)
-#define STRINGIFY_IMPLEMENTATION_(a) #a
-#define STRINGIFY(a) STRINGIFY_IMPLEMENTATION_(a)
-
-#ifdef __clang__
-/*
- * clang does not have GCC push pop
- * warning: clang attribute push can't be used within a namespace in clang up
- * til 8.0 so OPENSSL_TARGET_REGION and OPENSSL_UNTARGET_REGION must be
- * outside* of a namespace.
- */
-#define OPENSSL_TARGET_REGION(T)                                       \
-    _Pragma(STRINGIFY(clang attribute push(__attribute__((target(T))), \
-        apply_to = function)))
-#define OPENSSL_UNTARGET_REGION _Pragma("clang attribute pop")
-#elif defined(__GNUC__)
-#define OPENSSL_TARGET_REGION(T) \
-    _Pragma("GCC push_options") _Pragma(STRINGIFY(GCC target(T)))
-#define OPENSSL_UNTARGET_REGION _Pragma("GCC pop_options")
-#endif /* clang then gcc */
-
-/* Default target region macros don't do anything. */
-#ifndef OPENSSL_TARGET_REGION
-#define OPENSSL_TARGET_REGION(T)
-#define OPENSSL_UNTARGET_REGION
-#endif
-
-#define OPENSSL_TARGET_AVX2 \
-    OPENSSL_TARGET_REGION("avx2")
-#define OPENSSL_UNTARGET_AVX2 OPENSSL_UNTARGET_REGION
+#ifdef HAVE_AVX2
 
 /*
  * Ensure this whole block is compiled with AVX2 enabled on GCC.
  * Clang/MSVC will just ignore these pragmas.
  */
-
-#include <string.h>
-#include <immintrin.h>
-#include <stddef.h>
-#include <stdint.h>
-
 OPENSSL_TARGET_AVX2
 static __m256i lookup_pshufb_std(__m256i input)
 {
@@ -69,7 +31,7 @@ static __m256i lookup_pshufb_std(__m256i input)
 OPENSSL_UNTARGET_AVX2
 
 OPENSSL_TARGET_AVX2
-static inline __m256i lookup_pshufb_srp(__m256i input)
+static ossl_inline __m256i lookup_pshufb_srp(__m256i input)
 {
     const __m256i zero = _mm256_setzero_si256();
     const __m256i hi = _mm256_set1_epi8((char)0x80);
@@ -100,7 +62,7 @@ static inline __m256i lookup_pshufb_srp(__m256i input)
 OPENSSL_UNTARGET_AVX2
 
 OPENSSL_TARGET_AVX2
-static inline __m256i shift_right_zeros(__m256i v, int n)
+static ossl_inline __m256i shift_right_zeros(__m256i v, int n)
 {
     switch (n) {
     case 0:
@@ -142,7 +104,7 @@ static inline __m256i shift_right_zeros(__m256i v, int n)
 OPENSSL_UNTARGET_AVX2
 
 OPENSSL_TARGET_AVX2
-static inline __m256i shift_left_zeros(__m256i v, int n)
+static ossl_inline __m256i shift_left_zeros(__m256i v, int n)
 {
     switch (n) {
     case 0:
@@ -208,7 +170,7 @@ static const uint8_t shuffle_masks[16][16] = {
  * Insert a line feed character in the 64-byte input at index K in [0,32).
  */
 OPENSSL_TARGET_AVX2
-static inline __m256i insert_line_feed32(__m256i input, int K)
+static ossl_inline __m256i insert_line_feed32(__m256i input, int K)
 {
     __m256i line_feed_vector = _mm256_set1_epi8('\n');
     __m128i identity = _mm_setr_epi8(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
@@ -236,7 +198,7 @@ static inline __m256i insert_line_feed32(__m256i input, int K)
 OPENSSL_UNTARGET_AVX2
 
 OPENSSL_TARGET_AVX2
-static inline size_t ins_nl_gt32(__m256i v, uint8_t *out, int stride,
+static ossl_inline size_t ins_nl_gt32(__m256i v, uint8_t *out, int stride,
     int *wrap_cnt)
 {
     const int until_nl = stride - *wrap_cnt;
@@ -267,7 +229,7 @@ static inline size_t ins_nl_gt32(__m256i v, uint8_t *out, int stride,
 OPENSSL_UNTARGET_AVX2
 
 OPENSSL_TARGET_AVX2
-static inline size_t insert_nl_gt16(const __m256i v0,
+static ossl_inline size_t insert_nl_gt16(const __m256i v0,
     uint8_t *output,
     int wrap_max, int *wrap_cnt)
 {
@@ -345,7 +307,7 @@ static inline size_t insert_nl_gt16(const __m256i v0,
 OPENSSL_UNTARGET_AVX2
 
 OPENSSL_TARGET_AVX2
-static inline size_t insert_nl_2nd_vec_stride_12(const __m256i v0,
+static ossl_inline size_t insert_nl_2nd_vec_stride_12(const __m256i v0,
     uint8_t *output,
     int dummy_stride,
     int *wrap_cnt)
@@ -379,7 +341,7 @@ static inline size_t insert_nl_2nd_vec_stride_12(const __m256i v0,
 OPENSSL_UNTARGET_AVX2
 
 OPENSSL_TARGET_AVX2
-static inline __m256i insert_newlines_by_mask(__m256i data, __m256i mask)
+static ossl_inline __m256i insert_newlines_by_mask(__m256i data, __m256i mask)
 {
     __m256i newline = _mm256_set1_epi8('\n');
 
@@ -389,7 +351,7 @@ static inline __m256i insert_newlines_by_mask(__m256i data, __m256i mask)
 OPENSSL_UNTARGET_AVX2
 
 OPENSSL_TARGET_AVX2
-static inline size_t insert_nl_str4(const __m256i v0, uint8_t *output)
+static ossl_inline size_t insert_nl_str4(const __m256i v0, uint8_t *output)
 {
     __m256i shuffling_mask = _mm256_setr_epi8(0, 1, 2, 3, (char)0xFF, 4, 5, 6,
         7, (char)0xFF, 8, 9, 10, 11, (char)0xFF, 12,
@@ -447,7 +409,7 @@ static inline size_t insert_nl_str4(const __m256i v0, uint8_t *output)
 OPENSSL_UNTARGET_AVX2
 
 OPENSSL_TARGET_AVX2
-static inline size_t insert_nl_str8(const __m256i v0, uint8_t *output)
+static ossl_inline size_t insert_nl_str8(const __m256i v0, uint8_t *output)
 {
     __m256i shuffling_mask = _mm256_setr_epi8(0, 1, 2, 3, 4, 5, 6, 7, (char)0xFF,
         8, 9, 10, 11, 12, 13, 14,
@@ -668,5 +630,4 @@ size_t encode_base64_avx2(EVP_ENCODE_CTX *ctx, unsigned char *dst,
     return (size_t)(out - (uint8_t *)dst) + evp_encodeblock_int(ctx, out, src + i, srclen - i, final_wrap_cnt);
 }
 OPENSSL_UNTARGET_AVX2
-#endif /* !defined(_M_ARM64EC) */
-#endif
+#endif /* HAVE_AVX2 */

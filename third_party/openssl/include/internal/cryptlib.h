@@ -20,6 +20,7 @@
 
 #include "internal/common.h"
 
+#include <stdarg.h>
 #include <openssl/crypto.h>
 #include <openssl/buffer.h>
 #include <openssl/bio.h>
@@ -154,19 +155,82 @@ const void *ossl_bsearch(const void *key, const void *base, int num,
     int (*cmp_thunk)(int (*real_cmp_fn)(const void *, const void *), const void *, const void *),
     int flags);
 
+/**
+ * @brief Join a stack of ASN1_UTF8STRINGs into one allocated string.
+ *
+ * Concatenates the elements of text, separated by sep, into a newly allocated
+ * NUL terminated string. The element data is copied in full and may itself
+ * contain embedded NUL bytes, so a caller that treats the result as a C string
+ * will see it truncated at the first such byte.
+ *
+ * @param text the stack of ASN1_UTF8STRINGs to join
+ * @param sep separator placed between elements, or NULL for none
+ * @param max_len maximum length of the result, excluding the NUL terminator,
+ *                or 0 for no restriction
+ * @returns a newly allocated string to be freed with OPENSSL_free(), or NULL on
+ *          error or if the result would exceed max_len
+ */
 char *ossl_sk_ASN1_UTF8STRING2text(STACK_OF(ASN1_UTF8STRING) *text,
     const char *sep, size_t max_len);
-char *ossl_ipaddr_to_asc(unsigned char *p, int len);
+char *ossl_ipaddr_to_asc(const unsigned char *p, int len);
 
 char *ossl_buf2hexstr_sep(const unsigned char *buf, long buflen, char sep);
 unsigned char *ossl_hexstr2buf_sep(const char *str, long *buflen,
     const char sep);
+
+/*
+ * Parse a signed long with validation; see OPENSSL_strtoul() for the rules.
+ * Returns 1 on success (and stores the result in |*result|), 0 on failure.
+ */
+int ossl_strtol(const char *str, char **endptr, int base, long *result);
+
+/*
+ * As ossl_strtol() but stores the result in an int, additionally failing if
+ * the parsed value does not fit in an int.
+ * Returns 1 on success (and stores the result in |*result|), 0 on failure.
+ */
+int ossl_strtoint(const char *str, char **endptr, int base, int *result);
 
 /**
  *  Writes |n| value in hex format into |buf|,
  *  and returns the number of bytes written
  */
 size_t ossl_to_hex(char *buf, uint8_t n);
+
+/**
+ * @brief Portable asprintf() backed by OPENSSL_malloc().
+ *
+ * On failure nothing remains allocated and *str is set to NULL.
+ *
+ * @param str    receives the allocated buffer, to be freed with OPENSSL_free()
+ * @param format printf-style format string
+ * @returns bytes written on success, or -1 on error
+ */
+int ossl_asprintf(char **str, const char *format, ...)
+#if defined(__has_attribute)
+#if __has_attribute(format)
+    __attribute__((__format__(__printf__, 2, 3)))
+#endif
+#endif
+    ;
+
+/**
+ * @brief va_list form of ossl_asprintf().
+ *
+ * On failure nothing remains allocated and *str is set to NULL.
+ *
+ * @param str    receives the allocated buffer, to be freed with OPENSSL_free()
+ * @param format printf-style format string
+ * @param args   variadic arguments; consumed by the call
+ * @returns bytes written on success, or -1 on error
+ */
+int ossl_vasprintf(char **str, const char *format, va_list args)
+#if defined(__has_attribute)
+#if __has_attribute(format)
+    __attribute__((__format__(__printf__, 2, 0)))
+#endif
+#endif
+    ;
 
 STACK_OF(SSL_COMP) *ossl_load_builtin_compressions(void);
 void ossl_free_compression_methods_int(STACK_OF(SSL_COMP) *methods);

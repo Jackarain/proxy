@@ -348,9 +348,30 @@ typedef BIO_info_cb bio_info_cb; /* backward compatibility */
 SKM_DEFINE_STACK_OF_INTERNAL(BIO, BIO, BIO)
 #define sk_BIO_num(sk) OPENSSL_sk_num(ossl_check_const_BIO_sk_type(sk))
 #define sk_BIO_value(sk, idx) ((BIO *)OPENSSL_sk_value(ossl_check_const_BIO_sk_type(sk), (idx)))
-#define sk_BIO_new(cmp) ((STACK_OF(BIO) *)OPENSSL_sk_set_cmp_thunks(OPENSSL_sk_new(ossl_check_BIO_compfunc_type(cmp)), sk_BIO_cmpfunc_thunk))
-#define sk_BIO_new_null() ((STACK_OF(BIO) *)OPENSSL_sk_set_thunks(OPENSSL_sk_new_null(), sk_BIO_freefunc_thunk))
-#define sk_BIO_new_reserve(cmp, n) ((STACK_OF(BIO) *)OPENSSL_sk_set_cmp_thunks(OPENSSL_sk_new_reserve(ossl_check_BIO_compfunc_type(cmp), (n)), sk_BIO_cmpfunc_thunk))
+#define sk_BIO_new(cmp) \
+    ((STACK_OF(BIO) *)OPENSSL_sk_set_thunks( \
+        OPENSSL_sk_set_copy_thunks( \
+            OPENSSL_sk_set_cmp_thunks( \
+                OPENSSL_sk_new(ossl_check_BIO_compfunc_type(cmp)), \
+                sk_BIO_cmpfunc_thunk), \
+            sk_BIO_copyfunc_thunk), \
+        sk_BIO_freefunc_thunk))
+#define sk_BIO_new_null() \
+    ((STACK_OF(BIO) *)OPENSSL_sk_set_thunks( \
+        OPENSSL_sk_set_copy_thunks( \
+            OPENSSL_sk_set_cmp_thunks( \
+                OPENSSL_sk_new_null(), \
+                sk_BIO_cmpfunc_thunk), \
+            sk_BIO_copyfunc_thunk), \
+        sk_BIO_freefunc_thunk))
+#define sk_BIO_new_reserve(cmp, n) \
+    ((STACK_OF(BIO) *)OPENSSL_sk_set_thunks( \
+        OPENSSL_sk_set_copy_thunks( \
+            OPENSSL_sk_set_cmp_thunks( \
+                OPENSSL_sk_new_reserve(ossl_check_BIO_compfunc_type(cmp), (n)), \
+                sk_BIO_cmpfunc_thunk), \
+            sk_BIO_copyfunc_thunk), \
+        sk_BIO_freefunc_thunk))
 #define sk_BIO_reserve(sk, n) OPENSSL_sk_reserve(ossl_check_BIO_sk_type(sk), (n))
 #define sk_BIO_free(sk) OPENSSL_sk_free(ossl_check_BIO_sk_type(sk))
 #define sk_BIO_zero(sk) OPENSSL_sk_zero(ossl_check_BIO_sk_type(sk))
@@ -368,8 +389,25 @@ SKM_DEFINE_STACK_OF_INTERNAL(BIO, BIO, BIO)
 #define sk_BIO_find_all(sk, ptr, pnum) OPENSSL_sk_find_all(ossl_check_BIO_sk_type(sk), ossl_check_BIO_type(ptr), pnum)
 #define sk_BIO_sort(sk) OPENSSL_sk_sort(ossl_check_BIO_sk_type(sk))
 #define sk_BIO_is_sorted(sk) OPENSSL_sk_is_sorted(ossl_check_const_BIO_sk_type(sk))
-#define sk_BIO_dup(sk) ((STACK_OF(BIO) *)OPENSSL_sk_dup(ossl_check_const_BIO_sk_type(sk)))
-#define sk_BIO_deep_copy(sk, copyfunc, freefunc) ((STACK_OF(BIO) *)OPENSSL_sk_deep_copy(ossl_check_const_BIO_sk_type(sk), ossl_check_BIO_copyfunc_type(copyfunc), ossl_check_BIO_freefunc_type(freefunc)))
+#define sk_BIO_dup(sk) \
+    ((STACK_OF(BIO) *)OPENSSL_sk_set_thunks( \
+        OPENSSL_sk_set_copy_thunks( \
+            OPENSSL_sk_set_cmp_thunks( \
+                OPENSSL_sk_dup(ossl_check_const_BIO_sk_type(sk)), \
+                sk_BIO_cmpfunc_thunk), \
+            sk_BIO_copyfunc_thunk), \
+        sk_BIO_freefunc_thunk))
+#define sk_BIO_deep_copy(sk, copyfunc, freefunc) \
+    ((STACK_OF(BIO) *)OPENSSL_sk_set_thunks( \
+        OPENSSL_sk_set_copy_thunks( \
+            OPENSSL_sk_set_cmp_thunks( \
+                OPENSSL_sk_deep_copy( \
+                    ossl_check_const_BIO_sk_type(sk), \
+                    ossl_check_BIO_copyfunc_type(copyfunc), \
+                    ossl_check_BIO_freefunc_type(freefunc)), \
+                sk_BIO_cmpfunc_thunk), \
+            sk_BIO_copyfunc_thunk), \
+        sk_BIO_freefunc_thunk))
 #define sk_BIO_set_cmp_func(sk, cmp) ((sk_BIO_compfunc)OPENSSL_sk_set_cmp_func(ossl_check_BIO_sk_type(sk), ossl_check_BIO_compfunc_type(cmp)))
 
 /* clang-format on */
@@ -829,6 +867,7 @@ int BIO_sock_should_retry(int i);
 int BIO_sock_non_fatal_error(int error);
 int BIO_err_is_non_fatal(unsigned int errcode);
 int BIO_socket_wait(int fd, int for_read, time_t max_time);
+int BIO_socket_ready(int fd, int for_read);
 #endif
 long BIO_set_send_flags(BIO *b, int flags);
 int BIO_wait(BIO *bio, time_t max_time, unsigned int nap_milliseconds);
@@ -955,33 +994,24 @@ void BIO_copy_next_retry(BIO *b);
  */
 
 #define ossl_bio__attr__(x)
-#if defined(__GNUC__) && defined(__STDC_VERSION__)    \
-    && !defined(__MINGW32__) && !defined(__MINGW64__) \
+#if defined(__GNUC__) && !defined(__MINGW32__) && !defined(__MINGW64__) \
     && !defined(__APPLE__)
-/*
- * Because we support the 'z' modifier, which made its appearance in C99,
- * we can't use __attribute__ with pre C99 dialects.
- */
-#if __STDC_VERSION__ >= 199901L
 #undef ossl_bio__attr__
 #define ossl_bio__attr__ __attribute__
-#if __GNUC__ * 10 + __GNUC_MINOR__ >= 44
-#define ossl_bio__printf__ __gnu_printf__
-#else
-#define ossl_bio__printf__ __printf__
-#endif
-#endif
 #endif
 int BIO_printf(BIO *bio, const char *format, ...)
-    ossl_bio__attr__((__format__(ossl_bio__printf__, 2, 3)));
+    ossl_bio__attr__((__format__(__printf__, 2, 3)));
 int BIO_vprintf(BIO *bio, const char *format, va_list args)
-    ossl_bio__attr__((__format__(ossl_bio__printf__, 2, 0)));
+    ossl_bio__attr__((__format__(__printf__, 2, 0)));
+#ifndef OPENSSL_NO_DEPRECATED_4_1
+OSSL_DEPRECATEDIN_4_1_FOR("use snprintf()")
 int BIO_snprintf(char *buf, size_t n, const char *format, ...)
-    ossl_bio__attr__((__format__(ossl_bio__printf__, 3, 4)));
+    ossl_bio__attr__((__format__(__printf__, 3, 4)));
+OSSL_DEPRECATEDIN_4_1_FOR("use vsnprintf()")
 int BIO_vsnprintf(char *buf, size_t n, const char *format, va_list args)
-    ossl_bio__attr__((__format__(ossl_bio__printf__, 3, 0)));
+    ossl_bio__attr__((__format__(__printf__, 3, 0)));
+#endif
 #undef ossl_bio__attr__
-#undef ossl_bio__printf__
 
 BIO_METHOD *BIO_meth_new(int type, const char *name);
 void BIO_meth_free(BIO_METHOD *biom);

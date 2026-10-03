@@ -7,9 +7,6 @@
  * https://www.openssl.org/source/license.html
  */
 
-#include <stdlib.h>
-#include <stdarg.h>
-#include <string.h>
 #include <stdbool.h>
 #include <openssl/evp.h>
 #include <openssl/kdf.h>
@@ -18,8 +15,6 @@
 #include <openssl/proverr.h>
 #include "internal/cryptlib.h"
 #include "internal/fips.h"
-#include "internal/numbers.h"
-#include "crypto/evp.h"
 #include "prov/provider_ctx.h"
 #include "prov/providercommon.h"
 #include "prov/implementations.h"
@@ -308,7 +303,12 @@ static int kdf_srtpkdf_get_ctx_params(void *vctx, OSSL_PARAM params[])
         return 0;
 
     if (p.size != NULL) {
-        size_t sz = EVP_CIPHER_key_length(ossl_prov_cipher_cipher(&ctx->cipher));
+        const EVP_CIPHER *cipher = ossl_prov_cipher_cipher(&ctx->cipher);
+        size_t sz;
+
+        if (cipher == NULL)
+            return 0;
+        sz = EVP_CIPHER_key_length(cipher);
 
         if (!OSSL_PARAM_set_size_t(p.size, sz))
             return 0;

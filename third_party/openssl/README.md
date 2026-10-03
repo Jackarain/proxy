@@ -4,10 +4,10 @@ Welcome to the OpenSSL Project
 [![openssl logo]][www.openssl.org]
 
 [![github actions ci badge]][github actions ci]
-[![Nightly OS Zoo ci badge](https://github.com/openssl/openssl/actions/workflows/os-zoo.yml/badge.svg)](https://github.com/openssl/openssl/actions/workflows/os-zoo.yml)
+[![Nightly OS Zoo ci badge](https://github.com/openssl/openssl/actions/workflows/os-zoo.yml/badge.svg?event=schedule)](https://github.com/openssl/openssl/actions/workflows/os-zoo.yml)
 [![Provider Compatibility](https://github.com/openssl/openssl/actions/workflows/provider-compatibility.yml/badge.svg)](https://github.com/openssl/openssl/actions/workflows/provider-compatibility.yml)
 [![Quic Interop](https://github.com/openssl/openssl/actions/workflows/run_quic_interop.yml/badge.svg)](https://github.com/openssl/openssl/actions/workflows/run_quic_interop.yml)
-[![Daily checks](https://github.com/openssl/openssl/actions/workflows/run-checker-daily.yml/badge.svg)](https://github.com/openssl/openssl/actions/workflows/run-checker-daily.yml)
+[![Daily checks](https://github.com/openssl/openssl/actions/workflows/run-checker-daily.yml/badge.svg?event=schedule)](https://github.com/openssl/openssl/actions/workflows/run-checker-daily.yml)
 [![LFX Health Score](https://insights.linuxfoundation.org/api/badge/health-score?project=openssl)](https://insights.linuxfoundation.org/project/openssl)
 
 OpenSSL is a robust, commercial-grade, full-featured Open Source Toolkit
@@ -49,7 +49,7 @@ The OpenSSL toolkit includes:
   basis of the TLS implementation, but can also be used independently.
 
 - **openssl**
-  the OpenSSL command line tool, a swiss army knife for cryptographic tasks,
+  the OpenSSL command line tool, a Swiss Army knife for cryptographic tasks,
   testing and analyzing. It can be used for
   - creation of key parameters
   - creation of X.509 certificates, CSRs and CRLs
@@ -150,11 +150,10 @@ The manual pages for the master branch and all current stable releases are
 available online.
 
 - [OpenSSL master](https://docs.openssl.org/master/)
+- [OpenSSL 4.0](https://docs.openssl.org/4.0/)
 - [OpenSSL 3.6](https://docs.openssl.org/3.6/)
 - [OpenSSL 3.5](https://docs.openssl.org/3.5/)
 - [OpenSSL 3.4](https://docs.openssl.org/3.4/)
-- [OpenSSL 3.3](https://docs.openssl.org/3.3/)
-- [OpenSSL 3.2](https://docs.openssl.org/3.2/)
 - [OpenSSL 3.0](https://docs.openssl.org/3.0/)
 
 Demos

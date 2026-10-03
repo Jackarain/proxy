@@ -34,10 +34,6 @@ static OSSL_FUNC_provider_query_operation_fn deflt_query;
 #define ALGC(NAMES, FUNC, CHECK) { { NAMES, "provider=default", FUNC }, CHECK }
 #define ALG(NAMES, FUNC) ALGC(NAMES, FUNC, NULL)
 
-/* Functions provided by the core */
-static OSSL_FUNC_core_gettable_params_fn *c_gettable_params = NULL;
-static OSSL_FUNC_core_get_params_fn *c_get_params = NULL;
-
 /* Parameters we provide to the core */
 static const OSSL_PARAM deflt_param_types[] = {
     OSSL_PARAM_DEFN(OSSL_PROV_PARAM_NAME, OSSL_PARAM_UTF8_PTR, NULL, 0),
@@ -209,6 +205,9 @@ static const OSSL_ALGORITHM_CAPABLE deflt_ciphers[] = {
     ALG(PROV_NAMES_AES_192_GCM_SIV, ossl_aes192gcm_siv_functions),
     ALG(PROV_NAMES_AES_256_GCM_SIV, ossl_aes256gcm_siv_functions),
 #endif /* OPENSSL_NO_SIV */
+#ifndef OPENSSL_NO_ASCON128
+    ALG(PROV_NAMES_ASCON_AEAD128, ossl_ascon_aead128_functions),
+#endif /* OPENSSL_NO_ASCON128 */
     ALG(PROV_NAMES_AES_256_GCM, ossl_aes256gcm_functions),
     ALG(PROV_NAMES_AES_192_GCM, ossl_aes192gcm_functions),
     ALG(PROV_NAMES_AES_128_GCM, ossl_aes128gcm_functions),
@@ -372,6 +371,9 @@ static const OSSL_ALGORITHM deflt_kdfs[] = {
     { PROV_NAMES_TLS1_PRF, "provider=default", ossl_kdf_tls1_prf_functions },
     { PROV_NAMES_PBKDF2, "provider=default", ossl_kdf_pbkdf2_functions },
     { PROV_NAMES_PKCS12KDF, "provider=default", ossl_kdf_pkcs12_functions },
+#ifndef OPENSSL_NO_IKEV2KDF
+    { PROV_NAMES_IKEV2KDF, "provider=default", ossl_kdf_ikev2kdf_functions },
+#endif
 #ifndef OPENSSL_NO_SSKDF
     { PROV_NAMES_SSKDF, "provider=default", ossl_kdf_sskdf_functions },
 #endif
@@ -424,8 +426,10 @@ static const OSSL_ALGORITHM deflt_keyexch[] = {
 #endif
     { PROV_NAMES_TLS1_PRF, "provider=default", ossl_kdf_tls1_prf_keyexch_functions },
     { PROV_NAMES_HKDF, "provider=default", ossl_kdf_hkdf_keyexch_functions },
+#ifndef OPENSSL_NO_SCRYPT
     { PROV_NAMES_SCRYPT, "provider=default",
         ossl_kdf_scrypt_keyexch_functions },
+#endif
     { NULL, NULL, NULL }
 };
 
@@ -500,8 +504,10 @@ static const OSSL_ALGORITHM deflt_signature[] = {
     { PROV_NAMES_ML_DSA_87, "provider=default", ossl_ml_dsa_87_signature_functions },
 #endif
     { PROV_NAMES_HMAC, "provider=default", ossl_mac_legacy_hmac_signature_functions },
+#ifndef OPENSSL_NO_SIPHASH
     { PROV_NAMES_SIPHASH, "provider=default",
         ossl_mac_legacy_siphash_signature_functions },
+#endif
 #ifndef OPENSSL_NO_POLY1305
     { PROV_NAMES_POLY1305, "provider=default",
         ossl_mac_legacy_poly1305_signature_functions },
@@ -563,10 +569,12 @@ static const OSSL_ALGORITHM deflt_asym_kem[] = {
     { PROV_NAMES_ML_KEM_768, "provider=default", ossl_ml_kem_asym_kem_functions },
     { PROV_NAMES_ML_KEM_1024, "provider=default", ossl_ml_kem_asym_kem_functions },
 #if !defined(OPENSSL_NO_ECX)
+    { PROV_NAMES_MLKEM512X25519, "provider=default", ossl_mlx_kem_asym_kem_functions },
     { PROV_NAMES_X25519MLKEM768, "provider=default", ossl_mlx_kem_asym_kem_functions },
     { PROV_NAMES_X448MLKEM1024, "provider=default", ossl_mlx_kem_asym_kem_functions },
 #endif
 #if !defined(OPENSSL_NO_EC)
+    { PROV_NAMES_SecP256r1MLKEM512, "provider=default", ossl_mlx_kem_asym_kem_functions },
     { PROV_NAMES_SecP256r1MLKEM768, "provider=default", ossl_mlx_kem_asym_kem_functions },
     { PROV_NAMES_SecP384r1MLKEM1024, "provider=default", ossl_mlx_kem_asym_kem_functions },
 #endif
@@ -618,12 +626,16 @@ static const OSSL_ALGORITHM deflt_keymgmt[] = {
         PROV_DESCS_TLS1_PRF_SIGN },
     { PROV_NAMES_HKDF, "provider=default", ossl_kdf_keymgmt_functions,
         PROV_DESCS_HKDF_SIGN },
+#ifndef OPENSSL_NO_SCRYPT
     { PROV_NAMES_SCRYPT, "provider=default", ossl_kdf_keymgmt_functions,
         PROV_DESCS_SCRYPT_SIGN },
+#endif
     { PROV_NAMES_HMAC, "provider=default", ossl_mac_legacy_keymgmt_functions,
         PROV_DESCS_HMAC_SIGN },
+#ifndef OPENSSL_NO_SIPHASH
     { PROV_NAMES_SIPHASH, "provider=default", ossl_mac_legacy_keymgmt_functions,
         PROV_DESCS_SIPHASH_SIGN },
+#endif
 #ifndef OPENSSL_NO_POLY1305
     { PROV_NAMES_POLY1305, "provider=default", ossl_mac_legacy_keymgmt_functions,
         PROV_DESCS_POLY1305_SIGN },
@@ -650,12 +662,16 @@ static const OSSL_ALGORITHM deflt_keymgmt[] = {
     { PROV_NAMES_ML_KEM_1024, "provider=default", ossl_ml_kem_1024_keymgmt_functions,
         PROV_DESCS_ML_KEM_1024 },
 #if !defined(OPENSSL_NO_ECX)
+    { PROV_NAMES_MLKEM512X25519, "provider=default", ossl_mlx_x25519_512_kem_kmgmt_functions,
+        PROV_DESCS_MLKEM512X25519 },
     { PROV_NAMES_X25519MLKEM768, "provider=default", ossl_mlx_x25519_kem_kmgmt_functions,
         PROV_DESCS_X25519MLKEM768 },
     { PROV_NAMES_X448MLKEM1024, "provider=default", ossl_mlx_x448_kem_kmgmt_functions,
         PROV_DESCS_X448MLKEM1024 },
 #endif
 #if !defined(OPENSSL_NO_EC)
+    { PROV_NAMES_SecP256r1MLKEM512, "provider=default", ossl_mlx_p256_512_kem_kmgmt_functions,
+        PROV_DESCS_SecP256r1MLKEM512 },
     { PROV_NAMES_SecP256r1MLKEM768, "provider=default", ossl_mlx_p256_kem_kmgmt_functions,
         PROV_DESCS_SecP256r1MLKEM768 },
     { PROV_NAMES_SecP384r1MLKEM1024, "provider=default", ossl_mlx_p384_kem_kmgmt_functions,
@@ -788,6 +804,7 @@ int ossl_default_provider_init(const OSSL_CORE_HANDLE *handle,
     void **provctx)
 {
     OSSL_FUNC_core_get_libctx_fn *c_get_libctx = NULL;
+    OSSL_FUNC_core_get_params_fn *c_get_params = NULL;
     BIO_METHOD *corebiometh;
 
     if (!ossl_prov_bio_from_dispatch(in)
@@ -795,9 +812,6 @@ int ossl_default_provider_init(const OSSL_CORE_HANDLE *handle,
         return 0;
     for (; in->function_id != 0; in++) {
         switch (in->function_id) {
-        case OSSL_FUNC_CORE_GETTABLE_PARAMS:
-            c_gettable_params = OSSL_FUNC_core_gettable_params(in);
-            break;
         case OSSL_FUNC_CORE_GET_PARAMS:
             c_get_params = OSSL_FUNC_core_get_params(in);
             break;

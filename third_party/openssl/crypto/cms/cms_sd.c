@@ -304,7 +304,7 @@ static int ossl_cms_add1_signing_cert(CMS_SignerInfo *si,
 
     p = pp;
     i2d_ESS_SIGNING_CERT(sc, &p);
-    if (!(seq = ASN1_STRING_new()) || !ASN1_STRING_set(seq, pp, len)) {
+    if (!(seq = ASN1_STRING_new()) || !ossl_asn1_string_set1_data(seq, pp, len)) {
         ASN1_STRING_free(seq);
         OPENSSL_free(pp);
         return 0;
@@ -329,7 +329,7 @@ static int ossl_cms_add1_signing_cert_v2(CMS_SignerInfo *si,
 
     p = pp;
     i2d_ESS_SIGNING_CERT_V2(sc, &p);
-    if (!(seq = ASN1_STRING_new()) || !ASN1_STRING_set(seq, pp, len)) {
+    if (!(seq = ASN1_STRING_new()) || !ossl_asn1_string_set1_data(seq, pp, len)) {
         ASN1_STRING_free(seq);
         OPENSSL_free(pp);
         return 0;
@@ -493,9 +493,9 @@ static const char *cms_mdless_signing(EVP_PKEY *pkey)
     return NULL;
 }
 
-static const EVP_MD *ossl_cms_get_default_md(EVP_PKEY *pk, int *md_a_must)
+static EVP_MD *ossl_cms_get_default_md(const CMS_CTX *ctx, EVP_PKEY *pk, int *md_a_must)
 {
-    const EVP_MD *md;
+    EVP_MD *md = NULL;
     unsigned int i;
     int def_nid = NID_undef;
 
@@ -514,29 +514,28 @@ static const EVP_MD *ossl_cms_get_default_md(EVP_PKEY *pk, int *md_a_must)
             "pkey nid=%d", EVP_PKEY_get_id(pk));
         return NULL;
     }
-    md = EVP_get_digestbynid(def_nid);
+    md = EVP_MD_fetch(ossl_cms_ctx_get0_libctx(ctx), OBJ_nid2sn(def_nid), ossl_cms_ctx_get0_propq(ctx));
     if (md == NULL)
         ERR_raise_data(ERR_LIB_CMS, CMS_R_NO_DEFAULT_DIGEST,
             "default md nid=%d", def_nid);
     return md;
 }
 
-static const EVP_MD *ossl_cms_get_noattr_md(EVP_PKEY *pk, int *noattr_md_a_must)
+static EVP_MD *ossl_cms_get_noattr_md(const CMS_CTX *ctx, EVP_PKEY *pk, int *noattr_md_a_must)
 {
     unsigned int i;
 
     for (i = 0; key2data[i].name != NULL; i++) {
         if (EVP_PKEY_is_a(pk, key2data[i].name)) {
             *noattr_md_a_must = key2data[i].noattr_md_a_must;
-            return EVP_get_digestbynid(key2data[i].noattr_md_nid);
+            return EVP_MD_fetch(ossl_cms_ctx_get0_libctx(ctx), OBJ_nid2sn(key2data[i].noattr_md_nid), ossl_cms_ctx_get0_propq(ctx));
         }
     }
     return NULL;
 }
 
-static int ossl_cms_adjust_md(EVP_PKEY *pk, const EVP_MD **md, unsigned int flags)
+static int ossl_cms_adjust_md(const CMS_CTX *ctx, EVP_PKEY *pk, const EVP_MD **md, EVP_MD **fetched_md, unsigned int flags)
 {
-    const EVP_MD *tmp_md;
     int md_a_must = 0;
 
     while ((flags & CMS_NOATTR) != 0) {
@@ -547,26 +546,26 @@ static int ossl_cms_adjust_md(EVP_PKEY *pk, const EVP_MD **md, unsigned int flag
          */
         int noattr_md_a_must = 0;
 
-        tmp_md = ossl_cms_get_noattr_md(pk, &noattr_md_a_must);
-        if (tmp_md == NULL)
+        *fetched_md = ossl_cms_get_noattr_md(ctx, pk, &noattr_md_a_must);
+        if (*fetched_md == NULL)
             break; /* key type not listed - use the default */
 
         if (noattr_md_a_must)
-            *md = tmp_md;
+            *md = *fetched_md;
         else if (*md == NULL)
-            *md = tmp_md;
+            *md = *fetched_md;
         return 1;
     }
 
     if (*md != NULL)
         (void)ERR_set_mark(); /* No error if no default md and user-supplied md is set */
-    tmp_md = ossl_cms_get_default_md(pk, &md_a_must);
+    *fetched_md = ossl_cms_get_default_md(ctx, pk, &md_a_must);
     if (*md != NULL)
         (void)ERR_pop_to_mark();
     if (md_a_must)
-        *md = tmp_md;
+        *md = *fetched_md;
     else if (*md == NULL)
-        *md = tmp_md;
+        *md = *fetched_md;
 
     if (*md == NULL) /* ED448 case */
         return 0;
@@ -578,6 +577,7 @@ CMS_SignerInfo *CMS_add1_signer(CMS_ContentInfo *cms,
     X509 *signer, EVP_PKEY *pk, const EVP_MD *md,
     unsigned int flags)
 {
+    EVP_MD *local_md = NULL;
     CMS_SignedData *sd;
     CMS_SignerInfo *si = NULL;
     X509_ALGOR *alg;
@@ -631,7 +631,7 @@ CMS_SignerInfo *CMS_add1_signer(CMS_ContentInfo *cms,
     if (!ossl_cms_set1_SignerIdentifier(si->sid, signer, type, ctx))
         goto err;
 
-    if (ossl_cms_adjust_md(pk, &md, flags) != 1)
+    if (ossl_cms_adjust_md(ctx, pk, &md, &local_md, flags) != 1)
         goto err;
 
     if (!X509_ALGOR_set_md(si->digestAlgorithm, md))
@@ -677,7 +677,8 @@ CMS_SignerInfo *CMS_add1_signer(CMS_ContentInfo *cms,
         if (!(flags & CMS_NOSMIMECAP)) {
             STACK_OF(X509_ALGOR) *smcap = NULL;
 
-            i = CMS_add_standard_smimecap(&smcap);
+            i = CMS_add_standard_smimecap_ex(&smcap, ossl_cms_ctx_get0_libctx(ctx),
+                ossl_cms_ctx_get0_propq(ctx));
             if (i)
                 i = CMS_add_smimecap(si, smcap);
             sk_X509_ALGOR_pop_free(smcap, X509_ALGOR_free);
@@ -728,7 +729,6 @@ CMS_SignerInfo *CMS_add1_signer(CMS_ContentInfo *cms,
     }
 
     if (!(flags & CMS_NOCERTS)) {
-        /* NB ignore -1 return for duplicate cert */
         if (!CMS_add1_cert(cms, signer)) {
             ERR_raise(ERR_LIB_CMS, ERR_R_CMS_LIB);
             goto err;
@@ -763,9 +763,11 @@ CMS_SignerInfo *CMS_add1_signer(CMS_ContentInfo *cms,
         ERR_raise(ERR_LIB_CMS, ERR_R_CRYPTO_LIB);
         goto err;
     }
+    EVP_MD_free(local_md);
     return si;
 
 err:
+    EVP_MD_free(local_md);
     M_ASN1_free_of(si, CMS_SignerInfo);
     return NULL;
 }
@@ -868,6 +870,11 @@ void CMS_SignerInfo_set1_signer_cert(CMS_SignerInfo *si, X509 *signer)
     si->signer = signer;
 }
 
+X509 *CMS_SignerInfo_get0_signer_cert(const CMS_SignerInfo *si)
+{
+    return si->signer;
+}
+
 int CMS_SignerInfo_get0_signer_id(CMS_SignerInfo *si,
     ASN1_OCTET_STRING **keyid,
     X509_NAME **issuer, ASN1_INTEGER **sno)
@@ -900,6 +907,7 @@ int CMS_set1_signers_certs(CMS_ContentInfo *cms, const STACK_OF(X509) *scerts,
         if (si->signer != NULL)
             continue;
 
+        /* If any certificates passed they take priority */
         for (j = 0; j < sk_X509_num(scerts); j++) {
             x = sk_X509_value(scerts, j);
             if (CMS_SignerInfo_cert_cmp(si, x) == 0) {
@@ -1048,6 +1056,27 @@ static int cms_EVP_PKEY_verify(EVP_PKEY_CTX *pctx, BIO *in, unsigned char *sig,
         ret = EVP_PKEY_verify_message_final(pctx);
     }
     return ret;
+}
+
+int CMS_SignerInfo_get_verification_result(const CMS_SignerInfo *si, int type)
+{
+    switch (type) {
+    case CMS_VERIFY_RESULT:
+        return si->verify_result;
+
+    case CMS_VERIFY_CERT:
+        return si->cert_verified;
+
+    case CMS_VERIFY_ATTR:
+        return si->attr_verified;
+
+    case CMS_VERIFY_CONTENT:
+        return si->content_verified;
+
+    default:
+        ERR_raise(ERR_LIB_CMS, CMS_R_UNKNOWN_ID);
+        return 0;
+    }
 }
 
 static int cms_SignerInfo_content_sign(CMS_ContentInfo *cms,
@@ -1306,10 +1335,15 @@ int CMS_SignerInfo_verify(CMS_SignerInfo *si)
     (void)ERR_set_mark();
     fetched_md = EVP_MD_fetch(libctx, name, propq);
 
-    if (fetched_md != NULL)
+    if (fetched_md != NULL) {
         md = fetched_md;
-    else
+    } else {
         md = EVP_get_digestbyobj(si->digestAlgorithm->algorithm);
+        /* Reject aliases such as signature algorithm OIDs */
+        if (md != NULL
+            && EVP_MD_get_type(md) != OBJ_obj2nid(si->digestAlgorithm->algorithm))
+            md = NULL;
+    }
     if (md == NULL) {
         (void)ERR_clear_last_mark();
         ERR_raise(ERR_LIB_CMS, CMS_R_UNKNOWN_DIGEST_ALGORITHM);
@@ -1582,34 +1616,53 @@ int CMS_add_simple_smimecap(STACK_OF(X509_ALGOR) **algs,
 }
 
 /* Check to see if a cipher exists and if so add S/MIME capabilities */
-static int cms_add_cipher_smcap(STACK_OF(X509_ALGOR) **sk, int nid, int arg)
+static int cms_add_cipher_smcap(STACK_OF(X509_ALGOR) **sk, int nid, int arg,
+    OSSL_LIB_CTX *libctx, const char *propq)
 {
-    if (EVP_get_cipherbynid(nid))
+    EVP_CIPHER *cipher;
+
+    ERR_set_mark();
+    cipher = EVP_CIPHER_fetch(libctx, OBJ_nid2sn(nid), propq);
+    ERR_pop_to_mark();
+    if (cipher != NULL) {
+        EVP_CIPHER_free(cipher);
         return CMS_add_simple_smimecap(sk, nid, arg);
+    }
     return 1;
 }
 
-static int cms_add_digest_smcap(STACK_OF(X509_ALGOR) **sk, int nid, int arg)
+static int cms_add_digest_smcap(STACK_OF(X509_ALGOR) **sk, int nid, int arg,
+    OSSL_LIB_CTX *libctx, const char *propq)
 {
-    if (EVP_get_digestbynid(nid))
+    EVP_MD *md;
+
+    ERR_set_mark();
+    md = EVP_MD_fetch(libctx, OBJ_nid2sn(nid), propq);
+    ERR_pop_to_mark();
+    if (md != NULL) {
+        EVP_MD_free(md);
         return CMS_add_simple_smimecap(sk, nid, arg);
+    }
+    return 1;
+}
+
+int CMS_add_standard_smimecap_ex(STACK_OF(X509_ALGOR) **smcap,
+    OSSL_LIB_CTX *libctx, const char *propq)
+{
+    if (!cms_add_cipher_smcap(smcap, NID_aes_256_cbc, -1, libctx, propq)
+        || !cms_add_digest_smcap(smcap, NID_id_GostR3411_2012_256, -1, libctx, propq)
+        || !cms_add_digest_smcap(smcap, NID_id_GostR3411_2012_512, -1, libctx, propq)
+        || !cms_add_digest_smcap(smcap, NID_id_GostR3411_94, -1, libctx, propq)
+        || !cms_add_cipher_smcap(smcap, NID_id_Gost28147_89, -1, libctx, propq)
+        || !cms_add_cipher_smcap(smcap, NID_aes_192_cbc, -1, libctx, propq)
+        || !cms_add_cipher_smcap(smcap, NID_aes_128_cbc, -1, libctx, propq)
+        || !cms_add_cipher_smcap(smcap, NID_des_ede3_cbc, -1, libctx, propq)
+        || !cms_add_cipher_smcap(smcap, NID_rc2_cbc, 128, libctx, propq))
+        return 0;
     return 1;
 }
 
 int CMS_add_standard_smimecap(STACK_OF(X509_ALGOR) **smcap)
 {
-    if (!cms_add_cipher_smcap(smcap, NID_aes_256_cbc, -1)
-        || !cms_add_digest_smcap(smcap, NID_id_GostR3411_2012_256, -1)
-        || !cms_add_digest_smcap(smcap, NID_id_GostR3411_2012_512, -1)
-        || !cms_add_digest_smcap(smcap, NID_id_GostR3411_94, -1)
-        || !cms_add_cipher_smcap(smcap, NID_id_Gost28147_89, -1)
-        || !cms_add_cipher_smcap(smcap, NID_aes_192_cbc, -1)
-        || !cms_add_cipher_smcap(smcap, NID_aes_128_cbc, -1)
-        || !cms_add_cipher_smcap(smcap, NID_des_ede3_cbc, -1)
-        || !cms_add_cipher_smcap(smcap, NID_rc2_cbc, 128)
-        || !cms_add_cipher_smcap(smcap, NID_rc2_cbc, 64)
-        || !cms_add_cipher_smcap(smcap, NID_des_cbc, -1)
-        || !cms_add_cipher_smcap(smcap, NID_rc2_cbc, 40))
-        return 0;
-    return 1;
+    return CMS_add_standard_smimecap_ex(smcap, NULL, NULL);
 }

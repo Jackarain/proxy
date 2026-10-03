@@ -7,6 +7,9 @@
  * https://www.openssl.org/source/license.html
  */
 
+#if !defined(OSSL_PROVIDERS_IMPLEMENTATIONS_INCLUDE_PROV_IMPLEMENTATIONS_H)
+#define OSSL_PROVIDERS_IMPLEMENTATIONS_INCLUDE_PROV_IMPLEMENTATIONS_H
+
 #include <openssl/core.h>
 #include <openssl/types.h>
 
@@ -263,6 +266,10 @@ extern const OSSL_DISPATCH ossl_aes192gcm_siv_functions[];
 extern const OSSL_DISPATCH ossl_aes256gcm_siv_functions[];
 #endif /* OPENSSL_NO_SIV */
 
+#ifndef OPENSSL_NO_ASCON128
+extern const OSSL_DISPATCH ossl_ascon_aead128_functions[];
+#endif /* OPENSSL_NO_ASCON128 */
+
 /* MACs */
 extern const OSSL_DISPATCH ossl_blake2bmac_functions[];
 extern const OSSL_DISPATCH ossl_blake2smac_functions[];
@@ -276,7 +283,9 @@ extern const OSSL_DISPATCH ossl_kmac256_internal_functions[];
 #endif
 extern const OSSL_DISPATCH ossl_kmac128_functions[];
 extern const OSSL_DISPATCH ossl_kmac256_functions[];
+#ifndef OPENSSL_NO_SIPHASH
 extern const OSSL_DISPATCH ossl_siphash_functions[];
+#endif
 extern const OSSL_DISPATCH ossl_poly1305_functions[];
 
 /* KDFs / PRFs */
@@ -292,6 +301,7 @@ extern const OSSL_DISPATCH ossl_kdf_hkdf_functions[];
 extern const OSSL_DISPATCH ossl_kdf_hkdf_sha256_functions[];
 extern const OSSL_DISPATCH ossl_kdf_hkdf_sha384_functions[];
 extern const OSSL_DISPATCH ossl_kdf_hkdf_sha512_functions[];
+extern const OSSL_DISPATCH ossl_kdf_ikev2kdf_functions[];
 extern const OSSL_DISPATCH ossl_kdf_tls1_3_kdf_functions[];
 extern const OSSL_DISPATCH ossl_kdf_snmpkdf_functions[];
 extern const OSSL_DISPATCH ossl_kdf_srtpkdf_functions[];
@@ -352,9 +362,11 @@ extern const OSSL_DISPATCH ossl_ml_kem_768_keymgmt_functions[];
 extern const OSSL_DISPATCH ossl_ml_kem_1024_keymgmt_functions[];
 #ifndef OPENSSL_NO_EC
 #ifndef OPENSSL_NO_ECX
+extern const OSSL_DISPATCH ossl_mlx_x25519_512_kem_kmgmt_functions[];
 extern const OSSL_DISPATCH ossl_mlx_x25519_kem_kmgmt_functions[];
 extern const OSSL_DISPATCH ossl_mlx_x448_kem_kmgmt_functions[];
 #endif
+extern const OSSL_DISPATCH ossl_mlx_p256_512_kem_kmgmt_functions[];
 extern const OSSL_DISPATCH ossl_mlx_p256_kem_kmgmt_functions[];
 extern const OSSL_DISPATCH ossl_mlx_p384_kem_kmgmt_functions[];
 #ifndef OPENSSL_NO_SM2
@@ -881,3 +893,5 @@ extern const OSSL_DISPATCH ossl_SubjectPublicKeyInfo_der_to_ml_dsa_87_decoder_fu
 
 extern const OSSL_DISPATCH ossl_generic_skeymgmt_functions[];
 extern const OSSL_DISPATCH ossl_aes_skeymgmt_functions[];
+
+#endif /* !defined(OSSL_PROVIDERS_IMPLEMENTATIONS_INCLUDE_PROV_IMPLEMENTATIONS_H) */

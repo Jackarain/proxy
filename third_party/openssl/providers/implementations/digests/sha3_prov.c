@@ -59,7 +59,7 @@
 /*
  * IBM S390X support
  */
-#include "s390x_arch.h"
+#include "arch/s390x_arch.h"
 #define S390_SHA3 1
 #define S390_SHA3_CAPABLE(name) \
     ((OPENSSL_s390xcap_P.kimd[0] & S390X_CAPBIT(S390X_##name)) && (OPENSSL_s390xcap_P.klmd[0] & S390X_CAPBIT(S390X_##name)))
@@ -362,7 +362,7 @@ static PROV_SHA3_METHOD cshake_keccak_s390x_md = {
         ctx->meth = shake_generic_md;        \
     }
 #elif defined(__aarch64__) && defined(KECCAK1600_ASM)
-#include "arm_arch.h"
+#include "arch/arm_arch.h"
 
 static sha3_absorb_fn armsha3_sha3_absorb;
 
@@ -482,10 +482,18 @@ static PROV_SHA3_METHOD shake_ARMSHA3_md = {
         { OSSL_FUNC_DIGEST_DESERIALIZE, (void (*)(void))name##_deserialize }, \
         PROV_DISPATCH_FUNC_DIGEST_GET_PARAMS(name)
 
+#ifdef FIPS_MODULE
+#define PROV_SHA3_FIPS_GET_CTX_PARAMS \
+    PROV_DISPATCH_FUNC_DIGEST_GET_CTX_PARAMS,
+#else
+#define PROV_SHA3_FIPS_GET_CTX_PARAMS
+#endif
+
 #define PROV_FUNC_SHA3_DIGEST(name, bitlen, blksize, dgstsize, flags)     \
     PROV_FUNC_SHA3_DIGEST_COMMON(name, bitlen, blksize, dgstsize, flags), \
         { OSSL_FUNC_DIGEST_INIT, (void (*)(void))keccak_init },           \
-        PROV_DISPATCH_FUNC_DIGEST_CONSTRUCT_END
+        PROV_SHA3_FIPS_GET_CTX_PARAMS                                     \
+            PROV_DISPATCH_FUNC_DIGEST_CONSTRUCT_END
 
 #define PROV_FUNC_SHAKE_DIGEST(name, bitlen, blksize, dgstsize, flags)             \
     PROV_FUNC_SHA3_DIGEST_COMMON(name, bitlen, blksize, dgstsize, flags),          \

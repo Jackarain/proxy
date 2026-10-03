@@ -18,7 +18,7 @@
 #include <openssl/err.h>
 #include <openssl/rand.h>
 #include "ec_local.h"
-#include "s390x_arch.h"
+#include "arch/s390x_arch.h"
 
 /* Size of parameter blocks */
 #define S390X_SIZE_PARAM 4096
@@ -98,9 +98,7 @@ static int ec_GFp_s390x_nistp_mul(const EC_GROUP *group, EC_POINT *r,
 
         memset(&param, 0, sizeof(param));
 
-        if (group->meth->point_get_affine_coordinates(group, point_ptr,
-                x, y, ctx)
-                != 1
+        if (EC_POINT_get_affine_coordinates(group, point_ptr, x, y, ctx) != 1
             || BN_bn2binpad(x, param + S390X_OFF_SRC_X(len), len) == -1
             || BN_bn2binpad(y, param + S390X_OFF_SRC_Y(len), len) == -1
             || BN_bn2binpad(scalar_ptr,
@@ -109,9 +107,7 @@ static int ec_GFp_s390x_nistp_mul(const EC_GROUP *group, EC_POINT *r,
             || s390x_pcc(fc, param) != 0
             || BN_bin2bn(param + S390X_OFF_RES_X(len), len, x) == NULL
             || BN_bin2bn(param + S390X_OFF_RES_Y(len), len, y) == NULL
-            || group->meth->point_set_affine_coordinates(group, r,
-                   x, y, ctx)
-                != 1)
+            || EC_POINT_set_affine_coordinates(group, r, x, y, ctx) != 1)
             goto ret;
 
         rc = 1;
@@ -149,10 +145,30 @@ static ECDSA_SIG *ecdsa_s390x_nistp_sign_sig(const unsigned char *dgst,
 #endif
     int off;
 
+    if (dgstlen < 0) {
+        ERR_raise(ERR_LIB_EC, EC_R_INVALID_LENGTH);
+        return NULL;
+    }
+
+    if (eckey == NULL) {
+        ERR_raise(ERR_LIB_EC, EC_R_MISSING_PARAMETERS);
+        return NULL;
+    }
+
     group = EC_KEY_get0_group(eckey);
+    if (group == NULL) {
+        ERR_raise(ERR_LIB_EC, EC_R_MISSING_PARAMETERS);
+        return NULL;
+    }
+
     order = EC_GROUP_get0_order(group);
+    if (order == NULL) {
+        ERR_raise(ERR_LIB_EC, EC_R_MISSING_PARAMETERS);
+        return NULL;
+    }
+
     privkey = EC_KEY_get0_private_key(eckey);
-    if (group == NULL || order == NULL || privkey == NULL) {
+    if (privkey == NULL) {
         ERR_raise(ERR_LIB_EC, EC_R_MISSING_PARAMETERS);
         return NULL;
     }
@@ -289,9 +305,24 @@ static int ecdsa_s390x_nistp_verify_sig(const unsigned char *dgst, int dgstlen,
     const EC_POINT *pubkey;
     int off;
 
+    if (dgstlen < 0) {
+        ERR_raise(ERR_LIB_EC, EC_R_INVALID_LENGTH);
+        return -1;
+    }
+
+    if (sig == NULL || eckey == NULL) {
+        ERR_raise(ERR_LIB_EC, EC_R_MISSING_PARAMETERS);
+        return -1;
+    }
+
     group = EC_KEY_get0_group(eckey);
+    if (group == NULL) {
+        ERR_raise(ERR_LIB_EC, EC_R_MISSING_PARAMETERS);
+        return -1;
+    }
+
     pubkey = EC_KEY_get0_public_key(eckey);
-    if (eckey == NULL || group == NULL || pubkey == NULL || sig == NULL) {
+    if (pubkey == NULL) {
         ERR_raise(ERR_LIB_EC, EC_R_MISSING_PARAMETERS);
         return -1;
     }
@@ -333,9 +364,7 @@ static int ecdsa_s390x_nistp_verify_sig(const unsigned char *dgst, int dgstlen,
         goto ret;
     }
 
-    if (group->meth->point_get_affine_coordinates(group, pubkey,
-            x, y, ctx)
-            != 1
+    if (EC_POINT_get_affine_coordinates(group, pubkey, x, y, ctx) != 1
         || BN_bn2binpad(x, param + S390X_OFF_X(len), len) == -1
         || BN_bn2binpad(y, param + S390X_OFF_Y(len), len) == -1) {
         ERR_raise(ERR_LIB_EC, ERR_R_BN_LIB);

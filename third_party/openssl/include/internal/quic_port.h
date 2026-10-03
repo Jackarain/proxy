@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-2025 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2023-2026 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -47,8 +47,8 @@ typedef struct quic_port_args_st {
      * connection object for the incoming channel
      * user_ssl_arg is expected to point to a quic listener object
      */
-    SSL *(*get_conn_user_ssl)(QUIC_CHANNEL *ch, void *arg);
-    void *user_ssl_arg;
+    SSL *(*get_conn_user_ssl)(QUIC_CHANNEL *ch, QUIC_LISTENER *ql);
+    QUIC_LISTENER *ql;
 
     /*
      * This SSL_CTX will be used when constructing the handshake layer object
@@ -95,6 +95,9 @@ QUIC_CHANNEL *ossl_quic_port_create_incoming(QUIC_PORT *port, SSL *tls);
  */
 QUIC_CHANNEL *ossl_quic_port_pop_incoming(QUIC_PORT *port);
 
+/* Returns the first incoming channel without removing it, or NULL. */
+QUIC_CHANNEL *ossl_quic_port_peek_incoming(QUIC_PORT *port);
+
 /* Returns 1 if there is at least one connection incoming. */
 int ossl_quic_port_have_incoming(QUIC_PORT *port);
 
@@ -139,6 +142,51 @@ OSSL_TIME ossl_quic_port_get_time(QUIC_PORT *port);
 
 int ossl_quic_port_get_rx_short_dcid_len(const QUIC_PORT *port);
 int ossl_quic_port_get_tx_init_dcid_len(const QUIC_PORT *port);
+
+/* Configures the idle timeout to request from peer (milliseconds, 0=no timeout). */
+void ossl_quic_port_set_max_idle_timeout(QUIC_PORT *port, uint64_t ms);
+/* Gets the configured idle timeout to request from peer. */
+uint64_t ossl_quic_port_get_max_idle_timeout(const QUIC_PORT *port);
+
+/* Configures the maximum UDP payload size to advertise to the peer (bytes). */
+void ossl_quic_port_set_max_udp_payload_size(QUIC_PORT *port, uint64_t size);
+/* Gets the configured maximum UDP payload size to advertise to the peer. */
+uint64_t ossl_quic_port_get_max_udp_payload_size(const QUIC_PORT *port);
+
+/* Configures the maximum data to advertise to the peer (bytes). */
+void ossl_quic_port_set_init_max_data(QUIC_PORT *port, uint64_t max_data);
+/* Gets the configured maximum data to advertise to the peer. */
+uint64_t ossl_quic_port_get_init_max_data(const QUIC_PORT *port);
+
+/* Configures the maximum stream data for a bidi/uni remote/local stream to advertise to the peer (bytes). */
+void ossl_quic_port_set_init_max_stream_data(QUIC_PORT *port, uint64_t max_data, int is_uni, int is_remote);
+/* Gets the configured maximum stream data for a bidi/uni remote/local stream to advertise to the peer. */
+uint64_t ossl_quic_port_get_init_max_stream_data(const QUIC_PORT *port, int is_uni, int is_remote);
+
+/* Configures the maximum bidi/uni streams to advertise to the peer. */
+void ossl_quic_port_set_init_max_streams(QUIC_PORT *port, uint64_t max_streams, int is_uni);
+/* Gets the configured maximum bidi/uni streams to advertise to the peer. */
+uint64_t ossl_quic_port_get_init_max_streams(const QUIC_PORT *port, int is_uni);
+
+/* Configures the ACK delay exponent to advertise to the peer. */
+void ossl_quic_port_set_ack_delay_exponent(QUIC_PORT *port, uint64_t exp);
+/* Gets the configured ACK delay exponent to advertise to the peer. */
+uint64_t ossl_quic_port_get_ack_delay_exponent(const QUIC_PORT *port);
+
+/* Configures the maximum ACK delay to advertise to the peer (milliseconds). */
+void ossl_quic_port_set_max_ack_delay(QUIC_PORT *port, uint64_t ms);
+/* Gets the configured maximum ACK delay to advertise to the peer. */
+uint64_t ossl_quic_port_get_max_ack_delay(const QUIC_PORT *port);
+
+/* Configures the disable active migration flag to advertise to the peer. */
+void ossl_quic_port_set_disable_active_migration(QUIC_PORT *port, uint64_t disable);
+/* Gets the configured disable active migration flag to advertise to the peer. */
+uint64_t ossl_quic_port_get_disable_active_migration(const QUIC_PORT *port);
+
+/* Configures the active connection ID limit to advertise to the peer. */
+void ossl_quic_port_set_active_conn_id_limit(QUIC_PORT *port, uint64_t limit);
+/* Gets the configured active connection ID limit to advertise to the peer. */
+uint64_t ossl_quic_port_get_active_conn_id_limit(const QUIC_PORT *port);
 
 /* Returns 1 if the port is running/healthy, 0 if it has failed. */
 int ossl_quic_port_is_running(const QUIC_PORT *port);
@@ -195,6 +243,10 @@ uint64_t ossl_quic_port_get_net_bio_epoch(const QUIC_PORT *port);
  */
 void ossl_quic_port_raise_net_error(QUIC_PORT *port,
     QUIC_CHANNEL *triggering_ch);
+
+uint64_t ossl_quic_port_get_max_pending_channels(const QUIC_PORT *port);
+
+void ossl_quic_port_set_max_pending_channels(QUIC_PORT *port, uint64_t max_pending_channels);
 
 #endif
 

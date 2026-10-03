@@ -1,11 +1,18 @@
 /*
- * Copyright 2016-2023 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2016-2026 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
  * in the file LICENSE in the source distribution or at
  * https://www.openssl.org/source/license.html
  */
+
+#if !defined(OSSL_LIBCRYPTO_PKCS12_P12_LOCAL_H)
+#define OSSL_LIBCRYPTO_PKCS12_P12_LOCAL_H
+
+#include <openssl/asn1.h>
+#include <openssl/pkcs12.h>
+#include <openssl/x509.h>
 
 struct PKCS12_MAC_DATA_st {
     X509_SIG *dinfo;
@@ -42,4 +49,22 @@ struct pkcs12_bag_st {
     } value;
 };
 
+struct pkcs12_parse_ctx_st {
+    EVP_PKEY **pkey;
+    X509 **cert;
+    STACK_OF(X509) **ca;
+    STACK_OF(EVP_SKEY) **skeys;
+    /* internal: temporary cert collection used during parsing */
+    STACK_OF(X509) *ocerts;
+};
+
 const PKCS7_CTX *ossl_pkcs12_get0_pkcs7ctx(const PKCS12 *p12);
+int ossl_pkcs12_verify_mac(PKCS12 *p12, const char *pass, int passlen,
+    OSSL_LIB_CTX *libctx, const char *propq);
+STACK_OF(PKCS7) *ossl_pkcs12_unpack_authsafes_ex(const PKCS12 *p12,
+    OSSL_LIB_CTX *libctx, const char *propq);
+STACK_OF(PKCS12_SAFEBAG) *ossl_pkcs12_unpack_p7encdata_ex(PKCS7 *p7,
+    const char *pass, int passlen,
+    OSSL_LIB_CTX *libctx, const char *propq);
+
+#endif /* !defined(OSSL_LIBCRYPTO_PKCS12_P12_LOCAL_H) */

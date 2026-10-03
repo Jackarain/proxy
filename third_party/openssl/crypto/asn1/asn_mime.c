@@ -81,9 +81,9 @@ int i2d_ASN1_bio_stream(BIO *out, ASN1_VALUE *val, BIO *in, int flags,
         }
         if (!SMIME_crlf_copy(in, bio, flags)) {
             rv = 0;
+        } else if (BIO_flush(bio) <= 0) {
+            rv = 0;
         }
-
-        (void)BIO_flush(bio);
         /* Free up successive BIOs until we hit the old output BIO */
         do {
             tbio = BIO_pop(bio);
@@ -660,10 +660,8 @@ static int multi_split(BIO *bio, int flags, const char *bound, STACK_OF(BIO) **r
                     return 0;
                 BIO_set_mem_eof_return(bpart, 0);
             }
-            if (!sk_BIO_push(parts, bpart)) {
-                BIO_free(bpart);
-                return 0;
-            }
+            if (!sk_BIO_push(parts, bpart))
+                goto err;
             return 1;
         } else if (part != 0) {
             /* Strip (possibly CR +) LF from linebuf */
@@ -671,10 +669,8 @@ static int multi_split(BIO *bio, int flags, const char *bound, STACK_OF(BIO) **r
             if (first) {
                 first = 0;
                 if (bpart)
-                    if (!sk_BIO_push(parts, bpart)) {
-                        BIO_free(bpart);
-                        return 0;
-                    }
+                    if (!sk_BIO_push(parts, bpart))
+                        goto err;
                 bpart = BIO_new(BIO_s_mem());
                 if (bpart == NULL)
                     return 0;
@@ -688,17 +684,18 @@ static int multi_split(BIO *bio, int flags, const char *bound, STACK_OF(BIO) **r
 #endif
                     || (flags & SMIME_CRLFEOL) != 0) {
                     if (BIO_puts(bpart, "\r\n") < 0)
-                        return 0;
+                        goto err;
                 } else {
                     if (BIO_puts(bpart, "\n") < 0)
-                        return 0;
+                        goto err;
                 }
             }
             eol = next_eol;
             if (len > 0 && BIO_write(bpart, linebuf, len) != len)
-                return 0;
+                goto err;
         }
     }
+err:
     BIO_free(bpart);
     return 0;
 }

@@ -94,6 +94,8 @@ int ossl_quic_stream_map_init(QUIC_STREAM_MAP *qsm,
     QUIC_CHANNEL *ch)
 {
     qsm->map = lh_QUIC_STREAM_new(hash_stream, cmp_stream);
+    if (qsm->map == NULL)
+        return 0;
     qsm->active_list.prev = qsm->active_list.next = &qsm->active_list;
     qsm->accept_list.prev = qsm->accept_list.next = &qsm->accept_list;
     qsm->ready_for_gc_list.prev = qsm->ready_for_gc_list.next
@@ -123,6 +125,8 @@ static void release_each(QUIC_STREAM *stream, void *arg)
 
 void ossl_quic_stream_map_cleanup(QUIC_STREAM_MAP *qsm)
 {
+    if (qsm->map == NULL)
+        return;
     lh_QUIC_STREAM_set_down_load(qsm->map, 0);
     ossl_quic_stream_map_visit(qsm, release_each, qsm);
 
@@ -169,6 +173,10 @@ QUIC_STREAM *ossl_quic_stream_map_alloc(QUIC_STREAM_MAP *qsm,
     s->send_final_size = UINT64_MAX;
 
     lh_QUIC_STREAM_insert(qsm->map, s);
+    if (lh_QUIC_STREAM_error(qsm->map)) {
+        OPENSSL_free(s);
+        return NULL;
+    }
     return s;
 }
 
@@ -446,6 +454,13 @@ int ossl_quic_stream_map_notify_totally_acked(QUIC_STREAM_MAP *qsm,
 
     case QUIC_SSTREAM_STATE_DATA_SENT:
         qs->send_state = QUIC_SSTREAM_STATE_DATA_RECVD;
+        /*
+         * Remember final size in case  SSL_get_stream_write_state()
+         * gets called.
+         */
+        qs->have_final_size = ossl_quic_sstream_get_final_size(qs->sstream,
+            NULL);
+
         /* We no longer need a QUIC_SSTREAM in this state. */
         ossl_quic_sstream_free(qs->sstream);
         qs->sstream = NULL;
@@ -776,20 +791,27 @@ static QUIC_RXFC *qsm_get_max_streams_rxfc(QUIC_STREAM_MAP *qsm, QUIC_STREAM *s)
         : qsm->max_streams_uni_rxfc;
 }
 
-void ossl_quic_stream_map_remove_from_accept_queue(QUIC_STREAM_MAP *qsm,
+void ossl_quic_stream_map_retire_stream_credit(QUIC_STREAM_MAP *qsm,
     QUIC_STREAM *s,
     OSSL_TIME rtt)
 {
     QUIC_RXFC *max_streams_rxfc;
 
+    if ((max_streams_rxfc = qsm_get_max_streams_rxfc(qsm, s)) != NULL)
+        (void)ossl_quic_rxfc_on_retire(max_streams_rxfc, 1, rtt);
+}
+
+void ossl_quic_stream_map_remove_from_accept_queue(QUIC_STREAM_MAP *qsm,
+    QUIC_STREAM *s,
+    OSSL_TIME rtt)
+{
     list_remove(&qsm->accept_list, &s->accept_node);
     if (ossl_quic_stream_is_bidi(s))
         --qsm->num_accept_bidi;
     else
         --qsm->num_accept_uni;
 
-    if ((max_streams_rxfc = qsm_get_max_streams_rxfc(qsm, s)) != NULL)
-        (void)ossl_quic_rxfc_on_retire(max_streams_rxfc, 1, rtt);
+    ossl_quic_stream_map_retire_stream_credit(qsm, s, rtt);
 }
 
 size_t ossl_quic_stream_map_get_accept_queue_len(QUIC_STREAM_MAP *qsm, int is_uni)

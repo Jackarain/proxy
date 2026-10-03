@@ -260,9 +260,11 @@ x942_encode_otherinfo(size_t keylen,
         goto err;
     *out_ctr = (pcounter + 2);
     *der = der_buf;
+    der_buf = NULL;
     *der_len = der_buflen;
     ret = 1;
 err:
+    OPENSSL_free(der_buf);
     WPACKET_cleanup(&pkt);
     return ret;
 }
@@ -452,7 +454,7 @@ static int fips_x942kdf_key_check_passed(KDF_X942 *ctx)
     if (!key_approved) {
         if (!OSSL_FIPS_IND_ON_UNAPPROVED(ctx, OSSL_FIPS_IND_SETTABLE0,
                 libctx, "X942KDF", "Key size",
-                ossl_fips_config_x942kdf_key_check)) {
+                FIPS_CONFIG_X942KDF_KEY_CHECK)) {
             ERR_raise(ERR_LIB_PROV, PROV_R_INVALID_KEY_LENGTH);
             return 0;
         }

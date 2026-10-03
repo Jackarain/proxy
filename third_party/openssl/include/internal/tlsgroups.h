@@ -11,6 +11,10 @@
 #define OSSL_INTERNAL_TLSGROUPS_H
 #pragma once
 
+#include <stdint.h>
+
+#include <openssl/e_os2.h> /* For 'ossl_inline' */
+
 #define OSSL_TLS_GROUP_ID_sect163k1 0x0001
 #define OSSL_TLS_GROUP_ID_sect163r1 0x0002
 #define OSSL_TLS_GROUP_ID_sect163r2 0x0003
@@ -60,6 +64,8 @@
 #define OSSL_TLS_GROUP_ID_mlkem512 0x0200
 #define OSSL_TLS_GROUP_ID_mlkem768 0x0201
 #define OSSL_TLS_GROUP_ID_mlkem1024 0x0202
+#define OSSL_TLS_GROUP_ID_SecP256r1MLKEM512 0x11E9
+#define OSSL_TLS_GROUP_ID_MLKEM512X25519 0x11EA
 #define OSSL_TLS_GROUP_ID_SecP256r1MLKEM768 0x11EB
 #define OSSL_TLS_GROUP_ID_X25519MLKEM768 0x11EC
 #define OSSL_TLS_GROUP_ID_SecP384r1MLKEM1024 0x11ED

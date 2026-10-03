@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2025 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2014-2026 The OpenSSL Project Authors. All Rights Reserved.
  * Copyright (c) 2014, Intel Corporation. All Rights Reserved.
  * Copyright (c) 2015, CloudFlare, Inc.
  *
@@ -38,8 +38,6 @@
 #endif
 
 #define P256_LIMBS (256 / BN_BITS2)
-
-typedef unsigned short u16;
 
 typedef struct {
     BN_ULONG X[P256_LIMBS];
@@ -1210,8 +1208,8 @@ static NISTZ256_PRE_COMP *ecp_nistz256_pre_comp_new(const EC_GROUP *group)
 NISTZ256_PRE_COMP *EC_nistz256_pre_comp_dup(NISTZ256_PRE_COMP *p)
 {
     int i;
-    if (p != NULL)
-        CRYPTO_UP_REF(&p->references, &i);
+    if (p == NULL || !CRYPTO_UP_REF(&p->references, &i))
+        return NULL;
     return p;
 }
 
@@ -1533,7 +1531,7 @@ static int ecp_nistz256group_full_init(EC_GROUP *group,
     }
     if (!EC_POINT_copy(group->generator, P))
         goto err;
-    if (!BN_copy(group->order, order))
+    if (BN_copy(group->order, order) == NULL)
         goto err;
     if (!BN_set_word(group->cofactor, 1))
         goto err;

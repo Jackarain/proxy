@@ -39,12 +39,6 @@ static int ts_find_name(STACK_OF(GENERAL_NAME) *gen_names,
     GENERAL_NAME *name);
 
 /*
- * This must be large enough to hold all values in ts_status_text (with
- * comma separator) or all text fields in ts_failure_info (also with comma).
- */
-#define TS_STATUS_BUF_SIZE 256
-
-/*
  * Local mapping between response codes and descriptions.
  */
 static const char *ts_status_text[] = {
@@ -71,6 +65,37 @@ static const struct {
     { TS_INFO_ADD_INFO_NOT_AVAILABLE, "addInfoNotAvailable" },
     { TS_INFO_SYSTEM_FAILURE, "systemFailure" }
 };
+
+/*
+ * Pack the ts_failure_info[] entries from an ASN.1 bit string into a
+ * positional uint32_t: bit i is set iff ts_failure_info[i].code is set
+ * in @bs.
+ */
+static uint32_t ts_failure_mask(ASN1_BIT_STRING *bs)
+{
+    uint32_t mask = 0;
+    size_t i;
+
+    for (i = 0; i < OSSL_NELEM(ts_failure_info); i++)
+        if (ASN1_BIT_STRING_get_bit(bs, ts_failure_info[i].code))
+            mask |= 1U << i;
+    return mask;
+}
+
+/* Return the failure text for slot @idx, or "" if that slot is not set. */
+static const char *ts_failure_text(uint32_t mask, int idx)
+{
+    return (mask & (1U << idx)) ? ts_failure_info[idx].text : "";
+}
+
+/*
+ * Return "," iff slot @idx is set and any earlier slot is also set,
+ * otherwise "". Used as the printf-style separator preceding each slot.
+ */
+static const char *ts_failure_sep(uint32_t mask, int idx)
+{
+    return (mask & (1U << idx)) && (mask & ((1U << idx) - 1)) ? "," : "";
+}
 
 /*-
  * This function carries out the following tasks:
@@ -207,24 +232,32 @@ static ESS_SIGNING_CERT *ossl_ess_get_signing_cert(const PKCS7_SIGNER_INFO *si)
 {
     const ASN1_TYPE *attr;
     const unsigned char *p;
+    size_t len;
 
     attr = PKCS7_get_signed_attribute(si, NID_id_smime_aa_signingCertificate);
     if (attr == NULL || attr->type != V_ASN1_SEQUENCE)
         return NULL;
     p = ASN1_STRING_get0_data(attr->value.sequence);
-    return d2i_ESS_SIGNING_CERT(NULL, &p, ASN1_STRING_length(attr->value.sequence));
+    len = ASN1_STRING_get_length(attr->value.sequence);
+    if (len > INT_MAX)
+        return NULL;
+    return d2i_ESS_SIGNING_CERT(NULL, &p, (int)len);
 }
 
 static ESS_SIGNING_CERT_V2 *ossl_ess_get_signing_cert_v2(const PKCS7_SIGNER_INFO *si)
 {
     const ASN1_TYPE *attr;
     const unsigned char *p;
+    size_t len;
 
     attr = PKCS7_get_signed_attribute(si, NID_id_smime_aa_signingCertificateV2);
     if (attr == NULL || attr->type != V_ASN1_SEQUENCE)
         return NULL;
     p = ASN1_STRING_get0_data(attr->value.sequence);
-    return d2i_ESS_SIGNING_CERT_V2(NULL, &p, ASN1_STRING_length(attr->value.sequence));
+    len = ASN1_STRING_get_length(attr->value.sequence);
+    if (len > INT_MAX)
+        return NULL;
+    return d2i_ESS_SIGNING_CERT_V2(NULL, &p, (int)len);
 }
 
 static int ts_check_signing_certs(const PKCS7_SIGNER_INFO *si,
@@ -352,8 +385,10 @@ static int ts_check_status_info(TS_RESP *response)
     TS_STATUS_INFO *info = response->status_info;
     long status = ASN1_INTEGER_get(info->status);
     const char *status_text = NULL;
+    const char *mfail_msg = NULL;
     char *embedded_status_text = NULL;
-    char failure_text[TS_STATUS_BUF_SIZE] = "";
+    char *failure_text = NULL;
+    uint32_t mask;
 
     if (status == 0 || status == 1)
         return 1;
@@ -368,30 +403,30 @@ static int ts_check_status_info(TS_RESP *response)
         && (embedded_status_text = ts_get_status_text(info->text)) == NULL)
         return 0;
 
-    /* Fill in failure_text with the failure information. */
-    if (info->failure_info) {
-        int i;
-        int first = 1;
-        for (i = 0; i < (int)OSSL_NELEM(ts_failure_info); ++i) {
-            if (ASN1_BIT_STRING_get_bit(info->failure_info,
-                    ts_failure_info[i].code)) {
-                if (!first)
-                    strcat(failure_text, ",");
-                else
-                    first = 0;
-                strcat(failure_text, ts_failure_info[i].text);
-            }
-        }
-    }
-    if (failure_text[0] == '\0')
-        strcpy(failure_text, "unspecified");
+    /* Build a comma-separated list of failure_info bits, if any. */
+    mask = info->failure_info != NULL ? ts_failure_mask(info->failure_info) : 0;
+    if (mask != 0
+        && ossl_asprintf(&failure_text,
+               "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s",
+               ts_failure_text(mask, 0),
+               ts_failure_sep(mask, 1), ts_failure_text(mask, 1),
+               ts_failure_sep(mask, 2), ts_failure_text(mask, 2),
+               ts_failure_sep(mask, 3), ts_failure_text(mask, 3),
+               ts_failure_sep(mask, 4), ts_failure_text(mask, 4),
+               ts_failure_sep(mask, 5), ts_failure_text(mask, 5),
+               ts_failure_sep(mask, 6), ts_failure_text(mask, 6),
+               ts_failure_sep(mask, 7), ts_failure_text(mask, 7))
+            < 0)
+        mfail_msg = "unable to display, malloc failed";
 
     ERR_raise_data(ERR_LIB_TS, TS_R_NO_TIME_STAMP_TOKEN,
         "status code: %s, status text: %s, failure codes: %s",
         status_text,
-        embedded_status_text ? embedded_status_text : "unspecified",
-        failure_text);
+        embedded_status_text != NULL ? embedded_status_text : "unspecified",
+        failure_text != NULL ? failure_text : mfail_msg != NULL ? mfail_msg
+                                                                : "unspecified");
     OPENSSL_free(embedded_status_text);
+    OPENSSL_free(failure_text);
 
     return 0;
 }
@@ -482,6 +517,7 @@ static int ts_check_imprints(X509_ALGOR *algor_a,
     TS_MSG_IMPRINT *b = tst_info->msg_imprint;
     X509_ALGOR *algor_b = b->hash_algo;
     int ret = 0;
+    size_t len;
 
     if (algor_a) {
         if (OBJ_cmp(algor_a->algorithm, algor_b->algorithm))
@@ -495,7 +531,11 @@ static int ts_check_imprints(X509_ALGOR *algor_a,
             goto err;
     }
 
-    ret = len_a == (unsigned)ASN1_STRING_length(b->hashed_msg) && memcmp(imprint_a, ASN1_STRING_get0_data(b->hashed_msg), len_a) == 0;
+    len = ASN1_STRING_get_length(b->hashed_msg);
+    if (len > INT_MAX)
+        goto err;
+
+    ret = len_a == (unsigned)len && memcmp(imprint_a, ASN1_STRING_get0_data(b->hashed_msg), len) == 0;
 err:
     if (!ret)
         ERR_raise(ERR_LIB_TS, TS_R_MESSAGE_IMPRINT_MISMATCH);

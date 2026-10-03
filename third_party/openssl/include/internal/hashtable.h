@@ -13,6 +13,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <string.h>
 #include <openssl/e_os2.h>
 #include <internal/rcu.h>
 #include "crypto/context.h"
@@ -23,6 +24,7 @@ typedef struct ht_internal_st HT;
  * Represents a key to a hashtable
  */
 typedef struct ht_key_header_st {
+    uint64_t cached_hash;
     size_t keysize;
     size_t bufsize;
     uint8_t *keybuf;
@@ -169,10 +171,29 @@ static ossl_inline ossl_unused int ossl_key_raw_copy(HT_KEY *key, const uint8_t 
         (key)->keysize += tmplen;                                                      \
     } while (0)
 
+#define HT_INIT_KEY_CACHED(key, hash)         \
+    do {                                      \
+        HT_INIT_KEY((key));                   \
+        (key)->key_header.cached_hash = hash; \
+    } while (0)
+
+#define HT_INIT_KEY_EXTERNAL(key, buf, len) \
+    do {                                    \
+        HT_INIT_KEY((key));                 \
+        (key)->key_header.keybuf = (buf);   \
+        (key)->key_header.keysize = (len);  \
+    } while (0)
+
+#define HT_KEY_GET_HASH(key) (key)->key_header.cached_hash
+
 /*
  * Resets a hash table key to a known state
  */
-#define HT_KEY_RESET(key) memset((key)->key_header.keybuf, 0, (key)->key_header.keysize)
+#define HT_KEY_RESET(key)                                               \
+    do {                                                                \
+        memset((key)->key_header.keybuf, 0, (key)->key_header.keysize); \
+        (key)->key_header.cached_hash = 0;                              \
+    } while (0)
 
 /*
  * Sets a scalar field in a hash table key
@@ -336,7 +357,7 @@ static ossl_inline ossl_unused void ossl_ht_strcase(HT_KEY *key, char *tgt, cons
     if (key != NULL && key->keysize + len > key->bufsize)
         len = (size_t)(key->bufsize - key->keysize);
 
-    for (i = 0; src[i] != '\0' && i < len; i++)
+    for (i = 0; i < len && src[i] != '\0'; i++)
         tgt[i] = case_adjust & src[i];
 }
 
@@ -378,7 +399,9 @@ int ossl_ht_flush(HT *htable);
 /*
  * Inserts an element to a hash table, optionally returning
  * replaced data to caller
- * Returns 1 if the insert was successful, 0 on error
+ * Returns 1 if the insert was successful, 0 on duplicate without
+ * replacement, invalid input, or another non-allocation failure, and -1
+ * on allocation failure or if the table could not be grown.
  */
 int ossl_ht_insert(HT *htable, HT_KEY *key, HT_VALUE *data,
     HT_VALUE **olddata);

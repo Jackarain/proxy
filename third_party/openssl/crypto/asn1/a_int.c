@@ -1,5 +1,5 @@
 /*
- * Copyright 1995-2025 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 1995-2026 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -316,7 +316,7 @@ ASN1_INTEGER *ossl_c2i_ASN1_INTEGER(ASN1_INTEGER **a, const unsigned char **pp,
     } else
         ret = *a;
 
-    if (r > INT_MAX || ASN1_STRING_set(ret, NULL, (int)r) == 0) {
+    if (ossl_asn1_string_set1_data(ret, NULL, r) == 0) {
         ERR_raise(ERR_LIB_ASN1, ERR_R_ASN1_LIB);
         goto err;
     }
@@ -371,7 +371,7 @@ static int asn1_string_set_int64(ASN1_STRING *a, int64_t r, int itype)
         off = asn1_put_uint64(tbuf, r);
         a->type &= ~V_ASN1_NEG;
     }
-    return ASN1_STRING_set(a, tbuf + off, (int)(sizeof(tbuf) - off));
+    return ossl_asn1_string_set1_data(a, tbuf + off, (sizeof(tbuf) - off));
 }
 
 static int asn1_string_get_uint64(uint64_t *pr, const ASN1_STRING *a,
@@ -399,7 +399,7 @@ static int asn1_string_set_uint64(ASN1_STRING *a, uint64_t r, int itype)
 
     a->type = itype;
     off = asn1_put_uint64(tbuf, r);
-    return ASN1_STRING_set(a, tbuf + off, (int)(sizeof(tbuf) - off));
+    return ossl_asn1_string_set1_data(a, tbuf + off, (sizeof(tbuf) - off));
 }
 
 /*
@@ -441,11 +441,17 @@ ASN1_INTEGER *d2i_ASN1_UINTEGER(ASN1_INTEGER **a, const unsigned char **pp,
         i = ASN1_R_ILLEGAL_NEGATIVE_VALUE;
         goto err;
     }
+#if INT_MAX < LONG_MAX
+    if (len > INT_MAX - 1) {
+        i = ASN1_R_TOO_LARGE;
+        goto err;
+    }
+#endif
     /*
      * We must OPENSSL_malloc stuff, even for 0 bytes otherwise it signifies
      * a missing NULL parameter.
      */
-    s = OPENSSL_malloc((int)len + 1);
+    s = OPENSSL_malloc(len == 0 ? 1 : (size_t)len);
     if (s == NULL)
         goto err;
     ret->type = V_ASN1_INTEGER;
@@ -454,11 +460,11 @@ ASN1_INTEGER *d2i_ASN1_UINTEGER(ASN1_INTEGER **a, const unsigned char **pp,
             p++;
             len--;
         }
-        memcpy(s, p, (int)len);
+        memcpy(s, p, (size_t)len);
         p += len;
     }
 
-    ASN1_STRING_set0(ret, s, (int)len);
+    ASN1_STRING_set0(ret, s, (int)len); /* len <= INT_MAX checked above */
     if (a != NULL)
         (*a) = ret;
     *pp = p;
@@ -497,7 +503,7 @@ static ASN1_STRING *bn_to_asn1_string(const BIGNUM *bn, ASN1_STRING *ai,
     if (len == 0)
         len = 1;
 
-    if (ASN1_STRING_set(ret, NULL, len) == 0) {
+    if (ossl_asn1_string_set1_data(ret, NULL, len) == 0) {
         ERR_raise(ERR_LIB_ASN1, ERR_R_ASN1_LIB);
         goto err;
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright 1998-2025 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 1998-2026 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <openssl/objects.h>
+#include "internal/e_os.h"
 #include "internal/comp.h"
 #include <openssl/err.h>
 #include "crypto/cryptlib.h"
@@ -46,10 +47,6 @@ static void brotli_free(void *opaque, void *address)
  * work.  Therefore, all BROTLI routines are loaded at run time
  * and we do not link to a .LIB file when BROTLI_SHARED is set.
  */
-#if defined(OPENSSL_SYS_WINDOWS) || defined(OPENSSL_SYS_WIN32)
-#include <windows.h>
-#endif
-
 #ifdef BROTLI_SHARED
 #include "internal/dso.h"
 
@@ -292,6 +289,7 @@ DEFINE_RUN_ONCE_STATIC(ossl_comp_brotli_init)
 #define LIBBROTLIDEC "brotlidec"
 #endif
 
+    ERR_set_mark();
     brotli_encode_dso = DSO_load(NULL, LIBBROTLIENC, NULL, 0);
     if (brotli_encode_dso != NULL) {
         p_encode_init = (encode_init_ft)DSO_bind_func(brotli_encode_dso, "BrotliEncoderCreateInstance");
@@ -318,9 +316,12 @@ DEFINE_RUN_ONCE_STATIC(ossl_comp_brotli_init)
         || p_decode_stream == NULL || p_decode_has_more == NULL || p_decode_end == NULL
         || p_decode_error == NULL || p_decode_error_string == NULL || p_decode_is_finished == NULL
         || p_decode_oneshot == NULL) {
+        ERR_clear_last_mark();
         ossl_comp_brotli_cleanup();
         return 0;
     }
+    /* Do not leave errors behind on success. */
+    ERR_pop_to_mark();
 #endif
     return 1;
 }

@@ -71,9 +71,30 @@ typedef struct pkcs7_signer_info_st {
 SKM_DEFINE_STACK_OF_INTERNAL(PKCS7_SIGNER_INFO, PKCS7_SIGNER_INFO, PKCS7_SIGNER_INFO)
 #define sk_PKCS7_SIGNER_INFO_num(sk) OPENSSL_sk_num(ossl_check_const_PKCS7_SIGNER_INFO_sk_type(sk))
 #define sk_PKCS7_SIGNER_INFO_value(sk, idx) ((PKCS7_SIGNER_INFO *)OPENSSL_sk_value(ossl_check_const_PKCS7_SIGNER_INFO_sk_type(sk), (idx)))
-#define sk_PKCS7_SIGNER_INFO_new(cmp) ((STACK_OF(PKCS7_SIGNER_INFO) *)OPENSSL_sk_set_cmp_thunks(OPENSSL_sk_new(ossl_check_PKCS7_SIGNER_INFO_compfunc_type(cmp)), sk_PKCS7_SIGNER_INFO_cmpfunc_thunk))
-#define sk_PKCS7_SIGNER_INFO_new_null() ((STACK_OF(PKCS7_SIGNER_INFO) *)OPENSSL_sk_set_thunks(OPENSSL_sk_new_null(), sk_PKCS7_SIGNER_INFO_freefunc_thunk))
-#define sk_PKCS7_SIGNER_INFO_new_reserve(cmp, n) ((STACK_OF(PKCS7_SIGNER_INFO) *)OPENSSL_sk_set_cmp_thunks(OPENSSL_sk_new_reserve(ossl_check_PKCS7_SIGNER_INFO_compfunc_type(cmp), (n)), sk_PKCS7_SIGNER_INFO_cmpfunc_thunk))
+#define sk_PKCS7_SIGNER_INFO_new(cmp) \
+    ((STACK_OF(PKCS7_SIGNER_INFO) *)OPENSSL_sk_set_thunks( \
+        OPENSSL_sk_set_copy_thunks( \
+            OPENSSL_sk_set_cmp_thunks( \
+                OPENSSL_sk_new(ossl_check_PKCS7_SIGNER_INFO_compfunc_type(cmp)), \
+                sk_PKCS7_SIGNER_INFO_cmpfunc_thunk), \
+            sk_PKCS7_SIGNER_INFO_copyfunc_thunk), \
+        sk_PKCS7_SIGNER_INFO_freefunc_thunk))
+#define sk_PKCS7_SIGNER_INFO_new_null() \
+    ((STACK_OF(PKCS7_SIGNER_INFO) *)OPENSSL_sk_set_thunks( \
+        OPENSSL_sk_set_copy_thunks( \
+            OPENSSL_sk_set_cmp_thunks( \
+                OPENSSL_sk_new_null(), \
+                sk_PKCS7_SIGNER_INFO_cmpfunc_thunk), \
+            sk_PKCS7_SIGNER_INFO_copyfunc_thunk), \
+        sk_PKCS7_SIGNER_INFO_freefunc_thunk))
+#define sk_PKCS7_SIGNER_INFO_new_reserve(cmp, n) \
+    ((STACK_OF(PKCS7_SIGNER_INFO) *)OPENSSL_sk_set_thunks( \
+        OPENSSL_sk_set_copy_thunks( \
+            OPENSSL_sk_set_cmp_thunks( \
+                OPENSSL_sk_new_reserve(ossl_check_PKCS7_SIGNER_INFO_compfunc_type(cmp), (n)), \
+                sk_PKCS7_SIGNER_INFO_cmpfunc_thunk), \
+            sk_PKCS7_SIGNER_INFO_copyfunc_thunk), \
+        sk_PKCS7_SIGNER_INFO_freefunc_thunk))
 #define sk_PKCS7_SIGNER_INFO_reserve(sk, n) OPENSSL_sk_reserve(ossl_check_PKCS7_SIGNER_INFO_sk_type(sk), (n))
 #define sk_PKCS7_SIGNER_INFO_free(sk) OPENSSL_sk_free(ossl_check_PKCS7_SIGNER_INFO_sk_type(sk))
 #define sk_PKCS7_SIGNER_INFO_zero(sk) OPENSSL_sk_zero(ossl_check_PKCS7_SIGNER_INFO_sk_type(sk))
@@ -91,8 +112,25 @@ SKM_DEFINE_STACK_OF_INTERNAL(PKCS7_SIGNER_INFO, PKCS7_SIGNER_INFO, PKCS7_SIGNER_
 #define sk_PKCS7_SIGNER_INFO_find_all(sk, ptr, pnum) OPENSSL_sk_find_all(ossl_check_PKCS7_SIGNER_INFO_sk_type(sk), ossl_check_PKCS7_SIGNER_INFO_type(ptr), pnum)
 #define sk_PKCS7_SIGNER_INFO_sort(sk) OPENSSL_sk_sort(ossl_check_PKCS7_SIGNER_INFO_sk_type(sk))
 #define sk_PKCS7_SIGNER_INFO_is_sorted(sk) OPENSSL_sk_is_sorted(ossl_check_const_PKCS7_SIGNER_INFO_sk_type(sk))
-#define sk_PKCS7_SIGNER_INFO_dup(sk) ((STACK_OF(PKCS7_SIGNER_INFO) *)OPENSSL_sk_dup(ossl_check_const_PKCS7_SIGNER_INFO_sk_type(sk)))
-#define sk_PKCS7_SIGNER_INFO_deep_copy(sk, copyfunc, freefunc) ((STACK_OF(PKCS7_SIGNER_INFO) *)OPENSSL_sk_deep_copy(ossl_check_const_PKCS7_SIGNER_INFO_sk_type(sk), ossl_check_PKCS7_SIGNER_INFO_copyfunc_type(copyfunc), ossl_check_PKCS7_SIGNER_INFO_freefunc_type(freefunc)))
+#define sk_PKCS7_SIGNER_INFO_dup(sk) \
+    ((STACK_OF(PKCS7_SIGNER_INFO) *)OPENSSL_sk_set_thunks( \
+        OPENSSL_sk_set_copy_thunks( \
+            OPENSSL_sk_set_cmp_thunks( \
+                OPENSSL_sk_dup(ossl_check_const_PKCS7_SIGNER_INFO_sk_type(sk)), \
+                sk_PKCS7_SIGNER_INFO_cmpfunc_thunk), \
+            sk_PKCS7_SIGNER_INFO_copyfunc_thunk), \
+        sk_PKCS7_SIGNER_INFO_freefunc_thunk))
+#define sk_PKCS7_SIGNER_INFO_deep_copy(sk, copyfunc, freefunc) \
+    ((STACK_OF(PKCS7_SIGNER_INFO) *)OPENSSL_sk_set_thunks( \
+        OPENSSL_sk_set_copy_thunks( \
+            OPENSSL_sk_set_cmp_thunks( \
+                OPENSSL_sk_deep_copy( \
+                    ossl_check_const_PKCS7_SIGNER_INFO_sk_type(sk), \
+                    ossl_check_PKCS7_SIGNER_INFO_copyfunc_type(copyfunc), \
+                    ossl_check_PKCS7_SIGNER_INFO_freefunc_type(freefunc)), \
+                sk_PKCS7_SIGNER_INFO_cmpfunc_thunk), \
+            sk_PKCS7_SIGNER_INFO_copyfunc_thunk), \
+        sk_PKCS7_SIGNER_INFO_freefunc_thunk))
 #define sk_PKCS7_SIGNER_INFO_set_cmp_func(sk, cmp) ((sk_PKCS7_SIGNER_INFO_compfunc)OPENSSL_sk_set_cmp_func(ossl_check_PKCS7_SIGNER_INFO_sk_type(sk), ossl_check_PKCS7_SIGNER_INFO_compfunc_type(cmp)))
 
 /* clang-format on */
@@ -109,9 +147,30 @@ typedef struct pkcs7_recip_info_st {
 SKM_DEFINE_STACK_OF_INTERNAL(PKCS7_RECIP_INFO, PKCS7_RECIP_INFO, PKCS7_RECIP_INFO)
 #define sk_PKCS7_RECIP_INFO_num(sk) OPENSSL_sk_num(ossl_check_const_PKCS7_RECIP_INFO_sk_type(sk))
 #define sk_PKCS7_RECIP_INFO_value(sk, idx) ((PKCS7_RECIP_INFO *)OPENSSL_sk_value(ossl_check_const_PKCS7_RECIP_INFO_sk_type(sk), (idx)))
-#define sk_PKCS7_RECIP_INFO_new(cmp) ((STACK_OF(PKCS7_RECIP_INFO) *)OPENSSL_sk_set_cmp_thunks(OPENSSL_sk_new(ossl_check_PKCS7_RECIP_INFO_compfunc_type(cmp)), sk_PKCS7_RECIP_INFO_cmpfunc_thunk))
-#define sk_PKCS7_RECIP_INFO_new_null() ((STACK_OF(PKCS7_RECIP_INFO) *)OPENSSL_sk_set_thunks(OPENSSL_sk_new_null(), sk_PKCS7_RECIP_INFO_freefunc_thunk))
-#define sk_PKCS7_RECIP_INFO_new_reserve(cmp, n) ((STACK_OF(PKCS7_RECIP_INFO) *)OPENSSL_sk_set_cmp_thunks(OPENSSL_sk_new_reserve(ossl_check_PKCS7_RECIP_INFO_compfunc_type(cmp), (n)), sk_PKCS7_RECIP_INFO_cmpfunc_thunk))
+#define sk_PKCS7_RECIP_INFO_new(cmp) \
+    ((STACK_OF(PKCS7_RECIP_INFO) *)OPENSSL_sk_set_thunks( \
+        OPENSSL_sk_set_copy_thunks( \
+            OPENSSL_sk_set_cmp_thunks( \
+                OPENSSL_sk_new(ossl_check_PKCS7_RECIP_INFO_compfunc_type(cmp)), \
+                sk_PKCS7_RECIP_INFO_cmpfunc_thunk), \
+            sk_PKCS7_RECIP_INFO_copyfunc_thunk), \
+        sk_PKCS7_RECIP_INFO_freefunc_thunk))
+#define sk_PKCS7_RECIP_INFO_new_null() \
+    ((STACK_OF(PKCS7_RECIP_INFO) *)OPENSSL_sk_set_thunks( \
+        OPENSSL_sk_set_copy_thunks( \
+            OPENSSL_sk_set_cmp_thunks( \
+                OPENSSL_sk_new_null(), \
+                sk_PKCS7_RECIP_INFO_cmpfunc_thunk), \
+            sk_PKCS7_RECIP_INFO_copyfunc_thunk), \
+        sk_PKCS7_RECIP_INFO_freefunc_thunk))
+#define sk_PKCS7_RECIP_INFO_new_reserve(cmp, n) \
+    ((STACK_OF(PKCS7_RECIP_INFO) *)OPENSSL_sk_set_thunks( \
+        OPENSSL_sk_set_copy_thunks( \
+            OPENSSL_sk_set_cmp_thunks( \
+                OPENSSL_sk_new_reserve(ossl_check_PKCS7_RECIP_INFO_compfunc_type(cmp), (n)), \
+                sk_PKCS7_RECIP_INFO_cmpfunc_thunk), \
+            sk_PKCS7_RECIP_INFO_copyfunc_thunk), \
+        sk_PKCS7_RECIP_INFO_freefunc_thunk))
 #define sk_PKCS7_RECIP_INFO_reserve(sk, n) OPENSSL_sk_reserve(ossl_check_PKCS7_RECIP_INFO_sk_type(sk), (n))
 #define sk_PKCS7_RECIP_INFO_free(sk) OPENSSL_sk_free(ossl_check_PKCS7_RECIP_INFO_sk_type(sk))
 #define sk_PKCS7_RECIP_INFO_zero(sk) OPENSSL_sk_zero(ossl_check_PKCS7_RECIP_INFO_sk_type(sk))
@@ -129,8 +188,25 @@ SKM_DEFINE_STACK_OF_INTERNAL(PKCS7_RECIP_INFO, PKCS7_RECIP_INFO, PKCS7_RECIP_INF
 #define sk_PKCS7_RECIP_INFO_find_all(sk, ptr, pnum) OPENSSL_sk_find_all(ossl_check_PKCS7_RECIP_INFO_sk_type(sk), ossl_check_PKCS7_RECIP_INFO_type(ptr), pnum)
 #define sk_PKCS7_RECIP_INFO_sort(sk) OPENSSL_sk_sort(ossl_check_PKCS7_RECIP_INFO_sk_type(sk))
 #define sk_PKCS7_RECIP_INFO_is_sorted(sk) OPENSSL_sk_is_sorted(ossl_check_const_PKCS7_RECIP_INFO_sk_type(sk))
-#define sk_PKCS7_RECIP_INFO_dup(sk) ((STACK_OF(PKCS7_RECIP_INFO) *)OPENSSL_sk_dup(ossl_check_const_PKCS7_RECIP_INFO_sk_type(sk)))
-#define sk_PKCS7_RECIP_INFO_deep_copy(sk, copyfunc, freefunc) ((STACK_OF(PKCS7_RECIP_INFO) *)OPENSSL_sk_deep_copy(ossl_check_const_PKCS7_RECIP_INFO_sk_type(sk), ossl_check_PKCS7_RECIP_INFO_copyfunc_type(copyfunc), ossl_check_PKCS7_RECIP_INFO_freefunc_type(freefunc)))
+#define sk_PKCS7_RECIP_INFO_dup(sk) \
+    ((STACK_OF(PKCS7_RECIP_INFO) *)OPENSSL_sk_set_thunks( \
+        OPENSSL_sk_set_copy_thunks( \
+            OPENSSL_sk_set_cmp_thunks( \
+                OPENSSL_sk_dup(ossl_check_const_PKCS7_RECIP_INFO_sk_type(sk)), \
+                sk_PKCS7_RECIP_INFO_cmpfunc_thunk), \
+            sk_PKCS7_RECIP_INFO_copyfunc_thunk), \
+        sk_PKCS7_RECIP_INFO_freefunc_thunk))
+#define sk_PKCS7_RECIP_INFO_deep_copy(sk, copyfunc, freefunc) \
+    ((STACK_OF(PKCS7_RECIP_INFO) *)OPENSSL_sk_set_thunks( \
+        OPENSSL_sk_set_copy_thunks( \
+            OPENSSL_sk_set_cmp_thunks( \
+                OPENSSL_sk_deep_copy( \
+                    ossl_check_const_PKCS7_RECIP_INFO_sk_type(sk), \
+                    ossl_check_PKCS7_RECIP_INFO_copyfunc_type(copyfunc), \
+                    ossl_check_PKCS7_RECIP_INFO_freefunc_type(freefunc)), \
+                sk_PKCS7_RECIP_INFO_cmpfunc_thunk), \
+            sk_PKCS7_RECIP_INFO_copyfunc_thunk), \
+        sk_PKCS7_RECIP_INFO_freefunc_thunk))
 #define sk_PKCS7_RECIP_INFO_set_cmp_func(sk, cmp) ((sk_PKCS7_RECIP_INFO_compfunc)OPENSSL_sk_set_cmp_func(ossl_check_PKCS7_RECIP_INFO_sk_type(sk), ossl_check_PKCS7_RECIP_INFO_compfunc_type(cmp)))
 
 /* clang-format on */
@@ -138,6 +214,7 @@ SKM_DEFINE_STACK_OF_INTERNAL(PKCS7_RECIP_INFO, PKCS7_RECIP_INFO, PKCS7_RECIP_INF
 typedef struct pkcs7_signed_st {
     ASN1_INTEGER *version; /* version 1 */
     STACK_OF(X509_ALGOR) *md_algs; /* md used */
+    /* untrusted certificates for chain building, may include signer certs: */
     STACK_OF(X509) *cert; /* [ 0 ] */ /* name should be 'certificates' */
     STACK_OF(X509_CRL) *crl; /* [ 1 ] */ /* name should be 'crls' */
     STACK_OF(PKCS7_SIGNER_INFO) *signer_info;
@@ -165,6 +242,7 @@ typedef struct pkcs7_enveloped_st {
 typedef struct pkcs7_signedandenveloped_st {
     ASN1_INTEGER *version; /* version 1 */
     STACK_OF(X509_ALGOR) *md_algs; /* md used */
+    /* untrusted certificates for chain building, may include signer certs: */
     STACK_OF(X509) *cert; /* [ 0 ] */ /* name should be 'certificates' */
     STACK_OF(X509_CRL) *crl; /* [ 1 ] */ /* name should be 'crls' */
     STACK_OF(PKCS7_SIGNER_INFO) *signer_info;
@@ -225,9 +303,30 @@ typedef struct pkcs7_st {
 SKM_DEFINE_STACK_OF_INTERNAL(PKCS7, PKCS7, PKCS7)
 #define sk_PKCS7_num(sk) OPENSSL_sk_num(ossl_check_const_PKCS7_sk_type(sk))
 #define sk_PKCS7_value(sk, idx) ((PKCS7 *)OPENSSL_sk_value(ossl_check_const_PKCS7_sk_type(sk), (idx)))
-#define sk_PKCS7_new(cmp) ((STACK_OF(PKCS7) *)OPENSSL_sk_set_cmp_thunks(OPENSSL_sk_new(ossl_check_PKCS7_compfunc_type(cmp)), sk_PKCS7_cmpfunc_thunk))
-#define sk_PKCS7_new_null() ((STACK_OF(PKCS7) *)OPENSSL_sk_set_thunks(OPENSSL_sk_new_null(), sk_PKCS7_freefunc_thunk))
-#define sk_PKCS7_new_reserve(cmp, n) ((STACK_OF(PKCS7) *)OPENSSL_sk_set_cmp_thunks(OPENSSL_sk_new_reserve(ossl_check_PKCS7_compfunc_type(cmp), (n)), sk_PKCS7_cmpfunc_thunk))
+#define sk_PKCS7_new(cmp) \
+    ((STACK_OF(PKCS7) *)OPENSSL_sk_set_thunks( \
+        OPENSSL_sk_set_copy_thunks( \
+            OPENSSL_sk_set_cmp_thunks( \
+                OPENSSL_sk_new(ossl_check_PKCS7_compfunc_type(cmp)), \
+                sk_PKCS7_cmpfunc_thunk), \
+            sk_PKCS7_copyfunc_thunk), \
+        sk_PKCS7_freefunc_thunk))
+#define sk_PKCS7_new_null() \
+    ((STACK_OF(PKCS7) *)OPENSSL_sk_set_thunks( \
+        OPENSSL_sk_set_copy_thunks( \
+            OPENSSL_sk_set_cmp_thunks( \
+                OPENSSL_sk_new_null(), \
+                sk_PKCS7_cmpfunc_thunk), \
+            sk_PKCS7_copyfunc_thunk), \
+        sk_PKCS7_freefunc_thunk))
+#define sk_PKCS7_new_reserve(cmp, n) \
+    ((STACK_OF(PKCS7) *)OPENSSL_sk_set_thunks( \
+        OPENSSL_sk_set_copy_thunks( \
+            OPENSSL_sk_set_cmp_thunks( \
+                OPENSSL_sk_new_reserve(ossl_check_PKCS7_compfunc_type(cmp), (n)), \
+                sk_PKCS7_cmpfunc_thunk), \
+            sk_PKCS7_copyfunc_thunk), \
+        sk_PKCS7_freefunc_thunk))
 #define sk_PKCS7_reserve(sk, n) OPENSSL_sk_reserve(ossl_check_PKCS7_sk_type(sk), (n))
 #define sk_PKCS7_free(sk) OPENSSL_sk_free(ossl_check_PKCS7_sk_type(sk))
 #define sk_PKCS7_zero(sk) OPENSSL_sk_zero(ossl_check_PKCS7_sk_type(sk))
@@ -245,8 +344,25 @@ SKM_DEFINE_STACK_OF_INTERNAL(PKCS7, PKCS7, PKCS7)
 #define sk_PKCS7_find_all(sk, ptr, pnum) OPENSSL_sk_find_all(ossl_check_PKCS7_sk_type(sk), ossl_check_PKCS7_type(ptr), pnum)
 #define sk_PKCS7_sort(sk) OPENSSL_sk_sort(ossl_check_PKCS7_sk_type(sk))
 #define sk_PKCS7_is_sorted(sk) OPENSSL_sk_is_sorted(ossl_check_const_PKCS7_sk_type(sk))
-#define sk_PKCS7_dup(sk) ((STACK_OF(PKCS7) *)OPENSSL_sk_dup(ossl_check_const_PKCS7_sk_type(sk)))
-#define sk_PKCS7_deep_copy(sk, copyfunc, freefunc) ((STACK_OF(PKCS7) *)OPENSSL_sk_deep_copy(ossl_check_const_PKCS7_sk_type(sk), ossl_check_PKCS7_copyfunc_type(copyfunc), ossl_check_PKCS7_freefunc_type(freefunc)))
+#define sk_PKCS7_dup(sk) \
+    ((STACK_OF(PKCS7) *)OPENSSL_sk_set_thunks( \
+        OPENSSL_sk_set_copy_thunks( \
+            OPENSSL_sk_set_cmp_thunks( \
+                OPENSSL_sk_dup(ossl_check_const_PKCS7_sk_type(sk)), \
+                sk_PKCS7_cmpfunc_thunk), \
+            sk_PKCS7_copyfunc_thunk), \
+        sk_PKCS7_freefunc_thunk))
+#define sk_PKCS7_deep_copy(sk, copyfunc, freefunc) \
+    ((STACK_OF(PKCS7) *)OPENSSL_sk_set_thunks( \
+        OPENSSL_sk_set_copy_thunks( \
+            OPENSSL_sk_set_cmp_thunks( \
+                OPENSSL_sk_deep_copy( \
+                    ossl_check_const_PKCS7_sk_type(sk), \
+                    ossl_check_PKCS7_copyfunc_type(copyfunc), \
+                    ossl_check_PKCS7_freefunc_type(freefunc)), \
+                sk_PKCS7_cmpfunc_thunk), \
+            sk_PKCS7_copyfunc_thunk), \
+        sk_PKCS7_freefunc_thunk))
 #define sk_PKCS7_set_cmp_func(sk, cmp) ((sk_PKCS7_compfunc)OPENSSL_sk_set_cmp_func(ossl_check_PKCS7_sk_type(sk), ossl_check_PKCS7_compfunc_type(cmp)))
 
 /* clang-format on */
@@ -374,7 +490,9 @@ void PKCS7_RECIP_INFO_get0_alg(PKCS7_RECIP_INFO *ri, X509_ALGOR **penc);
 int PKCS7_add_recipient_info(PKCS7 *p7, PKCS7_RECIP_INFO *ri);
 int PKCS7_RECIP_INFO_set(PKCS7_RECIP_INFO *p7i, X509 *x509);
 int PKCS7_set_cipher(PKCS7 *p7, const EVP_CIPHER *cipher);
-int PKCS7_stream(unsigned char ***boundary, PKCS7 *p7);
+#if !defined(OPENSSL_NO_DEPRECATED_4_1)
+OSSL_DEPRECATEDIN_4_1 int PKCS7_stream(unsigned char ***boundary, PKCS7 *p7);
+#endif /* !defined(OPENSSL_NO_DEPRECATED_4_1) */
 
 PKCS7_ISSUER_AND_SERIAL *PKCS7_get_issuer_and_serial(PKCS7 *p7, int idx);
 ASN1_OCTET_STRING *PKCS7_get_octet_string(PKCS7 *p7);

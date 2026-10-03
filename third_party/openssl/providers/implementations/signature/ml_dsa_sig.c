@@ -24,6 +24,7 @@
 #include "internal/packet.h"
 #include "internal/sizes.h"
 #include "internal/fips.h"
+#include "fips/fipsindicator.h"
 
 #define ml_dsa_set_ctx_params_st ml_dsa_verifymsg_set_ctx_params_st
 #define ml_dsa_set_ctx_params_decoder ml_dsa_verifymsg_set_ctx_params_decoder
@@ -280,14 +281,17 @@ static int ml_dsa_sign_msg_final(void *vctx, unsigned char *sig,
                 return 0;
         }
 
-        if (!ossl_ml_dsa_mu_finalize(ctx->md_ctx, mu, sizeof(mu)))
+        if (!ossl_ml_dsa_mu_finalize(ctx->md_ctx, mu, sizeof(mu))) {
+            OPENSSL_cleanse(mu, sizeof(mu));
             return 0;
+        }
     }
 
     ret = ossl_ml_dsa_sign(ctx->key, 1, mu, sizeof(mu), NULL, 0, rnd,
         sizeof(rand_tmp), 0, sig, siglen, sigsize);
     if (rnd != ctx->test_entropy)
         OPENSSL_cleanse(rand_tmp, sizeof(rand_tmp));
+    OPENSSL_cleanse(mu, sizeof(mu));
     return ret;
 }
 
@@ -338,6 +342,7 @@ static int ml_dsa_verify_msg_final(void *vctx)
 {
     PROV_ML_DSA_CTX *ctx = (PROV_ML_DSA_CTX *)vctx;
     uint8_t mu[ML_DSA_MU_BYTES];
+    int ret = 0;
 
     if (!ossl_prov_is_running())
         return 0;
@@ -345,11 +350,12 @@ static int ml_dsa_verify_msg_final(void *vctx)
     if (ctx->md_ctx == NULL)
         return 0;
 
-    if (!ossl_ml_dsa_mu_finalize(ctx->md_ctx, mu, sizeof(mu)))
-        return 0;
+    if (ossl_ml_dsa_mu_finalize(ctx->md_ctx, mu, sizeof(mu)))
+        ret = ossl_ml_dsa_verify(ctx->key, 1, mu, sizeof(mu), NULL, 0, 0,
+            ctx->sig, ctx->siglen);
 
-    return ossl_ml_dsa_verify(ctx->key, 1, mu, sizeof(mu), NULL, 0, 0,
-        ctx->sig, ctx->siglen);
+    OPENSSL_cleanse(mu, sizeof(mu));
+    return ret;
 }
 
 static int ml_dsa_verify(void *vctx, const uint8_t *sig, size_t siglen,
@@ -457,6 +463,11 @@ static int ml_dsa_get_ctx_params(void *vctx, OSSL_PARAM *params)
         && !OSSL_PARAM_set_octet_string(p.id,
             ctx->aid_len == 0 ? NULL : ctx->aid_buf,
             ctx->aid_len))
+        return 0;
+
+    if (!OSSL_FIPS_IND_GET_PARAM_CONDITIONAL(p.ind,
+            ctx->test_entropy_len == 0
+                && ctx->msg_encode == ML_DSA_MESSAGE_ENCODE_PURE))
         return 0;
 
     return 1;

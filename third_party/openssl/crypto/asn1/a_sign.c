@@ -21,6 +21,7 @@
 #include <openssl/core_names.h>
 #include "crypto/asn1.h"
 #include "crypto/evp.h"
+#include "asn1_local.h"
 
 #ifndef OPENSSL_NO_DEPRECATED_3_0
 
@@ -100,7 +101,7 @@ int ASN1_sign(i2d_of_void *i2d, X509_ALGOR *algor1, X509_ALGOR *algor2,
      * In the interests of compatibility, I'll make sure that the bit string
      * has a 'not-used bits' value of 0
      */
-    ossl_asn1_string_set_bits_left(signature, 0);
+    ossl_asn1_bit_string_set_unused_bits(signature, 0);
 err:
     EVP_MD_CTX_free(ctx);
     OPENSSL_clear_free((char *)buf_in, inll);
@@ -163,6 +164,7 @@ int ASN1_item_sign_ctx(const ASN1_ITEM *it, X509_ALGOR *algor1,
     const void *data, EVP_MD_CTX *ctx)
 {
     const EVP_MD *md;
+    EVP_PKEY_CTX *pctx;
     EVP_PKEY *pkey;
     unsigned char *buf_in = NULL, *buf_out = NULL;
     size_t inl = 0, outl = 0, outll = 0;
@@ -170,7 +172,14 @@ int ASN1_item_sign_ctx(const ASN1_ITEM *it, X509_ALGOR *algor1,
     int rv, pkey_id;
 
     md = EVP_MD_CTX_get0_md(ctx);
-    pkey = EVP_PKEY_CTX_get0_pkey(EVP_MD_CTX_get_pkey_ctx(ctx));
+    pctx = EVP_MD_CTX_get_pkey_ctx(ctx);
+
+    if (pctx == NULL) {
+        ERR_raise(ERR_LIB_ASN1, ASN1_R_CONTEXT_NOT_INITIALISED);
+        goto err;
+    }
+
+    pkey = EVP_PKEY_CTX_get0_pkey(pctx);
 
     if (pkey == NULL) {
         ERR_raise(ERR_LIB_ASN1, ASN1_R_CONTEXT_NOT_INITIALISED);
@@ -178,13 +187,11 @@ int ASN1_item_sign_ctx(const ASN1_ITEM *it, X509_ALGOR *algor1,
     }
 
     if (pkey->ameth == NULL) {
-        EVP_PKEY_CTX *pctx = EVP_MD_CTX_get_pkey_ctx(ctx);
         OSSL_PARAM params[2];
         unsigned char aid[128];
         size_t aid_len = 0;
 
-        if (pctx == NULL
-            || !EVP_PKEY_CTX_IS_SIGNATURE_OP(pctx)) {
+        if (!EVP_PKEY_CTX_IS_SIGNATURE_OP(pctx)) {
             ERR_raise(ERR_LIB_ASN1, ASN1_R_CONTEXT_NOT_INITIALISED);
             goto err;
         }
@@ -276,13 +283,21 @@ int ASN1_item_sign_ctx(const ASN1_ITEM *it, X509_ALGOR *algor1,
         ERR_raise(ERR_LIB_ASN1, ERR_R_EVP_LIB);
         goto err;
     }
+    /* Only a sequence item carries a cached encoding */
+    if ((it->itype == ASN1_ITYPE_SEQUENCE
+            || it->itype == ASN1_ITYPE_NDEF_SEQUENCE)
+        && !ossl_asn1_enc_save((ASN1_VALUE **)&data, buf_in, buf_len, it)) {
+        outl = 0;
+        ERR_raise(ERR_LIB_ASN1, ERR_R_ASN1_LIB);
+        goto err;
+    }
     ASN1_STRING_set0(signature, buf_out, (int)outl);
     buf_out = NULL;
     /*
      * In the interests of compatibility, I'll make sure that the bit string
      * has a 'not-used bits' value of 0
      */
-    ossl_asn1_string_set_bits_left(signature, 0);
+    ossl_asn1_bit_string_set_unused_bits(signature, 0);
 err:
     OPENSSL_clear_free((char *)buf_in, inl);
     OPENSSL_clear_free((char *)buf_out, outll);

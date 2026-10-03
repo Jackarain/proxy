@@ -11,13 +11,9 @@
 #include <openssl/rand.h>
 #include <openssl/proverr.h>
 #include "crypto/ml_kem.h"
-#include "internal/common.h"
+#include "ml_kem_local.h"
 #include "internal/constant_time.h"
 #include "internal/sha3.h"
-
-#if defined(OPENSSL_CONSTANT_TIME_VALIDATION)
-#include <valgrind/memcheck.h>
-#endif
 
 #if ML_KEM_SEED_BYTES != ML_KEM_SHARED_SECRET_BYTES + ML_KEM_RANDOM_BYTES
 #error "ML-KEM keygen seed length != shared secret + random bytes length"
@@ -40,34 +36,40 @@
  */
 #define DEGREE ML_KEM_DEGREE
 #define INVERSE_DEGREE (ML_KEM_PRIME - 2 * 13)
-#define LOG2PRIME 12
-#define BARRETT_SHIFT (2 * LOG2PRIME)
+/*
+ * Barrett reduction approximates (x mod q) without a division instruction.
+ * It pre-computes m = floor(2^BARRETT_SHIFT / q) and then estimates:
+ *
+ *   quotient = (x * m) >> BARRETT_SHIFT
+ *   remainder = x - quotient * q         (corrected by reduce_once())
+ *
+ * Correctness requires BARRETT_SHIFT >= 2 * LOG2PRIME (== 2 * 12 == 24).
+ * The minimum shift of 24 bits is sufficient for the Barrett reduction
+ * bounds required by ML-KEM.
+ *
+ * On s390x, a Barrett shift of 32 allows (a * b) >> BARRETT_SHIFT to be
+ * obtained directly from the high half of a 32x32->64-bit multiplication,
+ * avoiding additional instructions.
+ * This optimization is used by the generic implementations of `reduce`
+ * and `compress`. In particular, `compress` is not manually vectorized,
+ * so it can benefit from compiler autovectorization when
+ * BARRETT_SHIFT == 32.
+ *
+ * On all other platforms BARRETT_SHIFT == 24 is used.  The multiplier
+ * m = floor(2^24 / 3329) = 5039 fits in 13 bits, which the compiler can
+ * represent as a small immediate.  On AArch64 the alternative value
+ * m = floor(2^32 / 3329) = 1290167 requires a wider immediate encoding
+ * (an extra movk instruction), making the 32-bit shift slightly less
+ * efficient on that platform.
+ */
+#if defined(__s390x__)
+#define BARRETT_SHIFT 32
+#else
+#define BARRETT_SHIFT 24
+#endif
 
 #ifdef SHA3_BLOCKSIZE
 #define SHAKE128_BLOCKSIZE SHA3_BLOCKSIZE(128)
-#endif
-
-/*
- * Return whether a value that can only be 0 or 1 is non-zero, in constant time
- * in practice!  The return value is a mask that is all ones if true, and all
- * zeros otherwise (twos-complement arithmetic assumed for unsigned values).
- *
- * Although this is used in constant-time selects, we omit a value barrier
- * here.  Value barriers impede auto-vectorization (likely because it forces
- * the value to transit through a general-purpose register). On AArch64, this
- * is a difference of 2x.
- *
- * We usually add value barriers to selects because Clang turns consecutive
- * selects with the same condition into a branch instead of CMOV/CSEL. This
- * condition does not occur in Kyber, so omitting it seems to be safe so far,
- * but see |cbd_2|, |cbd_3|, where reduction needs to be specialised to the
- * sign of the input, rather than adding |q| in advance, and using the generic
- * |reduce_once|.  (David Benjamin, Chromium)
- */
-#if 0
-#define constish_time_non_zero(b) (~constant_time_is_zero(b));
-#else
-#define constish_time_non_zero(b) (0u - (b))
 #endif
 
 /*
@@ -84,14 +86,6 @@
 #else
 #define SCALAR_SAMPLING_BUFSIZE 168
 #endif
-
-/*
- * Structure of keys
- */
-typedef struct ossl_ml_kem_scalar_st {
-    /* On every function entry and exit, 0 <= c[i] < ML_KEM_PRIME. */
-    uint16_t c[ML_KEM_DEGREE];
-} scalar;
 
 /* Key material allocation layout */
 #define DECLARE_ML_KEM_PUBKEYDATA(name, rank)                  \
@@ -146,30 +140,6 @@ static void scalar_encode(uint8_t *out, const scalar *s, int bits);
 #define U_VECTOR_BYTES(b) ((DEGREE / 8) * ML_KEM_##b##_DU * ML_KEM_##b##_RANK)
 #define V_SCALAR_BYTES(b) ((DEGREE / 8) * ML_KEM_##b##_DV)
 #define CTEXT_BYTES(b) (U_VECTOR_BYTES(b) + V_SCALAR_BYTES(b))
-
-#if defined(OPENSSL_CONSTANT_TIME_VALIDATION)
-
-/*
- * CONSTTIME_SECRET takes a pointer and a number of bytes and marks that region
- * of memory as secret. Secret data is tracked as it flows to registers and
- * other parts of a memory. If secret data is used as a condition for a branch,
- * or as a memory index, it will trigger warnings in valgrind.
- */
-#define CONSTTIME_SECRET(ptr, len) VALGRIND_MAKE_MEM_UNDEFINED(ptr, len)
-
-/*
- * CONSTTIME_DECLASSIFY takes a pointer and a number of bytes and marks that
- * region of memory as public. Public data is not subject to constant-time
- * rules.
- */
-#define CONSTTIME_DECLASSIFY(ptr, len) VALGRIND_MAKE_MEM_DEFINED(ptr, len)
-
-#else
-
-#define CONSTTIME_SECRET(ptr, len)
-#define CONSTTIME_DECLASSIFY(ptr, len)
-
-#endif
 
 /*
  * Indices of slots in the vinfo tables below
@@ -236,7 +206,7 @@ static const ML_KEM_VINFO vinfo_map[3] = {
  */
 static const int kPrime = ML_KEM_PRIME;
 static const unsigned int kBarrettShift = BARRETT_SHIFT;
-static const size_t kBarrettMultiplier = (1 << BARRETT_SHIFT) / ML_KEM_PRIME;
+static const size_t kBarrettMultiplier = (1ull << BARRETT_SHIFT) / ML_KEM_PRIME;
 static const uint16_t kHalfPrime = (ML_KEM_PRIME - 1) / 2;
 static const uint16_t kInverseDegree = INVERSE_DEGREE;
 
@@ -456,26 +426,231 @@ static __owur int sample_scalar(scalar *out, EVP_MD_CTX *mdctx)
     return 1;
 }
 
+static CRYPTO_ONCE ml_kem_ntt_once = CRYPTO_ONCE_STATIC_INIT;
+
+#if defined(_ARCH_PPC64)
+#include "arch/ppc_arch.h"
+#endif
+
+/*
+ * Function pointer types for NTT dispatch.
+ *
+ * Three NTT-related entry points are dispatched at runtime:
+ *
+ *  scalar_ntt
+ *      Forward NTT.  Converts a polynomial from standard into NTT domain.
+ *
+ *  scalar_inverse_ntt
+ *      Full inverse NTT: butterfly stages followed by multiplication by
+ *      INVERSE_DEGREE = (n/2)^-1 mod q.  Used inside matrix_mult_intt where
+ *      each result row is immediately transformed back to standard form.
+ *
+ *  scalar_inverse_ntt_demontgomerize
+ *      Inverse NTT whose input may still carry an inverse-Montgomery factor
+ *      R^-1 from a preceding inner_product_montgomery call.  On the generic
+ *      and PPC paths the two pointers are identical (both point at the same
+ *      fully-reduced implementation), because the generic inner_product
+ *      already produces fully-reduced outputs via Barrett reduction.  On the
+ *      s390x/vec128 path the two are distinct:
+ *        - inner_product_montgomery_vec128 accumulates the dot-product using
+ *          Montgomery arithmetic and intentionally leaves each coefficient
+ *          scaled by R^-1 (= 169 mod q), deferring the final conversion to
+ *          save a per-coefficient multiply.
+ *        - scalar_inverse_ntt_demontgomerize_vec128 first calls
+ *          demontgomerize_scalar_vec128 to convert coefficients from
+ *          inverse-Montgomery form to standard form, then runs the raw
+ *          inverse NTT butterfly stages, and finally multiplies by
+ *          INVERSE_DEGREE via scalar_mult_const_512_vec128.
+ *
+ * The net effect is that callers always see a fully-reduced standard-form
+ * polynomial after the (inner_product_montgomery, scalar_inverse_ntt_demontgomerize)
+ * pair, regardless of which backend is active.
+ */
+typedef void (*ml_kem_scalar_ntt_fn)(scalar *p);
+typedef void (*ml_kem_scalar_inverse_ntt_fn)(scalar *p);
+typedef void (*ml_kem_scalar_inverse_ntt_demontgomerize_fn)(scalar *p);
+
+/* Forward declarations */
+static void ossl_ml_kem_scalar_ntt_generic(scalar *s);
+static void ossl_ml_kem_scalar_inverse_ntt_generic(scalar *s);
+
+static ml_kem_scalar_ntt_fn scalar_ntt = ossl_ml_kem_scalar_ntt_generic;
+/*
+ * scalar_inverse_ntt: used by matrix_mult_intt, where inputs are already fully
+ * reduced (no deferred Montgomery factor).
+ */
+static ml_kem_scalar_inverse_ntt_fn scalar_inverse_ntt = ossl_ml_kem_scalar_inverse_ntt_generic;
+/*
+ * scalar_inverse_ntt_demontgomerize: used after inner_product_montgomery.  On
+ * generic/PPC this is the same function as scalar_inverse_ntt.  On s390x it is
+ * a specialised variant that also removes the inverse-Montgomery factor R^-1
+ * left by inner_product_montgomery_vec128.
+ */
+static ml_kem_scalar_inverse_ntt_demontgomerize_fn scalar_inverse_ntt_demontgomerize = ossl_ml_kem_scalar_inverse_ntt_generic;
+
+#if defined(MLKEM_NTT_PPC_ASM) && defined(_ARCH_PPC64)
+/*
+ * PPC64LE Platform supports.
+ */
+void mlkem_ntt_ppc(uint16_t *c);
+void mlkem_inverse_ntt_ppc(uint16_t *c);
+
+static void scalar_ntt_ppc(scalar *s)
+{
+    mlkem_ntt_ppc(s->c);
+}
+
+static void scalar_inverse_ntt_ppc(scalar *s)
+{
+    mlkem_inverse_ntt_ppc(s->c);
+}
+#endif
+
+/*
+ * VX_COMPILER_SUPPORT_VEC128 is now defined (via include/crypto/ml_kem.h)
+ * whenever OPENSSL_ML_KEM_S390X && __s390x__, without requiring __VX__.
+ * This ensures the S390X_VX_CAPABLE macro and the vec128 function prototypes
+ * are visible here even though ml_kem.c is compiled without -march=z13.
+ */
+#if defined(VX_COMPILER_SUPPORT_VEC128)
+#include "arch/s390x_arch.h"
+#endif
+
+/*
+ * Function pointer types for scalar multiplication dispatch.
+ *
+ *  scalar_mult_add
+ *      Pointwise-multiply two NTT-domain scalars and accumulate the result
+ *      into an existing scalar (out += lhs * rhs).
+ *
+ *  inner_product_montgomery
+ *      Computes the dot-product of two rank-element NTT-domain vectors and
+ *      stores the result in *out.  The name "montgomery" signals the output
+ *      representation contract:
+ *        - On the generic path the function uses Barrett reduction throughout
+ *          and the output is fully reduced in [0, q).
+ *        - On the s390x/vec128 path the function uses Montgomery multiplication
+ *          internally and the output coefficients are left scaled by R^-1
+ *          (= 169 mod q).  Callers MUST immediately follow this call with
+ *          scalar_inverse_ntt_demontgomerize, which demontgomerizes the
+ *          coefficients, runs the inverse NTT butterflies, and then applies
+ *          the INVERSE_DEGREE normalization.
+ *
+ *  matrix_mult_intt
+ *      Computes out[i] = INTT(sum_j m[i*rank+j] * a[j]) for each row i.
+ *      The generic implementation accumulates each row in standard form (via
+ *      Barrett reduction) and then calls scalar_inverse_ntt.  The s390x/vec128
+ *      implementation accumulates each row in inverse-Montgomery form, then
+ *      explicitly calls demontgomerize_scalar_vec128 to convert to standard
+ *      form, and finally calls ossl_ml_kem_scalar_inverse_ntt_vec128 directly
+ *      (not the demontgomerize INTT variant, which is reserved for use after
+ *      inner_product_montgomery_vec128).
+ */
+typedef void (*ml_kem_scalar_mult_add_fn)(scalar *out, const scalar *lhs, const scalar *rhs);
+typedef void (*ml_kem_inner_product_montgomery_fn)(scalar *out, const scalar *lhs, const scalar *rhs, int rank);
+typedef void (*ml_kem_matrix_mult_intt_fn)(scalar *out, const scalar *m, const scalar *a, int rank);
+
+/* Forward declarations */
+static void scalar_mult_generic(scalar *out, const scalar *lhs, const scalar *rhs);
+static void scalar_mult_add_generic(scalar *out, const scalar *lhs, const scalar *rhs);
+static void inner_product_generic(scalar *out, const scalar *lhs, const scalar *rhs, int rank);
+static void matrix_mult_intt_generic(scalar *out, const scalar *m, const scalar *a, int rank);
+
+/* Function pointers for dispatch */
+static ml_kem_scalar_mult_add_fn scalar_mult_add = scalar_mult_add_generic;
+/*
+ * Produces the NTT-domain dot-product of two vectors.  Result is in
+ * inverse-Montgomery form (each coefficient scaled by R^-1 = 169 mod q)
+ * on s390x (must be followed by scalar_inverse_ntt_demontgomerize), and
+ * fully reduced on all other platforms.
+ */
+static ml_kem_inner_product_montgomery_fn inner_product_montgomery = inner_product_generic;
+static ml_kem_matrix_mult_intt_fn matrix_mult_intt = matrix_mult_intt_generic;
+
+static void ml_kem_ntt_init(void)
+{
+/*
+ * Initialize NTT function pointers to PPC64le implementations if available.
+ * Scalar implementations are used by default.
+ */
+#if defined(MLKEM_NTT_PPC_ASM) && defined(_ARCH_PPC64)
+#if defined(__LITTLE_ENDIAN__) || (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
+    if (OPENSSL_ppccap_P & PPC_CRYPTO207) {
+        scalar_ntt = scalar_ntt_ppc;
+        scalar_inverse_ntt = scalar_inverse_ntt_ppc;
+        scalar_inverse_ntt_demontgomerize = scalar_inverse_ntt_ppc;
+    }
+#endif
+#endif
+
+/*
+ * Initialize NTT and scalar and matrix multiplication function pointers to
+ * the s390x/vec128 implementation if available.
+ *
+ * VX_COMPILER_SUPPORT_VEC128 is defined (via include/crypto/ml_kem.h) for
+ * every s390x TU that has OPENSSL_ML_KEM_S390X set, regardless of whether
+ * __VX__ is defined in this TU.  The runtime S390X_VX_CAPABLE check
+ * (facility bit 129) ensures the vector functions are only called when the
+ * hardware actually supports VX.
+ *
+ * On s390x three pointers differ from the generic ones in a coordinated way:
+ *   - scalar_inverse_ntt and scalar_inverse_ntt_demontgomerize point to two
+ *     DIFFERENT functions.  scalar_inverse_ntt_demontgomerize_vec128 is always
+ *     paired with inner_product_montgomery_vec128: the latter leaves each
+ *     coefficient in inverse-Montgomery form (scaled by R^-1 = 169 mod q),
+ *     and the former demontgomerizes the result first, then runs the inverse
+ *     NTT butterflies, and finally applies the INVERSE_DEGREE normalization.
+ *   - inner_product_montgomery_vec128 deliberately omits the final
+ *     inverse-Montgomery-to-standard conversion; callers must use
+ *     scalar_inverse_ntt_demontgomerize (not scalar_inverse_ntt) afterward.
+ *   - matrix_mult_intt_vec128 uses scalar_inverse_ntt_vec128 internally
+ *     (not the demontgomerize variant), because it manages its own reduction
+ *     strategy without a deferred Montgomery factor.
+ */
+#if defined(VX_COMPILER_SUPPORT_VEC128)
+    if (S390X_VX_CAPABLE) {
+        scalar_ntt = ossl_ml_kem_scalar_ntt_vec128;
+        scalar_inverse_ntt = ossl_ml_kem_scalar_inverse_ntt_vec128;
+        scalar_inverse_ntt_demontgomerize = ossl_ml_kem_scalar_inverse_ntt_demontgomerize_vec128;
+        scalar_mult_add = ossl_ml_kem_scalar_mult_add_vec128;
+        inner_product_montgomery = ossl_ml_kem_inner_product_montgomery_vec128;
+        matrix_mult_intt = ossl_ml_kem_matrix_mult_intt_vec128;
+    }
+#endif
+}
+
 /*-
  * reduce_once reduces 0 <= x < 2*kPrime, mod kPrime.
  *
  * Subtract |q| if the input is larger, without exposing a side-channel,
- * avoiding the "clangover" attack.  See |constish_time_non_zero| for a
+ * avoiding the "clangover" attack.  See |constish_time_true| for a
  * discussion on why the value barrier is by default omitted.
  */
 static __owur uint16_t reduce_once(uint16_t x)
 {
     const uint16_t subtracted = x - kPrime;
-    uint16_t mask = constish_time_non_zero(subtracted >> 15);
+    uint16_t mask = constish_time_true(subtracted >> 15);
 
     return (mask & x) | (~mask & subtracted);
 }
 
 /*
- * Constant-time reduce x mod kPrime using Barrett reduction. x must be less
- * than kPrime + 2 * kPrime^2.  This is sufficient to reduce a product of
- * two already reduced u_int16 values, in fact it is sufficient for each
- * to be less than 2^12, because (kPrime * (2 * kPrime + 1)) > 2^24.
+ * Constant-time Barrett reduction modulo kPrime.
+ *
+ * This implementation performs a single final correction via
+ * reduce_once(), so it requires the Barrett approximation to leave
+ * the intermediate remainder below 2*kPrime.
+ *
+ * All current callers satisfy
+ *
+ *     x < kPrime + 2*kPrime*kPrime,
+ *
+ * which covers products of two already reduced coefficients together
+ * with the additions performed by scalar_mult_add_generic().
+ *
+ * For BARRETT_SHIFT == 24, this bound is below the first input that
+ * would require more than one correction.  For BARRETT_SHIFT == 32,
+ * a single correction is sufficient for every uint32_t input.
  */
 static __owur uint16_t reduce(uint32_t x)
 {
@@ -506,7 +681,7 @@ static void scalar_mult_const(scalar *s, uint16_t a)
  * elements in GF(3329^2), with the coefficients of the elements being
  * consecutive entries in |s->c|.
  */
-static void scalar_ntt(scalar *s)
+void ossl_ml_kem_scalar_ntt_generic(scalar *s)
 {
     const uint16_t *roots = kNTTRoots;
     uint16_t *end = s->c + DEGREE;
@@ -538,7 +713,7 @@ static void scalar_ntt(scalar *s)
  * iFFT to account for the fact that 3329 does not have a 512th root of unity,
  * using the precomputed 128 roots of unity stored in InverseNTTRoots.
  */
-static void scalar_inverse_ntt(scalar *s)
+void ossl_ml_kem_scalar_inverse_ntt_generic(scalar *s)
 {
     const uint16_t *roots = kInverseNTTRoots;
     uint16_t *end = s->c + DEGREE;
@@ -592,7 +767,8 @@ static void scalar_sub(scalar *lhs, const scalar *rhs)
  * two reduced numbers together, so we need some intermediate reduction steps,
  * even if an uint64_t could hold 3 multiplied numbers.
  */
-static void scalar_mult(scalar *out, const scalar *lhs,
+
+static void scalar_mult_generic(scalar *out, const scalar *lhs,
     const scalar *rhs)
 {
     uint16_t *curr = out->c, *end = curr + DEGREE;
@@ -610,7 +786,7 @@ static void scalar_mult(scalar *out, const scalar *lhs,
 }
 
 /* Above, but add the result to an existing scalar */
-static ossl_inline void scalar_mult_add(scalar *out, const scalar *lhs,
+static ossl_inline void scalar_mult_add_generic(scalar *out, const scalar *lhs,
     const scalar *rhs)
 {
     uint16_t *curr = out->c, *end = curr + DEGREE;
@@ -766,11 +942,11 @@ scalar_decode_decompress_add(scalar *out, const uint8_t in[DEGREE / 8])
 
     /*
      * Add |half_q_plus_1| if the bit is set, without exposing a side-channel,
-     * avoiding the "clangover" attack.  See |constish_time_non_zero| for a
+     * avoiding the "clangover" attack.  See |constish_time_true| for a
      * discussion on why the value barrier is by default omitted.
      */
 #define decode_decompress_add_bit                        \
-    mask = constish_time_non_zero(bit0(b));              \
+    mask = constish_time_true(bit0(b));                  \
     *curr = reduce_once(*curr + (mask & half_q_plus_1)); \
     curr++;                                              \
     b >>= 1
@@ -930,28 +1106,27 @@ static void vector_compress(scalar *a, int bits, int rank)
 }
 
 /* The output scalar must not overlap with the inputs */
-static void inner_product(scalar *out, const scalar *lhs, const scalar *rhs,
+static void inner_product_generic(scalar *out, const scalar *lhs, const scalar *rhs,
     int rank)
 {
-    scalar_mult(out, lhs, rhs);
+    scalar_mult_generic(out, lhs, rhs);
     while (--rank > 0)
-        scalar_mult_add(out, ++lhs, ++rhs);
+        scalar_mult_add_generic(out, ++lhs, ++rhs);
 }
 
 /*
  * Here, the output vector must not overlap with the inputs, the result is
  * directly subjected to inverse NTT.
  */
-static void
-matrix_mult_intt(scalar *out, const scalar *m, const scalar *a, int rank)
+static void matrix_mult_intt_generic(scalar *out, const scalar *m, const scalar *a, int rank)
 {
     const scalar *ar;
     int i, j;
 
     for (i = rank; i-- > 0; ++out) {
-        scalar_mult(out, m++, ar = a);
+        scalar_mult_generic(out, m++, ar = a);
         for (j = rank - 1; j > 0; --j)
-            scalar_mult_add(out, m++, ++ar);
+            scalar_mult_add_generic(out, m++, ++ar);
         scalar_inverse_ntt(out);
     }
 }
@@ -984,6 +1159,12 @@ static __owur int matrix_expand(EVP_MD_CTX *mdctx, ML_KEM_KEY *key)
     int rank = key->vinfo->rank;
     int i, j;
 
+    /*
+     * The seeds derived below and the sampling buffers in sample_scalar()
+     * are not cleansed: per FIPS 203 section 3.3 the matrix A is easily
+     * computed from the public encapsulation key and does not require any
+     * special protections.
+     */
     memcpy(input, key->rho, ML_KEM_RANDOM_BYTES);
     for (i = 0; i < rank; i++) {
         for (j = 0; j < rank; j++) {
@@ -1014,29 +1195,33 @@ static __owur int cbd_2(scalar *out, uint8_t in[ML_KEM_RANDOM_BYTES + 1],
     uint16_t value, mask;
     uint8_t b;
 
-    if (!prf(randbuf, sizeof(randbuf), in, mdctx, key))
+    if (!prf(randbuf, sizeof(randbuf), in, mdctx, key)) {
+        OPENSSL_cleanse((void *)randbuf, sizeof(randbuf));
         return 0;
+    }
 
     do {
         b = *r++;
 
         /*
-         * Add |kPrime| if |value| underflowed.  See |constish_time_non_zero|
-         * for a discussion on why the value barrier is by default omitted.
-         * While this could have been written reduce_once(value + kPrime), this
-         * is one extra addition and small range of |value| tempts some
-         * versions of Clang to emit a branch.
+         * Add |kPrime| if |value| underflowed.  See |constish_time_true| for
+         * a discussion on why the value barrier is by default omitted.  While
+         * this could have been written reduce_once(value + kPrime), this is
+         * one extra addition and small range of |value| tempts some versions
+         * of Clang to emit a branch.
          */
         value = bit0(b) + bitn(1, b);
         value -= bitn(2, b) + bitn(3, b);
-        mask = constish_time_non_zero(value >> 15);
+        mask = constish_time_true(value >> 15);
         *curr++ = value + (kPrime & mask);
 
         value = bitn(4, b) + bitn(5, b);
         value -= bitn(6, b) + bitn(7, b);
-        mask = constish_time_non_zero(value >> 15);
+        mask = constish_time_true(value >> 15);
         *curr++ = value + (kPrime & mask);
     } while (curr < end);
+
+    OPENSSL_cleanse((void *)randbuf, sizeof(randbuf));
     return 1;
 }
 
@@ -1054,8 +1239,10 @@ static __owur int cbd_3(scalar *out, uint8_t in[ML_KEM_RANDOM_BYTES + 1],
     uint8_t b1, b2, b3;
     uint16_t value, mask;
 
-    if (!prf(randbuf, sizeof(randbuf), in, mdctx, key))
+    if (!prf(randbuf, sizeof(randbuf), in, mdctx, key)) {
+        OPENSSL_cleanse((void *)randbuf, sizeof(randbuf));
         return 0;
+    }
 
     do {
         b1 = *r++;
@@ -1063,7 +1250,7 @@ static __owur int cbd_3(scalar *out, uint8_t in[ML_KEM_RANDOM_BYTES + 1],
         b3 = *r++;
 
         /*
-         * Add |kPrime| if |value| underflowed.  See |constish_time_non_zero|
+         * Add |kPrime| if |value| underflowed.  See |constish_time_true|
          * for a discussion on why the value barrier is by default omitted.
          * While this could have been written reduce_once(value + kPrime), this
          * is one extra addition and small range of |value| tempts some
@@ -1071,24 +1258,26 @@ static __owur int cbd_3(scalar *out, uint8_t in[ML_KEM_RANDOM_BYTES + 1],
          */
         value = bit0(b1) + bitn(1, b1) + bitn(2, b1);
         value -= bitn(3, b1) + bitn(4, b1) + bitn(5, b1);
-        mask = constish_time_non_zero(value >> 15);
+        mask = constish_time_true(value >> 15);
         *curr++ = value + (kPrime & mask);
 
         value = bitn(6, b1) + bitn(7, b1) + bit0(b2);
         value -= bitn(1, b2) + bitn(2, b2) + bitn(3, b2);
-        mask = constish_time_non_zero(value >> 15);
+        mask = constish_time_true(value >> 15);
         *curr++ = value + (kPrime & mask);
 
         value = bitn(4, b2) + bitn(5, b2) + bitn(6, b2);
         value -= bitn(7, b2) + bit0(b3) + bitn(1, b3);
-        mask = constish_time_non_zero(value >> 15);
+        mask = constish_time_true(value >> 15);
         *curr++ = value + (kPrime & mask);
 
         value = bitn(2, b3) + bitn(3, b3) + bitn(4, b3);
         value -= bitn(5, b3) + bitn(6, b3) + bitn(7, b3);
-        mask = constish_time_non_zero(value >> 15);
+        mask = constish_time_true(value >> 15);
         *curr++ = value + (kPrime & mask);
     } while (curr < end);
+
+    OPENSSL_cleanse((void *)randbuf, sizeof(randbuf));
     return 1;
 }
 
@@ -1101,14 +1290,19 @@ static __owur int gencbd_vector(scalar *out, CBD_FUNC cbd, uint8_t *counter,
     EVP_MD_CTX *mdctx, const ML_KEM_KEY *key)
 {
     uint8_t input[ML_KEM_RANDOM_BYTES + 1];
+    int ret = 0;
 
     memcpy(input, seed, ML_KEM_RANDOM_BYTES);
     do {
         input[ML_KEM_RANDOM_BYTES] = (*counter)++;
         if (!cbd(out++, input, mdctx, key))
-            return 0;
+            goto end;
     } while (--rank > 0);
-    return 1;
+    ret = 1;
+
+end:
+    OPENSSL_cleanse((void *)input, sizeof(input));
+    return ret;
 }
 
 /*
@@ -1119,15 +1313,20 @@ static __owur int gencbd_vector_ntt(scalar *out, CBD_FUNC cbd, uint8_t *counter,
     EVP_MD_CTX *mdctx, const ML_KEM_KEY *key)
 {
     uint8_t input[ML_KEM_RANDOM_BYTES + 1];
+    int ret = 0;
 
     memcpy(input, seed, ML_KEM_RANDOM_BYTES);
     do {
         input[ML_KEM_RANDOM_BYTES] = (*counter)++;
         if (!cbd(out, input, mdctx, key))
-            return 0;
+            goto end;
         scalar_ntt(out++);
     } while (--rank > 0);
-    return 1;
+    ret = 1;
+
+end:
+    OPENSSL_cleanse((void *)input, sizeof(input));
+    return ret;
 }
 
 /* The |ETA1| value for ML-KEM-512 is 3, the rest and all ETA2 values are 2. */
@@ -1147,7 +1346,7 @@ static __owur int gencbd_vector_ntt(scalar *out, CBD_FUNC cbd, uint8_t *counter,
  * |A| (our key->m, with the public key holding an expanded (16-bit per scalar
  * coefficient) key->t vector).
  *
- * Caller passes storage in |tmp| for for two temporary vectors.
+ * Caller passes storage in |tmp| for two temporary vectors.
  */
 static __owur int encrypt_cpa(uint8_t out[ML_KEM_SHARED_SECRET_BYTES],
     const uint8_t message[DEGREE / 8],
@@ -1166,19 +1365,20 @@ static __owur int encrypt_cpa(uint8_t out[ML_KEM_SHARED_SECRET_BYTES],
     uint8_t counter = 0;
     int du = vinfo->du;
     int dv = vinfo->dv;
+    int ret = 0;
 
     /* FIPS 203 "y" vector */
     if (!gencbd_vector_ntt(y, cbd_1, &counter, r, rank, mdctx, key))
-        return 0;
+        goto end;
     /* FIPS 203 "v" scalar */
-    inner_product(&v, key->t, y, rank);
-    scalar_inverse_ntt(&v);
+    inner_product_montgomery(&v, key->t, y, rank);
+    scalar_inverse_ntt_demontgomerize(&v);
     /* FIPS 203 "u" vector */
     matrix_mult_intt(u, key->m, y, rank);
 
     /* All done with |y|, now free to reuse tmp[0] for FIPS 203 |e1| */
     if (!gencbd_vector(e1, cbd_2, &counter, r, rank, mdctx, key))
-        return 0;
+        goto end;
     vector_add(u, e1, rank);
     vector_compress(u, du, rank);
     vector_encode(out, u, du, rank);
@@ -1187,14 +1387,19 @@ static __owur int encrypt_cpa(uint8_t out[ML_KEM_SHARED_SECRET_BYTES],
     memcpy(input, r, ML_KEM_RANDOM_BYTES);
     input[ML_KEM_RANDOM_BYTES] = counter;
     if (!cbd_2(e2, input, mdctx, key))
-        return 0;
+        goto end;
     scalar_add(&v, e2);
 
     /* Combine message with |v| */
     scalar_decode_decompress_add(&v, message);
     scalar_compress(&v, dv);
     scalar_encode(out + vinfo->u_vector_bytes, &v, dv);
-    return 1;
+    ret = 1;
+
+end:
+    OPENSSL_cleanse((void *)input, sizeof(input));
+    OPENSSL_cleanse((void *)&v, sizeof(v));
+    return ret;
 }
 
 /*
@@ -1213,11 +1418,14 @@ decrypt_cpa(uint8_t out[ML_KEM_SHARED_SECRET_BYTES],
     vector_decode_decompress_ntt(u, ctext, du, rank);
     scalar_decode(&v, ctext + vinfo->u_vector_bytes, dv);
     scalar_decompress(&v, dv);
-    inner_product(&mask, key->s, u, rank);
-    scalar_inverse_ntt(&mask);
+    inner_product_montgomery(&mask, key->s, u, rank);
+    scalar_inverse_ntt_demontgomerize(&mask);
     scalar_sub(&v, &mask);
     scalar_compress(&v, 1);
     scalar_encode_1(out, &v);
+
+    OPENSSL_cleanse((void *)&v, sizeof(v));
+    OPENSSL_cleanse((void *)&mask, sizeof(mask));
 }
 
 /*-
@@ -1406,8 +1614,8 @@ static __owur int genkey(const uint8_t seed[ML_KEM_SEED_BYTES],
 
     ret = 1;
 end:
-    OPENSSL_cleanse((void *)augmented_seed, ML_KEM_RANDOM_BYTES);
-    OPENSSL_cleanse((void *)sigma, ML_KEM_RANDOM_BYTES);
+    OPENSSL_cleanse((void *)augmented_seed, sizeof(augmented_seed));
+    OPENSSL_cleanse((void *)hashed, sizeof(hashed));
     if (ret == 0) {
         ERR_raise_data(ERR_LIB_CRYPTO, ERR_R_INTERNAL_ERROR,
             "internal error while generating %s private key",
@@ -1445,6 +1653,7 @@ static int encap(uint8_t *ctext, uint8_t secret[ML_KEM_SHARED_SECRET_BYTES],
         ERR_raise_data(ERR_LIB_CRYPTO, ERR_R_INTERNAL_ERROR,
             "internal error while performing %s encapsulation",
             key->vinfo->algorithm_name);
+    OPENSSL_cleanse((void *)Kr, sizeof(Kr));
     return ret;
 }
 
@@ -1495,42 +1704,103 @@ static int decap(uint8_t secret[ML_KEM_SHARED_SECRET_BYTES],
     const ML_KEM_VINFO *vinfo = key->vinfo;
     int i;
     uint8_t mask;
+    int ret = 0;
 
     /*
-     * If our KDF is unavailable, fail early! Otherwise, keep going ignoring
-     * any further errors, returning success, and whatever we got for a shared
-     * secret.  The decrypt_cpa() function is just arithmetic on secret data,
-     * so should not be subject to failure that makes its output predictable.
-     *
-     * We guard against "should never happen" catastrophic failure of the
-     * "pure" function |hash_g| by overwriting the shared secret with the
-     * content of the failure key and returning early, if nevertheless hash_g
-     * fails.  This is not constant-time, but a failure of |hash_g| already
-     * implies loss of side-channel resistance.
-     *
-     * The same action is taken, if also |encrypt_cpa| should catastrophically
-     * fail, due to failure of the |PRF| underlying the CBD functions.
+     * The functions called below (kdf, hash_kr, encrypt_cpa) only fail on
+     * catastrophic failure of an underlying SHA3/SHAKE primitive, for example
+     * a memory allocation failure in EVP_DigestInit_ex(). None of these
+     * failures are dependent on the ciphertext content, so reporting them as a
+     * hard error does not create a chosen-ciphertext oracle and does not affect
+     * the constant-time properties of the implicit rejection path below.
      */
     if (!kdf(failure_key, key->z, ctext, vinfo->ctext_bytes, mdctx, key)) {
         ERR_raise_data(ERR_LIB_CRYPTO, ERR_R_INTERNAL_ERROR,
             "internal error while performing %s decapsulation",
             vinfo->algorithm_name);
-        return 0;
+        goto end;
     }
     decrypt_cpa(m, ctext, tmp, key);
     if (!hash_kr(Kr, m, mdctx, key)
         || !encrypt_cpa(tmp_ctext, m, r, tmp, mdctx, key)) {
-        memcpy(secret, failure_key, ML_KEM_SHARED_SECRET_BYTES);
+        ERR_raise_data(ERR_LIB_CRYPTO, ERR_R_INTERNAL_ERROR,
+            "internal error while performing %s decapsulation",
+            vinfo->algorithm_name);
         goto end;
     }
     mask = constant_time_eq_int_8(0,
         CRYPTO_memcmp(ctext, tmp_ctext, vinfo->ctext_bytes));
     for (i = 0; i < ML_KEM_SHARED_SECRET_BYTES; i++)
         secret[i] = constant_time_select_8(mask, Kr[i], failure_key[i]);
+    ret = 1;
 end:
     OPENSSL_cleanse(buf, DECAP_BUFFER_SZ);
-    return 1;
+    return ret;
 }
+
+/*
+ * Aligned allocation helpers for the VX path.
+ *
+ * On s390x with VX support the scalar type carries ALIGN16 but both
+ * OPENSSL_malloc and OPENSSL_secure_malloc may return only 8-byte-aligned
+ * storage.  Both the public-key buffer (t + m) and the private-key buffer
+ * (s + z + d) are therefore allocated with 16-byte alignment using a
+ * self-describing header-word technique:
+ *
+ *   - Over-allocate by sizeof(void *) + (SCALAR_ALIGN - 1) bytes.
+ *   - Advance the pointer to the next SCALAR_ALIGN boundary that is at least
+ *     sizeof(void *) bytes past the raw allocation, so there is always room
+ *     for a void * header even when raw is already SCALAR_ALIGN-aligned.
+ *   - Store the original raw pointer in the sizeof(void *) bytes of slack
+ *     immediately before the aligned pointer.
+ *   - To free: read back the raw pointer from that header slot.
+ *
+ * This is safe because sizeof(void *) <= 8 <= SCALAR_ALIGN = 16 on all
+ * supported platforms.  No raw-pointer field is needed in ML_KEM_KEY, so the
+ * struct layout is identical regardless of whether VX support is compiled in.
+ */
+#if defined(VX_COMPILER_SUPPORT_VEC128)
+#define SCALAR_ALIGN 16
+
+static scalar *alloc_pub_aligned(size_t puballoc)
+{
+    uint8_t *raw = OPENSSL_malloc(puballoc + sizeof(void *) + (SCALAR_ALIGN - 1));
+    uintptr_t addr;
+
+    if (raw == NULL)
+        return NULL;
+    addr = ((uintptr_t)raw + sizeof(void *) + (SCALAR_ALIGN - 1)) & ~(uintptr_t)(SCALAR_ALIGN - 1);
+    *(void **)((uint8_t *)(void *)addr - sizeof(void *)) = raw;
+    return (scalar *)(void *)addr;
+}
+
+static void free_pub_aligned(scalar *p)
+{
+    if (p == NULL)
+        return;
+    OPENSSL_free(*(void **)((uint8_t *)p - sizeof(void *)));
+}
+
+static scalar *alloc_prv_aligned(size_t prvalloc)
+{
+    uint8_t *raw = OPENSSL_secure_malloc(prvalloc + sizeof(void *) + (SCALAR_ALIGN - 1));
+    uintptr_t addr;
+
+    if (raw == NULL)
+        return NULL;
+    addr = ((uintptr_t)raw + sizeof(void *) + (SCALAR_ALIGN - 1)) & ~(uintptr_t)(SCALAR_ALIGN - 1);
+    *(void **)((uint8_t *)(void *)addr - sizeof(void *)) = raw;
+    return (scalar *)(void *)addr;
+}
+
+static void free_prv_aligned(scalar *p, size_t prvalloc)
+{
+    if (p == NULL)
+        return;
+    OPENSSL_secure_clear_free(*(void **)((uint8_t *)p - sizeof(void *)),
+        prvalloc + sizeof(void *) + (SCALAR_ALIGN - 1));
+}
+#endif /* VX_COMPILER_SUPPORT_VEC128 */
 
 /*
  * After allocating storage for public or private key data, update the key
@@ -1539,7 +1809,8 @@ end:
  * The caller should only store private data in `priv` *after* a successful
  * (non-zero) return from this function.
  */
-static __owur int add_storage(scalar *pub, scalar *priv, int private, ML_KEM_KEY *key)
+static __owur int add_storage(scalar *pub, scalar *priv,
+    int private, int dup, ML_KEM_KEY *key)
 {
     int rank = key->vinfo->rank;
 
@@ -1548,15 +1819,22 @@ static __owur int add_storage(scalar *pub, scalar *priv, int private, ML_KEM_KEY
          * One of these could be allocated correctly. It is legal to call free with a NULL
          * pointer, so always attempt to free both allocations here
          */
+#if defined(VX_COMPILER_SUPPORT_VEC128)
+        free_pub_aligned(pub);
+        free_prv_aligned(priv, key->vinfo->prvalloc);
+#else
         OPENSSL_free(pub);
         OPENSSL_secure_free(priv);
+#endif
         return 0;
     }
 
     /*
-     * We're adding key material, set up rho and pkhash to point to the rho_pkhash buffer
+     * We're adding key material, set up rho and pkhash to point to the
+     * rho_pkhash buffer.  Zero the key hash when creating fresh keys.
      */
-    memset(key->rho_pkhash, 0, sizeof(key->rho_pkhash));
+    if (dup == 0)
+        memset(key->rho_pkhash, 0, sizeof(key->rho_pkhash));
     key->rho = key->rho_pkhash;
     key->pkhash = key->rho_pkhash + ML_KEM_RANDOM_BYTES;
     key->d = key->z = NULL;
@@ -1599,9 +1877,18 @@ void ossl_ml_kem_key_reset(ML_KEM_KEY *key)
      *   secret |z|, and seed |d|, we can cleanse all three in one call.
      */
     if (key->t != NULL) {
-        if (ossl_ml_kem_have_prvkey(key))
+        if (ossl_ml_kem_have_prvkey(key)) {
+#if defined(VX_COMPILER_SUPPORT_VEC128)
+            free_prv_aligned(key->s, key->vinfo->prvalloc);
+#else
             OPENSSL_secure_clear_free(key->s, key->vinfo->prvalloc);
+#endif
+        }
+#if defined(VX_COMPILER_SUPPORT_VEC128)
+        free_pub_aligned(key->t);
+#else
         OPENSSL_free(key->t);
+#endif
     }
     key->d = key->z = key->seedbuf = key->encoded_dk = (uint8_t *)(key->s = key->m = key->t = NULL);
 }
@@ -1616,6 +1903,8 @@ void ossl_ml_kem_key_reset(ML_KEM_KEY *key)
 /* Retrieve the parameters of one of the ML-KEM variants */
 const ML_KEM_VINFO *ossl_ml_kem_get_vinfo(int evp_type)
 {
+    (void)CRYPTO_THREAD_run_once(&ml_kem_ntt_once, ml_kem_ntt_init);
+
     switch (evp_type) {
     case EVP_PKEY_ML_KEM_512:
         return &vinfo_map[ML_KEM_512_VINFO];
@@ -1625,6 +1914,27 @@ const ML_KEM_VINFO *ossl_ml_kem_get_vinfo(int evp_type)
         return &vinfo_map[ML_KEM_1024_VINFO];
     }
     return NULL;
+}
+
+/*
+ * @brief Fetch digest algorithms based on a propq.
+ * For the import case ossl_ml_kem_key_new() gets passed a NULL propq,
+ * so the propq is optionally deferred to the import using OSSL_PARAM.
+ */
+int ossl_ml_kem_key_fetch_digest(ML_KEM_KEY *key, const char *propq)
+{
+    if (key->shake128_md != NULL) {
+        EVP_MD_free(key->shake128_md);
+        EVP_MD_free(key->shake256_md);
+        EVP_MD_free(key->sha3_256_md);
+        EVP_MD_free(key->sha3_512_md);
+    }
+    key->shake128_md = EVP_MD_fetch(key->libctx, "SHAKE128", propq);
+    key->shake256_md = EVP_MD_fetch(key->libctx, "SHAKE256", propq);
+    key->sha3_256_md = EVP_MD_fetch(key->libctx, "SHA3-256", propq);
+    key->sha3_512_md = EVP_MD_fetch(key->libctx, "SHA3-512", propq);
+    return (key->shake128_md != NULL && key->shake256_md != NULL
+        && key->sha3_256_md != NULL && key->sha3_512_md != NULL);
 }
 
 ML_KEM_KEY *ossl_ml_kem_key_new(OSSL_LIB_CTX *libctx, const char *properties,
@@ -1645,17 +1955,10 @@ ML_KEM_KEY *ossl_ml_kem_key_new(OSSL_LIB_CTX *libctx, const char *properties,
     key->vinfo = vinfo;
     key->libctx = libctx;
     key->prov_flags = ML_KEM_KEY_PROV_FLAGS_DEFAULT;
-    key->shake128_md = EVP_MD_fetch(libctx, "SHAKE128", properties);
-    key->shake256_md = EVP_MD_fetch(libctx, "SHAKE256", properties);
-    key->sha3_256_md = EVP_MD_fetch(libctx, "SHA3-256", properties);
-    key->sha3_512_md = EVP_MD_fetch(libctx, "SHA3-512", properties);
     key->d = key->z = key->rho = key->pkhash = key->encoded_dk = key->seedbuf = NULL;
     key->s = key->m = key->t = NULL;
-
-    if (key->shake128_md != NULL
-        && key->shake256_md != NULL
-        && key->sha3_256_md != NULL
-        && key->sha3_512_md != NULL)
+    key->shake128_md = key->shake256_md = key->sha3_256_md = key->sha3_512_md = NULL;
+    if (ossl_ml_kem_key_fetch_digest(key, properties))
         return key;
 
     ossl_ml_kem_key_free(key);
@@ -1669,8 +1972,6 @@ ML_KEM_KEY *ossl_ml_kem_key_dup(const ML_KEM_KEY *key, int selection)
 {
     int ok = 0;
     ML_KEM_KEY *ret;
-    void *tmp_pub;
-    void *tmp_priv;
 
     if (key == NULL)
         return NULL;
@@ -1692,28 +1993,48 @@ ML_KEM_KEY *ossl_ml_kem_key_dup(const ML_KEM_KEY *key, int selection)
         selection = 0;
     else if (!ossl_ml_kem_have_prvkey(key))
         selection &= ~OSSL_KEYMGMT_SELECT_PRIVATE_KEY;
+    else if ((selection & OSSL_KEYMGMT_SELECT_PRIVATE_KEY) != 0)
+        selection &= ~OSSL_KEYMGMT_SELECT_PUBLIC_KEY;
 
     switch (selection & OSSL_KEYMGMT_SELECT_KEYPAIR) {
     case 0:
         ok = 1;
         break;
     case OSSL_KEYMGMT_SELECT_PUBLIC_KEY:
-        ok = add_storage(OPENSSL_memdup(key->t, key->vinfo->puballoc), NULL, 0, ret);
-        break;
+#if defined(VX_COMPILER_SUPPORT_VEC128)
+    {
+        scalar *pub = alloc_pub_aligned(key->vinfo->puballoc);
+
+        if (pub != NULL)
+            memcpy(pub, key->t, key->vinfo->puballoc);
+        ok = add_storage(pub, NULL, 0, 1, ret);
+    }
+#else
+        ok = add_storage(OPENSSL_memdup(key->t, key->vinfo->puballoc), NULL, 0, 1, ret);
+#endif
+    break;
     case OSSL_KEYMGMT_SELECT_PRIVATE_KEY:
-        tmp_pub = OPENSSL_memdup(key->t, key->vinfo->puballoc);
-        if (tmp_pub == NULL)
-            break;
-        tmp_priv = OPENSSL_secure_malloc(key->vinfo->prvalloc);
-        if (tmp_priv == NULL) {
-            OPENSSL_free(tmp_pub);
-            break;
+        /* Frees both and returns 0 if either is NULL */
+#if defined(VX_COMPILER_SUPPORT_VEC128)
+    {
+        scalar *pub = alloc_pub_aligned(key->vinfo->puballoc);
+        scalar *priv = alloc_prv_aligned(key->vinfo->prvalloc);
+
+        if (pub != NULL)
+            memcpy(pub, key->t, key->vinfo->puballoc);
+        ok = add_storage(pub, priv, 1, 1, ret);
+    }
+#else
+        ok = add_storage(OPENSSL_memdup(key->t, key->vinfo->puballoc),
+            OPENSSL_secure_malloc(key->vinfo->prvalloc), 1, 1, ret);
+#endif
+        if (ok) {
+            memcpy(ret->s, key->s, key->vinfo->prvalloc);
+
+            /* Duplicated keys retain |d|, if available */
+            if (key->d != NULL)
+                ret->d = ret->z + ML_KEM_RANDOM_BYTES;
         }
-        if ((ok = add_storage(tmp_pub, tmp_priv, 1, ret)) != 0)
-            memcpy(tmp_priv, key->s, key->vinfo->prvalloc);
-        /* Duplicated keys retain |d|, if available */
-        if (key->d != NULL)
-            ret->d = ret->z + ML_KEM_RANDOM_BYTES;
         break;
     }
 
@@ -1826,7 +2147,12 @@ int ossl_ml_kem_parse_public_key(const uint8_t *in, size_t len, ML_KEM_KEY *key)
         || (mdctx = EVP_MD_CTX_new()) == NULL)
         return 0;
 
-    if (add_storage(OPENSSL_malloc(vinfo->puballoc), NULL, 0, key))
+#if defined(VX_COMPILER_SUPPORT_VEC128)
+    if (add_storage(alloc_pub_aligned(vinfo->puballoc),
+            NULL, 0, 0, key))
+#else
+    if (add_storage(OPENSSL_malloc(vinfo->puballoc), NULL, 0, 0, key))
+#endif
         ret = parse_pubkey(in, mdctx, key);
 
     if (!ret)
@@ -1854,8 +2180,16 @@ int ossl_ml_kem_parse_private_key(const uint8_t *in, size_t len,
         || (mdctx = EVP_MD_CTX_new()) == NULL)
         return 0;
 
+    /* Clear any unused seed */
+    ossl_ml_kem_key_reset(key);
+
+#if defined(VX_COMPILER_SUPPORT_VEC128)
+    if (add_storage(alloc_pub_aligned(vinfo->puballoc),
+            alloc_prv_aligned(vinfo->prvalloc), 1, 0, key))
+#else
     if (add_storage(OPENSSL_malloc(vinfo->puballoc),
-            OPENSSL_secure_malloc(vinfo->prvalloc), 1, key))
+            OPENSSL_secure_malloc(vinfo->prvalloc), 1, 0, key))
+#endif
         ret = parse_prvkey(in, mdctx, key);
 
     if (!ret)
@@ -1903,8 +2237,13 @@ int ossl_ml_kem_genkey(uint8_t *pubenc, size_t publen, ML_KEM_KEY *key)
      */
     CONSTTIME_SECRET(seed, ML_KEM_SEED_BYTES);
 
+#if defined(VX_COMPILER_SUPPORT_VEC128)
+    if (add_storage(alloc_pub_aligned(vinfo->puballoc),
+            alloc_prv_aligned(vinfo->prvalloc), 1, 0, key))
+#else
     if (add_storage(OPENSSL_malloc(vinfo->puballoc),
-            OPENSSL_secure_malloc(vinfo->prvalloc), 1, key))
+            OPENSSL_secure_malloc(vinfo->prvalloc), 1, 0, key))
+#endif
         ret = genkey(seed, mdctx, pubenc, key);
     OPENSSL_cleanse(seed, sizeof(seed));
 
@@ -1913,6 +2252,9 @@ int ossl_ml_kem_genkey(uint8_t *pubenc, size_t publen, ML_KEM_KEY *key)
 
     EVP_MD_CTX_free(mdctx);
     if (!ret) {
+        /* Erase any partial public key output */
+        if (pubenc != NULL)
+            OPENSSL_cleanse(pubenc, vinfo->pubkey_bytes);
         ossl_ml_kem_key_reset(key);
         return 0;
     }
@@ -1976,6 +2318,10 @@ int ossl_ml_kem_encap_seed(uint8_t *ctext, size_t clen,
     }
 #undef case_encap_seed
 
+    /* Erase any partial ciphertext output on failure */
+    if (!ret)
+        OPENSSL_cleanse(ctext, clen);
+
     /* Declassify secret inputs and derived outputs before returning control */
     CONSTTIME_DECLASSIFY(entropy, elen);
     CONSTTIME_DECLASSIFY(ctext, clen);
@@ -1990,6 +2336,7 @@ int ossl_ml_kem_encap_rand(uint8_t *ctext, size_t clen,
     const ML_KEM_KEY *key)
 {
     uint8_t r[ML_KEM_RANDOM_BYTES];
+    int ret;
 
     if (key == NULL)
         return 0;
@@ -1999,8 +2346,11 @@ int ossl_ml_kem_encap_rand(uint8_t *ctext, size_t clen,
         < 1)
         return 0;
 
-    return ossl_ml_kem_encap_seed(ctext, clen, shared_secret, slen,
+    ret = ossl_ml_kem_encap_seed(ctext, clen, shared_secret, slen,
         r, sizeof(r), key);
+
+    OPENSSL_cleanse((void *)r, sizeof(r));
+    return ret;
 }
 
 int ossl_ml_kem_decap(uint8_t *shared_secret, size_t slen,
@@ -2011,15 +2361,17 @@ int ossl_ml_kem_decap(uint8_t *shared_secret, size_t slen,
     EVP_MD_CTX *mdctx;
     int ret = 0;
 #if defined(OPENSSL_CONSTANT_TIME_VALIDATION)
-    int classify_bytes = 2 * sizeof(scalar) + ML_KEM_RANDOM_BYTES;
+    int classify_bytes;
 #endif
 
     /* Need a private key here */
-    if (!ossl_ml_kem_have_prvkey(key))
+    if (!ossl_ml_kem_have_prvkey(key)
+        || shared_secret == NULL
+        || slen < ML_KEM_SHARED_SECRET_BYTES)
         return 0;
     vinfo = key->vinfo;
 
-    if (shared_secret == NULL || slen != ML_KEM_SHARED_SECRET_BYTES
+    if (slen != ML_KEM_SHARED_SECRET_BYTES
         || ctext == NULL || clen != vinfo->ctext_bytes
         || (mdctx = EVP_MD_CTX_new()) == NULL) {
         (void)RAND_bytes_ex(key->libctx, shared_secret,
@@ -2030,6 +2382,9 @@ int ossl_ml_kem_decap(uint8_t *shared_secret, size_t slen,
      * Data derived from |s| and |z| defaults secret, and to avoid side-channel
      * leaks should not influence control flow.
      */
+#if defined(OPENSSL_CONSTANT_TIME_VALIDATION)
+    classify_bytes = vinfo->rank * sizeof(scalar) + ML_KEM_RANDOM_BYTES;
+#endif
     CONSTTIME_SECRET(key->s, classify_bytes);
 
     /*-
@@ -2045,6 +2400,7 @@ int ossl_ml_kem_decap(uint8_t *shared_secret, size_t slen,
                                                                   \
         ret = decap(shared_secret, ctext, cbuf, tmp, mdctx, key); \
         OPENSSL_cleanse((void *)tmp, sizeof(tmp));                \
+        OPENSSL_cleanse((void *)cbuf, sizeof(cbuf));              \
     }
     switch (vinfo->evp_type) {
     case EVP_PKEY_ML_KEM_512:

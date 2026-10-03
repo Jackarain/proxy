@@ -11,7 +11,6 @@
 #include <string.h>
 #include <openssl/http.h>
 #include <openssl/httperr.h>
-#include <openssl/bio.h> /* for BIO_snprintf() */
 #include <openssl/err.h>
 #include "internal/cryptlib.h" /* for ossl_assert() */
 #ifndef OPENSSL_NO_SOCK
@@ -21,6 +20,7 @@
 #define NI_MAXHOST 255
 #endif
 #include "crypto/ctype.h" /* for ossl_isspace() */
+#define OSSL_URL_SCHEME_SUFFIX "://"
 
 static void init_pstring(char **pstr)
 {
@@ -79,16 +79,16 @@ int OSSL_parse_url(const char *url, char **pscheme, char **puser, char **phost,
         return 0;
     }
 
-    /* check for optional prefix "<scheme>://" */
-    scheme = scheme_end = url;
-    p = strstr(url, "://");
-    if (p == NULL) {
-        p = url;
-    } else {
-        scheme_end = p;
-        if (scheme_end == scheme)
-            goto parse_err;
-        p += strlen("://");
+    /* check for optional prefix "<scheme>://" as per RFC 3986 */
+    scheme = scheme_end = p = url;
+    if (ossl_isalpha(*p)) {
+        OSSL_SKIP_SCHEME(p);
+        if (HAS_PREFIX(p, OSSL_URL_SCHEME_SUFFIX)) {
+            scheme_end = p;
+            p += sizeof(OSSL_URL_SCHEME_SUFFIX) - 1;
+        } else {
+            p = url;
+        }
     }
 
     /* parse optional "userinfo@" */
@@ -105,7 +105,7 @@ int OSSL_parse_url(const char *url, char **pscheme, char **puser, char **phost,
     /* parse hostname/address as far as needed here */
     if (host[0] == '[') {
         /* IPv6 literal, which may include ':' */
-        host_end = strchr(host + 1, ']');
+        host_end = memchr(host + 1, ']', authority_end - host - 1);
         if (host_end == NULL)
             goto parse_err;
         p = ++host_end;
@@ -176,7 +176,7 @@ int OSSL_parse_url(const char *url, char **pscheme, char **puser, char **phost,
 
         if ((*ppath = OPENSSL_malloc(buflen)) == NULL)
             goto err;
-        BIO_snprintf(*ppath, buflen, "/%s", path);
+        snprintf(*ppath, buflen, "/%s", path);
     }
     return 1;
 
@@ -270,6 +270,9 @@ static int use_proxy(const char *no_proxy, const char *server)
         host[sl] = '\0';
         server = host;
     }
+
+    if (sl == 0)
+        return 1;
 
     /*
      * using environment variable names, both lowercase and uppercase variants,

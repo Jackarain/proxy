@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2025 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2018-2026 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -139,7 +139,7 @@ static int tdes_check_param(struct cmac_data_st *macctx, OSSL_PARAM *p,
     if (EVP_CIPHER_is_a(cipher, "DES-EDE3-CBC")) {
         if (!OSSL_FIPS_IND_ON_UNAPPROVED(macctx, OSSL_FIPS_IND_SETTABLE0,
                 libctx, "CMAC", "Triple-DES",
-                ossl_fips_config_tdes_encrypt_disallowed))
+                FIPS_CONFIG_TDES_ENCRYPT_DISABLED))
             return 0;
         OSSL_FIPS_IND_GET_PARAM(macctx, p, state, OSSL_FIPS_IND_SETTABLE0,
             OSSL_CIPHER_PARAM_FIPS_ENCRYPT_CHECK)
@@ -266,7 +266,7 @@ static int cmac_set_ctx_params(void *vmacctx, const OSSL_PARAM params[])
                 && !EVP_CIPHER_is_a(cipher, "AES-192-CBC")
                 && !EVP_CIPHER_is_a(cipher, "AES-128-CBC")
                 && !EVP_CIPHER_is_a(cipher, "DES-EDE3-CBC")) {
-                ERR_raise(ERR_LIB_PROV, EVP_R_UNSUPPORTED_CIPHER);
+                ERR_raise(ERR_LIB_PROV, PROV_R_INVALID_CIPHER);
                 return 0;
             }
         }

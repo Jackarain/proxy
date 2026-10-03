@@ -58,6 +58,7 @@ static int check_name_constraints(X509_STORE_CTX *ctx);
 static int check_id(X509_STORE_CTX *ctx);
 static int check_trust(X509_STORE_CTX *ctx, int num_untrusted);
 static int check_revocation(X509_STORE_CTX *ctx);
+static int revocation_check_end(X509_STORE_CTX *ctx, int check_all);
 #ifndef OPENSSL_NO_OCSP
 static int check_cert_ocsp_resp(X509_STORE_CTX *ctx);
 #endif
@@ -78,6 +79,8 @@ static void get_delta_sk(X509_STORE_CTX *ctx, X509_CRL **dcrl,
     STACK_OF(X509_CRL) *crls);
 static void crl_akid_check(X509_STORE_CTX *ctx, X509_CRL *crl, X509 **pissuer,
     int *pcrl_score);
+static int matching_crl_issuer_and_akid(const X509_CRL *crl,
+    const X509 *issuer, const X509_NAME *crl_issuer_name);
 static int crl_crldp_check(X509 *x, X509_CRL *crl, int crl_score,
     unsigned int *preasons);
 static int check_crl_path(X509_STORE_CTX *ctx, X509 *x);
@@ -625,6 +628,9 @@ static int check_extensions(X509_STORE_CTX *ctx)
 
     for (i = 0; i < num; i++) {
         x = sk_X509_value(ctx->chain, i);
+        /* RFC 5280, 4.2: a given extension MUST NOT appear more than once */
+        CB_FAIL_IF((x->ex_flags & EXFLAG_DUPLICATE) != 0,
+            ctx, x, i, X509_V_ERR_DUPLICATE_EXTENSION);
         CB_FAIL_IF((ctx->param->flags & X509_V_FLAG_IGNORE_CRITICAL) == 0
                 && (x->ex_flags & EXFLAG_CRITICAL) != 0,
             ctx, x, i, X509_V_ERR_UNHANDLED_CRITICAL_EXTENSION);
@@ -772,27 +778,6 @@ static int check_extensions(X509_STORE_CTX *ctx)
     return 1;
 }
 
-static int has_san_id(const X509 *x, int gtype)
-{
-    int i;
-    int ret = 0;
-    GENERAL_NAMES *gs = X509_get_ext_d2i(x, NID_subject_alt_name, NULL, NULL);
-
-    if (gs == NULL)
-        return 0;
-
-    for (i = 0; i < sk_GENERAL_NAME_num(gs); i++) {
-        GENERAL_NAME *g = sk_GENERAL_NAME_value(gs, i);
-
-        if (g->type == gtype) {
-            ret = 1;
-            break;
-        }
-    }
-    GENERAL_NAMES_free(gs);
-    return ret;
-}
-
 /*-
  * Returns -1 on internal error.
  * Sadly, returns 0 also on internal error in ctx->verify_cb().
@@ -889,20 +874,22 @@ static int check_name_constraints(X509_STORE_CTX *ctx)
 
             if (nc) {
                 int rv = NAME_CONSTRAINTS_check(x, nc);
-                int ret = 1;
 
-                /* If EE certificate check commonName too */
+                /*
+                 * Apply DNS name constraints to the EE subject commonName
+                 * only when the commonName may be used for host name checks,
+                 * mirroring do_x509_check(): only when the caller opted in
+                 * with X509_CHECK_FLAG_ALWAYS_CHECK_SUBJECT, and never when
+                 * X509_CHECK_FLAG_NEVER_CHECK_SUBJECT is set.
+                 */
                 if (rv == X509_V_OK && i == 0
                     && (ctx->param->hostflags
                            & X509_CHECK_FLAG_NEVER_CHECK_SUBJECT)
                         == 0
-                    && ((ctx->param->hostflags
-                            & X509_CHECK_FLAG_ALWAYS_CHECK_SUBJECT)
-                            != 0
-                        || (ret = has_san_id(x, GEN_DNS)) == 0))
+                    && (ctx->param->hostflags
+                           & X509_CHECK_FLAG_ALWAYS_CHECK_SUBJECT)
+                        != 0)
                     rv = NAME_CONSTRAINTS_check_CN(x, nc);
-                if (ret < 0)
-                    return ret;
 
                 switch (rv) {
                 case X509_V_OK:
@@ -936,7 +923,9 @@ static int check_hosts(X509 *x, X509_VERIFY_PARAM *vpm)
     for (int i = 0; i < n; ++i) {
         size_t len = sk_X509_BUFFER_value(vpm->hosts, i)->len;
         name = sk_X509_BUFFER_value(vpm->hosts, i)->data;
-        if (X509_check_host(x, (const char *)name, len, vpm->hostflags, &vpm->peername) > 0)
+        if (ossl_x509_check_host(x, (const char *)name, len, vpm->hostflags,
+                &vpm->peername)
+            > 0)
             return 1;
     }
     return n <= 0;
@@ -971,7 +960,7 @@ static int check_ips(X509 *x, X509_VERIFY_PARAM *vpm)
     for (int i = 0; i < n; ++i) {
         size_t len = sk_X509_BUFFER_value(vpm->ips, i)->len;
         name = sk_X509_BUFFER_value(vpm->ips, i)->data;
-        if (X509_check_ip(x, name, len, vpm->hostflags) > 0)
+        if (ossl_x509_check_ip(x, name, len, vpm->hostflags) > 0)
             return 1;
     }
     return n <= 0;
@@ -1168,6 +1157,20 @@ trusted:
     return X509_TRUST_UNTRUSTED;
 }
 
+/*
+ * Return the last chain depth whose revocation status should be checked.
+ * With X509_V_FLAG_*_CHECK_ALL and X509_V_FLAG_PARTIAL_CHAIN, revocation
+ * checking stops before the first trusted certificate in the chain.
+ */
+static int revocation_check_end(X509_STORE_CTX *ctx, int check_all)
+{
+    if (!check_all)
+        return 0;
+    return (ctx->param->flags & X509_V_FLAG_PARTIAL_CHAIN) == 0
+        ? sk_X509_num(ctx->chain) - 1
+        : ctx->num_untrusted - 1;
+}
+
 /* Sadly, returns 0 also on internal error. */
 static int check_revocation(X509_STORE_CTX *ctx)
 {
@@ -1185,10 +1188,10 @@ static int check_revocation(X509_STORE_CTX *ctx)
         /*
          * certificate status checking with OCSP
          */
-        if (ocsp_check_all_enabled)
-            last = sk_X509_num(ctx->chain) - 1;
-        else if (!crl_check_all_enabled && ctx->parent != NULL)
+        if (!ocsp_check_all_enabled && !crl_check_all_enabled
+            && ctx->parent != NULL)
             return 1; /* If checking CRL paths this isn't the EE certificate */
+        last = revocation_check_end(ctx, ocsp_check_all_enabled);
 
         for (i = 0; i <= last; i++) {
             ctx->error_depth = i;
@@ -1200,6 +1203,16 @@ static int check_revocation(X509_STORE_CTX *ctx)
 
             /* the issuer certificate is the next in the chain */
             ctx->current_issuer = sk_X509_value(ctx->chain, i + 1);
+            if (ctx->current_issuer == NULL) {
+                /*
+                 * No issuer exists at i+1 — this is the partial-chain
+                 * trust anchor. OCSP requires an issuer to build the
+                 * CertID, so skip OCSP checking for this certificate.
+                 */
+                if ((ctx->param->flags & X509_V_FLAG_PARTIAL_CHAIN) != 0)
+                    continue;
+                return verify_cb_ocsp(ctx, X509_V_ERR_OCSP_VERIFY_FAILED);
+            }
 
             ok = check_cert_ocsp_resp(ctx);
 
@@ -1241,14 +1254,9 @@ static int check_revocation(X509_STORE_CTX *ctx)
 
     if (crl_check_enabled && !ocsp_check_all_enabled) {
         /* certificate status check with CRLs */
-        if (crl_check_all_enabled) {
-            last = sk_X509_num(ctx->chain) - 1;
-        } else {
-            /* If checking CRL paths this isn't the EE certificate */
-            if (ctx->parent != NULL)
-                return 1;
-            last = 0;
-        }
+        if (!crl_check_all_enabled && ctx->parent != NULL)
+            return 1; /* If checking CRL paths this isn't the EE certificate */
+        last = revocation_check_end(ctx, crl_check_all_enabled);
 
         /*
          * in the case that OCSP is only enabled for the server certificate
@@ -1281,7 +1289,7 @@ static int check_cert_ocsp_resp(X509_STORE_CTX *ctx)
     OCSP_CERTID *sr_cert_id = NULL;
     ASN1_GENERALIZEDTIME *rev, *thisupd, *nextupd;
     ASN1_OBJECT *cert_id_md_oid;
-    EVP_MD *cert_id_md;
+    EVP_MD *cert_id_md = NULL;
     OCSP_CERTID *cert_id = NULL;
     int ret = V_OCSP_CERTSTATUS_UNKNOWN;
     int num;
@@ -1292,12 +1300,23 @@ static int check_cert_ocsp_resp(X509_STORE_CTX *ctx)
         return X509_V_ERR_OCSP_NO_RESPONSE;
 
     if ((resp = sk_OCSP_RESPONSE_value(ctx->ocsp_resp, ctx->error_depth)) == NULL
-        || (bs = OCSP_response_get1_basic(resp)) == NULL
-        || (num = OCSP_resp_count(bs)) < 1)
+        || (bs = OCSP_response_get1_basic(resp)) == NULL)
         return X509_V_ERR_OCSP_NO_RESPONSE;
+
+    /*
+     * OCSP_response_get1_basic() returns an owning reference, so once bs is
+     * non-NULL it must be released via the end: cleanup label. Route an empty
+     * BasicResponse (no single responses) through end: rather than returning
+     * directly, otherwise bs leaks.
+     */
+    if ((num = OCSP_resp_count(bs)) < 1) {
+        ret = X509_V_ERR_OCSP_NO_RESPONSE;
+        goto end;
+    }
 
     if (OCSP_response_status(resp) != OCSP_RESPONSE_STATUS_SUCCESSFUL) {
         OCSP_BASICRESP_free(bs);
+        bs = NULL;
         ret = X509_V_ERR_OCSP_RESP_INVALID;
         goto end;
     }
@@ -1314,13 +1333,17 @@ static int check_cert_ocsp_resp(X509_STORE_CTX *ctx)
         /* determine the md algorithm which was used to create cert id */
         sr_cert_id = (OCSP_CERTID *)OCSP_SINGLERESP_get0_id(sr);
         OCSP_id_get0_info(NULL, &cert_id_md_oid, NULL, NULL, sr_cert_id);
-        if (cert_id_md_oid != NULL)
-            cert_id_md = (EVP_MD *)EVP_get_digestbyobj(cert_id_md_oid);
-        else
-            cert_id_md = NULL;
+        if (cert_id_md_oid != NULL) {
+            char md_name[80];
+
+            if (i2t_ASN1_OBJECT(md_name, sizeof(md_name), cert_id_md_oid) > 0)
+                cert_id_md = EVP_MD_fetch(ctx->libctx, md_name, ctx->propq);
+        }
 
         /* search the stack for the requested OCSP response */
         cert_id = OCSP_cert_to_id(cert_id_md, ctx->current_cert, ctx->current_issuer);
+        EVP_MD_free(cert_id_md);
+        cert_id_md = NULL;
         if (cert_id == NULL) {
             ret = X509_V_ERR_OCSP_RESP_INVALID;
             goto end;
@@ -1673,6 +1696,12 @@ static int get_crl_score(X509_STORE_CTX *ctx, X509 **pissuer,
     /* Invalid IDP cannot be processed */
     if ((crl->idp_flags & IDP_INVALID) != 0)
         return 0;
+    /*
+     * Reject delta CRLs unconditionally here. They are considered by
+     * get_delta_sk() after a base CRL is selected.
+     */
+    if (crl->base_crl_number != NULL)
+        return 0;
     /* Reason codes or indirect CRLs need extended CRL support */
     if ((ctx->param->flags & X509_V_FLAG_EXTENDED_CRL_SUPPORT) == 0) {
         if (crl->idp_flags & (IDP_INDIRECT | IDP_REASONS))
@@ -1682,9 +1711,6 @@ static int get_crl_score(X509_STORE_CTX *ctx, X509 **pissuer,
         if ((crl->idp_reasons & ~tmp_reasons) == 0)
             return 0;
     }
-    /* Don't process deltas at this stage */
-    else if (crl->base_crl_number != NULL)
-        return 0;
     /* If issuer name doesn't match certificate need indirect CRL */
     if (X509_NAME_cmp(X509_get_issuer_name(x), X509_CRL_get_issuer(crl)) != 0) {
         if ((crl->idp_flags & IDP_INDIRECT) == 0)
@@ -1733,7 +1759,7 @@ static void crl_akid_check(X509_STORE_CTX *ctx, X509_CRL *crl,
 
     crl_issuer = sk_X509_value(ctx->chain, cidx);
 
-    if (X509_check_akid(crl_issuer, crl->akid) == X509_V_OK) {
+    if (matching_crl_issuer_and_akid(crl, crl_issuer, cnm)) {
         if (*pcrl_score & CRL_SCORE_ISSUER_NAME) {
             *pcrl_score |= CRL_SCORE_AKID | CRL_SCORE_ISSUER_CERT;
             *pissuer = crl_issuer;
@@ -1743,9 +1769,7 @@ static void crl_akid_check(X509_STORE_CTX *ctx, X509_CRL *crl,
 
     for (cidx++; cidx < sk_X509_num(ctx->chain); cidx++) {
         crl_issuer = sk_X509_value(ctx->chain, cidx);
-        if (X509_NAME_cmp(X509_get_subject_name(crl_issuer), cnm))
-            continue;
-        if (X509_check_akid(crl_issuer, crl->akid) == X509_V_OK) {
+        if (matching_crl_issuer_and_akid(crl, crl_issuer, cnm)) {
             *pcrl_score |= CRL_SCORE_AKID | CRL_SCORE_SAME_PATH;
             *pissuer = crl_issuer;
             return;
@@ -1762,14 +1786,22 @@ static void crl_akid_check(X509_STORE_CTX *ctx, X509_CRL *crl,
      */
     for (i = 0; i < sk_X509_num(ctx->untrusted); i++) {
         crl_issuer = sk_X509_value(ctx->untrusted, i);
-        if (X509_NAME_cmp(X509_get_subject_name(crl_issuer), cnm) != 0)
-            continue;
-        if (X509_check_akid(crl_issuer, crl->akid) == X509_V_OK) {
+        if (matching_crl_issuer_and_akid(crl, crl_issuer, cnm)) {
             *pissuer = crl_issuer;
             *pcrl_score |= CRL_SCORE_AKID;
             return;
         }
     }
+}
+
+static int matching_crl_issuer_and_akid(const X509_CRL *crl,
+    const X509 *issuer, const X509_NAME *crl_issuer_name)
+{
+    if (issuer == NULL)
+        return 0;
+    if (X509_NAME_cmp(X509_get_subject_name(issuer), crl_issuer_name) != 0)
+        return 0;
+    return X509_check_akid(issuer, crl->akid) == X509_V_OK;
 }
 
 /*
@@ -1826,16 +1858,59 @@ static int check_crl_chain(X509_STORE_CTX *ctx,
     return X509_cmp(cert_ta, crl_ta) == 0;
 }
 
+/*
+ * Return the full name of the certificate CRL distribution point dp, whose
+ * distpoint is a nameRelativeToCRLIssuer fragment: the CRL issuer name with
+ * the fragment appended.  The CRL issuer is the directoryName in
+ * dp->CRLissuer if there is one, else the issuer of the certificate.
+ *
+ * The result is a fresh X509_NAME owned by the caller.  It is deliberately
+ * not stored in dp->distpoint->dpname: once its extension cache has been
+ * published a certificate is shared between threads without locking, and
+ * computing the name here rather than when the certificate is parsed keeps
+ * a certificate with many relative distribution points from costing a copy
+ * of the issuer name per entry on every parse.  Returns NULL on error.
+ */
+static X509_NAME *crldp_full_name(const X509 *x, const DIST_POINT *dp)
+{
+    const X509_NAME *iname = NULL;
+    int i;
+
+    /*
+     * Note that the below way of determining iname is not really compliant
+     * with https://tools.ietf.org/html/rfc5280#section-4.2.1.13
+     * According to it, sk_GENERAL_NAME_num(dp->CRLissuer) MUST be <= 1
+     * and any CRLissuer could be of type different to GEN_DIRNAME.
+     */
+    for (i = 0; i < sk_GENERAL_NAME_num(dp->CRLissuer); i++) {
+        GENERAL_NAME *gen = sk_GENERAL_NAME_value(dp->CRLissuer, i);
+
+        if (gen->type == GEN_DIRNAME) {
+            iname = gen->d.directoryName;
+            break;
+        }
+    }
+    if (iname == NULL)
+        iname = X509_get_issuer_name(x);
+    return ossl_dist_point_name_full(dp->distpoint, iname);
+}
+
 /*-
  * Check for match between two dist point names: three separate cases.
  * 1. Both are relative names and compare X509_NAME types.
  * 2. One full, one relative. Compare X509_NAME to GENERAL_NAMES.
  * 3. Both are full names and compare two GENERAL_NAMES.
  * 4. One is NULL: automatic match.
+ *
+ * a is the certificate's distribution point name and b the CRL's issuing
+ * distribution point name.  When a is a relative name, aname is its full
+ * name as built by crldp_full_name(); a->dpname itself is not consulted.
+ * For b the full name is the cached b->dpname set when the CRL was parsed.
  */
-static int idp_check_dp(DIST_POINT_NAME *a, DIST_POINT_NAME *b)
+static int idp_check_dp(DIST_POINT_NAME *a, const X509_NAME *aname,
+    DIST_POINT_NAME *b)
 {
-    X509_NAME *nm = NULL;
+    const X509_NAME *nm = NULL;
     GENERAL_NAMES *gens = NULL;
     GENERAL_NAME *gena, *genb;
     int i, j;
@@ -1843,16 +1918,16 @@ static int idp_check_dp(DIST_POINT_NAME *a, DIST_POINT_NAME *b)
     if (a == NULL || b == NULL)
         return 1;
     if (a->type == 1) {
-        if (a->dpname == NULL)
+        if (aname == NULL)
             return 0;
         /* Case 1: two X509_NAME */
         if (b->type == 1) {
             if (b->dpname == NULL)
                 return 0;
-            return X509_NAME_cmp(a->dpname, b->dpname) == 0;
+            return X509_NAME_cmp(aname, b->dpname) == 0;
         }
         /* Case 2: set name and GENERAL_NAMES appropriately */
-        nm = a->dpname;
+        nm = aname;
         gens = b->name.fullname;
     } else if (b->type == 1) {
         if (b->dpname == NULL)
@@ -1907,6 +1982,52 @@ static int crldp_check_crlissuer(DIST_POINT *dp, X509_CRL *crl, int crl_score)
     return 0;
 }
 
+/*
+ * Check whether the distribution point name |idpname| of a CRL's IDP extension
+ * matches the default distribution point that RFC 5280, section 6.3.3, assumes
+ * for CRLs not specified in any of the certificate's distribution points: one
+ * whose fullName consists of the certificate issuer name and the names in the
+ * certificate's issuerAltName extension.  The assumed distribution point is
+ * constructed and matched with idp_check_dp().
+ */
+static int idp_check_issuer(DIST_POINT_NAME *idpname, X509 *x)
+{
+    DIST_POINT_NAME dpname;
+    GENERAL_NAMES *gens;
+    GENERAL_NAME *gen = NULL;
+    X509_NAME *iname = NULL;
+    int ret = 0;
+
+    /*
+     * An undecodable issuerAltName extension is treated as an absent one;
+     * any decoding errors are not left in the error queue.
+     */
+    ERR_set_mark();
+    gens = X509_get_ext_d2i(x, NID_issuer_alt_name, NULL, NULL);
+    ERR_pop_to_mark();
+    if (gens == NULL && (gens = sk_GENERAL_NAME_new_null()) == NULL)
+        return 0;
+    if ((gen = GENERAL_NAME_new()) == NULL
+        || (iname = X509_NAME_dup(X509_get_issuer_name(x))) == NULL)
+        goto end;
+    GENERAL_NAME_set0_value(gen, GEN_DIRNAME, iname);
+    iname = NULL; /* now owned by |gen| */
+    if (!sk_GENERAL_NAME_push(gens, gen))
+        goto end;
+    gen = NULL; /* now owned by |gens| */
+
+    dpname.type = 0; /* fullName */
+    dpname.name.fullname = gens;
+    dpname.dpname = NULL;
+    ret = idp_check_dp(&dpname, NULL, idpname);
+
+end:
+    GENERAL_NAME_free(gen);
+    X509_NAME_free(iname);
+    GENERAL_NAMES_free(gens);
+    return ret;
+}
+
 /* Check CRLDP and IDP */
 static int crl_crldp_check(X509 *x, X509_CRL *crl, int crl_score,
     unsigned int *preasons)
@@ -1925,17 +2046,40 @@ static int crl_crldp_check(X509 *x, X509_CRL *crl, int crl_score,
     *preasons = crl->idp_reasons;
     for (i = 0; i < sk_DIST_POINT_num(x->crldp); i++) {
         DIST_POINT *dp = sk_DIST_POINT_value(x->crldp, i);
+        X509_NAME *dpname = NULL;
+        int match;
 
-        if (crldp_check_crlissuer(dp, crl, crl_score)) {
-            if (crl->idp == NULL
-                || idp_check_dp(dp->distpoint, crl->idp->distpoint)) {
-                *preasons &= dp->dp_reasons;
-                return 1;
-            }
+        if (!crldp_check_crlissuer(dp, crl, crl_score))
+            continue;
+        if (crl->idp == NULL) {
+            match = 1;
+        } else {
+            /*
+             * A relative distribution point name is only comparable in
+             * full form.  Build it for this one comparison and discard it;
+             * if that fails the entry simply does not match.
+             */
+            if (dp->distpoint != NULL && dp->distpoint->type == 1
+                && (dpname = crldp_full_name(x, dp)) == NULL)
+                continue;
+            match = idp_check_dp(dp->distpoint, dpname, crl->idp->distpoint);
+            X509_NAME_free(dpname);
+        }
+        if (match) {
+            *preasons &= dp->dp_reasons;
+            return 1;
         }
     }
-    return (crl->idp == NULL || crl->idp->distpoint == NULL)
-        && (crl_score & CRL_SCORE_ISSUER_NAME) != 0;
+    /*
+     * The CRL is not specified in any distribution point of the certificate.
+     * RFC 5280, section 6.3.3, allows such a CRL if it is issued by the
+     * certificate issuer, assuming a distribution point with the reasons and
+     * cRLIssuer fields omitted and a distribution point name consisting of
+     * the certificate issuer name and any issuerAltName entries.
+     */
+    return (crl_score & CRL_SCORE_ISSUER_NAME) != 0
+        && (crl->idp == NULL || crl->idp->distpoint == NULL
+            || idp_check_issuer(crl->idp->distpoint, x));
 }
 
 /*

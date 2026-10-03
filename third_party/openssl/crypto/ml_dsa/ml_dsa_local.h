@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2024-2026 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -59,10 +59,21 @@ typedef struct vector_st VECTOR;
 typedef struct matrix_st MATRIX;
 typedef struct ml_dsa_sig_st ML_DSA_SIG;
 
-int ossl_ml_dsa_matrix_expand_A(EVP_MD_CTX *g_ctx, const EVP_MD *md,
+typedef int(ML_DSA_MATRIX_EXPAND_A_FN)(EVP_MD_CTX *g_ctx, const EVP_MD *md,
     const uint8_t *rho, MATRIX *out);
-int ossl_ml_dsa_vector_expand_S(EVP_MD_CTX *h_ctx, const EVP_MD *md, int eta,
-    const uint8_t *seed, VECTOR *s1, VECTOR *s2);
+typedef int(ML_DSA_VECTOR_EXPAND_S_FN)(EVP_MD_CTX *h_ctx, const EVP_MD *md,
+    int eta, const uint8_t *seed, VECTOR *s1, VECTOR *s2);
+typedef void(ML_DSA_VECTOR_EXPAND_MASK_FN)(VECTOR *out,
+    const uint8_t rho_prime[ML_DSA_RHO_PRIME_BYTES], uint32_t kappa, uint32_t gamma1,
+    EVP_MD_CTX *h_ctx, const EVP_MD *md);
+
+typedef struct ossl_ml_dsa_sample_ops_st {
+    ML_DSA_MATRIX_EXPAND_A_FN *matrix_expand_A;
+    ML_DSA_VECTOR_EXPAND_S_FN *vector_expand_S;
+    ML_DSA_VECTOR_EXPAND_MASK_FN *vector_expand_mask;
+} OSSL_ML_DSA_SAMPLE_OPS;
+
+const OSSL_ML_DSA_SAMPLE_OPS *ossl_ml_dsa_sample_ops(void);
 void ossl_ml_dsa_matrix_mult_vector(const MATRIX *matrix_kl, const VECTOR *vl,
     VECTOR *vk);
 int ossl_ml_dsa_poly_expand_mask(POLY *out, const uint8_t *seed, size_t seed_len,
@@ -75,6 +86,24 @@ int ossl_ml_dsa_poly_sample_in_ball(POLY *out_c, const uint8_t *seed, int seed_l
 void ossl_ml_dsa_poly_ntt(POLY *s);
 void ossl_ml_dsa_poly_ntt_inverse(POLY *s);
 void ossl_ml_dsa_poly_ntt_mult(const POLY *lhs, const POLY *rhs, POLY *out);
+
+/* Optimization for s390x */
+/*
+ * The forward declarations below must be visible in every TU that includes
+ * this header while compiling for s390x with the VX object enabled —
+ * specifically in ml_dsa_ntt.c (the dispatcher) and in ml_dsa_ntt_vec128.c
+ * (the implementation).  OPENSSL_ML_DSA_S390X is injected by the build
+ * system for all asm-enabled s390x targets; it is sufficient on its own —
+ * no additional __s390x__ predefined-macro check is needed because the
+ * define is never emitted for non-s390x targets.
+ */
+#if defined(OPENSSL_ML_DSA_S390X)
+#include "arch/s390x_arch.h"
+void ossl_ml_dsa_poly_ntt_scalar(POLY *p);
+void ossl_ml_dsa_poly_ntt_vec128(POLY *p);
+void ossl_ml_dsa_poly_ntt_inverse_vec128(POLY *p);
+void ossl_poly_ntt_mult_scalar_vec128(const POLY *lhs, const POLY *rhs, POLY *out);
+#endif
 
 void ossl_ml_dsa_key_compress_power2_round(uint32_t r, uint32_t *r1, uint32_t *r0);
 uint32_t ossl_ml_dsa_key_compress_high_bits(uint32_t r, uint32_t gamma2);
@@ -101,20 +130,26 @@ int ossl_ml_dsa_poly_decode_expand_mask(POLY *out,
     const uint8_t *in, size_t in_len,
     uint32_t gamma1);
 
-/*
- * @brief Reduces x mod q in constant time
+/*-
+ * @brief Reduces 0 <= x < 2*q, mod q.
  * i.e. return x < q ? x : x - q;
  *
- * @param x Where x is assumed to be in the range 0 <= x < 2*q
+ * Subtract |q| if the input is larger, without exposing a side-channel,
+ * avoiding the "clangover" attack.  See |constish_time_true| for a discussion
+ * on why the value barrier is by default omitted.
+ *
  * @returns the difference in the range 0..q-1
  */
-static ossl_inline ossl_unused uint32_t reduce_once(uint32_t x)
+static ossl_inline ossl_unused __owur uint32_t reduce_once(uint32_t x)
 {
-    return constant_time_select_32(constant_time_lt_32(x, ML_DSA_Q), x, x - ML_DSA_Q);
+    const uint32_t subtracted = x - ML_DSA_Q;
+    uint32_t mask = constish_time_true(subtracted >> 31);
+
+    return (mask & x) | (~mask & subtracted);
 }
 
 /*
- * @brief Calculate The positive value of (a-b) mod q in constant time.
+ * @brief Calculates the positive value of (a-b) mod q in constant time.
  *
  * a - b mod q gives a value in the range -(q-1)..(q-1)
  * By adding q we get a range of 1..(2q-1).
@@ -131,21 +166,25 @@ static ossl_inline ossl_unused uint32_t mod_sub(uint32_t a, uint32_t b)
 
 /*
  * @brief Returns the absolute value in constant time.
- * i.e. return is_positive(x) ? x : -x;
+ * i.e.  return is_negative(x) ? -x : x;
  */
 static ossl_inline ossl_unused uint32_t abs_signed(uint32_t x)
 {
-    return constant_time_select_32(constant_time_lt_32(x, 0x80000000), x, 0u - x);
+    uint32_t mask = 0u - (x >> 31);
+
+    return constant_time_select_32(mask, 0u - x, x);
 }
 
 /*
  * @brief Returns the absolute value modulo q in constant time
- * i.e return x > (q - 1) / 2 ? q - x : x;
+ * i.e return x <= (q-1)/2 ? x : q - x;
  */
 static ossl_inline ossl_unused uint32_t abs_mod_prime(uint32_t x)
 {
-    return constant_time_select_32(constant_time_lt_32(ML_DSA_Q_MINUS1_DIV2, x),
-        ML_DSA_Q - x, x);
+    uint32_t mask = x - ML_DSA_Q_MINUS1_DIV2;
+
+    mask = 0u - (mask >> 31);
+    return constant_time_select_32(mask, x, ML_DSA_Q - x);
 }
 
 /*
@@ -154,7 +193,9 @@ static ossl_inline ossl_unused uint32_t abs_mod_prime(uint32_t x)
  */
 static ossl_inline ossl_unused uint32_t maximum(uint32_t x, uint32_t y)
 {
-    return constant_time_select_int(constant_time_lt(x, y), y, x);
+    uint32_t mask = x - y;
+    mask = 0u - (mask >> 31);
+    return constant_time_select_int(mask, y, x);
 }
 
 #endif /* OSSL_CRYPTO_ML_DSA_LOCAL_H */

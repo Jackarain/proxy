@@ -27,14 +27,6 @@
  * inserted in the memory buffer
  */
 #define ASN1_STRING_FLAG_NDEF 0x010
-
-/*
- * This flag is used by the CMS code to indicate that a string is not
- * complete and is a place holder for content when it had all been accessed.
- * The flag will be reset when content has been written to it.
- */
-
-#define ASN1_STRING_FLAG_CONT 0x020
 /*
  * This flag is used by ASN1 code to indicate an ASN1_STRING is an MSTRING
  * type.
@@ -43,11 +35,14 @@
 /* String is embedded and only content should be freed */
 #define ASN1_STRING_FLAG_EMBED 0x080
 
+/* Data is static and should not be freed. */
+#define ASN1_STRING_FLAG_DATA_NOT_OWNED 0x100
+
 /* This is the base type that holds just about everything :-) */
 struct asn1_string_st {
     int length;
     int type;
-    unsigned char *data;
+    unsigned char *data OPENSSL_NONSTRING;
     /*
      * The value of the following field depends on the type being held.  It
      * is mostly being used for BIT_STRING so if the input data has a
@@ -183,7 +178,30 @@ EVP_PKEY *ossl_d2i_PrivateKey_legacy(int keytype, EVP_PKEY **a,
     OSSL_LIB_CTX *libctx, const char *propq);
 X509_ALGOR *ossl_X509_ALGOR_from_nid(int nid, int ptype, void *pval);
 
-void ossl_asn1_string_set_bits_left(ASN1_STRING *str, unsigned int num);
+void ossl_asn1_bit_string_clear_unused_bits(ASN1_STRING *str);
+void ossl_asn1_bit_string_set_unused_bits(ASN1_STRING *str, unsigned int num);
+
+/**
+ * @brief Set str's data as ASN1_STRING_set1_data() does, and NUL-terminate it.
+ * The terminator is not counted in str->length.
+ * @param str the string to set
+ * @param data the bytes to copy, or NULL to allocate len bytes unset
+ * @param len the number of bytes at data
+ * @returns 1 on success, 0 on failure
+ * @see ASN1_STRING_set1_data(3)
+ */
+int ossl_asn1_string_set1_data(ASN1_STRING *str, const uint8_t *data,
+    size_t len);
+
+/**
+ * @brief Set str's data as ASN1_STRING_set1_string() does, and NUL-terminate it.
+ * The terminator is not counted in str->length.
+ * @param str the string to set
+ * @param c_string the NUL-terminated string to copy
+ * @returns 1 on success, 0 on failure
+ * @see ASN1_STRING_set1_string(3)
+ */
+int ossl_asn1_string_set1_string(ASN1_STRING *str, const char *c_string);
 
 int asn1_item_embed_d2i(ASN1_VALUE **pval, const unsigned char **in,
     long len, const ASN1_ITEM *it, int tag, int aclass,
@@ -191,5 +209,8 @@ int asn1_item_embed_d2i(ASN1_VALUE **pval, const unsigned char **in,
     OSSL_LIB_CTX *libctx, const char *propq);
 
 ASN1_TIME *ossl_asn1_time_from_tm(ASN1_TIME *s, struct tm *ts, int type);
+
+int ossl_utf8_getc_internal(const unsigned char *str, int len, uint32_t *val);
+int ossl_utf8_putc_internal(unsigned char *str, int len, uint32_t value);
 
 #endif /* ndef OSSL_CRYPTO_ASN1_H */

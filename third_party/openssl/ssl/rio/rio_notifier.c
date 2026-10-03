@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2024-2026 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -10,9 +10,9 @@
 #include "internal/sockets.h"
 #include <openssl/bio.h>
 #include <openssl/err.h>
-#include "internal/thread_once.h"
 #include "internal/rio_notifier.h"
 
+#if !defined(OPENSSL_SYS_WINDOWS) || RIO_NOTIFIER_METHOD == RIO_NOTIFIER_METHOD_SOCKETPAIR
 /*
  * Sets a socket as close-on-exec, except that this is a no-op if we are certain
  * we do not need to do this or the OS does not support the concept.
@@ -25,67 +25,34 @@ static int set_cloexec(int fd)
     return 1;
 #endif
 }
+#endif
 
 #if defined(OPENSSL_SYS_WINDOWS)
 
-static CRYPTO_ONCE ensure_wsa_startup_once = CRYPTO_ONCE_STATIC_INIT;
-static CRYPTO_RWLOCK *wsa_lock;
-static int wsa_started;
-static int wsa_ref;
-
 static void ossl_wsa_cleanup(void)
 {
-    if (wsa_started) {
-        wsa_started = 0;
-        WSACleanup();
-    }
-
-    CRYPTO_THREAD_lock_free(wsa_lock);
-    wsa_lock = NULL;
+    WSACleanup();
 }
 
-DEFINE_RUN_ONCE_STATIC(do_wsa_startup)
+static int do_wsa_startup(void)
 {
     WORD versionreq = 0x0202; /* Version 2.2 */
     WSADATA wsadata;
 
-    wsa_lock = CRYPTO_THREAD_lock_new();
-    if (wsa_lock == NULL)
+    if (WSAStartup(versionreq, &wsadata) != 0)
         return 0;
-
-    if (WSAStartup(versionreq, &wsadata) != 0) {
-        CRYPTO_THREAD_lock_free(wsa_lock);
-        wsa_lock = NULL;
-        return 0;
-    }
-    wsa_started = 1;
 
     return 1;
 }
 
 static ossl_inline int ensure_wsa_startup(void)
 {
-    int rv, unused;
-
-    rv = RUN_ONCE(&ensure_wsa_startup_once, do_wsa_startup);
-    if (rv != 0)
-        CRYPTO_atomic_add(&wsa_ref, 1, &unused, wsa_lock);
-
-    return rv;
+    return do_wsa_startup();
 }
 
 static void wsa_done(void)
 {
-    int ref;
-
-    if (wsa_lock != NULL) {
-        CRYPTO_atomic_add(&wsa_ref, -1, &ref, wsa_lock);
-        if (ref == 0) {
-            ossl_wsa_cleanup();
-            ensure_wsa_startup_once = CRYPTO_ONCE_STATIC_INIT;
-            wsa_lock = NULL;
-        }
-    }
+    ossl_wsa_cleanup();
 }
 
 #endif
@@ -186,8 +153,6 @@ int ossl_rio_notifier_init(RIO_NOTIFIER *nfy)
     if (!ensure_wsa_startup()) {
         ERR_raise_data(ERR_LIB_SSL, ERR_R_INTERNAL_ERROR,
             "Cannot start Windows sockets");
-
-        wsa_done();
         return 0;
     }
 #endif
