@@ -21,18 +21,18 @@ endif()
 # ==================== 平台系统宏 ====================
 if(WIN32 AND MSVC)
     if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-        set(OPENSSL_SYS_DEFINES -DOPENSSL_SYS_WIN64A)
+        set(OPENSSL_SYS_DEFINES OPENSSL_SYS_WIN64A)
     else()
-        set(OPENSSL_SYS_DEFINES -DOPENSSL_SYS_WIN32)
+        set(OPENSSL_SYS_DEFINES OPENSSL_SYS_WIN32)
     endif()
 elseif(WIN32)
     if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-        set(OPENSSL_SYS_DEFINES -DOPENSSL_SYS_MINGW64)
+        set(OPENSSL_SYS_DEFINES OPENSSL_SYS_MINGW64)
     else()
-        set(OPENSSL_SYS_DEFINES -DOPENSSL_SYS_MINGW32)
+        set(OPENSSL_SYS_DEFINES OPENSSL_SYS_MINGW32)
     endif()
 elseif(APPLE)
-    set(OPENSSL_SYS_DEFINES -DOPENSSL_SYS_MACOSX)
+    set(OPENSSL_SYS_DEFINES OPENSSL_SYS_MACOSX)
 else()
     set(OPENSSL_SYS_DEFINES "")
 endif()
@@ -1114,85 +1114,85 @@ set(OPENSSL_SSL_SRCS
 # ==================== 架构相关编译宏 ====================
 if(OPENSSL_ARCH STREQUAL "x86_64")
     set(OPENSSL_CRYPTO_ASM_DEFINES
-        -DAES_ASM
-        -DBSAES_ASM
-        -DCMLL_ASM
-        -DECP_NISTZ256_ASM
-        -DGHASH_ASM
-        -DKECCAK1600_ASM
-        -DMD5_ASM
-        -DOPENSSL_BN_ASM_GF2m
-        -DOPENSSL_BN_ASM_MONT
-        -DOPENSSL_BN_ASM_MONT5
-        -DOPENSSL_CPUID_OBJ
-        -DOPENSSL_IA32_SSE2
-        -DOPENSSL_SM3_ASM
-        -DPOLY1305_ASM
-        -DSHA1_ASM
-        -DSHA256_ASM
-        -DSHA512_ASM
-        -DSM4_ASM
-        -DVPAES_ASM
-        -DX25519_ASM
+        AES_ASM
+        BSAES_ASM
+        CMLL_ASM
+        ECP_NISTZ256_ASM
+        GHASH_ASM
+        KECCAK1600_ASM
+        MD5_ASM
+        OPENSSL_BN_ASM_GF2m
+        OPENSSL_BN_ASM_MONT
+        OPENSSL_BN_ASM_MONT5
+        OPENSSL_CPUID_OBJ
+        OPENSSL_IA32_SSE2
+        OPENSSL_SM3_ASM
+        POLY1305_ASM
+        SHA1_ASM
+        SHA256_ASM
+        SHA512_ASM
+        SM4_ASM
+        VPAES_ASM
+        X25519_ASM
     )
     set(OPENSSL_SSL_ASM_DEFINES
-        -DAES_ASM
+        AES_ASM
     )
 elseif(OPENSSL_ARCH STREQUAL "x86")
     set(OPENSSL_CRYPTO_ASM_DEFINES
-        -DAES_ASM
-        -DCMLL_ASM
-        -DECP_NISTZ256_ASM
-        -DGHASH_ASM
-        -DMD5_ASM
-        -DOPENSSL_BN_ASM_GF2m
-        -DOPENSSL_BN_ASM_MONT
-        -DOPENSSL_BN_ASM_PART_WORDS
-        -DOPENSSL_CPUID_OBJ
-        -DOPENSSL_IA32_SSE2
-        -DPOLY1305_ASM
-        -DRMD160_ASM
-        -DSHA1_ASM
-        -DSHA256_ASM
-        -DSHA512_ASM
-        -DVPAES_ASM
+        AES_ASM
+        CMLL_ASM
+        ECP_NISTZ256_ASM
+        GHASH_ASM
+        MD5_ASM
+        OPENSSL_BN_ASM_GF2m
+        OPENSSL_BN_ASM_MONT
+        OPENSSL_BN_ASM_PART_WORDS
+        OPENSSL_CPUID_OBJ
+        OPENSSL_IA32_SSE2
+        POLY1305_ASM
+        RMD160_ASM
+        SHA1_ASM
+        SHA256_ASM
+        SHA512_ASM
+        VPAES_ASM
     )
     set(OPENSSL_SSL_ASM_DEFINES
-        -DAES_ASM
+        AES_ASM
     )
 elseif(OPENSSL_ARCH STREQUAL "aarch64")
     set(OPENSSL_CRYPTO_ASM_DEFINES
-        -DBSAES_ASM
-        -DECP_NISTZ256_ASM
-        -DECP_SM2P256_ASM
-        -DKECCAK1600_ASM
-        -DMD5_ASM
-        -DOPENSSL_BN_ASM_MONT
-        -DOPENSSL_CPUID_OBJ
-        -DOPENSSL_SM3_ASM
-        -DPOLY1305_ASM
-        -DSHA1_ASM
-        -DSHA256_ASM
-        -DSHA512_ASM
-        -DSM4_ASM
-        -DVPAES_ASM
-        -DVPSM4_ASM
+        BSAES_ASM
+        ECP_NISTZ256_ASM
+        ECP_SM2P256_ASM
+        KECCAK1600_ASM
+        MD5_ASM
+        OPENSSL_BN_ASM_MONT
+        OPENSSL_CPUID_OBJ
+        OPENSSL_SM3_ASM
+        POLY1305_ASM
+        SHA1_ASM
+        SHA256_ASM
+        SHA512_ASM
+        SM4_ASM
+        VPAES_ASM
+        VPSM4_ASM
     )
     set(OPENSSL_SSL_ASM_DEFINES "")
 elseif(OPENSSL_ARCH STREQUAL "arm")
     set(OPENSSL_CRYPTO_ASM_DEFINES
-        -DAES_ASM
-        -DBSAES_ASM
-        -DECP_NISTZ256_ASM
-        -DGHASH_ASM
-        -DKECCAK1600_ASM
-        -DOPENSSL_BN_ASM_GF2m
-        -DOPENSSL_BN_ASM_MONT
-        -DOPENSSL_CPUID_OBJ
-        -DPOLY1305_ASM
-        -DSHA1_ASM
-        -DSHA256_ASM
-        -DSHA512_ASM
+        AES_ASM
+        BSAES_ASM
+        ECP_NISTZ256_ASM
+        GHASH_ASM
+        KECCAK1600_ASM
+        OPENSSL_BN_ASM_GF2m
+        OPENSSL_BN_ASM_MONT
+        OPENSSL_CPUID_OBJ
+        POLY1305_ASM
+        SHA1_ASM
+        SHA256_ASM
+        SHA512_ASM
     )
     set(OPENSSL_SSL_ASM_DEFINES "")
 endif()
@@ -1519,26 +1519,26 @@ function(openssl_target_defines _target)
 endfunction()
 
 openssl_target_defines(crypto
-    -DOPENSSL_NO_ASYNC
-    -DOPENSSL_NO_ENGINE
-    -DOPENSSL_NO_RC1
-    -DOPENSSL_NO_RC3
-    -DOPENSSL_NO_MD1
-    -DOPENSSL_NO_MD2
-    -DOPENSSL_NO_MD3
-    -DOPENSSL_NO_MD4
-    -DOPENSSL_NO_MDC2
-    -DOPENSSL_NO_WHIRLPOOL
-    -DOPENSSL_NO_COMP
-    -DOPENSSLDIR=""
-    -DENGINESDIR=""
-    -DMODULESDIR=""
-    -DWIN32_LEAN_AND_MEAN
+    OPENSSL_NO_ASYNC
+    OPENSSL_NO_ENGINE
+    OPENSSL_NO_RC1
+    OPENSSL_NO_RC3
+    OPENSSL_NO_MD1
+    OPENSSL_NO_MD2
+    OPENSSL_NO_MD3
+    OPENSSL_NO_MD4
+    OPENSSL_NO_MDC2
+    OPENSSL_NO_WHIRLPOOL
+    OPENSSL_NO_COMP
+    OPENSSLDIR=""
+    ENGINESDIR=""
+    MODULESDIR=""
+    WIN32_LEAN_AND_MEAN
     ${OPENSSL_SYS_DEFINES}
     ${OPENSSL_CRYPTO_ASM_DEFINES}
 )
 
-openssl_target_defines(ssl -DOPENSSL_NO_ENGINE)
+openssl_target_defines(ssl OPENSSL_NO_ENGINE)
 openssl_target_defines(ssl ${OPENSSL_SSL_ASM_DEFINES})
 
 # 上层目录级 add_definitions 注入的 -D 对纯汇编无意义，
@@ -1557,7 +1557,7 @@ if(MINGW)
     target_link_libraries(crypto PUBLIC ws2_32)
 endif()
 if (MSVC)
-    openssl_target_defines(crypto -DDSO_WIN32 -DOPENSSL_SYS_WIN64 -DL_ENDIAN)
+    openssl_target_defines(crypto DSO_WIN32 OPENSSL_SYS_WIN64 L_ENDIAN)
     target_link_libraries(crypto PUBLIC bcrypt.lib crypt32.lib)
 endif()
 
