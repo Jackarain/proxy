@@ -2,10 +2,10 @@
 
 本目录包含 Android 端的两个组成部分：
 
-- `libproxy/` — C++ 核心库的 Android 封装（JNI/SWIG），编译产物为 `libxproxy.so`。
+- `libxproxy/` — C++ 核心库的 Android 封装（JNI/SWIG），编译产物为 `libxproxy.so`。
 - `xproxy/` — Flutter 客户端应用，加载 `libxproxy.so` 并以 `VpnService` 建立 TUN 隧道。
 
-## libproxy
+## libxproxy
 
 基于仓库根 `proxy/` 的 C++ proxy 服务（tun2socks 模式）的 Android 封装，提供最小
 JNI 接口（`xproxy.hpp`，经 `xproxy.i` SWIG 生成 `com.jackarain` 包下的 Java 包装）：
@@ -26,10 +26,10 @@ JNI 接口（`xproxy.hpp`，经 `xproxy.i` SWIG 生成 `com.jackarain` 包下的
 Flutter 客户端，在应用进程内直接调用 `libxproxy.so` 运行 proxy：
 
 - **配置**：多条配置以 JSON 存于 SharedPreferences，启动时经 Kotlin 桥
-  （`XproxyBridge`）翻译为 libproxy 配置后调用 `xproxy.start(json)`。
+  （`XproxyBridge`）翻译为 libxproxy 配置后调用 `xproxy.start(json)`。
 - **TUN**：`VpnService.establish()` detach 的 fd 经控制通道 `set_tun_fd` 注入
-  libproxy（`tun_wait_fd` 模式），同进程直接使用。
-- **protect**：libproxy 创建出站 socket 后经控制通道 `protect` 请求由 Kotlin 侧
+  libxproxy（`tun_wait_fd` 模式），同进程直接使用。
+- **protect**：libxproxy 创建出站 socket 后经控制通道 `protect` 请求由 Kotlin 侧
   调用 `VpnService.protect(fd)` 放行，避免回环进 TUN。
 - **控制通道**：Flutter 内置本地 WS 服务（`127.0.0.1:<port>`），proxy 主动连接并
   上报 `register/status/log`；应用可下发 `get_status` / `set_config` /

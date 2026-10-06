@@ -10,7 +10,7 @@ import org.json.JSONObject
  * 注意: System.loadLibrary 必须先于任何 com.jackarain.xproxy* 类的使用,
  * 因为 xproxyJNI 的静态初始化会调用 native swig_module_init.
  *
- * 与 libproxy 的交互以控制通道 WebSocket 为主 (日志/status/protect),
+ * 与 libxproxy 的交互以控制通道 WebSocket 为主 (日志/status/protect),
  * 本桥仅保留进程内必须直调的启动/停止.
  */
 object XproxyBridge {

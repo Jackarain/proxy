@@ -10,7 +10,7 @@ import 'vpn_channel.dart';
 
 /// 本地 JSON-RPC over WebSocket 控制服务端.
 ///
-/// 作为 libproxy launcher 的控制端: proxy 启动后会主动连接
+/// 作为 libxproxy launcher 的控制端: proxy 启动后会主动连接
 /// `ws://127.0.0.1:port/<token>`, 注册实例并持续上报 status/log;
 /// 本端可向其发起 get_status / set_config / shutdown 等 RPC 请求,
 /// 并响应 proxy 的 protect 请求 (放行对外 socket).
@@ -159,7 +159,7 @@ class LauncherServer {
     try {
       switch (method) {
         case 'protect':
-          // 放行 libproxy 对外 socket, 避免流量回环进 tun.
+          // 放行 libxproxy 对外 socket, 避免流量回环进 tun.
           final fd = (params['fd'] as num?)?.toInt() ?? -1;
           _reply(id, {'ok': await VpnChannel.protect(fd)});
         default:
@@ -181,7 +181,7 @@ class LauncherServer {
   }
 
   /// 控制通道连接建立后: 以用户配置的地址建立 VpnService tun, 再注入
-  /// libproxy (经 set_tun_fd). tun2socks 无需服务端分配地址, 直接使用
+  /// libxproxy (经 set_tun_fd). tun2socks 无需服务端分配地址, 直接使用
   /// VpnConfig 中的 tunAddress/dns 配置.
   Future<void> _handleEstablishTun() async {
     if (_tunEstablished) return;
@@ -295,7 +295,7 @@ class LauncherServer {
           _logCtrl.add(params);
         case 'register':
           _registerCtrl.add(params);
-          // proxy 连接建立后: 建立 VpnService tun 并注入 libproxy.
+          // proxy 连接建立后: 建立 VpnService tun 并注入 libxproxy.
           unawaited(_handleEstablishTun());
       }
     } else if (msg.containsKey('id')) {

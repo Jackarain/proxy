@@ -1,1 +1,1 @@
-﻿add_subdirectory(libproxy)
+﻿add_subdirectory(libxproxy)

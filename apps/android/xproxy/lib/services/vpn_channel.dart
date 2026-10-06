@@ -76,7 +76,7 @@ class VpnChannel {
     return ok ?? false;
   }
 
-  /// 以用户配置的地址建立 VpnService tun, 返回注入 libproxy 的 fd.
+  /// 以用户配置的地址建立 VpnService tun, 返回注入 libxproxy 的 fd.
   static Future<int> establishTun({
     required String address,
     required int prefix,

@@ -20,10 +20,10 @@ import androidx.core.content.ContextCompat
  * VpnService: 建立 VpnService tun 设备、放行对外 socket, 并持有
  * libxproxy.so 生命周期.
  *
- * 启动时先经 XproxyBridge 启动 libproxy (tun_wait_fd 模式, 无 tun),
+ * 启动时先经 XproxyBridge 启动 libxproxy (tun_wait_fd 模式, 无 tun),
  * 控制通道 WebSocket 连接建立后, Flutter 以用户配置的 tunAddress 调用
  * establishTun 在此建立 VpnService tun 并 detach fd, 再经控制通道
- * set_tun_fd 注入 libproxy. protect 同样经控制通道请求到达, 由本服务
+ * set_tun_fd 注入 libxproxy. protect 同样经控制通道请求到达, 由本服务
  * 放行, 避免对外 socket 流量回环进 tun.
  *
  * 需要直通物理网络的 socket 一律经控制通道 protect (到上游代理/目标的
@@ -175,7 +175,7 @@ class XproxyVpnService : VpnService() {
     }
 
     /**
-     * 以用户配置的地址建立 VpnService tun, detach 返回 fd (由 libproxy
+     * 以用户配置的地址建立 VpnService tun, detach 返回 fd (由 libxproxy
      * 持有并负责关闭). 地址/路由/MTU 在此一次性配置, 后续不可更改.
      *
      * @param address tun 地址 (来自 VpnConfig).
@@ -262,7 +262,7 @@ class XproxyVpnService : VpnService() {
         return host to prefix
     }
 
-    /** 停止 proxy 并释放资源; 幂等, 可重复调用. tun fd 由 libproxy 持有并关闭. */
+    /** 停止 proxy 并释放资源; 幂等, 可重复调用. tun fd 由 libxproxy 持有并关闭. */
     private fun teardown() {
         if (started) {
             // 代次检查: 快速 停止->再运行 时若已有新实例接管 (其 start 流程会

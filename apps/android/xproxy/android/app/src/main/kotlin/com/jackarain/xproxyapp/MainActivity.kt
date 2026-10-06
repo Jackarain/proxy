@@ -77,7 +77,7 @@ class MainActivity : FlutterActivity() {
                     "build_version" -> {
                         result.success(XproxyBridge.buildVersion())
                     }
-                    // 控制通道 protect 请求: 放行 libproxy 的对外 socket.
+                    // 控制通道 protect 请求: 放行 libxproxy 的对外 socket.
                     "protect" -> {
                         val fd = call.argument<Int>("fd") ?: -1
                         val inst = XproxyVpnService.instance

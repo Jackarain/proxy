@@ -312,7 +312,7 @@ TUN 模式直接运行在手机上：通过 Android `VpnService` 建立虚拟网
 
 客户端由两部分组成：
 
-- `apps/android/libproxy/` — C++ 代理内核的 Android 封装，经 SWIG/JNI 编译为
+- `apps/android/libxproxy/` — C++ 代理内核的 Android 封装，经 SWIG/JNI 编译为
   `libxproxy.so`，对外提供 `xproxy.start(json)`/`xproxy.stop()`/`xproxy.build_version()`
   等最小接口。
 - `apps/android/xproxy/` — Flutter 客户端应用，负责配置管理、`VpnService` 建立、控制

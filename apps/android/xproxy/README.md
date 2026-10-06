@@ -1,6 +1,6 @@
 # xproxy — proxy Android 客户端 (Flutter)
 
-基于 `libproxy` 编译出的 `libxproxy.so`, 通过 Android `VpnService` 建立 TUN,
+基于 `libxproxy` 编译出的 `libxproxy.so`, 通过 Android `VpnService` 建立 TUN,
 在同一个进程内直接调用 `xproxy.start(json)` 运行 proxy (tun2socks 模式).
 
 ## 架构
@@ -9,15 +9,15 @@
 Flutter (Dart)                          Android 原生 (Kotlin)                 libxproxy.so (C++)
 ┌────────────────────────┐  MethodChannel ┌─────────────────────────┐  JNI   ┌──────────────────────┐
 │ 配置管理/存储/UI        │ ──────────────▶ │ MainActivity            │ ─────▶ │ xproxy.start(json)     │
-│ 本地 WS 控制端 (Dart)   │                │ VpnService (TUN+protect)│        │ libproxy 服务          │
+│ 本地 WS 控制端 (Dart)   │                │ VpnService (TUN+protect)│        │ libxproxy 服务          │
 │ LauncherServer       │ ◀── ws jsonrpc ─┤                         │ ◀───── │ launcher 客户端     │
 └────────────────────────┘                └─────────────────────────┘        └──────────────────────┘
 ```
 
 - **配置**: 多条配置以 JSON 存于 SharedPreferences; 启动时经 json 传入 `libxproxy.so`.
 - **TUN**: `VpnService.establish()` detach 的 fd 经控制通道 `set_tun_fd` 注入
-  libproxy (tun_wait_fd 模式), 同进程直接使用.
-- **protect**: libproxy 创建到上游代理/目标的出站 socket 后, 经控制通道
+  libxproxy (tun_wait_fd 模式), 同进程直接使用.
+- **protect**: libxproxy 创建到上游代理/目标的出站 socket 后, 经控制通道
   `protect` 请求由 Kotlin 侧调用 `VpnService.protect(fd)` 放行, 避免回环进 TUN.
 - **控制通道**: Flutter 内置本地 WS 服务, 地址为 `ws://127.0.0.1:<port>/<token>`
   (`token` 每次运行随机生成, 只有带该路径的升级请求才被接受, 防止同机其它
