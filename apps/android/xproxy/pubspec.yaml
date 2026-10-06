@@ -35,9 +35,9 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^2.0.0
   shared_preferences: ^2.5.5
-  qr_flutter: ^4.1.0
+  # 直接用 qr 4.x 绘制二维码: qr_flutter 等控件包仍限定 qr ^3.0.1.
+  qr: ^4.0.0
   mobile_scanner: ^7.4.2
-  image_picker: ^1.2.3
 
 dev_dependencies:
   flutter_test:
@@ -95,7 +95,5 @@ flutter:
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
 dependency_overrides:
-  cross_file: ^0.4.0
   material_color_utilities: ^0.13.1
-  qr: ^4.0.0
   test_api: ^0.7.14

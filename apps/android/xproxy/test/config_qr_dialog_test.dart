@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 import 'package:xproxy/models/vpn_config.dart';
 import 'package:xproxy/widgets/config_qr_dialog.dart';
+import 'package:xproxy/widgets/qr_code_view.dart';
 
 void main() {
   testWidgets('分享弹窗显示配置二维码', (tester) async {
@@ -28,17 +28,16 @@ void main() {
 
     expect(find.text('分享配置'), findsNothing);
     expect(find.text('办公室'), findsOneWidget);
-    expect(find.byType(QrImageView), findsOneWidget);
+    expect(find.byType(QrCodeView), findsOneWidget);
     final dialog = tester.widget<Dialog>(find.byType(Dialog));
     expect(dialog.backgroundColor, Colors.white);
-    final qr = tester.widget<QrImageView>(find.byType(QrImageView));
+    final qr = tester.widget<QrCodeView>(find.byType(QrCodeView));
     expect(qr.size, greaterThan(240));
-    expect(qr.padding, EdgeInsets.zero);
 
     // 无关闭按钮, 点击弹窗任意位置关闭.
     expect(find.text('关闭'), findsNothing);
-    await tester.tap(find.byType(QrImageView));
+    await tester.tap(find.byType(QrCodeView));
     await tester.pumpAndSettle();
-    expect(find.byType(QrImageView), findsNothing);
+    expect(find.byType(QrCodeView), findsNothing);
   });
 }

@@ -5,11 +5,13 @@ import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.VpnService
+import android.net.Uri
 import android.os.Build
 import android.os.ParcelFileDescriptor
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import io.flutter.embedding.android.FlutterActivity
+import java.io.File
 import java.util.concurrent.Executors
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
@@ -21,9 +23,13 @@ class MainActivity : FlutterActivity() {
         private const val EVENTS = "com.jackarain.xproxy/events"
         private const val REQ_VPN = 1001
         private const val REQ_NOTIFICATION = 1002
+        private const val REQ_PICK_IMAGE = 1003
     }
 
     private var pendingPrepare: MethodChannel.Result? = null
+
+    /** 相册选图的未决回调 (同一时刻只允许一个请求). */
+    private var pendingPick: MethodChannel.Result? = null
 
     /** 自更新通道 (持工作线程), 引擎销毁时回收. */
     private var updateChannel: UpdateChannel? = null
@@ -105,6 +111,8 @@ class MainActivity : FlutterActivity() {
                         }
                         result.success(ok)
                     }
+                    // 打开系统相册选图, 复制到 cache 后返回文件路径.
+                    "pick_image" -> handlePickImage(result)
                     // 控制通道连接建立后: 以用户配置的地址建立 tun.
                     "establish_tun" -> {
                         val address = call.argument<String>("address") ?: ""
@@ -188,12 +196,66 @@ class MainActivity : FlutterActivity() {
     @Suppress("DEPRECATION")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == REQ_PICK_IMAGE) {
+            val result = pendingPick ?: return
+            pendingPick = null
+            val uri = data?.data
+            if (resultCode != Activity.RESULT_OK || uri == null) {
+                // 用户取消选择.
+                result.success(null)
+                return
+            }
+            try {
+                result.success(copyPickedImage(uri))
+            } catch (e: Exception) {
+                result.error("PICK_COPY_FAILED", e.message, null)
+            }
+            return
+        }
         if (requestCode == REQ_VPN) {
             val ok = resultCode == Activity.RESULT_OK
             pendingPrepare?.success(ok)
             pendingPrepare = null
             XproxyEvents.emitVpnState(if (ok) "prepared" else "permission_denied")
         }
+    }
+
+    /**
+     * 打开系统相册选择图片 (无需读存储权限), 选中后复制到 cache 目录
+     * 并返回文件路径.
+     *
+     * mobile_scanner 的 analyzeImage 只接受文件路径, 因此不能把
+     * content:// uri 直接交给 Flutter 侧.
+     */
+    private fun handlePickImage(result: MethodChannel.Result) {
+        if (pendingPick != null) {
+            result.error("PICK_BUSY", "已有未完成的选图请求", null)
+            return
+        }
+        pendingPick = result
+        val intent = Intent(Intent.ACTION_GET_CONTENT)
+            .setType("image/*")
+            .addCategory(Intent.CATEGORY_OPENABLE)
+        try {
+            startActivityForResult(
+                Intent.createChooser(intent, "选择二维码图片"), REQ_PICK_IMAGE
+            )
+        } catch (e: Exception) {
+            pendingPick = null
+            result.error("PICK_FAILED", e.message, null)
+        }
+    }
+
+    /** 把所选的 content:// 图片复制到 cache 目录, 返回绝对路径. */
+    private fun copyPickedImage(uri: Uri): String {
+        val dir = File(cacheDir, "picked").apply { mkdirs() }
+        // 固定文件名: 每次选图覆盖上一次的临时文件, 避免缓存堆积.
+        val file = File(dir, "picked_qr.jpg")
+        contentResolver.openInputStream(uri).use { input ->
+            requireNotNull(input) { "无法读取所选图片" }
+            file.outputStream().use { output -> input.copyTo(output) }
+        }
+        return file.absolutePath
     }
 
     private fun sendServiceCommand(

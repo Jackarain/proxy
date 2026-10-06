@@ -1,10 +1,10 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 
 import '../models/vpn_config.dart';
 import '../services/config_share.dart';
+import 'qr_code_view.dart';
 
 /// 弹出显示配置二维码的对话框.
 Future<void> showConfigQrDialog(BuildContext context, VpnConfig config) {
@@ -45,19 +45,10 @@ class _ConfigQrDialog extends StatelessWidget {
               SizedBox(
                 width: side,
                 height: side,
-                child: QrImageView(
+                child: QrCodeView(
                   data: encodeConfigShare(config),
                   size: side,
-                  version: QrVersions.auto,
-                  errorCorrectionLevel: QrErrorCorrectLevel.M,
                   backgroundColor: Colors.white,
-                  // 不留静默边距, 二维码铺满整个区域.
-                  padding: EdgeInsets.zero,
-                  errorStateBuilder:
-                      (_, _) => const Text(
-                        '配置内容过大, 无法生成二维码',
-                        style: TextStyle(color: Colors.black87),
-                      ),
                 ),
               ),
               const SizedBox(height: 12),

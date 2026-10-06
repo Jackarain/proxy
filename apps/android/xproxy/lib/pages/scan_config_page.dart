@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
+import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+
+import '../services/vpn_channel.dart';
 
 /// 扫码页: 相机实时扫描二维码, 也可从相册选图识别.
 ///
@@ -45,10 +47,16 @@ class _ScanConfigPageState extends State<ScanConfigPage> {
   }
 
   Future<void> _pickFromGallery() async {
-    final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
-    if (picked == null || !mounted) return;
+    final String? path;
     try {
-      final capture = await _controller.analyzeImage(picked.path);
+      path = await VpnChannel.pickImage();
+    } on PlatformException catch (e) {
+      if (mounted) _showMessage('打开相册失败: ${e.message ?? e.code}');
+      return;
+    }
+    if (path == null || !mounted) return;
+    try {
+      final capture = await _controller.analyzeImage(path);
       final raw = capture == null ? null : _firstValue(capture);
       if (!mounted) return;
       if (raw == null) {

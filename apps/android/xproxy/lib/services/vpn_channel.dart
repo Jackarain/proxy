@@ -105,6 +105,14 @@ class VpnChannel {
     await _channel.invokeMethod('close_tun_fd', {'fd': fd});
   }
 
+  /// 打开系统相册选择图片, 返回原生侧复制到 cache 的图片绝对路径.
+  ///
+  /// 用户取消选择时返回 null; 原生的扫码接口只接受文件路径, 故不能
+  /// 直接返回 content:// uri.
+  static Future<String?> pickImage() {
+    return _channel.invokeMethod<String>('pick_image');
+  }
+
   /// 原生事件: {"type":"log"|"vpn_state", ...}.
   static Stream<Map<String, dynamic>> events() {
     return _events.receiveBroadcastStream().map(
