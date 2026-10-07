@@ -1907,7 +1907,29 @@ namespace proxy {
 		, m_executor(std::move(executor))
 		, m_option(std::move(opt))
 		, m_tunio(std::make_unique<tunio::tunio>(m_ioc))
-	{}
+	{
+		build_match_index();
+	}
+
+	// build_match_index 预解析分流规则: proxy_cidr_ 解析为可比较的地址/网段,
+	// proxy_domains_ 剔除空项. 规则在 tun_server 生命周期内不再变化, 因此只需
+	// 在构造时做一次, 命中判断路径不再重复解析字符串.
+	void tun_server::build_match_index()
+	{
+		m_cidr_rules.reserve(m_option.proxy_cidr_.size());
+		for (const auto& cidr : m_option.proxy_cidr_)
+		{
+			if (!cidr.empty())
+				m_cidr_rules.emplace_back(parse_cidr_rule(cidr));
+		}
+
+		m_domain_suffixes.reserve(m_option.proxy_domains_.size());
+		for (const auto& domain : m_option.proxy_domains_)
+		{
+			if (!domain.empty())
+				m_domain_suffixes.emplace_back(domain);
+		}
+	}
 
 	std::shared_ptr<tun_server>
 	tun_server::make(net::any_io_executor executor, proxy_server_option opt)
@@ -2470,67 +2492,53 @@ namespace proxy {
 
 	bool tun_server::cidr_match(const net::ip::address& addr) const noexcept
 	{
-		boost::system::error_code ec;
-
-		for (const auto& ip_cidr : m_option.proxy_cidr_)
-		{
-			if (ip_cidr.empty())
-				continue;
-
-			try
+		// 规则已在 build_match_index 预解析, 此处只做地址比较. 显式判断地址族
+		// 等价于原实现中 to_v4()/to_v6() 抛异常后跳过该条规则.
+		return std::ranges::any_of(m_cidr_rules,
+			[&addr](const cidr_rule& rule) -> bool
 			{
-				auto iponly = net::ip::make_address(ip_cidr, ec);
-				if (!ec)
+				if (rule.single)
+					return *rule.single == addr;
+
+				if (rule.v4)
 				{
-					if (iponly == addr)
-						return true;
-					continue;
+					if (!addr.is_v4())
+						return false;
+
+					return (addr.to_v4().to_uint() & rule.v4->netmask().to_uint())
+						== rule.v4->network().to_uint();
 				}
 
-				ec.clear();
-				auto netaddr4 = net::ip::make_network_v4(ip_cidr, ec);
-				if (!ec)
+				if (rule.v6)
 				{
-					if ((addr.to_v4().to_uint() & netaddr4.netmask().to_uint()) ==
-						netaddr4.network().to_uint())
-						return true;
-					continue;
+					if (!addr.is_v6())
+						return false;
+
+					auto net6 = net::ip::make_network_v6(
+						addr.to_v6(), rule.v6->prefix_length());
+
+					return net6.canonical() == rule.v6->canonical();
 				}
 
-				ec.clear();
-				auto netaddr6 = net::ip::make_network_v6(ip_cidr, ec);
-				if (!ec)
-				{
-					auto net6 = net::ip::make_network_v6(addr.to_v6(),
-						netaddr6.prefix_length());
-					if (net6.canonical() == netaddr6.canonical())
-						return true;
-				}
-			}
-			catch (const std::exception&)
-			{}
-		}
-
-		return false;
+				return false;
+			});
 	}
 
 	bool tun_server::domain_match(const std::string& domain) const noexcept
 	{
-		for (const auto& d : m_option.proxy_domains_)
-		{
-			if (d.empty() || domain.size() < d.size())
-				continue;
+		// 空项已在 build_match_index 剔除; 后缀匹配要求域名以 '.' + 后缀结尾.
+		return std::ranges::any_of(m_domain_suffixes,
+			[&domain](const std::string& suffix) -> bool
+			{
+				if (domain.size() < suffix.size())
+					return false;
 
-			if (domain == d)
-				return true;
+				if (domain.size() == suffix.size())
+					return domain == suffix;
 
-			if (domain.size() > d.size() &&
-				domain.ends_with(d) &&
-				domain[domain.size() - d.size() - 1] == '.')
-				return true;
-		}
-
-		return false;
+				return domain.ends_with(suffix)
+					&& domain[domain.size() - suffix.size() - 1] == '.';
+			});
 	}
 
 	void tun_server::record_dns_answer(const char* data, size_t len) noexcept

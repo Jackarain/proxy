@@ -12,6 +12,7 @@
 #define INCLUDE__2026_08_22__TUN_SERVER_HPP
 
 #include "proxy/proxy_session.hpp"
+#include "proxy/proxy_util.hpp"
 #include "proxy/proxy_stream.hpp"
 #include "proxy/dns_response_cache.hpp"
 #include "proxy/doh_client.hpp"
@@ -559,6 +560,9 @@ namespace proxy {
 		}
 
 	private:
+		// build_match_index 预解析 proxy_cidr_/proxy_domains_, 供命中判断复用.
+		void build_match_index();
+
 		// m_ioc 保存引擎所属的 io_context（tunio 构造需要）.
 		net::io_context& m_ioc;
 
@@ -631,6 +635,12 @@ namespace proxy {
 
 		// 保护 m_domain_ips 的并发访问.
 		mutable std::mutex m_domain_ips_mutex;
+
+		// m_cidr_rules 保存预解析后的 proxy_cidr_ 规则（构造时一次性解析）.
+		std::vector<cidr_rule> m_cidr_rules;
+
+		// m_domain_suffixes 保存 proxy_domains_ 中非空的后缀（构造时剔除空项）.
+		std::vector<std::string> m_domain_suffixes;
 	};
 
 #else // 不支持的平台
