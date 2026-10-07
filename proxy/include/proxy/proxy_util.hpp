@@ -17,6 +17,8 @@
 
 #include <boost/system/error_code.hpp>
 #include <boost/asio/ip/address.hpp>
+#include <boost/asio/ip/network_v4.hpp>
+#include <boost/asio/ip/network_v6.hpp>
 #include <boost/asio/error.hpp>
 #include <boost/asio/socket_base.hpp>
 #include <boost/asio/awaitable.hpp>
@@ -116,6 +118,49 @@ namespace proxy {
 
 
 	static constexpr uint64_t udp_proxy_capsule_type = 0x00; // RFC 9297 DATAGRAM
+
+	// cidr_rule 保存一条预解析后的 IP/CIDR 规则.
+	//
+	// 规则字符串只在配置加载/变更时解析一次, 命中判断阶段只做地址比较,
+	// 避免在按包/按连接的匹配路径上重复调用 make_address/
+	// make_network_v4/make_network_v6. 解析顺序与原实现保持一致:
+	// 单地址 -> IPv4 网段 -> IPv6 网段; 无法解析时三者皆为空, 永不命中.
+	struct cidr_rule
+	{
+		// 规则原文 (地区名等非 IP 规则用作文本匹配).
+		std::string text;
+
+		// 三种形态互斥.
+		std::optional<net::ip::address> single;
+		std::optional<net::ip::network_v4> v4;
+		std::optional<net::ip::network_v6> v6;
+	};
+
+	inline cidr_rule parse_cidr_rule(std::string_view text)
+	{
+		cidr_rule rule;
+		rule.text.assign(text);
+
+		boost::system::error_code ec;
+		if (auto addr = net::ip::make_address(rule.text, ec); !ec)
+		{
+			rule.single = addr;
+			return rule;
+		}
+
+		ec.clear();
+		if (auto v4 = net::ip::make_network_v4(rule.text, ec); !ec)
+		{
+			rule.v4 = v4;
+			return rule;
+		}
+
+		ec.clear();
+		if (auto v6 = net::ip::make_network_v6(rule.text, ec); !ec)
+			rule.v6 = v6;
+
+		return rule;
+	}
 
 
 	// 将错误代码设置为系统错误.
