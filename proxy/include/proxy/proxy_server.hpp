@@ -13,6 +13,7 @@
 
 
 #include "proxy/proxy_session.hpp"
+#include "proxy/proxy_util.hpp"
 #include "proxy/dns_server.hpp"
 
 #include <atomic>
@@ -343,11 +344,15 @@ namespace proxy {
 		// 获取当前机器所有本地 IP 地址.
 		net::awaitable<void> get_local_address() noexcept;
 
-		// 判断 IP 地址是否在指定的 CIDR 范围.
-		bool ip_filter(const std::string& ip_cidr, const std::string& ip) const noexcept;
+		// 判断 IP 地址是否命中预解析后的规则 (单地址/IPv4 网段/IPv6 网段).
+		bool ip_filter(const cidr_rule& rule, const std::string& ip) const noexcept;
 
 		// 根据地区信息过滤客户端连接 (白/黑名单).
 		bool region_filter(const std::vector<std::string>& local_info) const noexcept;
+
+		// 预解析 allow_regions_/deny_regions_, 供 region_filter 复用;
+		// 地区规则支持热更新, 变更后需重建.
+		void rebuild_region_rules();
 
 		// 后端线程入口, 用于处理同步转异步操作.
 		void backend_thread_run() noexcept;
@@ -457,6 +462,11 @@ namespace proxy {
 		// m_option 保存当前服务器各选项配置.
 		mutable std::mutex m_option_mutex;
 		proxy_server_option m_option;
+
+		// m_allow_region_rules/m_deny_region_rules 保存预解析后的地区规则
+		// (与 m_option 的 allow_regions_/deny_regions_ 同步重建).
+		std::vector<cidr_rule> m_allow_region_rules;
+		std::vector<cidr_rule> m_deny_region_rules;
 
 		// 当前机器的所有 ip 地址.
 		std::set<net::ip::address> m_local_addrs;

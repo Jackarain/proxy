@@ -1768,6 +1768,9 @@ template void proxy_server::launcher_update_report<launcher_wss>(jsonrpc::jsonrp
 
 void proxy_server::start() noexcept
 {
+	// 预解析地区规则, 避免每次连接筛选都重复解析规则字符串.
+	rebuild_region_rules();
+
 	m_scheduler_locking = net::config(m_executor.context()).get("scheduler", "locking", true);
 
 	// 运行后端任务线程.
@@ -2595,6 +2598,7 @@ boost::json::object proxy_server::apply_options(const boost::json::object& optio
 				set.insert(parts.begin(), parts.end());
 			}
 			m_option.allow_regions_ = std::move(set);
+			rebuild_region_rules();
 			ok = true;
 		}
 		else if (name == "deny_region")
@@ -2606,6 +2610,7 @@ boost::json::object proxy_server::apply_options(const boost::json::object& optio
 				set.insert(parts.begin(), parts.end());
 			}
 			m_option.deny_regions_ = std::move(set);
+			rebuild_region_rules();
 			ok = true;
 		}
 		else if (name == "server_listen")
@@ -3146,10 +3151,27 @@ net::awaitable<void> proxy_server::get_local_address() noexcept
 		m_local_addrs.insert(entry.endpoint().address());
 }
 
-// 判断 IP 地址是否在指定的 CIDR 范围.
-bool proxy_server::ip_filter(const std::string& ip_cidr, const std::string& ip) const noexcept
+// rebuild_region_rules 预解析 allow_regions_/deny_regions_ 供 region_filter
+// 复用; 地区规则支持运行期热更新, 变更后需重建.
+void proxy_server::rebuild_region_rules()
 {
-	if (ip_cidr.empty() || ip.empty())
+	auto build = [](const std::unordered_set<std::string>& src)
+		{
+			std::vector<cidr_rule> rules;
+			rules.reserve(src.size());
+			for (const auto& rule : src)
+				rules.emplace_back(parse_cidr_rule(rule));
+			return rules;
+		};
+
+	m_allow_region_rules = build(m_option.allow_regions_);
+	m_deny_region_rules = build(m_option.deny_regions_);
+}
+
+// 判断 IP 地址是否命中预解析后的规则 (单地址/IPv4 网段/IPv6 网段).
+bool proxy_server::ip_filter(const cidr_rule& rule, const std::string& ip) const noexcept
+{
+	if (ip.empty())
 		return false;
 
 	boost::system::error_code ec;
@@ -3158,68 +3180,57 @@ bool proxy_server::ip_filter(const std::string& ip_cidr, const std::string& ip) 
 	if (ec)
 		return false;
 
-	try
+	if (rule.single)
+		return *rule.single == ipaddr;
+
+	// 注意: 与 tun_server::cidr_match 的掩码比较不同, 这里保持原有比较方式,
+	// network_v4/network_v6 保存的是未掩码地址, 即仅在 ip 与规则字面地址
+	// 一致时命中网段规则.
+	if (rule.v4)
 	{
-		auto iponly = net::ip::make_address(ip_cidr, ec);
-		if (!ec)
-			return iponly == ipaddr;
+		if (!ipaddr.is_v4())
+			return false;
 
-		auto netaddr4 = net::ip::make_network_v4(ip_cidr, ec);
-		if (!ec)
-		{
-			auto target = net::ip::make_network_v4(ipaddr.to_v4(), netaddr4.netmask());
-			return target == netaddr4;
-		}
-
-		auto netaddr6 = net::ip::make_network_v6(ip_cidr, ec);
-		if (!ec)
-		{
-			auto target = net::ip::make_network_v6(ipaddr.to_v6(), netaddr6.prefix_length());
-			return target == netaddr6;
-		}
+		auto target = net::ip::make_network_v4(ipaddr.to_v4(), rule.v4->netmask());
+		return target == *rule.v4;
 	}
-	catch (const std::exception&)
-	{}
+
+	if (rule.v6)
+	{
+		if (!ipaddr.is_v6())
+			return false;
+
+		auto target = net::ip::make_network_v6(
+			ipaddr.to_v6(), rule.v6->prefix_length());
+		return target == *rule.v6;
+	}
 
 	return false;
 }
 
 bool proxy_server::region_filter(const std::vector<std::string>& local_info) const noexcept
 {
-	const auto& deny_region = m_option.deny_regions_;
-	const auto& allow_region = m_option.allow_regions_;
+	const auto& deny_rules = m_deny_region_rules;
+	const auto& allow_rules = m_allow_region_rules;
 
-	if (deny_region.empty() && allow_region.empty())
+	if (deny_rules.empty() && allow_rules.empty())
 		return true;
 
-	auto rule_hit = [&](const std::string& rule) -> bool
+	// 规则命中: 地区名与本地信息文本相等, 或规则为 IP/CIDR 且命中其中的 IP.
+	auto rule_hit = [&local_info, this](const cidr_rule& rule) -> bool
 		{
-			for (const auto& item : local_info)
-			{
-				if (item == rule)
-					return true;
-
-				if (ip_filter(rule, item))
-					return true;
-			}
-			return false;
+			return std::ranges::any_of(local_info,
+				[&rule, this](const std::string& item) -> bool
+				{
+					return item == rule.text || ip_filter(rule, item);
+				});
 		};
 
-	for (const auto& rule : deny_region)
-	{
-		if (rule_hit(rule))
-			return false;
-	}
-
-	if (!allow_region.empty())
-	{
-		for (const auto& rule : allow_region)
-		{
-			if (rule_hit(rule))
-				return true;
-		}
+	if (std::ranges::any_of(deny_rules, rule_hit))
 		return false;
-	}
+
+	if (!allow_rules.empty())
+		return std::ranges::any_of(allow_rules, rule_hit);
 
 	return true;
 }
