@@ -2,6 +2,12 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
+/// 按应用分流模式 (Android VpnService 层按 UID 过滤).
+///
+/// [off] 不启用按应用分流; [include] 仅 [VpnConfig.appSplitPackages] 中的
+/// 应用流量进入 VPN; [exclude] 这些应用流量直连, 其余进入 VPN.
+enum AppSplitMode { off, include, exclude }
+
 /// 一条 proxy 配置.
 ///
 /// 同时包含 proxy 原生配置字段 (proxy_pass/proxy_domains/proxy_cidr 等,
@@ -31,8 +37,11 @@ class VpnConfig {
     this.noIpv6 = true,
     this.testUrl = 'https://www.google.com',
     this.bypassCn = false,
+    this.appSplitMode = AppSplitMode.off,
+    List<String>? appSplitPackages,
   }) : proxyDomains = proxyDomains ?? [],
        proxyCidr = proxyCidr ?? [],
+       appSplitPackages = appSplitPackages ?? [],
        dns = (dns == null || dns.isEmpty) ? ['223.6.6.6', '119.29.29.29'] : dns,
        dnsForeign = dnsForeign ?? [];
 
@@ -130,6 +139,12 @@ class VpnConfig {
   /// 中国大陆流量走系统物理网络直连.
   bool bypassCn;
 
+  /// 按应用分流模式, 经 VpnService 的 allowed/disallowed application 实现.
+  AppSplitMode appSplitMode;
+
+  /// 按应用分流的包名列表 (当前用户下的应用包名).
+  List<String> appSplitPackages;
+
   /// 生成新的配置 id (时间戳 + 随机后缀).
   static String newId() {
     final rand = Random.secure();
@@ -210,6 +225,9 @@ class VpnConfig {
     if (test.isEmpty ||
         (!test.startsWith('https://') && !test.startsWith('http://'))) {
       errors.add('测试连接需以 http:// 或 https:// 开头');
+    }
+    if (appSplitMode == AppSplitMode.include && appSplitPackages.isEmpty) {
+      errors.add('仅选中应用走代理时, 至少需要选择一个应用');
     }
     return errors;
   }
@@ -297,6 +315,8 @@ class VpnConfig {
     'noIpv6': noIpv6,
     'testUrl': testUrl,
     'bypassCn': bypassCn,
+    'appSplitMode': appSplitMode.name,
+    'appSplitPackages': appSplitPackages,
   };
 
   factory VpnConfig.fromJson(Map<String, dynamic> json) => VpnConfig(
@@ -322,7 +342,17 @@ class VpnConfig {
     noIpv6: json['noIpv6'] as bool? ?? true,
     testUrl: json['testUrl'] as String? ?? 'https://www.google.com',
     bypassCn: json['bypassCn'] as bool? ?? false,
+    appSplitMode: _appSplitMode(json['appSplitMode']),
+    appSplitPackages: _strList(json['appSplitPackages']),
   );
+
+  /// 解析按应用分流模式: 未知取值按关闭处理 (兼容旧/新版本配置).
+  static AppSplitMode _appSplitMode(dynamic v) {
+    for (final mode in AppSplitMode.values) {
+      if (mode.name == v) return mode;
+    }
+    return AppSplitMode.off;
+  }
 
   static List<String> _strList(dynamic v) {
     if (v is List) return v.whereType<String>().toList();

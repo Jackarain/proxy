@@ -32,6 +32,10 @@ final GZipCodec _gzip = GZipCodec(
 /// 时则只带 URL, 扫码方按 URL 重新拉取.
 const int shareProxyListLimit = 10;
 
+/// 按应用分流的包名列表在二维码中的最大条数. 超出时只保留前 N 条,
+/// 避免数据过大导致二维码无法识别.
+const int shareAppSplitLimit = 30;
+
 /// 生成配置二维码的内容.
 ///
 /// json 正文经 deflate(预共享字典) 压缩后再做 base64url, 缩小二维码数据量;
@@ -40,6 +44,9 @@ String encodeConfigShare(VpnConfig config) {
   final map = Map<String, dynamic>.from(config.toJson());
   map['proxyDomains'] = _shareList(config.proxyDomains, config.proxyDomainsUrl);
   map['proxyCidr'] = _shareList(config.proxyCidr, config.proxyCidrUrl);
+  map['appSplitPackages'] = config.appSplitPackages
+      .take(shareAppSplitLimit)
+      .toList();
   final json = jsonEncode({
     'type': _shareType,
     'version': _shareVersion,

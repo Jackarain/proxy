@@ -369,6 +369,53 @@ void main() {
     });
   });
 
+  group('按应用分流', () {
+    test('json 往返保留模式与包名', () {
+      final c = VpnConfig(
+        id: 'split',
+        name: '分应用',
+        proxyPass: 'https://1.2.3.4:443',
+        appSplitMode: AppSplitMode.include,
+        appSplitPackages: ['com.android.chrome', 'org.mozilla.firefox'],
+      );
+      final restored = VpnConfig.fromJson(c.toJson());
+      expect(restored.appSplitMode, AppSplitMode.include);
+      expect(restored.appSplitPackages, [
+        'com.android.chrome',
+        'org.mozilla.firefox',
+      ]);
+    });
+
+    test('缺省为关闭且未知模式按关闭处理', () {
+      final config = VpnConfig(id: '1', name: 'a', proxyPass: 'https://x:1');
+      expect(config.appSplitMode, AppSplitMode.off);
+      expect(config.appSplitPackages, isEmpty);
+
+      final json = config.toJson();
+      json['appSplitMode'] = 'unknown-mode';
+      expect(VpnConfig.fromJson(json).appSplitMode, AppSplitMode.off);
+    });
+
+    test('仅选中应用走代理时必须选择应用', () {
+      final config = VpnConfig(
+        id: '1',
+        name: 'a',
+        proxyPass: 'https://x:1',
+        appSplitMode: AppSplitMode.include,
+      );
+      expect(config.validate(), contains('仅选中应用走代理时, 至少需要选择一个应用'));
+
+      config.appSplitPackages = ['com.android.chrome'];
+      expect(config.validate(), isEmpty);
+
+      // 排除模式允许空列表 (等价于全部走代理).
+      config
+        ..appSplitMode = AppSplitMode.exclude
+        ..appSplitPackages = [];
+      expect(config.validate(), isEmpty);
+    });
+  });
+
   group('StorageService', () {
     test('配置持久化往返', () async {
       SharedPreferences.setMockInitialValues({});

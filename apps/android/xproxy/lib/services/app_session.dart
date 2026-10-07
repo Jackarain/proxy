@@ -121,7 +121,9 @@ class AppSession extends ChangeNotifier {
           old.dnsForeign.join(',') != config.dnsForeign.join(',') ||
           old.dnsForeignDoh != config.dnsForeignDoh ||
           old.proxyDomains.join(',') != config.proxyDomains.join(',') ||
-          old.proxyCidr.join(',') != config.proxyCidr.join(',');
+          old.proxyCidr.join(',') != config.proxyCidr.join(',') ||
+          old.appSplitMode != config.appSplitMode ||
+          old.appSplitPackages.join(',') != config.appSplitPackages.join(',');
     } catch (_) {
       return false;
     }

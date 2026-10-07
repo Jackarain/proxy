@@ -126,4 +126,31 @@ void main() {
 
     expect(decodeConfigShare(raw).name, '明文');
   });
+  test('分享内容携带按应用分流列表', () {
+    final config = VpnConfig(
+      id: '7',
+      name: '分应用',
+      proxyPass: 'https://1.2.3.4:443',
+      appSplitMode: AppSplitMode.exclude,
+      appSplitPackages: ['com.android.chrome'],
+    );
+
+    final decoded = decodeConfigShare(encodeConfigShare(config));
+    expect(decoded.appSplitMode, AppSplitMode.exclude);
+    expect(decoded.appSplitPackages, ['com.android.chrome']);
+  });
+
+  test('分享时按应用分流列表收敛到上限', () {
+    final config = VpnConfig(
+      id: '8',
+      name: '分应用',
+      proxyPass: 'https://1.2.3.4:443',
+      appSplitMode: AppSplitMode.include,
+      appSplitPackages: List.generate(40, (i) => 'com.example.app$i'),
+    );
+
+    final raw = encodeConfigShare(config);
+    expect(decodeConfigShare(raw).appSplitPackages.length, shareAppSplitLimit);
+  });
+
 }
