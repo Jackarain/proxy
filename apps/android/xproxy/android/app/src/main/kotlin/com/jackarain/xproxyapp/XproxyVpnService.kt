@@ -12,9 +12,18 @@ import android.net.NetworkCapabilities
 import android.net.VpnService
 import android.os.Handler
 import android.os.HandlerThread
+import android.content.pm.PackageManager
 import com.jackarain.xproxy.R
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
+
+/**
+ * establishTun 结果.
+ *
+ * @param fd tun 文件描述符 (由 libxproxy 接管后关闭).
+ * @param skippedPackages 按应用分流中被忽略的包名 (未安装/已卸载).
+ */
+class TunSetup(val fd: Int, val skippedPackages: List<String>)
 
 /**
  * VpnService: 建立 VpnService tun 设备、放行对外 socket, 并持有
@@ -184,7 +193,9 @@ class XproxyVpnService : VpnService() {
      * @param routes  需要接入 VPN 的路由 (为空时默认全隧道).
      * @param dns     DNS 服务器列表 (可为空).
      * @param session VPN 会话名称.
-     * @return tun fd; 失败抛出异常.
+     * @param splitMode 按应用分流模式: off/include/exclude.
+     * @param splitPackages 按应用分流的包名列表 (include/exclude 模式下生效).
+     * @return tun fd 与被忽略的分流包名; 失败抛出异常.
      */
     fun establishTun(
         address: String,
@@ -193,7 +204,9 @@ class XproxyVpnService : VpnService() {
         routes: List<String>,
         dns: List<String>,
         session: String,
-    ): Int {
+        splitMode: String,
+        splitPackages: List<String>,
+    ): TunSetup {
         val builder = Builder()
         builder.setSession(session.ifEmpty { "proxy" })
         builder.addAddress(address, prefix)
@@ -209,6 +222,7 @@ class XproxyVpnService : VpnService() {
         for (server in dns) {
             if (server.isNotBlank()) builder.addDnsServer(server.trim())
         }
+        val skipped = applyAppSplit(builder, splitMode, splitPackages)
         if (mtu > 0) builder.setMtu(mtu)
         // 指定底层物理网络: 使系统填充"排除 VPN"的路由表,
         // 否则 protectSocket 放行的连接无法路由 (SYN 卡住).
@@ -220,8 +234,62 @@ class XproxyVpnService : VpnService() {
         builder.setBlocking(true)
         val fd = builder.establish()
             ?: throw IllegalStateException("VpnService establish 失败")
-        return fd.detachFd()
+        return TunSetup(fd.detachFd(), skipped)
     }
+
+    /**
+     * 按应用分流: 由系统按 UID 过滤进入 tun 的流量.
+     *
+     * include (仅选中应用走 VPN) 与 exclude (选中应用直连) 互斥:
+     * VpnService 不允许同时使用 allowed/disallowed application, 因此只
+     * 调用其中一种. 自身包名固定直连, 避免本应用流量回环进 tun.
+     * 未安装 (清单里残留) 的包名跳过并返回给上层提示.
+     *
+     * @return 被忽略的包名列表.
+     */
+    private fun applyAppSplit(
+        builder: Builder,
+        splitMode: String,
+        splitPackages: List<String>,
+    ): List<String> {
+        if (splitMode != "include" && splitMode != "exclude") return emptyList()
+        val include = splitMode == "include"
+        val targets = LinkedHashSet<String>()
+        for (pkg in splitPackages) {
+            val name = pkg.trim()
+            if (name.isNotEmpty() && name != packageName) targets.add(name)
+        }
+        if (include && targets.isEmpty()) {
+            throw IllegalStateException("按应用分流未选择任何应用")
+        }
+        val skipped = mutableListOf<String>()
+        var applied = 0
+        for (pkg in targets) {
+            if (addApplication(builder, pkg, include)) applied++ else skipped.add(pkg)
+        }
+        if (include) {
+            if (applied == 0) {
+                throw IllegalStateException("按应用分流所选应用均不可用")
+            }
+        } else {
+            // 排除模式: 自身始终直连 (失败不影响分流本身).
+            addApplication(builder, packageName, false)
+        }
+        return skipped
+    }
+
+    /** 添加 allowed/disallowed application; 包名不存在返回 false. */
+    private fun addApplication(builder: Builder, pkg: String, allowed: Boolean): Boolean =
+        try {
+            if (allowed) {
+                builder.addAllowedApplication(pkg)
+            } else {
+                builder.addDisallowedApplication(pkg)
+            }
+            true
+        } catch (_: PackageManager.NameNotFoundException) {
+            false
+        }
 
     /** 当前已连接的物理网络 (排除 VPN 自身), 供 setUnderlyingNetworks 使用. */
     // 保留 getNetworkInfo().isConnected 而非改用 NET_CAPABILITY_VALIDATED:

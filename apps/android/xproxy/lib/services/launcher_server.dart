@@ -203,14 +203,22 @@ class LauncherServer {
     // 进入 TUN 后由 native 按 qname 分流转发.
     final dns = <String>['8.8.8.8', '1.1.1.1'];
     try {
-      final fd = await VpnChannel.establishTun(
+      final setup = await VpnChannel.establishTun(
         address: address,
         prefix: prefix,
         mtu: mtu,
         routes: routes,
         dns: dns,
         session: cfg['name'] as String? ?? 'proxy',
+        splitMode: cfg['appSplitMode'] as String? ?? 'off',
+        splitPackages:
+            (cfg['appSplitPackages'] as List?)?.whereType<String>().toList() ??
+            const [],
       );
+      final fd = setup.fd;
+      if (setup.skippedPackages.isNotEmpty) {
+        _logLocal('按应用分流已忽略未安装应用: ${setup.skippedPackages.join(', ')}');
+      }
       var injected = false;
       try {
         final result = await call('set_tun_fd', {'fd': fd});

@@ -2,6 +2,16 @@ import 'dart:async';
 
 import 'package:flutter/services.dart';
 
+import '../models/installed_app.dart';
+
+/// establish_tun 结果: tun fd 与被忽略的分流包名 (未安装/已卸载).
+class TunSetup {
+  const TunSetup({required this.fd, required this.skippedPackages});
+
+  final int fd;
+  final List<String> skippedPackages;
+}
+
 /// Flutter 与 Android 原生层 (VpnService/JNI 桥) 的通道.
 class VpnChannel {
   static const MethodChannel _channel = MethodChannel(
@@ -77,26 +87,48 @@ class VpnChannel {
   }
 
   /// 以用户配置的地址建立 VpnService tun, 返回注入 libxproxy 的 fd.
-  static Future<int> establishTun({
+  ///
+  /// [splitMode] 为 off/include/exclude, [splitPackages] 为按应用分流的
+  /// 包名列表 (include/exclude 模式下生效).
+  static Future<TunSetup> establishTun({
     required String address,
     required int prefix,
     required int mtu,
     required List<String> routes,
     required List<String> dns,
     required String session,
+    required String splitMode,
+    required List<String> splitPackages,
   }) async {
-    final fd = await _channel.invokeMethod<int>('establish_tun', {
-      'address': address,
-      'prefix': prefix,
-      'mtu': mtu,
-      'routes': routes,
-      'dns': dns,
-      'session': session,
-    });
-    if (fd == null || fd < 0) {
+    final res = await _channel.invokeMethod<Map<Object?, Object?>>(
+      'establish_tun',
+      {
+        'address': address,
+        'prefix': prefix,
+        'mtu': mtu,
+        'routes': routes,
+        'dns': dns,
+        'session': session,
+        'splitMode': splitMode,
+        'splitPackages': splitPackages,
+      },
+    );
+    final fd = (res?['fd'] as num?)?.toInt() ?? -1;
+    if (fd < 0) {
       throw StateError('establish_tun 失败');
     }
-    return fd;
+    final skipped =
+        (res?['skipped'] as List?)?.whereType<String>().toList() ?? const [];
+    return TunSetup(fd: fd, skippedPackages: skipped);
+  }
+
+  /// 列出已安装应用 (不含自身), 供按应用分流选择.
+  static Future<List<InstalledApp>> listApps() async {
+    final raw = await _channel.invokeMethod<List<Object?>>('list_apps');
+    return (raw ?? const [])
+        .whereType<Map<Object?, Object?>>()
+        .map(InstalledApp.fromMap)
+        .toList();
   }
 
   /// 关闭未成功注入 native 的 tun fd (VpnService detach 出的 fd),

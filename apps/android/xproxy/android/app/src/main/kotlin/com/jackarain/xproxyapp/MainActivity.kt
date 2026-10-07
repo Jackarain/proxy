@@ -3,6 +3,7 @@ package com.jackarain.xproxyapp
 import android.Manifest
 import android.app.Activity
 import android.content.Intent
+import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.net.VpnService
 import android.net.Uri
@@ -113,6 +114,8 @@ class MainActivity : FlutterActivity() {
                     }
                     // 打开系统相册选图, 复制到 cache 后返回文件路径.
                     "pick_image" -> handlePickImage(result)
+                    // 按应用分流: 列出可选应用 (不含自身).
+                    "list_apps" -> handleListApps(result)
                     // 控制通道连接建立后: 以用户配置的地址建立 tun.
                     "establish_tun" -> {
                         val address = call.argument<String>("address") ?: ""
@@ -121,6 +124,9 @@ class MainActivity : FlutterActivity() {
                         val routes = call.argument<List<String>>("routes") ?: emptyList()
                         val dns = call.argument<List<String>>("dns") ?: emptyList()
                         val session = call.argument<String>("session") ?: "proxy"
+                        val splitMode = call.argument<String>("splitMode") ?: "off"
+                        val splitPackages =
+                            call.argument<List<String>>("splitPackages") ?: emptyList()
                         val instance = XproxyVpnService.instance
                         if (instance == null) {
                             result.error("NO_SERVICE", "VpnService 未运行", null)
@@ -129,9 +135,14 @@ class MainActivity : FlutterActivity() {
                             // 路由多达上万条, 主线程同步执行会阻塞 UI 造成卡顿.
                             tunExecutor.execute {
                                 try {
+                                    val setup = instance.establishTun(
+                                        address, prefix, mtu, routes, dns, session,
+                                        splitMode, splitPackages
+                                    )
                                     result.success(
-                                        instance.establishTun(
-                                            address, prefix, mtu, routes, dns, session
+                                        mapOf(
+                                            "fd" to setup.fd,
+                                            "skipped" to setup.skippedPackages,
                                         )
                                     )
                                 } catch (e: Exception) {
@@ -256,6 +267,37 @@ class MainActivity : FlutterActivity() {
             file.outputStream().use { output -> input.copyTo(output) }
         }
         return file.absolutePath
+    }
+
+    /**
+     * 列出已安装应用, 供按应用分流选择 (不含自身).
+     *
+     * 需要 QUERY_ALL_PACKAGES 权限 (Android 11+), 见 AndroidManifest.
+     * 查询在后台线程执行, 结果回主线程回调.
+     */
+    private fun handleListApps(result: MethodChannel.Result) {
+        tunExecutor.execute {
+            val apps = try {
+                val pm = packageManager
+                pm.getInstalledApplications(0)
+                    .asSequence()
+                    .filter { it.packageName != packageName }
+                    .map {
+                        mapOf(
+                            "package" to it.packageName,
+                            "label" to pm.getApplicationLabel(it).toString(),
+                            "system" to
+                                ((it.flags and ApplicationInfo.FLAG_SYSTEM) != 0),
+                            "uid" to it.uid,
+                        )
+                    }
+                    .toList()
+            } catch (e: Exception) {
+                runOnUiThread { result.error("LIST_APPS_FAILED", e.message, null) }
+                return@execute
+            }
+            runOnUiThread { result.success(apps) }
+        }
     }
 
     private fun sendServiceCommand(

@@ -8,6 +8,9 @@
     <uses-permission android:name="android.permission.CAMERA"/>
     <!-- 安装自更新包需要用户授权「安装未知应用」. -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
+    <!-- 按应用分流需要枚举已安装应用 (Android 11+ 的包可见性限制);
+         本应用自发布 APK, 不走 Google Play 的该权限审核. -->
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"/>
     <application
         android:label="xProxy"
         android:name="${applicationName}"
