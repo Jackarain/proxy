@@ -86,4 +86,78 @@ void main() {
     expect(find.text('从 URL 拉取域名列表'), findsOneWidget);
     expect(find.text('从 URL 拉取 CIDR 列表'), findsOneWidget);
   });
+
+  testWidgets('分应用分流: 仅选中应用走代理时要求已选应用', (tester) async {
+    await _pumpEdit(
+      tester,
+      VpnConfig(id: '5', name: '分应用', proxyPass: 'https://1.2.3.4:443'),
+    );
+
+    await tester.tap(find.widgetWithText(Tab, '分流'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('已选应用'),
+      200,
+      scrollable: _list,
+    );
+    expect(find.text('未选择'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('仅选中应用走代理'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('仅选中应用走代理'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('保存'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('至少需要选择一个应用'), findsOneWidget);
+  });
+
+  testWidgets('分应用分流: 保存保留模式与已选应用', (tester) async {
+    final config = VpnConfig(
+      id: '6',
+      name: '分应用',
+      proxyPass: 'https://1.2.3.4:443',
+      appSplitMode: AppSplitMode.exclude,
+      appSplitPackages: ['com.android.chrome', 'org.mozilla.firefox'],
+    );
+    VpnConfig? saved;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder:
+              (ctx) => TextButton(
+                onPressed: () async {
+                  saved = await Navigator.of(ctx).push<VpnConfig>(
+                    MaterialPageRoute(
+                      builder:
+                          (_) => ConfigEditPage(config: config, isNew: false),
+                    ),
+                  );
+                },
+                child: const Text('打开'),
+              ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('打开'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(Tab, '分流'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('已选 2 个应用'),
+      200,
+      scrollable: _list,
+    );
+    expect(find.text('已选 2 个应用'), findsOneWidget);
+
+    await tester.tap(find.text('保存'));
+    await tester.pumpAndSettle();
+
+    expect(saved?.appSplitMode, AppSplitMode.exclude);
+    expect(saved?.appSplitPackages, [
+      'com.android.chrome',
+      'org.mozilla.firefox',
+    ]);
+  });
 }

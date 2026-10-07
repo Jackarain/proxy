@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../models/vpn_config.dart';
+import 'app_select_page.dart';
 
 class ConfigEditPage extends StatefulWidget {
   const ConfigEditPage({super.key, required this.config, required this.isNew});
@@ -43,6 +44,8 @@ class _ConfigEditPageState extends State<ConfigEditPage> {
   late bool _dnsCache = c.dnsCache;
   late bool _noIpv6 = c.noIpv6;
   late bool _globalProxy = c.globalProxy;
+  late AppSplitMode _appSplitMode = c.appSplitMode;
+  late List<String> _appSplitPackages = [...c.appSplitPackages];
   late String _proxyDomainsUrl = c.proxyDomainsUrl;
   late String _proxyCidrUrl = c.proxyCidrUrl;
   late final TextEditingController _proxyPassPoolSize = TextEditingController(
@@ -101,7 +104,9 @@ class _ConfigEditPageState extends State<ConfigEditPage> {
               int.tryParse(_proxyPassPoolSize.text.trim()) ?? 0
           ..testUrl = _testUrl.text.trim()
           ..disableCheckCert = _disableCheckCert
-          ..bypassCn = _bypassCn;
+          ..bypassCn = _bypassCn
+          ..appSplitMode = _appSplitMode
+          ..appSplitPackages = [..._appSplitPackages];
     final errors = vpn.validate();
     if (errors.isNotEmpty) {
       ScaffoldMessenger.of(
@@ -338,8 +343,69 @@ class _ConfigEditPageState extends State<ConfigEditPage> {
             onChanged: (v) => setState(() => _bypassCn = v),
           ),
         ], subtitle: '命中代理域名/CIDR 的流量走上游代理, 其余直连'),
+        _section('按应用分流', [
+          RadioGroup<AppSplitMode>(
+            groupValue: _appSplitMode,
+            onChanged: (v) =>
+                setState(() => _appSplitMode = v ?? AppSplitMode.off),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _splitModeTile(
+                  AppSplitMode.off,
+                  '关闭',
+                  '不按应用过滤, 所有应用按上方规则分流',
+                ),
+                _splitModeTile(
+                  AppSplitMode.include,
+                  '仅选中应用走代理',
+                  '只有选中的应用流量进入 VPN',
+                ),
+                _splitModeTile(
+                  AppSplitMode.exclude,
+                  '选中应用直连',
+                  '选中的应用不走 VPN, 其余应用走 VPN',
+                ),
+              ],
+            ),
+          ),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('已选应用'),
+            subtitle: Text(
+              _appSplitPackages.isEmpty
+                  ? '未选择'
+                  : '已选 ${_appSplitPackages.length} 个应用',
+            ),
+            trailing: TextButton(
+              onPressed: _appSplitMode == AppSplitMode.off ? null : _pickApps,
+              child: const Text('选择'),
+            ),
+          ),
+        ], subtitle: '系统按应用 UID 过滤进入 VPN 的流量, 仅作用于当前用户, 修改后需重启 VPN'),
       ],
     );
+  }
+
+  Widget _splitModeTile(AppSplitMode mode, String title, String subtitle) {
+    return RadioListTile<AppSplitMode>(
+      contentPadding: EdgeInsets.zero,
+      dense: true,
+      value: mode,
+      title: Text(title),
+      subtitle: Text(subtitle),
+    );
+  }
+
+  /// 打开应用选择页, 返回 null 表示用户取消 (保留原选择).
+  Future<void> _pickApps() async {
+    final picked = await Navigator.of(context).push<List<String>>(
+      MaterialPageRoute(
+        builder: (_) => AppSelectPage(selected: _appSplitPackages),
+      ),
+    );
+    if (picked == null || !mounted) return;
+    setState(() => _appSplitPackages = picked);
   }
 
   Future<bool> _fetchProxyDomains() => _promptFetchList(

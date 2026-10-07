@@ -49,7 +49,13 @@ flutter build apk --debug
   `proxy_domains` (后缀匹配, 命中走代理), `proxy_cidr` (命中走代理),
   `disable_check_cert`.
 - Android VpnService 专用: `tunAddress`, `tunPrefix`, `routes` (CIDR, 默认全隧道),
-  `dns`, `name`.
+  `dns`, `name`, `appSplitMode` / `appSplitPackages`.
+- 按应用分流 (`appSplitMode`): `off` (默认, 所有应用都进隧道), `include` (仅
+  `appSplitPackages` 中的应用走代理, 其余直连), `exclude` (选中应用直连,
+  其余走代理). `include`/`exclude` 由系统在内核按 UID 过滤, 两者互斥; 只决定
+  "谁进隧道", 进入隧道后仍按 `proxyDomains` / `proxyCidr` 决定是否走上游.
+  自身应用始终直连; 清单里已卸载的包名会被忽略并提示. 该功能需要
+  `QUERY_ALL_PACKAGES` 权限 (自发布 APK 不经过 Play 审核).
 - 运行时注入 (无需手填): `tun_wait_fd`, `launcher_url`.
 - 保存前做基础校验 (需填写上游代理、MTU/测试 URL 范围等).
 
