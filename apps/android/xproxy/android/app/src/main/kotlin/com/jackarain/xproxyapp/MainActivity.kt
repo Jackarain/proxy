@@ -293,9 +293,17 @@ class MainActivity : FlutterActivity() {
                     }
                     .toList()
             } catch (e: Exception) {
+                android.util.Log.w("xproxy-apps", "list_apps 失败: $e")
                 runOnUiThread { result.error("LIST_APPS_FAILED", e.message, null) }
                 return@execute
             }
+            // 便于排查「选择应用页无应用」: 直接看原生返回了多少个应用
+            // (为 0 时通常是包可见性受限, 见 AndroidManifest 的 QUERY_ALL_PACKAGES).
+            val system = apps.count { (it["system"] as? Boolean) == true }
+            android.util.Log.w(
+                "xproxy-apps",
+                "list_apps: 共 ${apps.size} 个 (系统应用 $system 个)"
+            )
             runOnUiThread { result.success(apps) }
         }
     }

@@ -139,6 +139,34 @@ void main() {
     expect(results.single, ['com.android.chrome']);
   });
 
+  testWidgets('只剩系统应用时提示可显示系统应用', (tester) async {
+    mockListApps(
+      () async => [
+        {
+          'package': 'com.android.settings',
+          'label': '系统设置',
+          'system': true,
+          'uid': 1000,
+        },
+      ],
+    );
+
+    await openPage(tester);
+    expect(find.textContaining('未发现第三方应用'), findsOneWidget);
+    expect(find.text('系统设置'), findsNothing);
+
+    await tester.tap(find.widgetWithText(FilledButton, '显示系统应用'));
+    await tester.pumpAndSettle();
+    expect(find.text('系统设置'), findsOneWidget);
+  });
+
+  testWidgets('完全没有应用时给出提示', (tester) async {
+    mockListApps(() async => <Map<String, Object>>[]);
+
+    await openPage(tester);
+    expect(find.textContaining('未读取到任何应用'), findsOneWidget);
+  });
+
   testWidgets('应用列表读取失败可重试', (tester) async {
     var fail = true;
     mockListApps(() async {

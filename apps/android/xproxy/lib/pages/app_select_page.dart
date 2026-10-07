@@ -170,10 +170,53 @@ class _AppSelectPageState extends State<AppSelectPage> {
     );
   }
 
+  /// 列表为空时的提示: 区分「搜索无结果」「系统应用被折叠」「完全没有应用」,
+  /// 后者常见于模拟器/新设备, 也可能是包可见性受限, 给出可操作的出口而不是死路.
+  Widget _buildEmpty(List<InstalledApp> apps) {
+    if (_search.text.trim().isNotEmpty) {
+      return const Center(child: Text('没有匹配的应用'));
+    }
+    final hiddenSystem = apps.where((a) => a.system).length;
+    if (hiddenSystem > 0 && !_showSystem) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '未发现第三方应用, 已折叠 $hiddenSystem 个系统应用',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              FilledButton(
+                onPressed: () => setState(() => _showSystem = true),
+                child: const Text('显示系统应用'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    if (apps.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: Text(
+            '未读取到任何应用, 可能是系统限制了应用列表访问. '
+            '请确认已安装最新版本, 必要时重新安装本应用后再试.',
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+    return const Center(child: Text('没有匹配的应用'));
+  }
+
   Widget _buildList(List<InstalledApp> apps) {
     final visible = _visible(apps);
     if (visible.isEmpty) {
-      return const Center(child: Text('没有匹配的应用'));
+      return _buildEmpty(apps);
     }
     return ListView.builder(
       itemCount: visible.length,
