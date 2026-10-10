@@ -8,16 +8,19 @@
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 
-// tun2socks：通过 tunio 库实现的 SOCKS5 透明代理
+// tun2socks：通过 tunio 库实现的透明代理示例
 //
 // 用法示例：
 //   sudo ./tun2socks --tun tun0 --ip 10.0.0.1 --netmask 255.255.255.0 \
-//                    --proxy 127.0.0.1:1080
+//                    --proxy socks5://127.0.0.1:1080
 //
 // 功能：
-//   - TCP：引擎终止虚拟连接，应用层经 SOCKS5 CONNECT 连到代理后全双工桥接；
-//   - UDP：引擎维护 NAT 会话，应用层经 SOCKS5 UDP ASSOCIATE 中继转发；
-//   - 后端连接失败时向客户端发送 RST。
+//   - TCP：引擎终止虚拟连接，应用层经代理 CONNECT 连到目标后全双工桥接，
+//          上游拨号超时后向客户端发送 RST；
+//   - UDP：引擎维护 NAT 会话，应用层经代理中继转发（socks5 UDP ASSOCIATE
+//          或 direct 直发）；
+//   - 代理：socks5（含 RFC1929 认证）、http CONNECT、direct、reject；
+//   - 半关闭：一侧关闭写后，另一侧在超时窗口内继续收尾，避免连接悬挂。
 #include "tunio/tun_tcp_acceptor.hpp"
 #include "tunio/tun_config.hpp"
 #include "tunio/tun_tcp_socket.hpp"
@@ -25,20 +28,26 @@
 #include "tunio/tun_udp_socket.hpp"
 #include "tunio/tunio.hpp"
 
-#include "socks5_client.hpp"
+#include "app_log.hpp"
+#include "proxy.hpp"
 
 #include <boost/asio.hpp>
 
+#include <array>
+#include <chrono>
 #include <csignal>
 #include <cstdint>
+#include <functional>
 #include <iostream>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
 namespace {
 namespace net = boost::asio;
 namespace te = tunio;
+namespace t2s = tun2socks_example;
 
 struct options
 {
@@ -48,13 +57,16 @@ struct options
     std::string ipv6_addr;
     uint8_t ipv6_prefix_len = 64;
     size_t mtu = 1500;
-    std::string proxy_host = "127.0.0.1";
-    uint16_t proxy_port = 1080;
+    std::string proxy_url = "socks5://127.0.0.1:1080";
     bool udp = true;
     bool utun_prefix = false;
     int inject_fd = -1;
     size_t threads = 1;
     size_t num_queues = 1;
+    t2s::log_level loglevel = t2s::log_level::info;
+    std::chrono::milliseconds connect_timeout{5000};
+    std::chrono::seconds half_close_timeout{60};
+    std::chrono::seconds udp_timeout{60};
 };
 
 void usage(const char *prog)
@@ -68,11 +80,17 @@ void usage(const char *prog)
         << "  --ip6-prefix <len>     IPv6 前缀长度（默认 64）\n"
         << "  --mtu <bytes>          MTU（默认 1500）\n"
         << "  --queues <n>           Linux TUN 多队列数（IFF_MULTI_QUEUE，默认 1）\n"
-        << "  --proxy <host:port>    SOCKS5 代理地址（默认 127.0.0.1:1080）\n"
+        << "  --proxy <url>          代理地址，默认 socks5://127.0.0.1:1080；\n"
+        << "                         格式 [scheme://][user:pass@]host[:port]，\n"
+        << "                         scheme 取 socks5|http|direct|reject\n"
         << "  --utun-prefix          注入的 fd 为 macOS utun（读写带 4 字节家族前缀）\n"
         << "  --no-udp               禁用 UDP 转发\n"
         << "  --inject-fd <fd>       注入外部已打开的 TUN 文件描述符\n"
-        << "  --threads <n>          io_context 线程数（默认 1）\n";
+        << "  --threads <n>          io_context 线程数（默认 1）\n"
+        << "  --loglevel <level>     debug|info|warn|error|silent（默认 info）\n"
+        << "  --connect-timeout <ms> 上游连接超时毫秒数（默认 5000）\n"
+        << "  --half-close-timeout <s> 半关闭收尾超时秒数（默认 60）\n"
+        << "  --udp-timeout <s>      UDP 会话空闲超时秒数（默认 60）\n";
 }
 
 options parse_args(int argc, char **argv)
@@ -107,14 +125,7 @@ options parse_args(int argc, char **argv)
                     std::to_string(tunio::max_multi_queues) + " 之间");
             }
         } else if (arg == "--proxy") {
-            const std::string val = next();
-            const auto pos = val.rfind(':');
-            if (pos == std::string::npos) {
-                throw std::runtime_error("proxy 需要 host:port 格式");
-            }
-            opt.proxy_host = val.substr(0, pos);
-            opt.proxy_port =
-                static_cast<uint16_t>(std::stoul(val.substr(pos + 1)));
+            opt.proxy_url = next();
         } else if (arg == "--utun-prefix") {
             opt.utun_prefix = true;
         } else if (arg == "--no-udp") {
@@ -123,6 +134,18 @@ options parse_args(int argc, char **argv)
             opt.inject_fd = std::stoi(next());
         } else if (arg == "--threads") {
             opt.threads = static_cast<size_t>(std::stoul(next()));
+        } else if (arg == "--loglevel") {
+            const std::string val = next();
+            if (!t2s::parse_log_level(val, opt.loglevel)) {
+                throw std::runtime_error("非法日志级别: " + val);
+            }
+        } else if (arg == "--connect-timeout") {
+            opt.connect_timeout =
+                std::chrono::milliseconds(std::stoul(next()));
+        } else if (arg == "--half-close-timeout") {
+            opt.half_close_timeout = std::chrono::seconds(std::stoul(next()));
+        } else if (arg == "--udp-timeout") {
+            opt.udp_timeout = std::chrono::seconds(std::stoul(next()));
         } else if (arg == "-h" || arg == "--help") {
             usage(argv[0]);
             std::exit(0);
@@ -133,74 +156,123 @@ options parse_args(int argc, char **argv)
     return opt;
 }
 
-// ---- TCP 全双工数据泵（与 DESIGN.md §10.1 一致）----
+// ---- TCP 全双工数据泵 ----
+//
+// 两个方向各自独立收尾：一侧读结束后对另一侧发送 FIN（半关闭），随后
+// 任一方向先完成写关闭时启动收尾定时器，超时仍未结束则强制关闭双方。
+struct tcp_bridge_state
+{
+    explicit tcp_bridge_state(net::any_io_executor ex)
+        : timer(ex)
+    {
+    }
+
+    net::steady_timer timer;
+    int pending = 2;
+};
+
+void on_direction_done(std::shared_ptr<tcp_bridge_state> state,
+    std::shared_ptr<tunio::tun_tcp_socket> client,
+    std::shared_ptr<net::ip::tcp::socket> upstream,
+    std::chrono::seconds half_close_timeout)
+{
+    if (--state->pending <= 0) {
+        // Boost 1.92 移除了带 error_code 的 timer::cancel 重载，使用无参版本；
+        // cancel 的失败（定时器已到期）在收尾路径中无副作用。
+        state->timer.cancel();
+        return;
+    }
+
+    state->timer.expires_after(half_close_timeout);
+    state->timer.async_wait([state, client, upstream](
+        const boost::system::error_code &ec) {
+        if (ec) {
+            return; // 另一方向已正常收尾，定时器被取消
+        }
+        t2s::log_debug("[tcp] 半关闭超时，关闭连接");
+        client->close();
+        boost::system::error_code ignore;
+        upstream->close(ignore);
+    });
+}
+
+net::awaitable<void> pump_client_to_upstream(
+    std::shared_ptr<tunio::tun_tcp_socket> client,
+    std::shared_ptr<net::ip::tcp::socket> upstream,
+    std::shared_ptr<tcp_bridge_state> state,
+    std::chrono::seconds half_close_timeout)
+{
+    std::array<char, 65536> buf;
+    try {
+        for (;;) {
+            const size_t n = co_await client->async_read_some(
+                net::buffer(buf), net::use_awaitable);
+            co_await net::async_write(
+                *upstream, net::buffer(buf, n), net::use_awaitable);
+        }
+    } catch (const std::exception &e) {
+        t2s::log_debug("[tcp] client->upstream 结束: ", e.what());
+    }
+    boost::system::error_code ec;
+    upstream->shutdown(net::ip::tcp::socket::shutdown_send, ec);
+    on_direction_done(state, client, upstream, half_close_timeout);
+}
+
+net::awaitable<void> pump_upstream_to_client(
+    std::shared_ptr<tunio::tun_tcp_socket> client,
+    std::shared_ptr<net::ip::tcp::socket> upstream,
+    std::shared_ptr<tcp_bridge_state> state,
+    std::chrono::seconds half_close_timeout)
+{
+    std::array<char, 65536> buf;
+    try {
+        for (;;) {
+            const size_t n = co_await upstream->async_read_some(
+                net::buffer(buf), net::use_awaitable);
+            co_await client->async_write_some(
+                net::buffer(buf, n), net::use_awaitable);
+        }
+    } catch (const std::exception &e) {
+        t2s::log_debug("[tcp] upstream->client 结束: ", e.what());
+    }
+    boost::system::error_code ec;
+    client->shutdown(net::ip::tcp::socket::shutdown_send, ec);
+    on_direction_done(state, client, upstream, half_close_timeout);
+}
+
 net::awaitable<void> tcp_bridge(tunio::tun_tcp_socket client,
-    net::ip::tcp::endpoint proxy)
+    std::shared_ptr<t2s::proxy> proxy,
+    std::chrono::seconds half_close_timeout)
 {
     auto ex = co_await net::this_coro::executor;
-    auto dest = client.original_destination();
-    auto upstream = std::make_shared<net::ip::tcp::socket>(ex);
+    const auto dest = client.original_destination();
+    const std::string host = dest.address().to_string();
 
+    net::ip::tcp::socket upstream(ex);
     try {
-        *upstream = co_await tun2socks_example::socks5_connect(
-            proxy, dest.address().to_string(), dest.port());
-    } catch (const boost::system::system_error &e) {
-        std::cerr << "[tun2socks] " << dest << " -> " << proxy << " : "
-            << e.what() << std::endl;
+        upstream = co_await proxy->connect(host, dest.port());
+    } catch (const std::exception &e) {
+        t2s::log_warn("[tcp] ", dest, " -> ", proxy->name(), ": ", e.what());
         client.reset(); // 后端失败：立即 RST 客户端
         co_return;
     }
+    t2s::log_debug("[tcp] ", dest, " <-> ", proxy->name());
 
     auto c = std::make_shared<tunio::tun_tcp_socket>(std::move(client));
-    net::co_spawn(
-        ex,
-        [c, upstream]() -> net::awaitable<void> {
-            std::array<char, 65536> buf;
-            try {
-                for (;;) {
-                    size_t n = co_await c->async_read_some(net::buffer(buf),
-                        net::use_awaitable);
-                    co_await net::async_write(*upstream, net::buffer(buf, n),
-                        net::use_awaitable);
-                }
-            } catch (const boost::system::system_error &e) {
-                std::cerr << "[bridge] client->upstream exit: " << e.what()
-                    << std::endl;
-            } catch (const std::exception &e) {
-                std::cerr << "[bridge] client->upstream exit: " << e.what()
-                    << std::endl;
-            }
-            boost::system::error_code sec;
-            upstream->shutdown(net::ip::tcp::socket::shutdown_send, sec);
-        },
-        net::detached);
+    auto u = std::make_shared<net::ip::tcp::socket>(std::move(upstream));
+    auto state = std::make_shared<tcp_bridge_state>(ex);
 
-    net::co_spawn(
-        ex,
-        [c, upstream]() -> net::awaitable<void> {
-            std::array<char, 65536> buf;
-            try {
-                for (;;) {
-                    size_t n = co_await upstream->async_read_some(
-                        net::buffer(buf), net::use_awaitable);
-                    co_await net::async_write(*c, net::buffer(buf, n),
-                        net::use_awaitable);
-                }
-            } catch (const boost::system::system_error &e) {
-                std::cerr << "[bridge] upstream->client exit: " << e.what()
-                    << std::endl;
-                c->close();
-            } catch (const std::exception &e) {
-                std::cerr << "[bridge] upstream->client exit: " << e.what()
-                    << std::endl;
-                c->close();
-            }
-        },
+    net::co_spawn(ex,
+        pump_client_to_upstream(c, u, state, half_close_timeout),
+        net::detached);
+    net::co_spawn(ex,
+        pump_upstream_to_client(c, u, state, half_close_timeout),
         net::detached);
 }
 
 net::awaitable<void> tcp_listener(tunio::tunio &engine,
-    net::ip::tcp::endpoint proxy)
+    std::shared_ptr<t2s::proxy> proxy,
+    std::chrono::seconds half_close_timeout)
 {
     auto ex = co_await net::this_coro::executor;
     tunio::tun_tcp_acceptor acceptor(engine);
@@ -212,67 +284,75 @@ net::awaitable<void> tcp_listener(tunio::tunio &engine,
         if (ec) {
             co_return;
         }
-        net::co_spawn(ex, tcp_bridge(std::move(client), proxy), net::detached);
+        net::co_spawn(ex,
+            tcp_bridge(std::move(client), proxy, half_close_timeout),
+            net::detached);
     }
 }
 
-// ---- UDP：每个会话经 SOCKS5 UDP ASSOCIATE 中继转发 ----
+// ---- UDP：每个会话经代理中继转发 ----
 net::awaitable<void> udp_bridge(tunio::tun_udp_socket session,
-    net::ip::tcp::endpoint proxy)
+    std::shared_ptr<t2s::proxy> proxy,
+    std::chrono::seconds udp_timeout)
 {
     auto ex = co_await net::this_coro::executor;
-    auto relay = std::make_shared<tun2socks_example::socks5_udp_relay>(ex);
+    std::shared_ptr<t2s::udp_relay> relay;
     try {
-        co_await relay->associate(proxy);
-    } catch (const boost::system::system_error &e) {
-        std::cerr << "[tun2socks] udp associate " << proxy << " : " << e.what()
-            << std::endl;
+        relay = co_await proxy->associate_udp();
+    } catch (const std::exception &e) {
+        t2s::log_warn("[udp] associate ", proxy->name(), ": ", e.what());
         session.close();
         co_return;
     }
+    if (!relay) {
+        session.close();
+        co_return;
+    }
+    session.set_timeout(udp_timeout);
 
     auto s = std::make_shared<tunio::tun_udp_socket>(std::move(session));
 
-    // 客户端 -> 中继
-    net::co_spawn(
-        ex,
+    // 会话 -> 中继
+    net::co_spawn(ex,
         [s, relay]() -> net::awaitable<void> {
             std::array<char, 2048> buf;
             try {
                 for (;;) {
                     net::ip::udp::endpoint target;
-                    size_t n = co_await s->async_receive_from(
+                    const size_t n = co_await s->async_receive_from(
                         net::buffer(buf), target, net::use_awaitable);
-                    co_await relay->send_to(
+                    co_await relay->send(
                         std::vector<uint8_t>(buf.data(), buf.data() + n),
                         target);
                 }
-            } catch (...) {
-                relay->close();
+            } catch (const std::exception &e) {
+                t2s::log_debug("[udp] session->relay 结束: ", e.what());
             }
+            relay->close();
         },
         net::detached);
 
-    // 中继 -> 客户端
-    net::co_spawn(
-        ex,
+    // 中继 -> 会话
+    net::co_spawn(ex,
         [s, relay]() -> net::awaitable<void> {
             try {
                 for (;;) {
-                    auto [payload, target] = co_await relay->receive_from();
+                    auto [payload, target] = co_await relay->receive();
                     co_await s->async_send_to(target, net::buffer(payload),
                         net::use_awaitable);
                 }
-            } catch (...) {
-                s->close();
-                relay->close();
+            } catch (const std::exception &e) {
+                t2s::log_debug("[udp] relay->session 结束: ", e.what());
             }
+            s->close();
+            relay->close();
         },
         net::detached);
 }
 
 net::awaitable<void> udp_listener(tunio::tunio &engine,
-    net::ip::tcp::endpoint proxy)
+    std::shared_ptr<t2s::proxy> proxy,
+    std::chrono::seconds udp_timeout)
 {
     auto ex = co_await net::this_coro::executor;
     tunio::tun_udp_acceptor acceptor(engine);
@@ -284,7 +364,8 @@ net::awaitable<void> udp_listener(tunio::tunio &engine,
         if (ec) {
             co_return;
         }
-        net::co_spawn(ex, udp_bridge(std::move(session), proxy), net::detached);
+        net::co_spawn(ex, udp_bridge(std::move(session), proxy, udp_timeout),
+            net::detached);
     }
 }
 
@@ -301,10 +382,45 @@ int main(int argc, char **argv)
         return 1;
     }
 
+    t2s::logger::instance().set_level(opt.loglevel);
+
     net::io_context io(opt.threads);
     // 单线程 io 使用无 Strand 派发开销的单线程模式；多线程 io 时引擎
     // 内部以 Strand 串行化，保证线程安全.
     tunio::tunio engine(io, opt.threads == 1);
+
+    // 解析代理 URL，并同步解析代理主机（支持 IP 与域名）。此处在
+    // io.run() 之前调用，同步解析不会阻塞事件循环.
+    t2s::proxy_config pcfg;
+    std::string perr;
+    if (!t2s::parse_proxy_url(opt.proxy_url, pcfg, perr)) {
+        std::cerr << "代理参数错误: " << perr << std::endl;
+        return 1;
+    }
+    if (pcfg.scheme == "socks5" || pcfg.scheme == "http") {
+        boost::system::error_code rec;
+        net::ip::tcp::resolver resolver(io);
+        const auto results =
+            resolver.resolve(pcfg.host, std::to_string(pcfg.port), rec);
+        if (rec || results.empty()) {
+            std::cerr << "无法解析代理地址 " << pcfg.host << ":"
+                << pcfg.port << ": " << rec.message() << std::endl;
+            return 1;
+        }
+        pcfg.endpoint = results.begin()->endpoint();
+    }
+
+    auto upstream_proxy =
+        t2s::make_proxy(pcfg, io.get_executor(), opt.connect_timeout);
+    if (!upstream_proxy) {
+        std::cerr << "无法创建代理: " << pcfg.scheme << std::endl;
+        return 1;
+    }
+    if (opt.udp && !upstream_proxy->supports_udp()) {
+        t2s::log_warn("代理 ", upstream_proxy->name(),
+            " 不支持 UDP，已禁用 UDP 转发");
+        opt.udp = false;
+    }
 
     tunio::tun_config cfg;
     cfg.dev_name = opt.dev_name;
@@ -325,24 +441,22 @@ int main(int argc, char **argv)
         std::cerr << "打开 TUN 设备失败: " << ec.message() << std::endl;
         return 1;
     }
-    std::cout << "tun2socks 已启动: " << cfg.dev_name << " " << cfg.ipv4_addr
-        << (cfg.ipv6_addr.empty() ? "" : " / " + cfg.ipv6_addr) << " -> "
-        << opt.proxy_host << ":" << opt.proxy_port << " (队列 x"
-        << engine.queue_count() << ")" << std::endl;
 
-    // 代理地址可为 IP 或域名：make_address 仅接受 IP，非法输入抛异常，
-    // 在此捕获避免 terminate；域名解析由 socks5_connect 内部处理.
-    net::ip::address proxy_addr;
-    try {
-        proxy_addr = net::ip::make_address(opt.proxy_host);
-    } catch (const boost::system::system_error &) {
-        std::cerr << "invalid proxy address: " << opt.proxy_host << std::endl;
-        return 1;
+    std::string proxy_desc = upstream_proxy->name() + "://";
+    if (!pcfg.host.empty()) {
+        proxy_desc += pcfg.host + ":" + std::to_string(pcfg.port);
     }
-    net::ip::tcp::endpoint proxy(proxy_addr, opt.proxy_port);
-    net::co_spawn(io, tcp_listener(engine, proxy), net::detached);
+    t2s::log_info("tun2socks 已启动: ", cfg.dev_name, " ", cfg.ipv4_addr,
+        (cfg.ipv6_addr.empty() ? "" : " / " + cfg.ipv6_addr), " -> ",
+        proxy_desc, " (队列 x", engine.queue_count(), ")");
+
+    net::co_spawn(io,
+        tcp_listener(engine, upstream_proxy, opt.half_close_timeout),
+        net::detached);
     if (opt.udp) {
-        net::co_spawn(io, udp_listener(engine, proxy), net::detached);
+        net::co_spawn(io,
+            udp_listener(engine, upstream_proxy, opt.udp_timeout),
+            net::detached);
     }
 
     // SIGUSR1 为 POSIX 信号，Windows CRT 未定义；统计转储功能仅 POSIX 可用.
@@ -365,12 +479,14 @@ int main(int argc, char **argv)
                 << " tx_dropped=" << st.tx_dropped.load()
                 << " rx_ooo=" << st.rx_ooo.load()
                 << " tcp_connections=" << st.tcp_connections.load()
+                << " udp_sessions=" << st.udp_sessions.load()
+                << " icmp_replies=" << st.icmp_replies.load()
                 << std::endl;
             signals.async_wait(on_signal);
             return;
         }
 #endif
-        std::cout << "\n正在关闭..." << std::endl;
+        t2s::log_info("正在关闭...");
         engine.close();
     };
     signals.async_wait(on_signal);

@@ -582,7 +582,7 @@ for (auto &t : threads) {
 | 程序 | 说明 |
 | :--- | :--- |
 | `tun_echo` | 最小示例：TCP 桥接本机 echo 服务 + UDP 回显 |
-| `tun2socks` | SOCKS5 透明代理：TCP CONNECT + UDP ASSOCIATE |
+| `tun2socks` | 透明代理示例：TCP CONNECT + UDP 中继，支持 socks5（含 RFC1929 认证）/http/direct/reject，含连接、半关闭与 UDP 会话超时 |
 | `examples/python/tun_echo.py` | `tun_echo` 的 Python 绑定版本（ctypes 绑定） |
 | `examples/python/tun2socks.py` | `tun2socks` 的 Python 绑定版本（纯 Python SOCKS5 客户端） |
 | `examples/c/tun2socks.c` | `tun2socks` 的 C API 版本（阻塞接口 + pthread，构建产物 `tun2socks_c`） |
