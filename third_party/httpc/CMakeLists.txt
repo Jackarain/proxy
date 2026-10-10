@@ -25,17 +25,23 @@ project(httpc
 # ---------------------------------------------------------------------------
 # Options
 # ---------------------------------------------------------------------------
+# 判断本工程是被独立构建, 还是作为 third_party 被 add_subdirectory 引入.
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+	set(HTTPC_IS_TOP_LEVEL ON)
+else()
+	set(HTTPC_IS_TOP_LEVEL OFF)
+endif()
+
 option(HTTPC_BUILD_EXAMPLES      "Build httpc examples"                          OFF)
 option(HTTPC_BUILD_TESTS         "Build httpc tests"                             OFF)
 option(HTTPC_SEPARATE_COMPILATION "Compile Boost.Asio/Beast separately"          ON)
-option(HTTPC_INSTALL             "Generate httpc install rules"                  ON)
+option(HTTPC_INSTALL             "Generate httpc install rules"                  ${HTTPC_IS_TOP_LEVEL})
 set(HTTPC_BOOST_ROOT "" CACHE PATH
 	"Path to a Boost source tree (e.g. third_party/boost). When set, its per-library include dirs are used instead of find_package(Boost).")
 
 # 单独构建时才设置默认构建类型；作为 third_party 被 add_subdirectory 引入时
 # 不覆盖宿主工程的 CMAKE_BUILD_TYPE.
-if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR
-	AND NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+if(HTTPC_IS_TOP_LEVEL AND NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 	set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
 endif()
 
@@ -63,9 +69,12 @@ set(HTTPC_BOOST_INCLUDE_DIRS "")
 # Boost superproject 或系统 Boost）时，直接复用，避免重复编译 Boost.URL 以及
 # 头文件/ABI 混用.
 if(TARGET Boost::url)
+	if(HTTPC_BOOST_ROOT)
+		message(STATUS "Host provides Boost::url; ignoring HTTPC_BOOST_ROOT=${HTTPC_BOOST_ROOT}")
+	endif()
 	set(HTTPC_BOOST_DEFINITIONS "")
-	set(HTTPC_BOOST_TARGETS Boost::url Boost::system)
-	foreach(_comp asio beast variant2)
+	set(HTTPC_BOOST_TARGETS Boost::url)
+	foreach(_comp system asio beast variant2)
 		if(TARGET Boost::${_comp})
 			list(APPEND HTTPC_BOOST_TARGETS Boost::${_comp})
 		endif()
@@ -119,7 +128,7 @@ else()
 	endif()
 endif()
 
-if(NOT TARGET OpenSSL::SSL)
+if(NOT TARGET OpenSSL::SSL OR NOT TARGET OpenSSL::Crypto)
 	find_package(OpenSSL REQUIRED)
 endif()
 if(NOT TARGET Threads::Threads)

@@ -49,6 +49,7 @@ cmake --build build -j
 | `HTTPC_SEPARATE_COMPILATION` | `ON`    | 单独编译 Boost.Asio/Beast（更快）。             |
 | `HTTPC_BUILD_TESTS`          | `OFF`   | 构建单元测试与集成测试。                        |
 | `HTTPC_BOOST_ROOT`           | (自动)  | Boost 源码树的路径。                            |
+| `HTTPC_INSTALL`              | (见下)  | 生成安装规则；独立构建时为 `ON`，作为子工程时为 `OFF`。 |
 
 构建示例：
 
