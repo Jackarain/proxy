@@ -32,14 +32,15 @@ use std::{
     }, //
 };
 
-#[cfg(feature = "libc")]
-use crate::ffi::{
-    mut_slice_into_ffi_raw_parts,
-    slice_into_ffi_raw_parts, //
-};
-use crate::io::stdio::{
-    DatagramSocket,
-    PollFor, //
+use crate::{
+    ffi::{
+        mut_slice_into_ffi_raw_parts,
+        slice_into_ffi_raw_parts, //
+    },
+    io::stdio::{
+        DatagramSocket,
+        PollFor, //
+    }, //
 };
 
 use super::{
@@ -99,11 +100,11 @@ impl<Socket: DatagramSocket, Reactor: PollFor<Socket> + Send> AbstractWriter
     ) -> AbstractSocketResult {
         loop {
             match (self.socket.send(buffer), async_ctx.as_mut()) {
-                (AbstractSocketResult::Retry, Some(ctx)) => {
-                    if matches!(self.reactor.poll_write(ctx), Poll::Pending) {
-                        return AbstractSocketResult::Retry;
-                    }
-                }
+                (AbstractSocketResult::Retry, Some(ctx)) => match self.reactor.poll_write(ctx) {
+                    Poll::Pending => return AbstractSocketResult::Retry,
+                    Poll::Ready(Ok(())) => {}
+                    Poll::Ready(Err(e)) => return AbstractSocketResult::Err(Box::new(e)),
+                },
                 (res, _) => return res,
             }
         }
@@ -119,11 +120,26 @@ impl<Socket: DatagramSocket, Reactor: PollFor<Socket> + Send> AbstractSocket
 {
 }
 
+/// Check if an I/O error corresponds to `ENOBUFS` (kernel socket buffer exhaustion).
+#[inline]
+fn os_has_no_resource(err: &io::Error) -> bool {
+    #[cfg(unix)]
+    {
+        matches!(err.raw_os_error(), Some(libc::ENOBUFS | libc::ENOMEM))
+    }
+    #[cfg(not(unix))]
+    {
+        false
+    }
+}
+
 impl DatagramSocket for UnixDatagram {
     fn send(&mut self, datagram: &[u8]) -> AbstractSocketResult {
         loop {
             return match UnixDatagram::send(self, datagram) {
                 Ok(bytes) => AbstractSocketResult::Ok(bytes),
+                Err(e) if matches!(e.kind(), io::ErrorKind::Interrupted) => continue,
+                Err(e) if os_has_no_resource(&e) => AbstractSocketResult::Ok(datagram.len()),
                 Err(e) => crate::retry_on_interrupt!(e),
             };
         }
@@ -195,23 +211,23 @@ impl<Io: AsRawFd + Send> DatagramSocket for UseFd<Io> {
             target_os = "freebsd",
             target_os = "netbsd",
             target_os = "openbsd",
-            target_os = "macos",
-            target_os = "ios",
+            target_vendor = "apple",
         ))]
-        let flag = 0;
-        #[cfg(any(windows, target_os = "none"))]
         let flag = 0;
         loop {
             let rc = unsafe {
                 // Safety: the socket file descriptor is exclusively owned.
                 libc::send(self.as_raw_fd(), buf as _, len, flag)
             };
-            return if rc < 0 {
+            if rc < 0 {
                 let err = io::Error::last_os_error();
-                crate::retry_on_interrupt!(err)
+                if os_has_no_resource(&err) {
+                    return AbstractSocketResult::Ok(datagram.len());
+                }
+                return crate::retry_on_interrupt!(err);
             } else {
-                AbstractSocketResult::Ok(rc as usize)
-            };
+                return AbstractSocketResult::Ok(rc as usize);
+            }
         }
     }
 

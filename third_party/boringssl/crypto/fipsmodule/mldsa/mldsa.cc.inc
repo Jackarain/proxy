@@ -62,7 +62,7 @@ constexpr uint32_t kPrime = 8380417;
 constexpr uint32_t kPrimeNegInverse = 4236238847;
 constexpr int kDroppedBits = 13;
 constexpr uint32_t kHalfPrime = (kPrime - 1) / 2;
-// 256^-1 * R^2 mod kPrime. This is not 256^-1 in Montgomery form, but 256^-1
+// 256^-1 ⋅ R² mod kPrime. This is not 256^-1 in Montgomery form, but 256^-1
 // doubly-converted to Montgomery form.
 constexpr uint32_t kInverseDegreeDoubleMontgomery = 41978;
 
@@ -308,6 +308,22 @@ inline uint32_t reduce_once(uint32_t x) {
   return (mask & x) | (~mask & subtracted);
 }
 
+// reduce_from_u32 returns `x mod kPrime`. `x` can be any `uint32_t`.
+inline uint32_t reduce_from_u32(uint32_t x) {
+  // kPrime is 2^23 - 2^13 + 1. We first split `x` into the upper 9 bits and the
+  // lower 23 bits:
+  uint32_t hi = x >> 23, lo = x & ((uint32_t{1} << 23) - 1);
+  // 2^23 = 2^13 - 1 mod kPrime
+  //    x = hi * 2^23 + lo
+  //      = hi * 2^13 - hi + lo mod kPrime
+  //
+  // This value does not overflow and is below 2 * kPrime. We can `reduce_once`.
+  static constexpr uint32_t kMaxHi = UINT32_MAX >> 23;
+  static constexpr uint32_t kMaxLo = (uint32_t{1} << 23) - 1;
+  static_assert((kMaxHi << 13) - kMaxHi + kMaxLo < 2 * kPrime);
+  return reduce_once((hi << 13) - hi + lo);
+}
+
 // Returns the absolute value in constant time, interpreting the high bit as a
 // sign bit.
 inline uint32_t abs_signed(uint32_t x) {
@@ -358,13 +374,20 @@ inline void scalar_sub(scalar *out, const scalar *lhs, const scalar *rhs) {
   }
 }
 
-inline uint32_t reduce_montgomery(uint64_t x) {
+// reduce_montgomery_partial returns a number equivalent to x * R^-1 mod kPrime.
+// The output is less than 2 * kPrime. `x` must be at most kPrime * 2^32.
+inline uint32_t reduce_montgomery_partial(uint64_t x) {
   declassify_assert(x <= ((uint64_t)kPrime << 32));
   uint64_t a = (uint32_t)x * kPrimeNegInverse;
   uint64_t b = x + a * kPrime;
   declassify_assert((b & 0xffffffff) == 0);
-  uint32_t c = b >> 32;
-  return reduce_once(c);
+  return b >> 32;
+}
+
+// reduce_montgomery returns x * R^-1 mod kPrime, fully reduced. `x` must be at
+// most kPrime * 2^32.
+inline uint32_t reduce_montgomery(uint64_t x) {
+  return reduce_once(reduce_montgomery_partial(x));
 }
 
 // Montgomery-multiply two scalars in the number theoretically transformed
@@ -382,23 +405,28 @@ inline void scalar_mult_montgomery(scalar *out, const scalar *lhs,
 // FIPS 204, Algorithm 41 (`NTT`).
 inline void scalar_ntt(scalar *s) {
   // Manually unrolled loop to maximize vectorization.
-#define ITER(step, offset)                                              \
-  {                                                                     \
-    int k = 0;                                                          \
-    for (int i = 0; i < step; i++) {                                    \
-      const uint32_t step_root = kNTTRootsMontgomery[step + i];         \
-      for (int j = k; j < k + offset; j++) {                            \
-        uint32_t even = s->c[j];                                        \
-        /* `reduce_montgomery` works on values up to kPrime*R and R     \
-         * 2*kPrime. `step_root` < kPrime because it's static data.     \
-         * `s->c[...]` is < kPrime by the invariants of that struct. */ \
-        uint32_t odd = reduce_montgomery((uint64_t)step_root *          \
-                                         (uint64_t)s->c[j + offset]);   \
-        s->c[j] = reduce_once(odd + even);                              \
-        s->c[j + offset] = mod_sub(even, odd);                          \
-      }                                                                 \
-      k += 2 * offset;                                                  \
-    }                                                                   \
+  //
+  // Intermediate values of `s` are not fully reduced. `ITER` writes to every
+  // element of `s` exactly once. Each write adds less than 2*kPrime to some
+  // value from the previous iteration. After eight iterations, each element
+  // will be less than 17*kPrime. This fits in `uint32_t`, so we never overflow.
+#define ITER(step, offset)                                                    \
+  {                                                                           \
+    int k = 0;                                                                \
+    for (int i = 0; i < step; i++) {                                          \
+      const uint32_t step_root = kNTTRootsMontgomery[step + i];               \
+      for (int j = k; j < k + offset; j++) {                                  \
+        uint32_t even = s->c[j];                                              \
+        /* `reduce_montgomery_partial` works on values up to kPrime*R.        \
+         * `step_root < kPrime` because it's static data. `s->c[...] < R`     \
+         * because it's 32-bit. */                                            \
+        uint32_t odd = reduce_montgomery_partial(uint64_t{step_root} *        \
+                                                 uint64_t{s->c[j + offset]}); \
+        s->c[j] = even + odd;                                                 \
+        s->c[j + offset] = even + 2 * kPrime - odd;                           \
+      }                                                                       \
+      k += 2 * offset;                                                        \
+    }                                                                         \
   }
 
   ITER(1, 128)
@@ -411,6 +439,11 @@ inline void scalar_ntt(scalar *s) {
   ITER(128, 1)
   static_assert(kDegree == 256);
 #undef ITER
+
+  // Now `s` is correct but the elements are not fully reduced. Reduce them.
+  for (int i = 0; i < kDegree; i++) {
+    s->c[i] = reduce_from_u32(s->c[i]);
+  }
 }
 
 // In place inverse number theoretic transform of a given scalar, but with each
@@ -421,27 +454,31 @@ inline void scalar_ntt(scalar *s) {
 // FIPS 204, Algorithm 42 (`NTT^-1`).
 inline void scalar_inverse_ntt_montgomery(scalar *s) {
   // Manually unrolled loop to maximize vectorization.
-#define ITER(step, offset)                                                     \
-  {                                                                            \
-    int k = 0;                                                                 \
-    for (int i = 0; i < step; i++) {                                           \
-      const uint32_t step_root =                                               \
-          kPrime - kNTTRootsMontgomery[step + (step - 1 - i)];                 \
-      for (int j = k; j < k + offset; j++) {                                   \
-        uint32_t even = s->c[j];                                               \
-        uint32_t odd = s->c[j + offset];                                       \
-        s->c[j] = reduce_once(odd + even);                                     \
-        /* `reduce_montgomery` works on values up to kPrime*R and R >          \
-         * 2*kPrime. kPrime + even < 2*kPrime because `even` < kPrime, by the  \
-         * invariants of that structure. Thus kPrime + even - odd < 2*kPrime   \
-         * because odd >= 0, because it's unsigned and less than kPrime.       \
-         * Lastly step_root < kPrime, because `kNTTRootsMontgomery` is static  \
-         * data. */                                                            \
-        s->c[j + offset] = reduce_montgomery((uint64_t)step_root *             \
-                                             (uint64_t)(kPrime + even - odd)); \
-      }                                                                        \
-      k += 2 * offset;                                                         \
-    }                                                                          \
+  //
+  // Intermediate values of `s` are not fully reduced. `ITER` writes
+  // to every element of `s` exactly once. Each write either adds two values
+  // from the previous iteration, or is at most 2 * kPrime. After eight
+  // iterations, each element will be less than 2⁸ * kPrime = 256 * kPrime.
+  // This fits in `uint32_t`, so we never overflow.
+#define ITER(step, offset)                                                  \
+  {                                                                         \
+    int k = 0;                                                              \
+    for (int i = 0; i < step; i++) {                                        \
+      const uint32_t step_root =                                            \
+          kPrime - kNTTRootsMontgomery[step + (step - 1 - i)];              \
+      for (int j = k; j < k + offset; j++) {                                \
+        uint32_t even = s->c[j];                                            \
+        uint32_t odd = s->c[j + offset];                                    \
+        s->c[j] = odd + even;                                               \
+        /* `reduce_montgomery_partial` works on values up to kPrime*R.      \
+         * `step_root < kPrime` because it's static data. The other term is \
+         * less than R because it's 32-bit, and does not overflow because   \
+         * `odd` is at most 128 * kPrime per the above. */                  \
+        s->c[j + offset] = reduce_montgomery_partial(                       \
+            uint64_t{step_root} * uint64_t{128 * kPrime + even - odd});     \
+      }                                                                     \
+      k += 2 * offset;                                                      \
+    }                                                                       \
   }
 
   ITER(128, 1)
@@ -456,7 +493,8 @@ inline void scalar_inverse_ntt_montgomery(scalar *s) {
 #undef ITER
 
   // `kInverseDegreeDoubleMontgomery` has been double-converted to Montgomery
-  // form, so the result is an extra R term in the final result.
+  // form, so the result is an extra R term in the final result. This also fully
+  // reduces the partially-reduced values above.
   for (int i = 0; i < kDegree; i++) {
     s->c[i] = reduce_montgomery(uint64_t{s->c[i]} *
                                 uint64_t{kInverseDegreeDoubleMontgomery});
@@ -540,12 +578,12 @@ inline void power2_round(uint32_t *r1, uint32_t *r0, uint32_t r) {
 
 // Scale back previously rounded value.
 inline void scale_power2_round(uint32_t *out, uint32_t r1) {
-  // Pre-condition: 0 <= r1 <= 2^10 - 1
+  // Pre-condition: 0 ≤ r1 ≤ 2^10 - 1
   assert(r1 < (1u << 10));
 
   *out = r1 << kDroppedBits;
 
-  // Post-condition: 0 <= out <= 2^23 - 2^13 = kPrime - 1
+  // Post-condition: 0 ≤ out ≤ 2^23 - 2^13 = kPrime - 1
   assert(*out < kPrime);
 }
 
@@ -568,7 +606,7 @@ inline uint32_t high_bits(uint32_t x) {
     // Below is the formula taken from the reference implementation.
     //
     // Here, Gamma2 == 2^18 - 2^8
-    // This returns ((ceil(x / 2^7) * (2^10 + 1) + 2^21) / 2^22) mod 2^4
+    // This returns ((ceil(x / 2^7) ⋅ (2^10 + 1) + 2^21) / 2^22) mod 2^4
     r1 = (r1 * 1025 + (1 << 21)) >> 22;
     r1 &= 15;
   } else if constexpr (prime_minus_one_over_gamma2<K>() == 88) {
@@ -1157,7 +1195,30 @@ inline int scalar_decode_signed<20, (1u << 19)>(scalar *out,
 // is used for matrix expansion and only operates on public inputs.
 inline void scalar_from_keccak_block_vartime(scalar *out, int *done,
                                              const uint8_t block[168]) {
-  for (size_t i = 0; i < 168 && *done < kDegree; i += 3) {
+  // kStep is the number of loop iterations to do at once. May need to become
+  // platform dependent at some point. Must be a compile-time constant - if we
+  // ever need to runtime dispatch on it, it has to be made a template argument.
+  const size_t kStep = 2;
+
+  // Branchless sampling as long as there is enough space in the output buffer
+  // even if all sampled numbers are < `kPrime`.
+  size_t i = 0;
+  for (; i <= size_t{168 - 3 * kStep} && *done <= int{kDegree - kStep};
+       i += 3 * kStep) {
+    uint32_t d[kStep];
+    for (size_t k = 0; k < kStep; ++k) {
+      size_t bi = i + 3 * k;
+      d[k] = (uint32_t)block[bi] | ((uint32_t)block[bi + 1] << 8) |
+             (((uint32_t)block[bi + 2] & 0x7f) << 16);
+    }
+    for (size_t k = 0; k < kStep; ++k) {
+      out->c[*done] = d[k];
+      *done += d[k] < kPrime;
+    }
+  }
+
+  // Branchful "tail".
+  for (; i < 168 && *done < kDegree; i += 3) {
     // FIPS 204, Algorithm 14 (`CoeffFromThreeBytes`).
     uint32_t value = (uint32_t)block[i] | ((uint32_t)block[i + 1] << 8) |
                      (((uint32_t)block[i + 2] & 0x7f) << 16);
@@ -1205,31 +1266,48 @@ inline void scalar_from_keccak_vartime_x2(scalar *out[2],
 }
 #endif
 
+#if defined(HAVE_KECCAK_X4)
+inline void scalar_from_keccak_vartime_x4(scalar *out[4],
+                                          BORINGSSL_keccak_st keccak_ctx[]) {
+  for (int i = 0; i < 4; i++) {
+    assert(keccak_ctx[i].squeeze_offset == 0);
+    assert(keccak_ctx[i].rate_bytes == 168);
+  }
+  static_assert(168 % 3 == 0, "block and coefficient boundaries do not align");
+
+  int done[4] = {0, 0, 0, 0};
+  while (done[0] < kDegree || done[1] < kDegree || done[2] < kDegree ||
+         done[3] < kDegree) {
+    uint8_t block[4][168];
+    uint8_t *blocks[] = {block[0], block[1], block[2], block[3]};
+    BORINGSSL_keccak_squeeze_x4(keccak_ctx, blocks, sizeof(block[0]));
+    scalar_from_keccak_block_vartime(out[0], &done[0], block[0]);
+    scalar_from_keccak_block_vartime(out[1], &done[1], block[1]);
+    scalar_from_keccak_block_vartime(out[2], &done[2], block[2]);
+    scalar_from_keccak_block_vartime(out[3], &done[3], block[3]);
+  }
+}
+#endif
+
 template <int ETA>
 inline bool coefficient_from_nibble(uint32_t nibble, uint32_t *result);
 
 template <>
 inline bool coefficient_from_nibble<4>(uint32_t nibble, uint32_t *result) {
-  if (constant_time_declassify_int(nibble < 9)) {
-    // Knowing bounds on `nibble` seems to tempt some versions of Clang to emit
-    // a branch, if we don't have a barrier in `mod_sub`.
-    *result = mod_sub(4, value_barrier_u32(nibble));
-    return true;
-  }
-  return false;
+  // Knowing bounds on `nibble` seems to tempt some versions of Clang to emit
+  // a branch, if we don't have a barrier in `mod_sub`.
+  *result = mod_sub(4, value_barrier_u32(nibble));
+  return constant_time_declassify_int(nibble < 9);
 }
 
 template <>
 inline bool coefficient_from_nibble<2>(uint32_t nibble, uint32_t *result) {
-  if (constant_time_declassify_int(nibble < 15)) {
-    // Knowing bounds on `nibble` seems to tempt some versions of Clang to emit
-    // a branch, if we don't have a barrier in `mod_sub`.
-    // Constant time "nibble % 5".
-    nibble = nibble - 5 * ((205 * nibble) >> 10);
-    *result = mod_sub(2, value_barrier_u32(nibble));
-    return true;
-  }
-  return false;
+  // Knowing bounds on `nibble` seems to tempt some versions of Clang to emit
+  // a branch, if we don't have a barrier in `mod_sub`.
+  // Constant time "nibble % 5".
+  uint32_t rem = nibble - 5 * ((205 * nibble) >> 10);
+  *result = mod_sub(2, value_barrier_u32(rem));
+  return constant_time_declassify_int(nibble < 15);
 }
 
 template <int ETA>
@@ -1243,12 +1321,9 @@ inline void scalar_uniform_block(scalar *out, int *done,
     // Individual bytes of the SHAKE-256 stream are (indistinguishable from)
     // independent of each other and the original seed, so leaking information
     // about the rejected bytes does not reveal the input or output.
-    uint32_t v;
-    if (coefficient_from_nibble<ETA>(t0, &v)) {
-      out->c[(*done)++] = v;
-    }
-    if (*done < kDegree && coefficient_from_nibble<ETA>(t1, &v)) {
-      out->c[(*done)++] = v;
+    *done += coefficient_from_nibble<ETA>(t0, &out->c[*done]);
+    if (*done < kDegree) {
+      *done += coefficient_from_nibble<ETA>(t1, &out->c[*done]);
     }
   }
 }
@@ -1283,6 +1358,29 @@ inline void scalar_uniform_x2(scalar *out[2],
     BORINGSSL_keccak_squeeze_x2(keccak_ctx, blocks, sizeof(block[0]));
     scalar_uniform_block<ETA>(out[0], &done[0], block[0]);
     scalar_uniform_block<ETA>(out[1], &done[1], block[1]);
+  }
+}
+#endif
+
+#if defined(HAVE_KECCAK_X4)
+template <int ETA>
+inline void scalar_uniform_x4(scalar *out[4],
+                              BORINGSSL_keccak_st keccak_ctx[]) {
+  for (int i = 0; i < 4; i++) {
+    assert(keccak_ctx[i].squeeze_offset == 0);
+    assert(keccak_ctx[i].rate_bytes == 136);
+  }
+
+  int done[4] = {0, 0, 0, 0};
+  while (done[0] < kDegree || done[1] < kDegree || done[2] < kDegree ||
+         done[3] < kDegree) {
+    uint8_t block[4][136];
+    uint8_t *blocks[] = {block[0], block[1], block[2], block[3]};
+    BORINGSSL_keccak_squeeze_x4(keccak_ctx, blocks, sizeof(block[0]));
+    scalar_uniform_block<ETA>(out[0], &done[0], block[0]);
+    scalar_uniform_block<ETA>(out[1], &done[1], block[1]);
+    scalar_uniform_block<ETA>(out[2], &done[2], block[2]);
+    scalar_uniform_block<ETA>(out[3], &done[3], block[3]);
   }
 }
 #endif
@@ -1383,12 +1481,41 @@ inline void matrix_expand_step_x2(matrix<K, L> *out,
 }
 #endif
 
+#if defined(HAVE_KECCAK_X4)
+template <int K, int L>
+inline void matrix_expand_step_x4(matrix<K, L> *out,
+                                  const uint8_t rho[kRhoBytes], int index) {
+  BORINGSSL_keccak_st keccak_ctx[4];
+  for (int k = 0; k < 4; k++) {
+    BORINGSSL_keccak_init(&keccak_ctx[k], boringssl_shake128);
+    BORINGSSL_keccak_absorb(&keccak_ctx[k], rho, kRhoBytes);
+    uint8_t index_buf[2];
+    index_buf[0] = static_cast<uint8_t>((index + k) % L);
+    index_buf[1] = static_cast<uint8_t>((index + k) / L);
+    BORINGSSL_keccak_absorb(&keccak_ctx[k], index_buf, 2);
+  }
+
+  scalar *outs[] = {&out->v[index / L][index % L],
+                    &out->v[(index + 1) / L][(index + 1) % L],
+                    &out->v[(index + 2) / L][(index + 2) % L],
+                    &out->v[(index + 3) / L][(index + 3) % L]};
+  scalar_from_keccak_vartime_x4(outs, keccak_ctx);
+}
+#endif
+
 template <int K, int L>
 inline void matrix_expand(matrix<K, L> *out, const uint8_t rho[kRhoBytes]) {
   static_assert(K <= 0x100, "K must fit in 8 bits");
   static_assert(L <= 0x100, "L must fit in 8 bits");
 
   int index = 0;
+#if defined(HAVE_KECCAK_X4)
+  if (BORINGSSL_have_keccak_x4()) {
+    for (; index + 4 <= K * L; index += 4) {
+      matrix_expand_step_x4<K, L>(out, rho, index);
+    }
+  }
+#endif
 #if defined(HAVE_KECCAK_X2)
   for (; index + 2 <= K * L; index += 2) {
     matrix_expand_step_x2(out, rho, index);
@@ -1437,6 +1564,27 @@ inline void vector_expand_short_step_x2(scalar *out0, scalar *out1,
 }
 #endif
 
+#if defined(HAVE_KECCAK_X4)
+template <int K>
+inline void vector_expand_short_step_x4(scalar *out0, scalar *out1,
+                                        scalar *out2, scalar *out3,
+                                        const uint8_t sigma[kSigmaBytes],
+                                        int index) {
+  BORINGSSL_keccak_st keccak_ctx[4];
+  for (int k = 0; k < 4; k++) {
+    BORINGSSL_keccak_init(&keccak_ctx[k], boringssl_shake256);
+    BORINGSSL_keccak_absorb(&keccak_ctx[k], sigma, kSigmaBytes);
+    uint8_t index_buf[2];
+    index_buf[0] = static_cast<uint8_t>(index + k);
+    index_buf[1] = 0;
+    BORINGSSL_keccak_absorb(&keccak_ctx[k], index_buf, 2);
+  }
+
+  scalar *outs[] = {out0, out1, out2, out3};
+  scalar_uniform_x4<eta<K>()>(outs, keccak_ctx);
+}
+#endif
+
 // FIPS 204, Algorithm 33 (`ExpandS`).
 template <int K, int L>
 inline void vector_expand_short(vector<L> *s1, vector<K> *s2,
@@ -1454,6 +1602,15 @@ inline void vector_expand_short(vector<L> *s1, vector<K> *s2,
   }
 
   int index = 0;
+#if defined(HAVE_KECCAK_X4)
+  if (BORINGSSL_have_keccak_x4()) {
+    for (; index + 4 <= K + L; index += 4) {
+      vector_expand_short_step_x4<K>(all_scalars[index], all_scalars[index + 1],
+                                     all_scalars[index + 2],
+                                     all_scalars[index + 3], sigma, index);
+    }
+  }
+#endif
 #if defined(HAVE_KECCAK_X2)
   for (; index + 2 <= K + L; index += 2) {
     vector_expand_short_step_x2<K>(all_scalars[index], all_scalars[index + 1],

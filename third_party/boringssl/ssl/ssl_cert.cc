@@ -77,7 +77,13 @@ UniquePtr<CERT> ssl_cert_dup(CERT *cert) {
 
 static void ssl_cert_set_cert_cb(CERT *cert, int (*cb)(SSL *ssl, void *arg),
                                  void *arg) {
-  cert->cert_cb = cb;
+  cert->cert_cb.cb = cb;
+  cert->cert_cb_arg = arg;
+}
+
+static void ssl_cert_set_cert_cb(
+    CERT *cert, int (*cb)(SSL *ssl, void *arg, uint8_t *out_alert), void *arg) {
+  cert->cert_cb.cb = cb;
   cert->cert_cb_arg = arg;
 }
 
@@ -606,6 +612,12 @@ void SSL_CTX_set_cert_cb(SSL_CTX *ctx, int (*cb)(SSL *ssl, void *arg),
   ssl_cert_set_cert_cb(FromOpaque(ctx)->cert.get(), cb, arg);
 }
 
+void SSL_CTX_set_cert_cb_ex(SSL_CTX *ctx,
+                            int (*cb)(SSL *ssl, void *arg, uint8_t *out_alert),
+                            void *arg) {
+  ssl_cert_set_cert_cb(FromOpaque(ctx)->cert.get(), cb, arg);
+}
+
 void SSL_set_cert_cb(SSL *ssl, int (*cb)(SSL *ssl, void *arg), void *arg) {
   auto *ssl_impl = FromOpaque(ssl);
   if (!ssl_impl->config) {
@@ -614,8 +626,18 @@ void SSL_set_cert_cb(SSL *ssl, int (*cb)(SSL *ssl, void *arg), void *arg) {
   ssl_cert_set_cert_cb(ssl_impl->config->cert.get(), cb, arg);
 }
 
+void SSL_set_cert_cb_ex(SSL *ssl,
+                        int (*cb)(SSL *ssl, void *arg, uint8_t *out_alert),
+                        void *arg) {
+  auto *ssl_impl = FromOpaque(ssl);
+  if (!ssl_impl->config) {
+    return;
+  }
+  ssl_cert_set_cert_cb(ssl_impl->config->cert.get(), cb, arg);
+}
+
 const STACK_OF(CRYPTO_BUFFER) *SSL_get0_peer_certificates(const SSL *ssl) {
-  SSL_SESSION *session = SSL_get_session(ssl);
+  SSLSession *session = ssl_get_session(FromOpaque(ssl));
   if (session == nullptr) {
     return nullptr;
   }

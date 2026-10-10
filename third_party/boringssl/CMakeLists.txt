@@ -845,9 +845,33 @@ if(BUILD_TESTING)
           WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
           DEPENDS run_unit_tests bssl_shim handshaker
           USES_TERMINAL)
+      if(BORINGSSL_PREFIX)
+        add_custom_target(
+          check_prefixed_symbols
+          COMMENT "Checking symbol prefixing"
+          COMMAND ${GO_EXECUTABLE}
+                  run ${CMAKE_CURRENT_SOURCE_DIR}/util/audit_symbols.go
+                  -ignore-symbols-with ${BORINGSSL_PREFIX}
+                  $<TARGET_FILE:crypto>
+                  $<TARGET_FILE:decrepit>
+                  $<TARGET_FILE:pki>
+                  $<TARGET_FILE:ssl>
+          USES_TERMINAL
+        )
+        add_dependencies(run_tests check_prefixed_symbols)
+      else()
+        add_custom_target(
+            check_prefixed_symbols
+            COMMAND ${CMAKE_COMMAND} -E echo "Symbol prefixing not enabled"
+            COMMAND ${CMAKE_COMMAND} -E false)
+      endif()
     else()
       add_custom_target(
           run_unit_tests
+          COMMAND ${CMAKE_COMMAND} -E echo "Running tests requires Go"
+          COMMAND ${CMAKE_COMMAND} -E false)
+      add_custom_target(
+          check_prefixed_symbols
           COMMAND ${CMAKE_COMMAND} -E echo "Running tests requires Go"
           COMMAND ${CMAKE_COMMAND} -E false)
       add_custom_target(
@@ -856,20 +880,6 @@ if(BUILD_TESTING)
           COMMAND ${CMAKE_COMMAND} -E false)
     endif()
   endif()
-endif()
-
-if(BORINGSSL_PREFIX)
-  require_go()
-  add_custom_target(
-    verify_boringssl_prefix ALL
-    COMMENT "Verifying symbol prefixing"
-    COMMAND ${GO_EXECUTABLE}
-            run ${CMAKE_CURRENT_SOURCE_DIR}/util/audit_symbols.go
-            -ignore-symbols-with ${BORINGSSL_PREFIX}
-            $<TARGET_FILE:crypto>
-    DEPENDS crypto
-    USES_TERMINAL
-  )
 endif()
 
 if(INSTALL_ENABLED)

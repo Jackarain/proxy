@@ -150,13 +150,6 @@ static TestData kX509CmpTests[] = {
         0,
     },
     {
-        // Timezone offset, UTCTime.
-        "170217180154+0100",
-        V_ASN1_UTCTIME,
-        0,
-        0,
-    },
-    {
         // Extra digits.
         "2017021718015400Z",
         V_ASN1_GENERALIZEDTIME,
@@ -221,13 +214,15 @@ static TestData kX509CmpTests[] = {
     },
     // Test limits and unusual cases.
     {
-        "99991231235959Z", V_ASN1_GENERALIZEDTIME,
+        "99991231235959Z",
+        V_ASN1_GENERALIZEDTIME,
         // Test a very large positive time with the largest representable time
         253402300799,
         -1,  // TODO(bbe): This is *technically* wrong by rfc5280.
     },
     {
-        "99991231235959Z", V_ASN1_GENERALIZEDTIME,
+        "99991231235959Z",
+        V_ASN1_GENERALIZEDTIME,
         // one second after the largest possible time should still compare
         // correctly
         253402300800,
@@ -297,7 +292,6 @@ static TestData kX509CmpTests[] = {
         -62167219199,
         -1,
     },
-
 };
 
 TEST(X509TimeTest, TestCmpTime) {
@@ -309,6 +303,50 @@ TEST(X509TimeTest, TestCmpTime) {
     ASSERT_TRUE(ASN1_STRING_set(t.get(), test.data, strlen(test.data)));
 
     EXPECT_EQ(test.expected, X509_cmp_time_posix(t.get(), test.cmp_time));
+    EXPECT_EQ(test.expected,
+              X509_cmp_time_posix_nonstandard(t.get(), test.cmp_time));
+  }
+}
+
+struct NonStandardTestData {
+  const char *data;
+  int type;
+  int64_t cmp_time;
+  // -1 if asn1_time <= cmp_time, 1 if asn1_time > cmp_time, 0 if error.
+  int expected;
+  int expected_nonstandard;
+};
+
+static NonStandardTestData kX509CmpNonStandardTests[] = {
+    {
+        // Timezone offset, UTCTime.
+        "170217180154+0100",
+        V_ASN1_UTCTIME,
+        1487350913,
+        0,
+        1,
+    },
+    {
+        // Timezone offset, UTCTime.
+        "170217180154+0100",
+        V_ASN1_UTCTIME,
+        1487350915,
+        0,
+        -1,
+    },
+};
+
+TEST(X509TimeTest, TestCmpTimeNonStandard) {
+  for (auto &test : kX509CmpNonStandardTests) {
+    SCOPED_TRACE(test.data);
+
+    bssl::UniquePtr<ASN1_STRING> t(ASN1_STRING_type_new(test.type));
+    ASSERT_TRUE(t);
+    ASSERT_TRUE(ASN1_STRING_set(t.get(), test.data, strlen(test.data)));
+
+    EXPECT_EQ(test.expected, X509_cmp_time_posix(t.get(), test.cmp_time));
+    EXPECT_EQ(test.expected_nonstandard,
+              X509_cmp_time_posix_nonstandard(t.get(), test.cmp_time));
   }
 }
 

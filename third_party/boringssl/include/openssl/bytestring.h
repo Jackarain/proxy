@@ -238,6 +238,7 @@ OPENSSL_EXPORT int CBS_get_u64_decimal(CBS *cbs, uint64_t *out);
 #define CBS_ASN1_OBJECT 0x6u
 #define CBS_ASN1_ENUMERATED 0xau
 #define CBS_ASN1_UTF8STRING 0xcu
+#define CBS_ASN1_RELATIVE_OID 0xdu
 #define CBS_ASN1_SEQUENCE (0x10u | CBS_ASN1_CONSTRUCTED)
 #define CBS_ASN1_SET (0x11u | CBS_ASN1_CONSTRUCTED)
 #define CBS_ASN1_NUMERICSTRING 0x12u
@@ -785,7 +786,8 @@ extern "C++" {
 
 BSSL_NAMESPACE_BEGIN
 
-using ScopedCBB = internal::StackAllocated<CBB, void, CBB_zero, CBB_cleanup>;
+BORINGSSL_MAKE_STACK_TRAITS(CBB, CBB_zero, CBB_cleanup)
+using ScopedCBB = internal::StackAllocated<CBB>;
 
 BSSL_NAMESPACE_END
 

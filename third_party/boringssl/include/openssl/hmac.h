@@ -138,8 +138,8 @@ BSSL_NAMESPACE_BEGIN
 
 BORINGSSL_MAKE_DELETER(HMAC_CTX, HMAC_CTX_free)
 
-using ScopedHMAC_CTX =
-    internal::StackAllocated<HMAC_CTX, void, HMAC_CTX_init, HMAC_CTX_cleanup>;
+BORINGSSL_MAKE_STACK_TRAITS(HMAC_CTX, HMAC_CTX_init, HMAC_CTX_cleanup)
+using ScopedHMAC_CTX = internal::StackAllocated<HMAC_CTX>;
 
 BSSL_NAMESPACE_END
 

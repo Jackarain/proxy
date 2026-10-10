@@ -56,6 +56,11 @@ struct OPENSSL_EXPORT TrustedSubtree {
   std::array<uint8_t, SHA256_DIGEST_LENGTH> hash;
 };
 
+struct OPENSSL_EXPORT LogTrustedSubtrees {
+  uint16_t log_number;
+  std::vector<TrustedSubtree> trusted_subtrees;
+};
+
 // Describes the level of trust in a certificate.
 struct OPENSSL_EXPORT CertificateTrust {
   static constexpr CertificateTrust ForTrustAnchor() {
@@ -146,48 +151,63 @@ struct OPENSSL_EXPORT CertificateTrust {
 class OPENSSL_EXPORT MTCAnchor {
  public:
   enum MtcSpecVersion {
-    // draft-davidben-tls-merkle-tree-certs-08
-    kDavidben08,
     // draft-ietf-plants-merkle-tree-certs-04
-    kPlants04
+    kPlants04,
+
+    // draft-ietf-plants-merkle-tree-certs-07
+    kPlants07
   };
-  // Create an MTCAnchor with spec version kDavidben08 for a trusted log with
-  // `log_id` containing the DER encoding of the relative OID of the log's ID.
-  // The `trusted_subtrees` must be sorted by their subtree ranges.
-  MTCAnchor(Span<const uint8_t> log_id,
-            Span<const TrustedSubtree> trusted_subtrees);
+
+  class Token {
+   private:
+    explicit Token() = default;
+    friend MTCAnchor;
+  };
 
   // Create an MTCAnchor with spec version kPlants04 for a trusted CA with
   // `ca_id` containing the DER encoding of the relative OID of the CA's ID.
   // `ca_signature_algorithm` and `ca_key` configure the CA cosigner key.
   // `ca_key` should be a DER-encoded SubjectPublicKeyInfo.
-  // The `trusted_subtrees` must be sorted by their subtree ranges.
+  // The `log_trusted_subtrees` must be sorted by log number, and each
+  // `trusted_subtrees` within must be sorted by their subtree ranges.
   MTCAnchor(Span<const uint8_t> ca_id,
             SignatureAlgorithm ca_signature_algorithm,
             UniquePtr<CRYPTO_BUFFER> ca_key,
-            std::map<uint16_t, std::vector<TrustedSubtree>> trusted_subtrees);
+            std::vector<LogTrustedSubtrees> log_trusted_subtrees);
+
+  // Create an MTCAnchor with spec version kPlants07 for a trusted CA with
+  // `ca_id` containing the DER encoding of the relative OID of the CA's ID.
+  // `ca_signature_algorithm` and `ca_key` configure the CA cosigner key.
+  // `ca_key` should be a DER-encoded SubjectPublicKeyInfo.
+  // The `log_trusted_subtrees` must be sorted by log number, and each
+  // `trusted_subtrees` within must be sorted by their subtree ranges.
+  // Returns nullptr on error.
+  static std::shared_ptr<const MTCAnchor> CreatePlants07(
+      Span<const uint8_t> ca_id, SignatureAlgorithm ca_signature_algorithm,
+      UniquePtr<CRYPTO_BUFFER> ca_key,
+      std::vector<LogTrustedSubtrees> log_trusted_subtrees);
+
+  // This constructor is conceptually private, but needs to be public for
+  // make_shared to work. Uses the "passkey idiom" to prevent callers outside
+  // of the class from calling it.
+  // Outside callers should use the Create* static method(s).
+  MTCAnchor(Token, MtcSpecVersion spec_version, Span<const uint8_t> ca_id,
+            SignatureAlgorithm ca_signature_algorithm,
+            UniquePtr<CRYPTO_BUFFER> ca_key,
+            std::vector<LogTrustedSubtrees> log_trusted_subtrees);
 
   // Returns whether this MTCAnchor represents a valid anchor. This function
   // exists because the c'tor inputs could be invalid.
+  // TODO(mattm): remove public constructor and remove or private the IsValid
+  // method.
   bool IsValid() const;
 
   MtcSpecVersion spec_version() const { return spec_version_; }
-  Span<const uint8_t> log_id() const {
-    BSSL_CHECK(spec_version_ == kDavidben08);
-    return ca_id_;
-  }
-  Span<const uint8_t> ca_id() const {
-    BSSL_CHECK(spec_version_ == kPlants04);
-    return ca_id_;
-  }
+  Span<const uint8_t> ca_id() const { return ca_id_; }
   SignatureAlgorithm ca_signature_algorithm() const {
-    BSSL_CHECK(spec_version_ == kPlants04);
     return ca_signature_algorithm_;
   }
-  const CRYPTO_BUFFER* ca_key() const {
-    BSSL_CHECK(spec_version_ == kPlants04);
-    return ca_key_.get();
-  }
+  const CRYPTO_BUFFER *ca_key() const { return ca_key_.get(); }
   // TODO(nharper): Move this function to TrustAnchor.
   der::Input NormalizedSubject() const;
   // TODO(nharper): Remove this function in favor of TrustAnchor's version.
@@ -195,26 +215,19 @@ class OPENSSL_EXPORT MTCAnchor {
   // TODO(nharper): Move this function to TrustAnchor.
   std::shared_ptr<const ParsedCertificate> AsCert() const;
 
-  // Only valid for spec version kDavidben08.
-  std::optional<TreeHashConstSpan> SubtreeHash(Subtree target_range) const;
-  // Only valid for spec version kPlants04.
   std::optional<TreeHashConstSpan> SubtreeHash(uint16_t log_number,
                                                Subtree target_range) const;
+  std::string TrustedSubtreesDebugString() const;
 
  private:
   void CreateSyntheticCert(Span<const uint8_t> ca_id);
 
-
   MtcSpecVersion spec_version_;
-  // (If spec_version_ == kDavidben08, `ca_id` is actually the log id.)
   std::vector<uint8_t> ca_id_;
   SignatureAlgorithm ca_signature_algorithm_;
   UniquePtr<CRYPTO_BUFFER> ca_key_;
   std::shared_ptr<const ParsedCertificate> synthetic_cert_;
-  // If spec_version_ == kDavidben08, the 0th entry in the map will have the
-  // trusted subtrees. Otherwise, this maps from the log_number to the trusted
-  // subtrees for that log.
-  std::map<uint16_t, std::vector<TrustedSubtree>> trusted_subtrees_;
+  std::vector<LogTrustedSubtrees> trusted_subtrees_;
 };
 
 // A TrustAnchor contains information about how a trust anchor is trusted and

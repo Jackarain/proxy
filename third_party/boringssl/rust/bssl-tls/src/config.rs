@@ -16,7 +16,7 @@
 
 use core::ffi::c_int;
 
-use bssl_macros::bssl_enum;
+use bssl_crypto::bssl_enum;
 
 bssl_enum! {
     /// Protocol version for TLS or DTLS
@@ -88,6 +88,36 @@ bitflags::bitflags! {
         /// `EQUAL_PREFERENCE_WITH_NEXT` indicates that the corresponding group has equal preference
         /// with the next member of the list of groups being configured.
         const EQUAL_PREFERENCE_WITH_NEXT = 0x01;
+    }
+}
+
+bssl_enum! {
+    /// DTLS-SRTP protection profiles per [RFC 5764] and [RFC 7714].
+    ///
+    /// [RFC 5764]: <https://datatracker.ietf.org/doc/html/rfc5764>
+    /// [RFC 7714]: <https://datatracker.ietf.org/doc/html/rfc7714>
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+    #[non_exhaustive]
+    pub enum SrtpProtectionProfile: u16 {
+        /// `SRTP_AES128_CM_HMAC_SHA1_80`
+        Aes128CmSha1_80 = bssl_sys::SRTP_AES128_CM_SHA1_80 as u16,
+        /// `SRTP_AES128_CM_HMAC_SHA1_32`
+        Aes128CmSha1_32 = bssl_sys::SRTP_AES128_CM_SHA1_32 as u16,
+        /// `SRTP_AEAD_AES_128_GCM`
+        AeadAes128Gcm = bssl_sys::SRTP_AEAD_AES_128_GCM as u16,
+        /// `SRTP_AEAD_AES_256_GCM`
+        AeadAes256Gcm = bssl_sys::SRTP_AEAD_AES_256_GCM as u16,
+    }
+}
+
+impl SrtpProtectionProfile {
+    pub(crate) const fn bssl_name(self) -> &'static str {
+        match self {
+            Self::Aes128CmSha1_80 => "SRTP_AES128_CM_SHA1_80",
+            Self::Aes128CmSha1_32 => "SRTP_AES128_CM_SHA1_32",
+            Self::AeadAes128Gcm => "SRTP_AEAD_AES_128_GCM",
+            Self::AeadAes256Gcm => "SRTP_AEAD_AES_256_GCM",
+        }
     }
 }
 

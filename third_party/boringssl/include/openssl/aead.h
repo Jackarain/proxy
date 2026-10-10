@@ -398,26 +398,20 @@ OPENSSL_EXPORT int EVP_AEAD_CTX_open_gather(
     size_t in_tag_len, const uint8_t *ad, size_t ad_len);
 
 // crypto_ivec_st (aka `CRYPTO_IVEC`) combines a pointer to input data with its
-// length. It is usually passed as an array of length of at most
-// `CRYPTO_IOVEC_MAX`.
+// length. It is usually passed as an array.
 struct crypto_ivec_st {
   const uint8_t *in;
   size_t len;
 };
 
 // crypto_iovec_st (aka `CRYPTO_IOVEC` combines a pointer to input data and a
-// pointer to an output buffer with their common length. It is usually passed
-// as an array of length of at most `CRYPTO_IOVEC_MAX`.
+// pointer to an output buffer with their common length.
 struct crypto_iovec_st {
   // `out` and `in` must be disjoint or equal
   uint8_t *out;
   const uint8_t *in;
   size_t len;
 };
-
-// CRYPTO_IOVEC_MAX is the maximum number of entries in an `CRYPTO_IOVEC` or
-// `CRYPTO_IVEC` parameter.
-#define CRYPTO_IOVEC_MAX 16
 
 // EVP_AEAD_CTX_sealv encrypts and authenticates the `in` bytes from `iovec`
 // and authenticates the `aadvec` bytes. It writes the same amount of
@@ -450,8 +444,6 @@ struct crypto_iovec_st {
 // directly or via `iovec` and `aadvec`, with the one exception that it is
 // permitted for the same `iovec` member's `in` and `out` members to be equal
 // (in-place operation).
-//
-// `num_iovec` and `num_aadvec` must be <= `CRYPTO_IOVEC_MAX`.
 OPENSSL_EXPORT
 int EVP_AEAD_CTX_sealv(const EVP_AEAD_CTX *ctx, const CRYPTO_IOVEC *iovec,
                        size_t num_iovec, uint8_t *out_tag, size_t *out_tag_len,
@@ -493,8 +485,6 @@ int EVP_AEAD_CTX_sealv(const EVP_AEAD_CTX *ctx, const CRYPTO_IOVEC *iovec,
 // directly or via `iovec` and `aadvec`, with the one exception that it is
 // permitted for the same `iovec` member's `in` and `out` members to be equal
 // (in-place operation).
-//
-// `num_iovec` and `num_aadvec` must be <= `CRYPTO_IOVEC_MAX`.
 OPENSSL_EXPORT
 int EVP_AEAD_CTX_openv(const EVP_AEAD_CTX *ctx, const CRYPTO_IOVEC *iovec,
                        size_t num_iovec, size_t *out_total_bytes,
@@ -531,8 +521,6 @@ int EVP_AEAD_CTX_openv(const EVP_AEAD_CTX *ctx, const CRYPTO_IOVEC *iovec,
 // directly or via `iovec` and `aadvec`, with the one exception that it is
 // permitted for the same `iovec` member's `in` and `out` members to be equal
 // (in-place operation).
-//
-// `num_iovec` and `num_aadvec` must be <= `CRYPTO_IOVEC_MAX`.
 OPENSSL_EXPORT
 int EVP_AEAD_CTX_openv_detached(const EVP_AEAD_CTX *ctx,
                                 const CRYPTO_IOVEC *iovec, size_t num_iovec,
@@ -646,9 +634,9 @@ extern "C++" {
 
 BSSL_NAMESPACE_BEGIN
 
-using ScopedEVP_AEAD_CTX =
-    internal::StackAllocated<EVP_AEAD_CTX, void, EVP_AEAD_CTX_zero,
-                             EVP_AEAD_CTX_cleanup>;
+BORINGSSL_MAKE_STACK_TRAITS(EVP_AEAD_CTX, EVP_AEAD_CTX_zero,
+                            EVP_AEAD_CTX_cleanup)
+using ScopedEVP_AEAD_CTX = internal::StackAllocated<EVP_AEAD_CTX>;
 
 BORINGSSL_MAKE_DELETER(EVP_AEAD_CTX, EVP_AEAD_CTX_free)
 

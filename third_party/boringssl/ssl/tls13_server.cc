@@ -36,6 +36,26 @@
 
 BSSL_NAMESPACE_BEGIN
 
+enum tls13_server_hs_state_t {
+  state13_select_parameters = 0,
+  state13_select_session,
+  state13_send_hello_retry_request,
+  state13_read_second_client_hello,
+  state13_send_server_hello,
+  state13_send_server_certificate_verify,
+  state13_send_server_finished,
+  state13_send_half_rtt_ticket,
+  state13_read_second_client_flight,
+  state13_process_end_of_early_data,
+  state13_read_client_encrypted_extensions,
+  state13_read_client_certificate,
+  state13_read_client_certificate_verify,
+  state13_read_channel_id,
+  state13_read_client_finished,
+  state13_send_new_session_ticket,
+  state13_done,
+};
+
 static const uint8_t kZeroes[EVP_MAX_MD_SIZE] = {0};
 
 // Allow a minute of ticket age skew in either direction. This covers
@@ -136,21 +156,6 @@ static int ssl_ext_supported_versions_add_serverhello(SSL_HANDSHAKE *hs,
   return 1;
 }
 
-static const SSL_CIPHER *choose_tls13_cipher(
-    const SSLImpl *ssl, const SSL_CLIENT_HELLO *client_hello) {
-  CBS cipher_suites;
-  CBS_init(&cipher_suites, client_hello->cipher_suites,
-           client_hello->cipher_suites_len);
-
-  const uint16_t version = ssl_protocol_version(ssl);
-
-  return ssl_choose_tls13_cipher(cipher_suites,
-                                 ssl->config->aes_hw_override
-                                     ? ssl->config->aes_hw_override_value
-                                     : EVP_has_aes_hardware(),
-                                 version, ssl->config->compliance_policy);
-}
-
 static bool add_new_session_tickets(SSL_HANDSHAKE *hs, bool *out_sent_tickets) {
   SSLImpl *const ssl = hs->ssl;
   if (  // If the client doesn't accept resumption with PSK_DHE_KE, don't send a
@@ -173,7 +178,7 @@ static bool add_new_session_tickets(SSL_HANDSHAKE *hs, bool *out_sent_tickets) {
   assert(ssl->session_ctx->num_tickets <= kMaxTickets);
   bool sent_tickets = false;
   for (size_t i = 0; i < ssl->session_ctx->num_tickets; i++) {
-    UniquePtr<SSL_SESSION> session(
+    UniquePtr<SSLSession> session(
         SSL_SESSION_dup(hs->new_session.get(), SSL_SESSION_INCLUDE_NONAUTH));
     if (!session) {
       return false;
@@ -391,7 +396,12 @@ static enum ssl_hs_wait_t do_select_parameters(SSL_HANDSHAKE *hs) {
   }
 
   // Negotiate the cipher suite. This must happen before negotiating PSKs.
-  hs->new_cipher = choose_tls13_cipher(ssl, &client_hello);
+  CBS client_cipher_list;
+  CBS_init(&client_cipher_list, client_hello.cipher_suites,
+           client_hello.cipher_suites_len);
+  hs->new_cipher = ssl->config->tls13_cipher_list.ChooseCipher(
+      &client_cipher_list, /*prioritize_client_pref=*/false,
+      ssl_protocol_version(ssl), SSL_kGENERIC, SSL_aGENERIC);
   if (hs->new_cipher == nullptr) {
     OPENSSL_PUT_ERROR(SSL, SSL_R_NO_SHARED_CIPHER);
     ssl_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_HANDSHAKE_FAILURE);
@@ -479,7 +489,7 @@ static enum ssl_hs_wait_t do_select_parameters(SSL_HANDSHAKE *hs) {
 }
 
 static enum ssl_ticket_aead_result_t select_session(
-    SSL_HANDSHAKE *hs, uint8_t *out_alert, UniquePtr<SSL_SESSION> *out_session,
+    SSL_HANDSHAKE *hs, uint8_t *out_alert, UniquePtr<SSLSession> *out_session,
     int32_t *out_ticket_age_skew, bool *out_offered_ticket,
     const SSLMessage &msg, const SSL_CLIENT_HELLO *client_hello) {
   SSLImpl *const ssl = hs->ssl;
@@ -530,7 +540,7 @@ static enum ssl_ticket_aead_result_t select_session(
   // tickets are renewed separately as part of the NewSessionTicket. Also save
   // the ticket so we can find the PSK again on the second ClientHello.
   bool unused_renew;
-  UniquePtr<SSL_SESSION> session;
+  UniquePtr<SSLSession> session;
   enum ssl_ticket_aead_result_t ret =
       ssl_process_ticket(hs, &session, &unused_renew, psk->identity,
                          /*session_id=*/{}, /*save_ticket=*/true);
@@ -573,7 +583,7 @@ static enum ssl_ticket_aead_result_t select_session(
   return ssl_ticket_aead_success;
 }
 
-static bool quic_ticket_compatible(const SSL_SESSION *session,
+static bool quic_ticket_compatible(const SSLSession *session,
                                    const SSL_CONFIG *config) {
   if (!session->is_quic) {
     return true;
@@ -603,7 +613,7 @@ static enum ssl_hs_wait_t do_select_session(SSL_HANDSHAKE *hs) {
   }
 
   uint8_t alert = SSL_AD_DECODE_ERROR;
-  UniquePtr<SSL_SESSION> session;
+  UniquePtr<SSLSession> session;
   bool offered_ticket = false;
   switch (select_session(hs, &alert, &session, &ssl->s3->ticket_age_skew,
                          &offered_ticket, msg, &client_hello)) {
@@ -1165,7 +1175,7 @@ static enum ssl_hs_wait_t do_send_server_finished(SSL_HANDSHAKE *hs) {
   }
 
   hs->tls13_state = state13_send_half_rtt_ticket;
-  return hs->handback ? ssl_hs_handback : ssl_hs_ok;
+  return ssl_hs_ok;
 }
 
 static enum ssl_hs_wait_t do_send_half_rtt_ticket(SSL_HANDSHAKE *hs) {

@@ -276,10 +276,10 @@ void bssl::CRYPTO_gcm128_init_aes_key(GCM128_KEY *gcm_key, const uint8_t *key,
 
 #if !defined(OPENSSL_NO_ASM)
 #if defined(OPENSSL_X86_64)
-  if (gcm_key->ghash == gcm_ghash_vpclmulqdq_avx512 &&
+  if (gcm_key->ghash == gcm_ghash_vpclmulqdq_avx512 && is_hwaes &&
       CRYPTO_is_VAES_capable()) {
     gcm_key->impl = gcm_x86_vaes_avx512;
-  } else if (gcm_key->ghash == gcm_ghash_vpclmulqdq_avx2 &&
+  } else if (gcm_key->ghash == gcm_ghash_vpclmulqdq_avx2 && is_hwaes &&
              CRYPTO_is_VAES_capable()) {
     gcm_key->impl = gcm_x86_vaes_avx2;
   } else if (gcm_key->ghash == gcm_ghash_avx && is_hwaes) {

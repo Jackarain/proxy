@@ -24,6 +24,7 @@
 #include <openssl/base.h>
 #include <openssl/curve25519.h>
 #include <openssl/digest.h>
+#include <openssl/ec.h>
 #include <openssl/err.h>
 #include <openssl/evp.h>
 #include <openssl/rand.h>
@@ -152,6 +153,16 @@ class HPKETestVector {
       }
 
       VerifyRecipient(recipient_ctx.get());
+
+      // Test the recipient made directly with the pre-computed shared secret.
+      if (mode_ == Mode::kBase) {
+        ScopedEVP_HPKE_CTX recipient_ctx_shared_secret;
+        ASSERT_TRUE(EVP_HPKE_CTX_setup_recipient_with_shared_secret(
+            recipient_ctx_shared_secret.get(), kem, kdf, aead,
+            shared_secret_.data(), shared_secret_.size(), info_.data(),
+            info_.size()));
+        VerifyRecipient(recipient_ctx_shared_secret.get());
+      }
     }
   }
 
@@ -247,6 +258,7 @@ class HPKETestVector {
   std::vector<uint8_t> context_;
   std::vector<uint8_t> info_;
   std::vector<uint8_t> enc_;
+  std::vector<uint8_t> shared_secret_;
   std::vector<uint8_t> sender_seed_;
   std::vector<uint8_t> public_key_r_;
   std::vector<uint8_t> secret_key_r_;
@@ -300,6 +312,7 @@ bool HPKETestVector::ReadFromFileTest(FileTest *t) {
       !t->GetBytes(&public_key_r_, "pkRm") ||
       !t->GetBytes(&ikm_r_, "ikmR") ||  //
       !t->GetBytes(&sender_seed_, "sender_seed") ||
+      !t->GetBytes(&shared_secret_, "shared_secret") ||
       !t->GetBytes(&enc_, "enc")) {
     return false;
   }
@@ -660,11 +673,13 @@ TEST(HPKETest, InvalidP256PrivateKey) {
   ScopedEVP_HPKE_KEY key;
   EXPECT_FALSE(EVP_HPKE_KEY_init(key.get(), EVP_hpke_p256_hkdf_sha256(),
                                  zero_key, sizeof(zero_key)));
+  EXPECT_TRUE(ErrorsAreAndClear({{ERR_LIB_EVP, EVP_R_DECODE_ERROR}}));
 
   uint8_t all_ones_key[32];
   OPENSSL_memset(all_ones_key, 0xff, sizeof(all_ones_key));
   EXPECT_FALSE(EVP_HPKE_KEY_init(key.get(), EVP_hpke_p256_hkdf_sha256(),
                                  all_ones_key, sizeof(all_ones_key)));
+  EXPECT_TRUE(ErrorsAreAndClear({{ERR_LIB_EC, EC_R_INVALID_SCALAR}}));
 }
 
 TEST(HPKETest, InternalParseIntSafe) {
@@ -687,6 +702,42 @@ TEST(HPKETest, InternalParseIntSafe) {
   ASSERT_EQ(u16, 65535);
 
   ASSERT_FALSE(ParseIntSafe(&u16, "65536"));
+}
+
+TEST(HPKETest, SetupRecipientWithSharedSecret) {
+  for (const auto kem_func : kAllKEMs) {
+    const EVP_HPKE_KEM *kem = kem_func();
+    SCOPED_TRACE(EVP_HPKE_KEM_id(kem));
+
+    EXPECT_EQ(EVP_HPKE_KEM_shared_secret_len(kem), 32u);
+
+    // Test buffer size validation on setup_recipient_with_shared_secret:
+    ScopedEVP_HPKE_CTX ctx;
+    uint8_t short_secret[31] = {0};
+    uint8_t long_secret[33] = {0};
+    EXPECT_FALSE(EVP_HPKE_CTX_setup_recipient_with_shared_secret(
+        ctx.get(), kem, EVP_hpke_hkdf_sha256(), EVP_hpke_aes_128_gcm(),
+        short_secret, sizeof(short_secret), nullptr, 0));
+    EXPECT_TRUE(
+        ErrorEquals(ERR_get_error(), ERR_LIB_EVP, EVP_R_INVALID_BUFFER_SIZE));
+    ERR_clear_error();
+
+    EXPECT_FALSE(EVP_HPKE_CTX_setup_recipient_with_shared_secret(
+        ctx.get(), kem, EVP_hpke_hkdf_sha256(), EVP_hpke_aes_128_gcm(),
+        long_secret, sizeof(long_secret), nullptr, 0));
+    EXPECT_TRUE(
+        ErrorEquals(ERR_get_error(), ERR_LIB_EVP, EVP_R_INVALID_BUFFER_SIZE));
+    ERR_clear_error();
+
+    // Verify that calling EVP_HPKE_CTX_cleanup on failure is safe even if ctx
+    // was uninitialized.
+    EVP_HPKE_CTX uninit_ctx;
+    EXPECT_FALSE(EVP_HPKE_CTX_setup_recipient_with_shared_secret(
+        &uninit_ctx, kem, EVP_hpke_hkdf_sha256(), EVP_hpke_aes_128_gcm(),
+        short_secret, sizeof(short_secret), nullptr, 0));
+    EVP_HPKE_CTX_cleanup(&uninit_ctx);
+    ERR_clear_error();
+  }
 }
 
 BSSL_NAMESPACE_END

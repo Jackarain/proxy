@@ -259,12 +259,14 @@ pub(crate) unsafe extern "C" fn complete<Method: PrivateKeyMethods>(
                     // Safety: `out_len` is a valid pointer by BoringSSL invariant.
                     *out_len = len;
                 }
+                task.take();
                 bssl_sys::ssl_private_key_result_t_ssl_private_key_success
             }
             PrivateKeyOperationResult::Pending => {
                 bssl_sys::ssl_private_key_result_t_ssl_private_key_retry
             }
             PrivateKeyOperationResult::Error => {
+                task.take();
                 bssl_sys::ssl_private_key_result_t_ssl_private_key_failure
             }
         }

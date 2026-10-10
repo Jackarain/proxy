@@ -621,8 +621,7 @@ bool ssl_is_valid_ech_config_list(Span<const uint8_t> ech_config_list) {
 
 static bool select_ech_cipher_suite(const EVP_HPKE_KDF **out_kdf,
                                     const EVP_HPKE_AEAD **out_aead,
-                                    Span<const uint8_t> cipher_suites,
-                                    const bool has_aes_hardware) {
+                                    Span<const uint8_t> cipher_suites) {
   const EVP_HPKE_AEAD *aead = nullptr;
   CBS cbs = cipher_suites;
   while (CBS_len(&cbs) != 0) {
@@ -638,7 +637,7 @@ static bool select_ech_cipher_suite(const EVP_HPKE_KDF **out_kdf,
       continue;
     }
     if (aead == nullptr ||
-        (!has_aes_hardware && aead_id == EVP_HPKE_CHACHA20_POLY1305)) {
+        (!EVP_has_aes_hardware() && aead_id == EVP_HPKE_CHACHA20_POLY1305)) {
       aead = candidate;
     }
   }
@@ -684,10 +683,7 @@ bool ssl_select_ech_config(SSL_HANDSHAKE *hs, Span<uint8_t> out_enc,
       const EVP_HPKE_AEAD *aead;
       if (supported &&  //
           ech_config.kem_id == EVP_HPKE_DHKEM_X25519_HKDF_SHA256 &&
-          select_ech_cipher_suite(&kdf, &aead, ech_config.cipher_suites,
-                                  hs->ssl->config->aes_hw_override
-                                      ? hs->ssl->config->aes_hw_override_value
-                                      : EVP_has_aes_hardware())) {
+          select_ech_cipher_suite(&kdf, &aead, ech_config.cipher_suites)) {
         ScopedCBB info;
         static const uint8_t kInfoLabel[] = "tls ech";  // includes trailing NUL
         if (!CBB_init(info.get(), sizeof(kInfoLabel) + ech_config.raw.size()) ||
@@ -745,11 +741,9 @@ static bool setup_ech_grease(SSL_HANDSHAKE *hs) {
   }
 
   const uint16_t kdf_id = EVP_HPKE_HKDF_SHA256;
-  const bool has_aes_hw = hs->ssl->config->aes_hw_override
-                              ? hs->ssl->config->aes_hw_override_value
-                              : EVP_has_aes_hardware();
-  const EVP_HPKE_AEAD *aead =
-      has_aes_hw ? EVP_hpke_aes_128_gcm() : EVP_hpke_chacha20_poly1305();
+  const EVP_HPKE_AEAD *aead = EVP_has_aes_hardware()
+                                  ? EVP_hpke_aes_128_gcm()
+                                  : EVP_hpke_chacha20_poly1305();
   static_assert(ssl_grease_ech_config_id < sizeof(hs->grease_seed),
                 "hs->grease_seed is too small");
   uint8_t config_id = hs->grease_seed[ssl_grease_ech_config_id];
@@ -1029,6 +1023,15 @@ SSL_ECH_KEYS *SSL_ECH_KEYS_new() { return New<SSLECHKeys>(); }
 
 void SSL_ECH_KEYS_up_ref(SSL_ECH_KEYS *keys) {
   FromOpaque(keys)->UpRefInternal();
+}
+
+SSL_ECH_KEYS *SSL_ECH_KEYS_dup_ref(const SSL_ECH_KEYS *keys) {
+  if (keys == nullptr) {
+    return nullptr;
+  }
+  auto *ptr = const_cast<SSL_ECH_KEYS *>(keys);
+  SSL_ECH_KEYS_up_ref(ptr);
+  return ptr;
 }
 
 void SSL_ECH_KEYS_free(SSL_ECH_KEYS *keys) {

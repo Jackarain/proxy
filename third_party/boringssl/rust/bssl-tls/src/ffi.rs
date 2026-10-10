@@ -33,10 +33,7 @@ use bssl_crypto::{
 
 use crate::{
     context::CertificateCache,
-    errors::{
-        Error,
-        IoError, //
-    }, //
+    errors::Error, //
 };
 
 pub(crate) fn slice_into_ffi_raw_parts<T>(slice: &[T]) -> (*const T, usize) {
@@ -97,21 +94,18 @@ impl<'a> Bio<'a> {
         Bio(bio, PhantomData)
     }
 
-    pub fn from_bytes(buf: &'a [u8]) -> Result<Self, Error> {
-        let len = if let Ok(len) = buf.len().try_into() {
-            len
-        } else {
-            return Err(Error::Io(IoError::TooLong));
-        };
+    pub fn from_bytes(buf: &'a [u8]) -> Self {
+        #[allow(clippy::expect_used, reason = "breach of fundamental invariant")]
+        let len = buf.len().try_into().expect("impossible allocation size");
         let mem_buf = unsafe {
             // Safety: buf is still valid
             bssl_sys::BIO_new_mem_buf(buf.as_ffi_void_ptr(), len)
         };
         let mem_buf = NonNull::new(mem_buf).expect("allocation failure");
-        Ok(unsafe {
+        unsafe {
             // Safety: our returned object is outlived by the input buffer.
             Self::new(mem_buf)
-        })
+        }
     }
 
     pub fn ptr(&mut self) -> *mut bssl_sys::BIO {
@@ -135,6 +129,9 @@ pub struct ReceiveBuffer<'a> {
     cursor: usize,
     _p: PhantomData<&'a mut [u8]>,
 }
+
+// Safety: by construction `ReceiveBuffer` owns the buffer region for exclusive access.
+unsafe impl Send for ReceiveBuffer<'_> {}
 
 impl<'a> ReceiveBuffer<'a> {
     /// Create a new receiver buffer, with uninitialised bytes.

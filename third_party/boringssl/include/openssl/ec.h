@@ -342,9 +342,33 @@ OPENSSL_EXPORT int EC_encode_to_curve_p384_xmd_sha384_sswu(
 // returns one on success and zero on error. `salt` is the HKDF-Extract salt,
 // which is the SSID. `ikm` is the HKDF-Extract input, or password and
 // identifier concatenation.
+//
+// This generates the PT value. The PWE value still requires multiplication by
+// the hashed MAC addresses.
 OPENSSL_EXPORT int EC_wpa3_sae_hash_to_curve_p256(
     const EC_GROUP *group, EC_POINT *out, const uint8_t *salt, size_t salt_len,
     const uint8_t *ikm, size_t ikm_len);
+
+// EC_wpa3_sae_hunt_and_peck_p256 hashes `salt` and `password` to a point on
+// `group` and writes the result to `out`, using the WPA3 "hunt and peck"
+// algorithm defined in IEEE Std 802.11-2020, Section 12.4.4.2.2. It returns one
+// on success and zero on error. `group` must be P-256. `salt` is the
+// HKDF-Extract salt, which is the MAC concatenation. `password` is the
+// password, used to compute the HKDF-Extract input.
+//
+// Unlike a proper hash-to-curve construction, this algorithm is based on
+// rejection sampling and cannot run in time independent of `in`. To reduce
+// information leakage, the number of iterations is blinded up to
+// `min_iterations`. If at most `min_iterations` are needed to find a point,
+// only this fact is leaked. However, past `min_iterations`, the number of
+// iterations used may be leaked as a side channel.
+//
+// Each iteration has a roughly 50% probability of finding an output. For
+// example, a 64 iteration minimum reduces the chance of leak to 2^-64. However,
+// running time scales linearly with `min_iterations`.
+OPENSSL_EXPORT int EC_wpa3_sae_hunt_and_peck_p256(
+    const EC_GROUP *group, EC_POINT *out, const uint8_t *salt, size_t salt_len,
+    const uint8_t *password, size_t password_len, uint8_t min_iterations);
 
 
 // Deprecated functions.

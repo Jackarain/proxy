@@ -48,17 +48,20 @@ import (
 var skipWeakSymbols = []*regexp.Regexp{
 	// Symbols on Linux and other platforms with IA-64 name mangling.
 	regexp.MustCompile(`^DW\.ref\.__gxx_personality_.*`), // libstdc++ exception handling
+	regexp.MustCompile(`^_Z4ceil.*`),                     // ceil()
 	regexp.MustCompile(`^_Z6memchr.*`),                   // memchr()
 	regexp.MustCompile(`^_Z6strchr.*`),                   // strchr()
 	regexp.MustCompile(`^_ZNr?V?K?9__gnu_cxx.*`),         // __gnu_cxx::
 	regexp.MustCompile(`^_ZTI.*`),                        // typeinfo
 	regexp.MustCompile(`^_ZTS.*`),                        // typeinfo name
 	regexp.MustCompile(`^_ZTV.*`),                        // vtable
+	regexp.MustCompile(`^_ZTv.*`),                        // virtual thunks
 	regexp.MustCompile(`^_Z[A-Z]*St.*`),                  // std::
 	regexp.MustCompile(`^_Zd.*`),                         // operator delete()
 	regexp.MustCompile(`^_Zn.*`),                         // operator new()
 	regexp.MustCompile(`^__\w+\.get_pc_thunk\..*`),       // PIC
 	regexp.MustCompile(`^___asan_.*`),                    // AddressSanitizer
+	regexp.MustCompile(`^__clang_call_terminate$`),       // noexcept boundaries
 	regexp.MustCompile(`^__cxa_.*`),                      // libc++abi
 	regexp.MustCompile(`^__dynamic_cast$`),               // libc++abi
 	regexp.MustCompile(`^__emutls_get_address$`),         // emulated TLS
@@ -88,10 +91,12 @@ var skipWeakSymbols = []*regexp.Regexp{
 	regexp.MustCompile(`^_real$`),                                       // Number literals
 	regexp.MustCompile(`^_vfprintf_l$`),                                 // vfprintf()
 	regexp.MustCompile(`^_xmm$`),                                        // SSE
+	regexp.MustCompile(`^ceilf$`),                                       // std::unordered_* uses this
 	regexp.MustCompile(`^fprintf$`),                                     // fprintf()
 	regexp.MustCompile(`^snprintf$`),                                    // snprintf()
 	regexp.MustCompile(`^time$`),                                        // MSVC 14.50+ CRT
 	regexp.MustCompile(`^vsnprintf$`),                                   // vsnprintf()
+	regexp.MustCompile(`^wmemchr$`),                                     // wmemchr()
 
 	// Symbols in the FIPS module.
 	// They are provided for tooling only and should not be read internally.
@@ -140,6 +145,9 @@ func guessArchiveFiles() []string {
 	for _, name := range []string{
 		// List of libraries for which symbol prefixing is stable.
 		"crypto",
+		"decrepit",
+		"pki",
+		"ssl",
 	} {
 		found := ""
 		// Trying patterns for all platforms as the current build might be a cross compile.

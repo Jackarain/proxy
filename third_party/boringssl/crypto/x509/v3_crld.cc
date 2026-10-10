@@ -286,27 +286,10 @@ static void *v2i_crld(const X509V3_EXT_METHOD *method, const X509V3_CTX *ctx,
   return crld.release();
 }
 
-static int dpn_cb(int operation, ASN1_VALUE **pval, const ASN1_ITEM *it,
-                  void *exarg) {
-  DIST_POINT_NAME *dpn = asn1_load_ptr_as<DIST_POINT_NAME>(pval);
-
-  switch (operation) {
-    case ASN1_OP_NEW_POST:
-      dpn->dpname = nullptr;
-      break;
-
-    case ASN1_OP_FREE_POST:
-      X509_NAME_free(dpn->dpname);
-      break;
-  }
-  return 1;
-}
-
-
-ASN1_CHOICE_cb(DIST_POINT_NAME, dpn_cb) = {
+ASN1_CHOICE(DIST_POINT_NAME) = {
     ASN1_IMP_SEQUENCE_OF(DIST_POINT_NAME, name.fullname, GENERAL_NAME, 0),
     ASN1_IMP_SET_OF(DIST_POINT_NAME, name.relativename, X509_NAME_ENTRY, 1),
-} ASN1_CHOICE_END_cb(DIST_POINT_NAME, DIST_POINT_NAME, type)
+} ASN1_CHOICE_END(DIST_POINT_NAME)
 
 IMPLEMENT_ASN1_ALLOC_FUNCTIONS(DIST_POINT_NAME)
 
@@ -483,35 +466,6 @@ static int i2r_crldp(const X509V3_EXT_METHOD *method, void *pcrldp, BIO *out,
       BIO_printf(out, "%*sCRL Issuer:\n", indent, "");
       print_gens(out, point->CRLissuer, indent);
     }
-  }
-  return 1;
-}
-
-int bssl::DIST_POINT_set_dpname(DIST_POINT_NAME *dpn, X509_NAME *iname) {
-  size_t i;
-  STACK_OF(X509_NAME_ENTRY) *frag;
-  X509_NAME_ENTRY *ne;
-  if (!dpn || (dpn->type != 1)) {
-    return 1;
-  }
-  frag = dpn->name.relativename;
-  dpn->dpname = X509_NAME_dup(iname);
-  if (!dpn->dpname) {
-    return 0;
-  }
-  for (i = 0; i < sk_X509_NAME_ENTRY_num(frag); i++) {
-    ne = sk_X509_NAME_ENTRY_value(frag, i);
-    if (!X509_NAME_add_entry(dpn->dpname, ne, -1, i ? 0 : 1)) {
-      X509_NAME_free(dpn->dpname);
-      dpn->dpname = nullptr;
-      return 0;
-    }
-  }
-  // generate cached encoding of name
-  if (i2d_X509_NAME(dpn->dpname, nullptr) < 0) {
-    X509_NAME_free(dpn->dpname);
-    dpn->dpname = nullptr;
-    return 0;
   }
   return 1;
 }

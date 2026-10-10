@@ -204,15 +204,12 @@ static enum ssl_hs_wait_t do_read_hello_retry_request(SSL_HANDSHAKE *hs) {
     return ssl_hs_error;
   }
 
-  // The cipher suite must be one we offered. We currently offer all supported
-  // TLS 1.3 ciphers unless policy controls limited it. So we check the version
-  // and that it's ok per policy.
+  // The cipher suite must be one we offered, and supported for the version.
   const SSL_CIPHER *cipher = SSL_get_cipher_by_value(server_hello.cipher_suite);
   if (cipher == nullptr ||
       SSL_CIPHER_get_min_version(cipher) > ssl_protocol_version(ssl) ||
       SSL_CIPHER_get_max_version(cipher) < ssl_protocol_version(ssl) ||
-      !ssl_tls13_cipher_meets_policy(SSL_CIPHER_get_protocol_id(cipher),
-                                     ssl->config->compliance_policy)) {
+      !ssl->config->tls13_cipher_list.Contains(server_hello.cipher_suite)) {
     OPENSSL_PUT_ERROR(SSL, SSL_R_WRONG_CIPHER_RETURNED);
     ssl_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_ILLEGAL_PARAMETER);
     return ssl_hs_error;
@@ -382,7 +379,7 @@ static enum ssl_hs_wait_t do_send_second_client_hello(SSL_HANDSHAKE *hs) {
 }
 
 static bool check_session(const SSL_HANDSHAKE *hs, uint8_t *out_alert,
-                          const SSL_SESSION *session) {
+                          const SSLSession *session) {
   const SSLImpl *const ssl = hs->ssl;
   if (session->ssl_version != ssl->s3->version) {
     OPENSSL_PUT_ERROR(SSL, SSL_R_OLD_SESSION_VERSION_NOT_RETURNED);
@@ -577,7 +574,7 @@ static enum ssl_hs_wait_t do_read_server_hello(SSL_HANDSHAKE *hs) {
         return ssl_hs_error;
       }
     } else {
-      const SSL_SESSION *session = std::get<UniquePtr<SSL_SESSION>>(*psk).get();
+      const SSLSession *session = std::get<UniquePtr<SSLSession>>(*psk).get();
       assert(session == ssl->session.get());
       if (!check_session(hs, &alert, session)) {
         ssl_send_alert(ssl, SSL3_AL_FATAL, alert);
@@ -996,11 +993,13 @@ static enum ssl_hs_wait_t do_send_client_certificate(SSL_HANDSHAKE *hs) {
     // Do not send client certificates on ECH reject. We have not authenticated
     // the server for the name that can learn the certificate.
     SSL_certs_clear(ssl);
-  } else if (hs->config->cert->cert_cb != nullptr) {
+  } else if (hs->config->cert->cert_cb) {
+    uint8_t alert = SSL_AD_INTERNAL_ERROR;
     // Call cert_cb to update the certificate.
-    int rv = hs->config->cert->cert_cb(ssl, hs->config->cert->cert_cb_arg);
+    int rv =
+        hs->config->cert->cert_cb(ssl, hs->config->cert->cert_cb_arg, &alert);
     if (rv == 0) {
-      ssl_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_INTERNAL_ERROR);
+      ssl_send_alert(ssl, SSL3_AL_FATAL, alert);
       OPENSSL_PUT_ERROR(SSL, SSL_R_CERT_CB_ERROR);
       return ssl_hs_error;
     }
@@ -1224,7 +1223,7 @@ bool tls13_process_new_session_ticket(SSLImpl *ssl, const SSLMessage &msg) {
   }
 
   CBS body = msg.body;
-  UniquePtr<SSL_SESSION> session = tls13_create_session_with_ticket(ssl, &body);
+  UniquePtr<SSLSession> session = tls13_create_session_with_ticket(ssl, &body);
   if (!session) {
     return false;
   }
@@ -1239,9 +1238,9 @@ bool tls13_process_new_session_ticket(SSLImpl *ssl, const SSLMessage &msg) {
   return true;
 }
 
-UniquePtr<SSL_SESSION> tls13_create_session_with_ticket(SSLImpl *ssl,
-                                                        CBS *body) {
-  UniquePtr<SSL_SESSION> session = SSL_SESSION_dup(
+UniquePtr<SSLSession> tls13_create_session_with_ticket(SSLImpl *ssl,
+                                                       CBS *body) {
+  UniquePtr<SSLSession> session = SSL_SESSION_dup(
       ssl->s3->established_session.get(), SSL_SESSION_INCLUDE_NONAUTH);
   if (!session) {
     return nullptr;

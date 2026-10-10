@@ -384,6 +384,7 @@ set(
   crypto/cpu_arm_linux.cc
   crypto/cpu_intel.cc
   crypto/crypto.cc
+  crypto/curve25519/cpace.cc
   crypto/curve25519/curve25519.cc
   crypto/curve25519/curve25519_64_adx.cc
   crypto/curve25519/spake25519.cc
@@ -577,6 +578,7 @@ set(
   include/openssl/cmac.h
   include/openssl/cms.h
   include/openssl/conf.h
+  include/openssl/configuration.h
   include/openssl/cpu.h
   include/openssl/crypto.h
   include/openssl/ctrdrbg.h
@@ -641,6 +643,7 @@ set(
   include/openssl/tls_prf.h
   include/openssl/trust_token.h
   include/openssl/type_check.h
+  include/openssl/types.h
   include/openssl/x509.h
   include/openssl/x509_vfy.h
   include/openssl/x509v3.h
@@ -790,6 +793,8 @@ set(
   crypto/constant_time_test.cc
   crypto/cpu_arm_linux_test.cc
   crypto/crypto_test.cc
+  crypto/curve25519/cpace_test.cc
+  crypto/curve25519/curve25519_test.cc
   crypto/curve25519/ed25519_test.cc
   crypto/curve25519/spake25519_test.cc
   crypto/curve25519/x25519_test.cc
@@ -898,6 +903,7 @@ set(
   crypto/cipher/test/nist_cavp/tdes_ecb.txt
   crypto/cipher/test/xchacha20_poly1305_tests.txt
   crypto/curve25519/ed25519_tests.txt
+  crypto/curve25519/ed25519ph_tests.txt
   crypto/ecdh/ecdh_tests.txt
   crypto/evp/test/dh_tests.txt
   crypto/evp/test/ec_tests.txt
@@ -1031,6 +1037,26 @@ set(
   crypto/x509/test/many_names1.pem
   crypto/x509/test/many_names2.pem
   crypto/x509/test/many_names3.pem
+  crypto/x509/test/mtc/ca_cert.pem
+  crypto/x509/test/mtc/cert_10_0.pem
+  crypto/x509/test/mtc/cert_10_1.pem
+  crypto/x509/test/mtc/cert_2034_0.pem
+  crypto/x509/test/mtc/cert_2035_0.pem
+  crypto/x509/test/mtc/cert_2_0.pem
+  crypto/x509/test/mtc/cert_32_0.pem
+  crypto/x509/test/mtc/cert_33_0.pem
+  crypto/x509/test/mtc/cert_33_1.pem
+  crypto/x509/test/mtc/cert_33_2.pem
+  crypto/x509/test/mtc/cert_33_3.pem
+  crypto/x509/test/mtc/cert_33_4.pem
+  crypto/x509/test/mtc/cert_33_5.pem
+  crypto/x509/test/mtc/cert_33_6.pem
+  crypto/x509/test/mtc/cert_33_7.pem
+  crypto/x509/test/mtc/cert_33_8.pem
+  crypto/x509/test/mtc/cert_33_9.pem
+  crypto/x509/test/mtc/cert_5036_0.pem
+  crypto/x509/test/mtc/large_merkle_tree_consistency_proof_tests.txt
+  crypto/x509/test/mtc/large_merkle_tree_inclusion_proof_tests.txt
   crypto/x509/test/policy_intermediate.pem
   crypto/x509/test/policy_intermediate_any.pem
   crypto/x509/test/policy_intermediate_duplicate.pem
@@ -1454,6 +1480,8 @@ set(
 set(
   PKI_TEST_DATA
 
+  crypto/x509/test/mtc/large_merkle_tree_consistency_proof_tests.txt
+  crypto/x509/test/mtc/large_merkle_tree_inclusion_proof_tests.txt
   pki/testdata/cert_issuer_source_static_unittest/c1.pem
   pki/testdata/cert_issuer_source_static_unittest/c2.pem
   pki/testdata/cert_issuer_source_static_unittest/d.pem
@@ -2236,6 +2264,7 @@ set(
   pki/testdata/ocsp_unittest/future_response.pem
   pki/testdata/ocsp_unittest/good_response.pem
   pki/testdata/ocsp_unittest/good_response_invalid_serial.pem
+  pki/testdata/ocsp_unittest/good_response_invalid_status.pem
   pki/testdata/ocsp_unittest/good_response_next_update.pem
   pki/testdata/ocsp_unittest/good_response_sha256.pem
   pki/testdata/ocsp_unittest/has_critical_ct_extension.pem
@@ -2253,6 +2282,9 @@ set(
   pki/testdata/ocsp_unittest/no_response.pem
   pki/testdata/ocsp_unittest/ocsp_extra_certs.pem
   pki/testdata/ocsp_unittest/ocsp_sign_bad_indirect.pem
+  pki/testdata/ocsp_unittest/ocsp_sign_bad_indirect_critical_extension.pem
+  pki/testdata/ocsp_unittest/ocsp_sign_bad_indirect_expired.pem
+  pki/testdata/ocsp_unittest/ocsp_sign_bad_indirect_wrong_issuer.pem
   pki/testdata/ocsp_unittest/ocsp_sign_direct.pem
   pki/testdata/ocsp_unittest/ocsp_sign_indirect.pem
   pki/testdata/ocsp_unittest/ocsp_sign_indirect_missing.pem
@@ -2263,9 +2295,11 @@ set(
   pki/testdata/ocsp_unittest/responder_id.pem
   pki/testdata/ocsp_unittest/responder_name.pem
   pki/testdata/ocsp_unittest/revoke_response.pem
+  pki/testdata/ocsp_unittest/revoke_response_invalid_status.pem
   pki/testdata/ocsp_unittest/revoke_response_reason.pem
   pki/testdata/ocsp_unittest/stale_response.pem
   pki/testdata/ocsp_unittest/unknown_response.pem
+  pki/testdata/ocsp_unittest/unknown_response_invalid_status.pem
   pki/testdata/parse_certificate_unittest/authority_key_identifier/empty_sequence.pem
   pki/testdata/parse_certificate_unittest/authority_key_identifier/extra_contents_after_extension_sequence.pem
   pki/testdata/parse_certificate_unittest/authority_key_identifier/extra_contents_after_issuer_and_serial.pem
@@ -2386,9 +2420,6 @@ set(
   pki/testdata/path_builder_unittest/key_id_prioritization/int_no_ski_c.pem
   pki/testdata/path_builder_unittest/key_id_prioritization/root.pem
   pki/testdata/path_builder_unittest/key_id_prioritization/target.pem
-  pki/testdata/path_builder_unittest/mtc/leaf.pem
-  pki/testdata/path_builder_unittest/mtc/mtc-ica.pem
-  pki/testdata/path_builder_unittest/mtc/mtc-leaf.pem
   pki/testdata/path_builder_unittest/mtc_plants04/leaf.pem
   pki/testdata/path_builder_unittest/mtc_plants04/mtc-ica.pem
   pki/testdata/path_builder_unittest/mtc_plants04/mtc-leaf-standalone-3cosigners.pem
@@ -2397,6 +2428,14 @@ set(
   pki/testdata/path_builder_unittest/mtc_plants04/mtc-leaf-standalone-no_ca_signer.pem
   pki/testdata/path_builder_unittest/mtc_plants04/mtc-leaf-standalone.pem
   pki/testdata/path_builder_unittest/mtc_plants04/mtc-leaf.pem
+  pki/testdata/path_builder_unittest/mtc_plants07/leaf.pem
+  pki/testdata/path_builder_unittest/mtc_plants07/mtc-ica.pem
+  pki/testdata/path_builder_unittest/mtc_plants07/mtc-leaf-standalone-3cosigners.pem
+  pki/testdata/path_builder_unittest/mtc_plants07/mtc-leaf-standalone-cosigner_wrong_order.pem
+  pki/testdata/path_builder_unittest/mtc_plants07/mtc-leaf-standalone-duplicate_ca_signer.pem
+  pki/testdata/path_builder_unittest/mtc_plants07/mtc-leaf-standalone-no_ca_signer.pem
+  pki/testdata/path_builder_unittest/mtc_plants07/mtc-leaf-standalone.pem
+  pki/testdata/path_builder_unittest/mtc_plants07/mtc-leaf.pem
   pki/testdata/path_builder_unittest/multi-root-A-by-B.pem
   pki/testdata/path_builder_unittest/multi-root-B-by-C.pem
   pki/testdata/path_builder_unittest/multi-root-B-by-F.pem
@@ -3049,6 +3088,7 @@ set(
   include/openssl/srtp.h
   include/openssl/ssl.h
   include/openssl/ssl3.h
+  include/openssl/ssl_deprecated.h
   include/openssl/tls1.h
 )
 

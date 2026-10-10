@@ -40,9 +40,8 @@ void x509_algor_cleanup(X509_ALGOR *alg);
 // A ScopedX509Algor is a stack-allocatable `X509_ALGOR` with managed lifetime.
 // This cannot use `DECLARE_OPAQUE_STRUCT` because `X509_ALGOR` is a public
 // struct.
-using ScopedX509Algor =
-    internal::StackAllocated<X509_ALGOR, void, x509_algor_init,
-                             x509_algor_cleanup>;
+BORINGSSL_MAKE_STACK_TRAITS(X509_ALGOR, x509_algor_init, x509_algor_cleanup)
+using ScopedX509Algor = internal::StackAllocated<X509_ALGOR>;
 
 // x509_parse_algorithm parses a DER-encoded, AlgorithmIdentifier from `cbs` and
 // writes the result to `*out`. It returns one on success and zero on error.
@@ -264,22 +263,6 @@ DECLARE_ASN1_FUNCTIONS_const(X509_CRL_INFO)
 
 BSSL_NAMESPACE_END
 
-// Values in idp_flags field
-// IDP present
-#define IDP_PRESENT 0x1
-// IDP values inconsistent
-#define IDP_INVALID 0x2
-// onlyuser true
-#define IDP_ONLYUSER 0x4
-// onlyCA true
-#define IDP_ONLYCA 0x8
-// onlyattr true
-#define IDP_ONLYATTR 0x10
-// indirectCRL true
-#define IDP_INDIRECT 0x20
-// onlysomereasons present
-#define IDP_REASONS 0x40
-
 struct X509_crl_st {
   // actual signature
   bssl::X509_CRL_INFO *crl;
@@ -290,8 +273,6 @@ struct X509_crl_st {
   // Copies of various extensions
   AUTHORITY_KEYID *akid;
   ISSUING_DIST_POINT *idp;
-  // Convenient breakdown of IDP
-  int idp_flags;
   unsigned char crl_hash[SHA256_DIGEST_LENGTH];
 } /* X509_CRL */;
 
@@ -626,10 +607,7 @@ STACK_OF(CONF_VALUE) *X509V3_parse_list(const char *line);
 // GENERAL_NAME_cmp returns zero if `a` and `b` are equal and a non-zero
 // value otherwise. Note this function does not provide a comparison suitable
 // for sorting.
-//
-// This function is exported for testing.
-OPENSSL_EXPORT int GENERAL_NAME_cmp(const GENERAL_NAME *a,
-                                    const GENERAL_NAME *b);
+int GENERAL_NAME_cmp(const GENERAL_NAME *a, const GENERAL_NAME *b);
 
 // X509_VERIFY_PARAM_lookup returns a pre-defined `X509_VERIFY_PARAM` named by
 // `name`, or NULL if no such name is defined.
@@ -651,9 +629,6 @@ int X509_is_valid_trust_id(int trust);
 
 int X509_PURPOSE_get_trust(const X509_PURPOSE *xp);
 
-// TODO(https://crbug.com/boringssl/695): Remove this.
-int DIST_POINT_set_dpname(DIST_POINT_NAME *dpn, X509_NAME *iname);
-
 // x509_parse_name parses a DER-encoded, X.509 Name from `cbs` and writes the
 // result to `*out`. It returns one on success and zero on error.
 int x509_parse_name(CBS *cbs, X509_NAME *out);
@@ -670,6 +645,10 @@ int x509_name_copy(X509_NAME *dst, const X509_NAME *src);
 
 // Merkle Tree Certificate (MTC) verification functions.
 
+// x509_is_merkle_tree_ca returns whether `x509` contains an extension of type
+// id-pe-mtcCertificationAuthority.
+bool x509_is_merkle_tree_ca(const X509 *x509);
+
 // x509_evaluate_mtc_subtree_inclusion_proof carries out the procedure in
 // section 4.3.2 of draft-ietf-plants-merkle-tree-certs to evaluate a subtree
 // inclusion proof for an entry at index `index` with hash `entry_hash` of a
@@ -685,6 +664,13 @@ bool x509_evaluate_mtc_subtree_inclusion_proof(
     Span<const uint8_t> inclusion_proof, uint64_t index,
     Span<const uint8_t> entry_hash, uint64_t subtree_start,
     uint64_t subtree_end);
+
+// x509_verify_mtc verifies `x509` as a Merkle Tree Certificate issued by
+// `issuer`, which must be an MTC CA represented in X.509 format. `pkey` is the
+// `issuer`'s public key. It returns one if the MTC is valid, or zero on error.
+// This function only checks the MTC proof itself and does not perform a full
+// certificate validation.
+int x509_verify_mtc(const X509 *x509, const EVP_PKEY *pkey, const X509 *issuer);
 
 
 // Standard extensions.

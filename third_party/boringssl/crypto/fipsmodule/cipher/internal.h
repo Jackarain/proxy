@@ -163,13 +163,10 @@ namespace iovec {
 
 // IsValid returns whether the given `CRYPTO_IVEC` or `CRYPTO_IOVEC` is
 // valid for use with public APIs, i.e. does not contain more than `SIZE_MAX`
-// bytes and not more than `CRYPTO_IOVEC_MAX` chunks. Note that the `EVP_AEAD`
-// methods need to accept an arbitrary number of chunks.
+// bytes. Note that the `EVP_AEAD` methods need to accept an arbitrary number
+// of chunks.
 template <typename IVec>
 inline bool IsValid(Span<IVec> ivecs) {
-  if (ivecs.size() > CRYPTO_IOVEC_MAX) {
-    return false;
-  }
   size_t allowed = SIZE_MAX;
   for (const IVec &ivec : ivecs) {
     size_t len = ivec.len;
@@ -412,6 +409,10 @@ inline bool ForEachBlockRange(Span<IVec> ivecs, const FWhole &f_whole,
 
   return call_func(f_final, current_range_head);
 }
+
+// MaybeInplaceArray can hold a copy of a CRYPTO_IOVEC. If it is a low
+// amount of entries, it will be stored on the stack, otherwise on the heap.
+using MaybeInplaceArray = bssl::MaybeInplaceArray<CRYPTO_IOVEC, 16>;
 
 // ForEachOutBlockRange is like `ForEachBlockRange` but reads from a
 // `CRYPTO_IOVEC`'s `out` member instead.

@@ -45,6 +45,7 @@ func (r *Result) Speed() (float64, string) {
 	if r.BytesPerSecond != 0 {
 		return r.BytesPerSecond / 1000000, "MB/sec"
 	}
+
 	var unit time.Duration
 	switch r.TimeUnit {
 	case "ns":
@@ -56,7 +57,7 @@ func (r *Result) Speed() (float64, string) {
 	default:
 		log.Panicf("unsupported time unit: %q", r.TimeUnit)
 	}
-	return float64(unit) / r.CPUTime, "ops/sec"
+	return float64(time.Second/unit) / r.CPUTime, "ops/sec"
 }
 
 func printResult(result Result, baseline *Result) error {

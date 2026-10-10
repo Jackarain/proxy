@@ -23,6 +23,7 @@
 #include <openssl/pool.h>
 
 #include "test_helpers.h"
+#include "trust_store.h"
 #include "trust_store_in_memory.h"
 
 BSSL_NAMESPACE_BEGIN
@@ -214,21 +215,21 @@ class TrustStoreCollectionMtcTest : public testing::Test {
     // Create modified versions of `mtc_leaf_` with different issuers. These
     // don't need to be able to verify, we just need certs with different
     // issuers to test the issuer lookup in GetTrustedMTCIssuerOf.
-    constexpr char kLogId2Str[] = "32473.2";
-    mtc_leaf2_ = ModifyLeafWithIssuerLogId(kLogId2Str);
+    constexpr char kCaId2Str[] = "32473.2";
+    mtc_leaf2_ = ModifyLeafWithIssuerCaId(kCaId2Str);
     ASSERT_TRUE(mtc_leaf2_);
 
-    constexpr char kLogId3Str[] = "32473.3";
-    mtc_leaf3_ = ModifyLeafWithIssuerLogId(kLogId3Str);
+    constexpr char kCaId3Str[] = "32473.3";
+    mtc_leaf3_ = ModifyLeafWithIssuerCaId(kCaId3Str);
     ASSERT_TRUE(mtc_leaf3_);
   }
 
-  std::shared_ptr<const ParsedCertificate> ModifyLeafWithIssuerLogId(
-      std::string_view new_log_id) {
-    // The log_id encoded in the issuer name of mtc-leaf.pem.
-    constexpr std::string_view log_id_str = "32473.1";
+  std::shared_ptr<const ParsedCertificate> ModifyLeafWithIssuerCaId(
+      std::string_view new_ca_id) {
+    // The ca_id encoded in the issuer name of mtc-leaf.pem.
+    constexpr std::string_view ca_id_str = "32473.1";
 
-    if (new_log_id.size() != log_id_str.size()) {
+    if (new_ca_id.size() != ca_id_str.size()) {
       ADD_FAILURE() << "invalid replacement string";
       return nullptr;
     }
@@ -236,15 +237,15 @@ class TrustStoreCollectionMtcTest : public testing::Test {
     std::vector<uint8_t> leaf_der2(mtc_leaf_->der_cert().begin(),
                                    mtc_leaf_->der_cert().end());
 
-    // find the log_id_str in leaf_der2 and replace the bytes with
-    // new log id.
-    auto it = std::search(leaf_der2.begin(), leaf_der2.end(),
-                          log_id_str.begin(), log_id_str.end());
+    // find the ca_id_str in leaf_der2 and replace the bytes with
+    // new CA id.
+    auto it = std::search(leaf_der2.begin(), leaf_der2.end(), ca_id_str.begin(),
+                          ca_id_str.end());
     if (it == leaf_der2.end()) {
-      ADD_FAILURE() << "log id not found";
+      ADD_FAILURE() << "CA id not found";
       return nullptr;
     }
-    std::copy(new_log_id.begin(), new_log_id.end(), it);
+    std::copy(new_ca_id.begin(), new_ca_id.end(), it);
 
     CertErrors errors;
     std::shared_ptr<const ParsedCertificate> mtc_leaf2 =
@@ -268,17 +269,22 @@ TEST_F(TrustStoreCollectionMtcTest, MtcNoStores) {
 }
 
 TEST_F(TrustStoreCollectionMtcTest, MtcTwoStores) {
-  constexpr uint8_t kLogid1[] = {0x81, 0xfd, 0x59, 0x01};
-  constexpr uint8_t kLogid2[] = {0x81, 0xfd, 0x59, 0x02};
-  constexpr uint8_t kLogid3[] = {0x81, 0xfd, 0x59, 0x03};
+  constexpr uint8_t kCaId1[] = {0x81, 0xfd, 0x59, 0x01};
+  constexpr uint8_t kCaId2[] = {0x81, 0xfd, 0x59, 0x02};
+  constexpr uint8_t kCaId3[] = {0x81, 0xfd, 0x59, 0x03};
 
-  Span<const TrustedSubtree> trusted_subtrees;
-  std::shared_ptr<const MTCAnchor> mtc_anchor1 =
-      std::make_shared<MTCAnchor>(MakeSpan(kLogid1), trusted_subtrees);
-  std::shared_ptr<const MTCAnchor> mtc_anchor2 =
-      std::make_shared<MTCAnchor>(MakeSpan(kLogid2), trusted_subtrees);
-  std::shared_ptr<const MTCAnchor> mtc_anchor3 =
-      std::make_shared<MTCAnchor>(MakeSpan(kLogid3), trusted_subtrees);
+  std::vector<LogTrustedSubtrees> trusted_subtrees;
+  // The ca_key doesn't need to be valid for this test.
+  UniquePtr<CRYPTO_BUFFER> ca_spki(CRYPTO_BUFFER_new({}, 0, nullptr));
+  auto mtc_anchor1 = std::make_shared<MTCAnchor>(
+      MakeSpan(kCaId1), SignatureAlgorithm::kMldsa44, UpRef(ca_spki),
+      trusted_subtrees);
+  auto mtc_anchor2 = std::make_shared<MTCAnchor>(
+      MakeSpan(kCaId2), SignatureAlgorithm::kMldsa44, UpRef(ca_spki),
+      trusted_subtrees);
+  auto mtc_anchor3 = std::make_shared<MTCAnchor>(
+      MakeSpan(kCaId3), SignatureAlgorithm::kMldsa44, UpRef(ca_spki),
+      trusted_subtrees);
 
   TrustStoreCollection collection;
   TrustStoreInMemory in_memory1;

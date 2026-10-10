@@ -29,7 +29,8 @@ use crate::{
         ConfigurationError,
         KeyExchangeGroupFlag,
         KeyExchangeGroups,
-        ProtocolVersion, //
+        ProtocolVersion,
+        SrtpProtectionProfile, //
     },
     connection::{
         TlsConnectionBuilder,
@@ -76,16 +77,14 @@ pub enum TlsExternalVerifierMode {}
 /// [`TlsContextBuilder::with_certificate_verifier`].
 pub enum DtlsExternalVerifierMode {}
 
-pub(crate) trait HasBasicIo {}
-
 /// A marker trait for modes that have built-in X.509 support.
-pub trait UseBuiltinX509 {}
+pub(crate) trait UseBuiltinX509: SupportedMode {}
 
 impl UseBuiltinX509 for TlsMode {}
 impl UseBuiltinX509 for DtlsMode {}
 
 /// A collection of supported mode of operations.
-pub trait SupportedMode:
+pub(crate) trait SupportedMode:
     HasTlsContextMethod + HasTlsConnectionMethod + HasPrivateKeyMethods
 {
 }
@@ -96,10 +95,22 @@ impl SupportedMode for QuicMode {}
 impl SupportedMode for TlsExternalVerifierMode {}
 impl SupportedMode for DtlsExternalVerifierMode {}
 
-impl HasBasicIo for TlsMode {}
-impl HasBasicIo for DtlsMode {}
-impl HasBasicIo for TlsExternalVerifierMode {}
-impl HasBasicIo for DtlsExternalVerifierMode {}
+pub(crate) trait HasStreamIo: SupportedMode {}
+
+impl HasStreamIo for TlsMode {}
+impl HasStreamIo for TlsExternalVerifierMode {}
+
+pub(crate) trait HasDatagramIo: SupportedMode {}
+
+impl HasDatagramIo for DtlsMode {}
+impl HasDatagramIo for DtlsExternalVerifierMode {}
+
+pub(crate) trait HasShutdown: SupportedMode {}
+
+impl HasShutdown for TlsMode {}
+impl HasShutdown for DtlsMode {}
+impl HasShutdown for TlsExternalVerifierMode {}
+impl HasShutdown for DtlsExternalVerifierMode {}
 
 /// General TLS configuration
 ///
@@ -245,6 +256,42 @@ where
         Ok(self)
     }
 
+    /// Configure the `use_srtp` extension profiles for DTLS-SRTP per [RFC 5764], in the order of
+    /// descending preference.
+    ///
+    /// This method returns [`ConfigurationError::InvalidParameters`] if `profiles` is empty, or
+    /// [`ConfigurationError::DuplicatedParameters`] if `profiles` contains duplicates.
+    ///
+    /// [RFC 5764]: <https://datatracker.ietf.org/doc/html/rfc5764>
+    pub fn with_srtp_profiles(
+        &mut self,
+        profiles: &[SrtpProtectionProfile],
+    ) -> Result<&mut Self, Error> {
+        if profiles.is_empty() {
+            return Err(Error::Configuration(ConfigurationError::InvalidParameters));
+        }
+        if has_duplicates(profiles) {
+            return Err(Error::Configuration(
+                ConfigurationError::DuplicatedParameters,
+            ));
+        }
+        let mut names = alloc::vec::Vec::new();
+        for (i, profile) in profiles.iter().enumerate() {
+            if i > 0 {
+                names.push(b':');
+            }
+            names.extend_from_slice(profile.bssl_name().as_bytes());
+        }
+        names.push(b'\0');
+        check_lib_error!(unsafe {
+            // Safety:
+            // - the validity of the handle `self.ptr` is witnessed by `self`;
+            // - `names` is a valid NUL-terminated ASCII string of profile names.
+            bssl_sys::SSL_CTX_set_srtp_profiles(self.ptr(), names.as_ptr() as *const _)
+        });
+        Ok(self)
+    }
+
     /// Set the maximum acceptable protocol.
     ///
     /// If `version` is set to `None`, the library will choose a default maximum version.
@@ -353,7 +400,7 @@ where
     /// - `FIPS` is an alias for `HIGH`.
     ///
     /// - `SSLv3` and `TLSv1` match ciphers available in TLS 1.1 or earlier.
-    ///   `TLSv1_2` matches ciphers new in TLS 1.2. This is confusing and should not
+    ///   `TLSv1.2` matches ciphers new in TLS 1.2. This is confusing and should not
     ///   be used.
     ///
     /// [cipher suite configuration]: <https://docs.openssl.org/3.0/man1/openssl-ciphers/#cipher-list-format>

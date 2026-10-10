@@ -157,7 +157,15 @@ const uint8_t kOidAlgMldsa65[] = {OBJ_ENC_ML_DSA_65};
 // In dotted notation: 2.16.840.1.101.3.4.3.19
 const uint8_t kOidAlgMldsa87[] = {OBJ_ENC_ML_DSA_87};
 
-// From draft-davidben-tls-merkle-tree-certs-08:
+// From draft-ietf-plants-merkle-tree-certs-07:
+//
+//   id-alg-mtcProof OBJECT IDENTIFIER ::= {
+//       iso(1) identified-organization(3) dod(6) internet(1) security(5)
+//       mechanisms(5) pkix(7) algorithms(6) 67 }
+const uint8_t kOidAlgMtcProof[] = {0x2b, 0x06, 0x01, 0x05, 0x05, 0x07, 0x06,
+                                   0x43};
+
+// From draft-ietf-plants-merkle-tree-certs-04:
 //
 //   id-alg-mtcProof OBJECT IDENTIFIER ::= {
 //       iso(1) identified-organization(3) dod(6) internet(1) security(5)
@@ -166,8 +174,8 @@ const uint8_t kOidAlgMldsa87[] = {OBJ_ENC_ML_DSA_87};
 // Also from said draft:
 //   For initial experimentation, early implementations of this design will use
 //   the OID 1.3.6.1.4.1.44363.47.0 instead of id-alg-mtcProof.
-const uint8_t kOidAlgMtcProofDraftDavidben08[] = {0x2b, 0x06, 0x01, 0x04, 0x01,
-                                                  0x82, 0xda, 0x4b, 0x2f, 0x00};
+const uint8_t kOidAlgMtcProofDraftPlants04[] = {0x2b, 0x06, 0x01, 0x04, 0x01,
+                                                0x82, 0xda, 0x4b, 0x2f, 0x00};
 
 // Returns true if the entirety of the input is a NULL value.
 [[nodiscard]] bool IsNull(der::Input input) {
@@ -439,8 +447,11 @@ std::optional<SignatureAlgorithm> ParseSignatureAlgorithm(
     return ParseRsaPss(params);
   }
 
-  if (oid == der::Input(kOidAlgMtcProofDraftDavidben08) && params.empty()) {
-    return SignatureAlgorithm::kMtcProofDraftDavidben08;
+  if (oid == der::Input(kOidAlgMtcProof) && params.empty()) {
+    return SignatureAlgorithm::kMtcProof;
+  }
+  if (oid == der::Input(kOidAlgMtcProofDraftPlants04) && params.empty()) {
+    return SignatureAlgorithm::kMtcProofDraftPlants04;
   }
 
   // Unknown signature algorithm.
@@ -484,7 +495,8 @@ std::optional<DigestAlgorithm> GetTlsServerEndpointDigestAlgorithm(
 
     // RFC 5929 (nor other references) does not define digests to use for these
     // signature algorithms:
-    case SignatureAlgorithm::kMtcProofDraftDavidben08:
+    case SignatureAlgorithm::kMtcProofDraftPlants04:
+    case SignatureAlgorithm::kMtcProof:
     case SignatureAlgorithm::kMldsa44:
     case SignatureAlgorithm::kMldsa65:
     case SignatureAlgorithm::kMldsa87:

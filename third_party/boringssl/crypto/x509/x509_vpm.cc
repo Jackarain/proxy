@@ -366,7 +366,7 @@ int X509_VERIFY_PARAM_get_depth(const X509_VERIFY_PARAM *param) {
 
 static const X509_VERIFY_PARAM kDefaultParam = {
     /*check_time=*/0,
-    /*flags=*/X509_V_FLAG_TRUSTED_FIRST,
+    /*flags=*/0,
     /*purpose=*/0,
     /*trust=*/0,
     /*depth=*/100,

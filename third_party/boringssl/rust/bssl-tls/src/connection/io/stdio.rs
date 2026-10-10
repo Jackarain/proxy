@@ -14,41 +14,35 @@
 
 use std::io;
 
-use super::{
-    Error,
-    TlsMode, //
-};
+use super::Error;
 use crate::{
     ReceiveBuffer,
     connection::TlsConnection,
-    context::DtlsMode,
+    context::TlsMode,
     errors::{
         IoError,
         TlsRetryReason, //
     },
-    io::{
-        AbstractSocketResult,
-        IoStatus,
-        stdio::DatagramSocket, //
-    }, //
+    io::IoStatus, //
 };
 
 fn translate_res_for_stdio(res: Result<IoStatus, Error>) -> Result<usize, io::Error> {
     match res {
         Ok(IoStatus::Ok(bytes)) => Ok(bytes),
-        Ok(IoStatus::EndOfStream) | Err(Error::Io(IoError::EndOfStream)) => Ok(0),
+        // We must be able to differentiate between a graceful shutdown and a transport EOF
+        Err(Error::Io(IoError::EndOfStream)) => Err(io::Error::new(
+            io::ErrorKind::UnexpectedEof,
+            "unexpected eof",
+        )),
+
         Ok(IoStatus::Retry(TlsRetryReason::WantRead | TlsRetryReason::WantWrite)) => {
             Err(io::Error::new(io::ErrorKind::WouldBlock, "would block"))
         }
         Ok(IoStatus::Retry(reason)) => Err(io::Error::new(io::ErrorKind::Other, reason)),
-        Ok(IoStatus::Err) => Err(io::Error::new(
-            io::ErrorKind::Other,
-            "The transport has failed the I/O operation",
-        )),
-        Ok(IoStatus::Empty) => Err(io::Error::new(
-            io::ErrorKind::ConnectionReset,
-            "connection reset or panicked",
-        )),
+        Err(Error::Io(IoError::Transport(e))) => match e.downcast::<io::Error>() {
+            Ok(err) => Err(*err),
+            Err(e) => Err(io::Error::new(io::ErrorKind::Other, e)),
+        },
         Err(
             e @ (Error::Library(..)
             | Error::Configuration(..)
@@ -65,43 +59,17 @@ fn translate_res_for_stdio(res: Result<IoStatus, Error>) -> Result<usize, io::Er
 impl<R> io::Read for TlsConnection<R, TlsMode> {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         let mut buf = ReceiveBuffer::new(buf);
-        let res = self.sync_read(&mut buf);
+        let res = self.poll_read(&mut buf);
         translate_res_for_stdio(res)
     }
 }
 
 impl<R> io::Write for TlsConnection<R, TlsMode> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        translate_res_for_stdio(self.sync_write(buf))
+        translate_res_for_stdio(self.poll_write(buf))
     }
 
     fn flush(&mut self) -> io::Result<()> {
-        Ok(())
-    }
-}
-
-fn translate_result_for_datagram(res: Result<IoStatus, Error>) -> AbstractSocketResult {
-    match res {
-        Ok(IoStatus::Ok(bytes)) => AbstractSocketResult::Ok(bytes),
-        Ok(IoStatus::EndOfStream) | Err(Error::Io(IoError::EndOfStream)) => {
-            AbstractSocketResult::EndOfStream
-        }
-        Ok(IoStatus::Retry(_)) => AbstractSocketResult::Retry,
-        Ok(IoStatus::Empty | IoStatus::Err) => AbstractSocketResult::Err(Box::new(io::Error::new(
-            io::ErrorKind::Other,
-            "transport failed or empty",
-        ))),
-        Err(e) => AbstractSocketResult::Err(Box::new(io::Error::new(io::ErrorKind::Other, e))),
-    }
-}
-
-impl<R> DatagramSocket for TlsConnection<R, DtlsMode> {
-    fn send(&mut self, datagram: &[u8]) -> AbstractSocketResult {
-        translate_result_for_datagram(self.sync_write(datagram))
-    }
-
-    fn recv(&mut self, datagram: &mut [u8]) -> AbstractSocketResult {
-        let mut datagram = ReceiveBuffer::new(datagram);
-        translate_result_for_datagram(self.sync_read(&mut datagram))
+        translate_res_for_stdio(self.poll_flush()).map(|_| ())
     }
 }

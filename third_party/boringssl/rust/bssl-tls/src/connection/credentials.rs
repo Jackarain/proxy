@@ -476,30 +476,6 @@ impl<R, M> TlsConnectionInHandshake<'_, R, M> {
     }
 }
 
-/// # Sessions
-impl<R, M> TlsConnectionInHandshake<'_, R, M> {
-    /// Disable session creation.
-    pub fn disable_session(&mut self) -> &mut Self {
-        unsafe {
-            // Safety: the validity of the handle `ptr` is witnessed by `self`.
-            bssl_sys::SSL_set_mode(
-                self.ptr(),
-                super::ConnectionMode::MODE_NO_SESSION_CREATION.bits(),
-            );
-        }
-        self
-    }
-
-    /// Set the session for resumption.
-    pub fn set_session(&mut self, session: &crate::sessions::TlsSession) -> &mut Self {
-        unsafe {
-            // Safety: self.ptr and session.0 are valid.
-            bssl_sys::SSL_set_session(self.ptr(), session.ptr());
-        }
-        self
-    }
-}
-
 /// # Raw Public Key
 impl<R, M> TlsConnectionInHandshake<'_, R, M> {
     /// Set acceptable peer certificate types

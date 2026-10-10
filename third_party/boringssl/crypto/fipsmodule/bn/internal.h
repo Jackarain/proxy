@@ -221,7 +221,6 @@ extern "C"
 // are `num` words long. It returns the carry bit, which is one if the operation
 // overflowed and zero otherwise. Any pair of `ap`, `bp`, and `rp` may be equal
 // to each other but otherwise may not alias.
-
 #if defined(BN_ADD_ASM)
 extern "C"
 #endif
@@ -251,17 +250,24 @@ extern "C"
     void bn_mul_comba8(BN_ULONG r[16], const BN_ULONG a[8],
                        const BN_ULONG b[8]);
 
-// bn_sqr_comba8 sets `r` to `a`^2.
+// bn_sqr_comba8 sets `r` to `a`².
 #if defined(BN_MUL_ASM)
 extern "C"
 #endif
     void bn_sqr_comba8(BN_ULONG r[16], const BN_ULONG a[8]);
 
-// bn_sqr_comba4 sets `r` to `a`^2.
+// bn_sqr_comba4 sets `r` to `a`².
 #if defined(BN_MUL_ASM)
 extern "C"
 #endif
     void bn_sqr_comba4(BN_ULONG r[8], const BN_ULONG a[4]);
+
+// bn_add_carry_words adds `carry` to `ap` and places the result in `rp`. `ap`
+// and `rp` are `num` words long and may alias. `carry` must be 0 or 1. It
+// returns the carry bit, which is one if the operation overflowed and zero
+// otherwise.
+BN_ULONG bn_add_carry_words(BN_ULONG *rp, const BN_ULONG *ap, BN_ULONG carry,
+                            size_t num);
 
 // bn_less_than_words returns one if `a` < `b` and zero otherwise, where `a`
 // and `b` both are `len` words long. It runs in constant time.
@@ -318,7 +324,7 @@ int bn_rand_secret_range(BIGNUM *r, int *out_is_uniform, BN_ULONG min_inclusive,
 BSSL_NAMESPACE_END
 
 struct bn_mont_ctx_st {
-  // RR is R^2, reduced modulo `N`. It is used to convert to Montgomery form. It
+  // RR is R², reduced modulo `N`. It is used to convert to Montgomery form. It
   // is guaranteed to have the same width as `N`.
   BIGNUM RR;
   // N is the modulus. It is always stored in minimal form, so `N.width`
@@ -725,7 +731,7 @@ int BN_MONT_CTX_set_locked(UniquePtr<BN_MONT_CTX> *pmont, Mutex *lock,
 void bn_mul_small(BN_ULONG *r, size_t num_r, const BN_ULONG *a, size_t num_a,
                  const BN_ULONG *b, size_t num_b);
 
-// bn_sqr_small sets `r` to `a`^2. `num_r` must be `num_a`*2. `r` and `a` may
+// bn_sqr_small sets `r` to `a`². `num_r` must be `num_a`*2. `r` and `a` may
 // not alias.
 void bn_sqr_small(BN_ULONG *r, size_t num_r, const BN_ULONG *a, size_t num_a);
 
@@ -740,7 +746,7 @@ void bn_to_montgomery_small(BN_ULONG *r, const BN_ULONG *a, size_t num,
 
 // bn_from_montgomery_small sets `r` to `a` translated out of the Montgomery
 // domain. `r` and `a` are `num_r` and `num_a` words long, respectively. `num_r`
-// must be `mont->N.width`. `a` must be at most `mont->N`^2 and may alias `r`.
+// must be `mont->N.width`. `a` must be at most `mont->N`² and may alias `r`.
 //
 // Unlike most of these functions, only `num_r` is bounded by
 // `BN_SMALL_MAX_WORDS`. `num_a` may exceed it, but must be at most 2 * `num_r`.

@@ -349,6 +349,14 @@ static const CipherTest kCipherTests[] = {
         },
         false,
     },
+    // TLSv1 matches everything that existed before TLS 1.2.
+    {
+        "AES128-SHA:ECDHE-RSA-AES128-GCM-SHA256:!TLSv1",
+        {
+            {SSL_CIPHER_ECDHE_RSA_WITH_AES_128_GCM_SHA256, 0},
+        },
+        false,
+    },
     // TLSv1.2 matches everything added in TLS 1.2.
     {
         "AES128-SHA:ECDHE-RSA-AES128-GCM-SHA256:!TLSv1.2",
@@ -364,6 +372,23 @@ static const CipherTest kCipherTests[] = {
         {
             {SSL_CIPHER_RSA_WITH_AES_128_CBC_SHA, 0},
             {SSL_CIPHER_ECDHE_RSA_WITH_AES_128_GCM_SHA256, 0},
+        },
+        false,
+    },
+    // Multipart aliases should combine commutatively with version aliases.
+    {
+        "TLSv1+RSA",
+        {
+            {SSL_CIPHER_RSA_WITH_AES_128_CBC_SHA, 0},
+            {SSL_CIPHER_RSA_WITH_AES_256_CBC_SHA, 0},
+        },
+        false,
+    },
+    {
+        "RSA+TLSv1",
+        {
+            {SSL_CIPHER_RSA_WITH_AES_128_CBC_SHA, 0},
+            {SSL_CIPHER_RSA_WITH_AES_256_CBC_SHA, 0},
         },
         false,
     },
@@ -2257,6 +2282,81 @@ TEST(SSLTest, SetGroupIdsWithFlags_DefaultGroups) {
   EXPECT_EQ(SSL_get_group_id(client.get()), SSL_GROUP_X25519);
 }
 
+TEST(SSLTest, ConfigureTLS13Ciphers) {
+  const struct {
+    const char *description;
+    std::vector<uint16_t> ciphers;
+    std::vector<uint32_t> flags;
+    bool expected_success;
+  } kTests[] = {
+      {
+          "Empty ciphers / default.",
+          {},
+          {},
+          true,
+      },
+      {
+          "Single cipher.",
+          {SSL_CIPHER_AES_128_GCM_SHA256},
+          {0},
+          true,
+      },
+      {
+          "Multiple ciphers with equal preference.",
+          {SSL_CIPHER_AES_128_GCM_SHA256, SSL_CIPHER_CHACHA20_POLY1305_SHA256},
+          {SSL_CIPHER_FLAG_EQUAL_PREFERENCE_WITH_NEXT, 0},
+          true,
+      },
+      {
+          "Singleton followed by multiple ciphers with equal preference.",
+          {SSL_CIPHER_AES_256_GCM_SHA384, SSL_CIPHER_AES_128_GCM_SHA256,
+           SSL_CIPHER_CHACHA20_POLY1305_SHA256},
+          {0, SSL_CIPHER_FLAG_EQUAL_PREFERENCE_WITH_NEXT, 0},
+          true,
+      },
+      {
+          "Multiple ciphers with equal preference followed by singleton.",
+          {SSL_CIPHER_AES_128_GCM_SHA256, SSL_CIPHER_CHACHA20_POLY1305_SHA256,
+           SSL_CIPHER_AES_256_GCM_SHA384},
+          {SSL_CIPHER_FLAG_EQUAL_PREFERENCE_WITH_NEXT, 0, 0},
+          true,
+      },
+      {
+          "Config error (last cipher has equal preference flag).",
+          {SSL_CIPHER_AES_128_GCM_SHA256, SSL_CIPHER_CHACHA20_POLY1305_SHA256},
+          {0, SSL_CIPHER_FLAG_EQUAL_PREFERENCE_WITH_NEXT},
+          false,
+      },
+      {
+          "Duplicate cipher in list.",
+          {SSL_CIPHER_AES_128_GCM_SHA256, SSL_CIPHER_AES_128_GCM_SHA256},
+          {0, 0},
+          false,
+      },
+      {
+          "Non-TLS 1.3 cipher in list.",
+          {SSL_CIPHER_ECDHE_RSA_WITH_AES_128_GCM_SHA256},
+          {0},
+          false,
+      },
+  };
+
+  for (const auto &t : kTests) {
+    SCOPED_TRACE(t.description);
+    ASSERT_EQ(t.ciphers.size(), t.flags.size()) << "Test setup error.";
+    bssl::UniquePtr<SSL_CTX> ctx(SSL_CTX_new(TLS_method()));
+    ASSERT_TRUE(ctx);
+    EXPECT_EQ(t.expected_success,
+              SSL_CTX_set1_tls13_ciphers(ctx.get(), t.ciphers.data(),
+                                         t.flags.data(), t.ciphers.size()));
+    bssl::UniquePtr<SSL> ssl(SSL_new(ctx.get()));
+    ASSERT_TRUE(ssl);
+    EXPECT_EQ(t.expected_success,
+              SSL_set1_tls13_ciphers(ssl.get(), t.ciphers.data(),
+                                     t.flags.data(), t.ciphers.size()));
+  }
+}
+
 struct ECHConfigParams {
   uint16_t version = TLSEXT_TYPE_encrypted_client_hello;
   uint16_t config_id = 1;
@@ -2488,6 +2588,8 @@ TEST(SSLTest, ECHKeyConsistency) {
   EXPECT_FALSE(SSL_ECH_KEYS_add(keys.get(), /*is_retry_config=*/1,
                                 ech_config.data(), ech_config.size(),
                                 wrong_key.get()));
+  EXPECT_TRUE(ErrorsAreAndClear(
+      {{ERR_LIB_SSL, SSL_R_ECH_SERVER_CONFIG_AND_PRIVATE_KEY_MISMATCH}}));
 
   // Adding an ECHConfig with a truncated public key is an error.
   ECHConfigParams truncated;
@@ -2497,6 +2599,8 @@ TEST(SSLTest, ECHKeyConsistency) {
   EXPECT_FALSE(SSL_ECH_KEYS_add(keys.get(), /*is_retry_config=*/1,
                                 ech_config.data(), ech_config.size(),
                                 key.get()));
+  EXPECT_TRUE(ErrorsAreAndClear(
+      {{ERR_LIB_SSL, SSL_R_ECH_SERVER_CONFIG_AND_PRIVATE_KEY_MISMATCH}}));
 
   // Adding an ECHConfig with the right public key, but wrong KEM ID, is an
   // error.
@@ -2507,6 +2611,8 @@ TEST(SSLTest, ECHKeyConsistency) {
   EXPECT_FALSE(SSL_ECH_KEYS_add(keys.get(), /*is_retry_config=*/1,
                                 ech_config.data(), ech_config.size(),
                                 key.get()));
+  EXPECT_TRUE(ErrorsAreAndClear(
+      {{ERR_LIB_SSL, SSL_R_ECH_SERVER_CONFIG_AND_PRIVATE_KEY_MISMATCH}}));
 }
 
 // Test that `SSL_CTX_set1_ech_keys` fails when the config list
@@ -2555,6 +2661,8 @@ TEST(SSLTest, UnsupportedECHConfig) {
   EXPECT_FALSE(SSL_ECH_KEYS_add(keys.get(), /*is_retry_config=*/1,
                                 ech_config.data(), ech_config.size(),
                                 key.get()));
+  EXPECT_TRUE(
+      ErrorsAreAndClear({{ERR_LIB_SSL, SSL_R_UNSUPPORTED_ECH_SERVER_CONFIG}}));
 
   // Unsupported cipher suites are rejected. (We only support HKDF-SHA256.)
   ECHConfigParams unsupported_kdf;
@@ -2565,6 +2673,8 @@ TEST(SSLTest, UnsupportedECHConfig) {
   EXPECT_FALSE(SSL_ECH_KEYS_add(keys.get(), /*is_retry_config=*/1,
                                 ech_config.data(), ech_config.size(),
                                 key.get()));
+  EXPECT_TRUE(
+      ErrorsAreAndClear({{ERR_LIB_SSL, SSL_R_UNSUPPORTED_ECH_SERVER_CONFIG}}));
   ECHConfigParams unsupported_aead;
   unsupported_aead.key = key.get();
   unsupported_aead.cipher_suites = {EVP_HPKE_HKDF_SHA256, 0xffff};
@@ -2572,6 +2682,8 @@ TEST(SSLTest, UnsupportedECHConfig) {
   EXPECT_FALSE(SSL_ECH_KEYS_add(keys.get(), /*is_retry_config=*/1,
                                 ech_config.data(), ech_config.size(),
                                 key.get()));
+  EXPECT_TRUE(
+      ErrorsAreAndClear({{ERR_LIB_SSL, SSL_R_UNSUPPORTED_ECH_SERVER_CONFIG}}));
 
 
   // Unsupported extensions are rejected.
@@ -2978,9 +3090,11 @@ TEST(SSLTest, TLS13ExporterAvailability) {
   EXPECT_FALSE(SSL_export_keying_material(client.get(), buffer.data(),
                                           buffer.size(), label, strlen(label),
                                           nullptr, 0, 0));
+  EXPECT_TRUE(ErrorsAreAndClear({{ERR_LIB_SSL, SSL_R_HANDSHAKE_NOT_COMPLETE}}));
   EXPECT_FALSE(SSL_export_keying_material(server.get(), buffer.data(),
                                           buffer.size(), label, strlen(label),
                                           nullptr, 0, 0));
+  EXPECT_TRUE(ErrorsAreAndClear({{ERR_LIB_SSL, SSL_R_HANDSHAKE_NOT_COMPLETE}}));
 
   // Send all the server's handshake messages.
   int server_ret = SSL_do_handshake(server.get());
@@ -2993,6 +3107,7 @@ TEST(SSLTest, TLS13ExporterAvailability) {
   EXPECT_FALSE(SSL_export_keying_material(client.get(), buffer.data(),
                                           buffer.size(), label, strlen(label),
                                           nullptr, 0, 0));
+  EXPECT_TRUE(ErrorsAreAndClear({{ERR_LIB_SSL, SSL_R_HANDSHAKE_NOT_COMPLETE}}));
   EXPECT_TRUE(SSL_export_keying_material(server.get(), buffer.data(),
                                          buffer.size(), label, strlen(label),
                                          nullptr, 0, 0));
@@ -3020,6 +3135,8 @@ TEST(SSLTest, TLS13ExporterAvailability) {
                                          nullptr, 0, 0));
 }
 
+#if !defined(BORINGSSL_SHARED_LIBRARY)
+// TODO(crbug.com/565766495): Take `SSLSession` when the lhash does.
 static void AppendSession(SSL_SESSION *session, void *arg) {
   std::vector<SSL_SESSION *> *out =
       reinterpret_cast<std::vector<SSL_SESSION *> *>(arg);
@@ -3032,14 +3149,14 @@ static bool CacheEquals(SSL_CTX *ctx,
                         const std::vector<SSL_SESSION *> &expected) {
   auto *ctx_impl = FromOpaque(ctx);
   // Check the linked list.
-  SSL_SESSION *ptr = ctx_impl->session_cache_head;
+  SSLSession *ptr = ctx_impl->session_cache_head;
   for (SSL_SESSION *session : expected) {
-    if (ptr != session) {
+    if (ptr != FromOpaque(session)) {
       return false;
     }
     // TODO(davidben): This is an absurd way to denote the end of the list.
     if (ptr->next ==
-        reinterpret_cast<SSL_SESSION *>(&ctx_impl->session_cache_tail)) {
+        reinterpret_cast<SSLSession *>(&ctx_impl->session_cache_tail)) {
       ptr = nullptr;
     } else {
       ptr = ptr->next;
@@ -3132,6 +3249,7 @@ TEST(SSLTest, InternalSessionCache) {
   ASSERT_TRUE(CacheEquals(ctx.get(), {collision.get(), sessions[9].get(),
                                       sessions[8].get(), sessions[5].get()}));
 }
+#endif  //  !BORINGSSL_SHARED_LIBRARY
 
 static uint16_t EpochFromSequence(uint64_t seq) {
   return static_cast<uint16_t>(seq >> 48);
@@ -3822,6 +3940,7 @@ TEST(SSLTest, EarlyDataRejectStaleUnreportedBytes) {
   EXPECT_EQ(Bytes(received), Bytes(kNewWrite));
 }
 
+#if !defined(BORINGSSL_SHARED_LIBRARY)
 TEST(SSLTest, SessionDuplication) {
   bssl::UniquePtr<SSL_CTX> client_ctx(SSL_CTX_new(TLS_method()));
   bssl::UniquePtr<SSL_CTX> server_ctx =
@@ -3836,8 +3955,8 @@ TEST(SSLTest, SessionDuplication) {
                                      server_ctx.get()));
 
   SSL_SESSION *session0 = SSL_get_session(client.get());
-  bssl::UniquePtr<SSL_SESSION> session1 =
-      bssl::SSL_SESSION_dup(session0, SSL_SESSION_DUP_ALL);
+  bssl::UniquePtr<SSLSession> session1 =
+      bssl::SSL_SESSION_dup(FromOpaque(session0), SSL_SESSION_DUP_ALL);
   ASSERT_TRUE(session1);
 
   session1->not_resumable = false;
@@ -3853,6 +3972,7 @@ TEST(SSLTest, SessionDuplication) {
 
   EXPECT_EQ(Bytes(s0_bytes, s0_len), Bytes(s1_bytes, s1_len));
 }
+#endif  // !BORINGSSL_SHARED_LIBRARY
 
 static void ExpectFDs(const SSL *ssl, int rfd, int wfd) {
   EXPECT_EQ(rfd, SSL_get_fd(ssl));
@@ -4655,11 +4775,17 @@ TEST(SSLTest, SetVersion) {
 
   // Invalid TLS versions are rejected.
   EXPECT_FALSE(SSL_CTX_set_max_proto_version(ctx.get(), DTLS1_VERSION));
+  EXPECT_TRUE(ErrorsAreAndClear({{ERR_LIB_SSL, SSL_R_UNKNOWN_SSL_VERSION}}));
   EXPECT_FALSE(SSL_CTX_set_max_proto_version(ctx.get(), 0x0200));
+  EXPECT_TRUE(ErrorsAreAndClear({{ERR_LIB_SSL, SSL_R_UNKNOWN_SSL_VERSION}}));
   EXPECT_FALSE(SSL_CTX_set_max_proto_version(ctx.get(), 0x1234));
+  EXPECT_TRUE(ErrorsAreAndClear({{ERR_LIB_SSL, SSL_R_UNKNOWN_SSL_VERSION}}));
   EXPECT_FALSE(SSL_CTX_set_min_proto_version(ctx.get(), DTLS1_VERSION));
+  EXPECT_TRUE(ErrorsAreAndClear({{ERR_LIB_SSL, SSL_R_UNKNOWN_SSL_VERSION}}));
   EXPECT_FALSE(SSL_CTX_set_min_proto_version(ctx.get(), 0x0200));
+  EXPECT_TRUE(ErrorsAreAndClear({{ERR_LIB_SSL, SSL_R_UNKNOWN_SSL_VERSION}}));
   EXPECT_FALSE(SSL_CTX_set_min_proto_version(ctx.get(), 0x1234));
+  EXPECT_TRUE(ErrorsAreAndClear({{ERR_LIB_SSL, SSL_R_UNKNOWN_SSL_VERSION}}));
 
   // Zero is the default version.
   EXPECT_TRUE(SSL_CTX_set_max_proto_version(ctx.get(), 0));
@@ -4669,6 +4795,7 @@ TEST(SSLTest, SetVersion) {
 
   // SSL 3.0 is not available.
   EXPECT_FALSE(SSL_CTX_set_min_proto_version(ctx.get(), SSL3_VERSION));
+  EXPECT_TRUE(ErrorsAreAndClear({{ERR_LIB_SSL, SSL_R_UNKNOWN_SSL_VERSION}}));
 
   ctx.reset(SSL_CTX_new(DTLS_method()));
   ASSERT_TRUE(ctx);
@@ -4686,13 +4813,21 @@ TEST(SSLTest, SetVersion) {
 
   // Invalid DTLS versions are rejected.
   EXPECT_FALSE(SSL_CTX_set_max_proto_version(ctx.get(), TLS1_VERSION));
+  EXPECT_TRUE(ErrorsAreAndClear({{ERR_LIB_SSL, SSL_R_UNKNOWN_SSL_VERSION}}));
   EXPECT_FALSE(SSL_CTX_set_max_proto_version(ctx.get(), 0xfefe /* DTLS 1.1 */));
+  EXPECT_TRUE(ErrorsAreAndClear({{ERR_LIB_SSL, SSL_R_UNKNOWN_SSL_VERSION}}));
   EXPECT_FALSE(SSL_CTX_set_max_proto_version(ctx.get(), 0xfffe /* DTLS 0.1 */));
+  EXPECT_TRUE(ErrorsAreAndClear({{ERR_LIB_SSL, SSL_R_UNKNOWN_SSL_VERSION}}));
   EXPECT_FALSE(SSL_CTX_set_max_proto_version(ctx.get(), 0x1234));
+  EXPECT_TRUE(ErrorsAreAndClear({{ERR_LIB_SSL, SSL_R_UNKNOWN_SSL_VERSION}}));
   EXPECT_FALSE(SSL_CTX_set_min_proto_version(ctx.get(), TLS1_VERSION));
+  EXPECT_TRUE(ErrorsAreAndClear({{ERR_LIB_SSL, SSL_R_UNKNOWN_SSL_VERSION}}));
   EXPECT_FALSE(SSL_CTX_set_min_proto_version(ctx.get(), 0xfefe /* DTLS 1.1 */));
+  EXPECT_TRUE(ErrorsAreAndClear({{ERR_LIB_SSL, SSL_R_UNKNOWN_SSL_VERSION}}));
   EXPECT_FALSE(SSL_CTX_set_min_proto_version(ctx.get(), 0xfffe /* DTLS 0.1 */));
+  EXPECT_TRUE(ErrorsAreAndClear({{ERR_LIB_SSL, SSL_R_UNKNOWN_SSL_VERSION}}));
   EXPECT_FALSE(SSL_CTX_set_min_proto_version(ctx.get(), 0x1234));
+  EXPECT_TRUE(ErrorsAreAndClear({{ERR_LIB_SSL, SSL_R_UNKNOWN_SSL_VERSION}}));
 
   // Zero is the default version.
   EXPECT_TRUE(SSL_CTX_set_max_proto_version(ctx.get(), 0));
@@ -6092,6 +6227,207 @@ TEST(SSLTest, ClientCABuffers) {
   EXPECT_TRUE(cert_cb_called);
 }
 
+TEST(SSLTest, CertCallbackExServerAlert) {
+  for (uint16_t version : {TLS1_2_VERSION, TLS1_3_VERSION}) {
+    SCOPED_TRACE(version);
+
+    // Test with a custom alert.
+    {
+      bssl::UniquePtr<SSL_CTX> client_ctx(SSL_CTX_new(TLS_method()));
+      bssl::UniquePtr<SSL_CTX> server_ctx(SSL_CTX_new(TLS_method()));
+      ASSERT_TRUE(client_ctx && server_ctx);
+      ASSERT_TRUE(SSL_CTX_set_max_proto_version(client_ctx.get(), version));
+      ASSERT_TRUE(SSL_CTX_set_max_proto_version(server_ctx.get(), version));
+
+      SSL_CTX_set_cert_cb_ex(
+          server_ctx.get(),
+          [](SSL *ssl, void *arg, uint8_t *out_alert) -> int {
+            *out_alert = SSL_AD_UNRECOGNIZED_NAME;
+            return 0;
+          },
+          nullptr);
+
+      bssl::UniquePtr<SSL> client, server;
+      ASSERT_TRUE(CreateClientAndServer(&client, &server, client_ctx.get(),
+                                        server_ctx.get()));
+
+      int client_ret = SSL_do_handshake(client.get());
+      EXPECT_EQ(SSL_get_error(client.get(), client_ret), SSL_ERROR_WANT_READ);
+
+      int server_ret = SSL_do_handshake(server.get());
+      EXPECT_EQ(server_ret, -1);
+      EXPECT_EQ(SSL_get_error(server.get(), server_ret), SSL_ERROR_SSL);
+      EXPECT_TRUE(ErrorsAreAndClear({{ERR_LIB_SSL, SSL_R_CERT_CB_ERROR}}));
+
+      client_ret = SSL_do_handshake(client.get());
+      EXPECT_EQ(client_ret, -1);
+      EXPECT_EQ(SSL_get_error(client.get(), client_ret), SSL_ERROR_SSL);
+      EXPECT_TRUE(ErrorsAreAndClear(
+          {{ERR_LIB_SSL, SSL_R_TLSV1_ALERT_UNRECOGNIZED_NAME}}));
+    }
+
+    // Test that the default alert (internal error) is used if untouched.
+    {
+      bssl::UniquePtr<SSL_CTX> client_ctx(SSL_CTX_new(TLS_method()));
+      bssl::UniquePtr<SSL_CTX> server_ctx(SSL_CTX_new(TLS_method()));
+      ASSERT_TRUE(client_ctx && server_ctx);
+      ASSERT_TRUE(SSL_CTX_set_max_proto_version(client_ctx.get(), version));
+      ASSERT_TRUE(SSL_CTX_set_max_proto_version(server_ctx.get(), version));
+
+      SSL_CTX_set_cert_cb_ex(
+          server_ctx.get(),
+          [](SSL *ssl, void *arg, uint8_t *out_alert) -> int { return 0; },
+          nullptr);
+
+      bssl::UniquePtr<SSL> client, server;
+      ASSERT_TRUE(CreateClientAndServer(&client, &server, client_ctx.get(),
+                                        server_ctx.get()));
+
+      int client_ret = SSL_do_handshake(client.get());
+      EXPECT_EQ(SSL_get_error(client.get(), client_ret), SSL_ERROR_WANT_READ);
+
+      int server_ret = SSL_do_handshake(server.get());
+      EXPECT_EQ(server_ret, -1);
+      EXPECT_EQ(SSL_get_error(server.get(), server_ret), SSL_ERROR_SSL);
+      EXPECT_TRUE(ErrorsAreAndClear({{ERR_LIB_SSL, SSL_R_CERT_CB_ERROR}}));
+
+      client_ret = SSL_do_handshake(client.get());
+      EXPECT_EQ(client_ret, -1);
+      EXPECT_EQ(SSL_get_error(client.get(), client_ret), SSL_ERROR_SSL);
+      EXPECT_TRUE(
+          ErrorsAreAndClear({{ERR_LIB_SSL, SSL_R_TLSV1_ALERT_INTERNAL_ERROR}}));
+    }
+  }
+}
+
+TEST(SSLTest, CertCallbackExClientAlert) {
+  for (uint16_t version : {TLS1_2_VERSION, TLS1_3_VERSION}) {
+    SCOPED_TRACE(version);
+
+    bssl::UniquePtr<SSL_CTX> client_ctx(SSL_CTX_new(TLS_method()));
+    bssl::UniquePtr<SSL_CTX> server_ctx(
+        CreateContextWithTestCertificate(TLS_method()));
+    ASSERT_TRUE(client_ctx && server_ctx);
+    ASSERT_TRUE(SSL_CTX_set_max_proto_version(client_ctx.get(), version));
+    ASSERT_TRUE(SSL_CTX_set_max_proto_version(server_ctx.get(), version));
+
+    SSL_CTX_set_custom_verify(server_ctx.get(),
+                              SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+                              AcceptAnyCertificate);
+    SSL_CTX_set_custom_verify(client_ctx.get(), SSL_VERIFY_PEER,
+                              AcceptAnyCertificate);
+
+    SSL_CTX_set_cert_cb_ex(
+        client_ctx.get(),
+        [](SSL *ssl, void *arg, uint8_t *out_alert) -> int {
+          *out_alert = SSL_AD_ACCESS_DENIED;
+          return 0;
+        },
+        nullptr);
+
+    bssl::UniquePtr<SSL> client, server;
+    ASSERT_TRUE(CreateClientAndServer(&client, &server, client_ctx.get(),
+                                      server_ctx.get()));
+
+    // Step handshakes until the client cert callback fails.
+    int client_ret = SSL_do_handshake(client.get());
+    EXPECT_EQ(SSL_get_error(client.get(), client_ret), SSL_ERROR_WANT_READ);
+
+    int server_ret = SSL_do_handshake(server.get());
+    EXPECT_EQ(SSL_get_error(server.get(), server_ret), SSL_ERROR_WANT_READ);
+
+    client_ret = SSL_do_handshake(client.get());
+    EXPECT_EQ(client_ret, -1);
+    EXPECT_EQ(SSL_get_error(client.get(), client_ret), SSL_ERROR_SSL);
+    EXPECT_TRUE(ErrorsAreAndClear({{ERR_LIB_SSL, SSL_R_CERT_CB_ERROR}}));
+
+    server_ret = SSL_do_handshake(server.get());
+    EXPECT_EQ(server_ret, -1);
+    EXPECT_EQ(SSL_get_error(server.get(), server_ret), SSL_ERROR_SSL);
+    EXPECT_TRUE(
+        ErrorsAreAndClear({{ERR_LIB_SSL, SSL_R_TLSV1_ALERT_ACCESS_DENIED}}));
+  }
+}
+
+TEST(SSLTest, CertCallbackExPauseAndResume) {
+  bssl::UniquePtr<SSL_CTX> client_ctx(SSL_CTX_new(TLS_method()));
+  bssl::UniquePtr<SSL_CTX> server_ctx(SSL_CTX_new(TLS_method()));
+  ASSERT_TRUE(client_ctx && server_ctx);
+
+  SSL_CTX_set_custom_verify(client_ctx.get(), SSL_VERIFY_PEER,
+                            AcceptAnyCertificate);
+
+  bool cert_ready = false;
+  SSL_CTX_set_cert_cb_ex(
+      server_ctx.get(),
+      [](SSL *ssl, void *arg, uint8_t *out_alert) -> int {
+        bool *ready = reinterpret_cast<bool *>(arg);
+        if (!*ready) {
+          return -1;
+        }
+        bssl::UniquePtr<X509> cert = GetTestCertificate();
+        bssl::UniquePtr<EVP_PKEY> key = GetTestKey();
+        if (!SSL_use_certificate(ssl, cert.get()) ||
+            !SSL_use_PrivateKey(ssl, key.get())) {
+          return 0;
+        }
+        return 1;
+      },
+      &cert_ready);
+
+  bssl::UniquePtr<SSL> client, server;
+  ASSERT_TRUE(CreateClientAndServer(&client, &server, client_ctx.get(),
+                                    server_ctx.get()));
+
+  int client_ret = SSL_do_handshake(client.get());
+  EXPECT_EQ(SSL_get_error(client.get(), client_ret), SSL_ERROR_WANT_READ);
+
+  int server_ret = SSL_do_handshake(server.get());
+  EXPECT_EQ(server_ret, -1);
+  EXPECT_EQ(SSL_get_error(server.get(), server_ret),
+            SSL_ERROR_WANT_X509_LOOKUP);
+
+  cert_ready = true;
+  ASSERT_TRUE(CompleteHandshakes(client.get(), server.get()));
+}
+
+TEST(SSLTest, CertCallbackExSSLOverride) {
+  bssl::UniquePtr<SSL_CTX> client_ctx(SSL_CTX_new(TLS_method()));
+  bssl::UniquePtr<SSL_CTX> server_ctx(SSL_CTX_new(TLS_method()));
+  ASSERT_TRUE(client_ctx && server_ctx);
+
+  // Set CTX-level callback to fail with default alert.
+  SSL_CTX_set_cert_cb(
+      server_ctx.get(), [](SSL *ssl, void *arg) -> int { return 0; }, nullptr);
+
+  bssl::UniquePtr<SSL> client, server;
+  ASSERT_TRUE(CreateClientAndServer(&client, &server, client_ctx.get(),
+                                    server_ctx.get()));
+
+  // Simulate rejection of peer certificate *somehow*.
+  SSL_set_cert_cb_ex(
+      server.get(),
+      [](SSL *ssl, void *arg, uint8_t *out_alert) -> int {
+        *out_alert = SSL_AD_HANDSHAKE_FAILURE;
+        return 0;
+      },
+      nullptr);
+
+  int client_ret = SSL_do_handshake(client.get());
+  EXPECT_EQ(SSL_get_error(client.get(), client_ret), SSL_ERROR_WANT_READ);
+
+  int server_ret = SSL_do_handshake(server.get());
+  EXPECT_EQ(server_ret, -1);
+  EXPECT_EQ(SSL_get_error(server.get(), server_ret), SSL_ERROR_SSL);
+  EXPECT_TRUE(ErrorsAreAndClear({{ERR_LIB_SSL, SSL_R_CERT_CB_ERROR}}));
+
+  client_ret = SSL_do_handshake(client.get());
+  EXPECT_EQ(client_ret, -1);
+  EXPECT_EQ(SSL_get_error(client.get(), client_ret), SSL_ERROR_SSL);
+  EXPECT_TRUE(
+      ErrorsAreAndClear({{ERR_LIB_SSL, SSL_R_SSLV3_ALERT_HANDSHAKE_FAILURE}}));
+}
+
 // Configuring the empty cipher list, though an error, should still modify the
 // configuration.
 TEST(SSLTest, EmptyCipherList) {
@@ -6538,6 +6874,22 @@ TEST_P(SSLVersionTest, SSLPending) {
   EXPECT_EQ(1, SSL_has_pending(client_.get()));
 }
 
+// Test that `SSL_write(0)` does not write a zero-length record.
+TEST_P(SSLVersionTest, WriteZeroLength) {
+  // Disable session tickets. In TLS 1.3, the NewSessionTicket is deferred to
+  // the first write and flushed on an `SSL_write` call. This confuses the test.
+  SSL_CTX_set_options(client_ctx_.get(), SSL_OP_NO_TICKET);
+  SSL_CTX_set_options(server_ctx_.get(), SSL_OP_NO_TICKET);
+
+  ASSERT_TRUE(Connect());
+  uint64_t old_bytes_written = BIO_number_written(SSL_get_wbio(client_.get()));
+  ASSERT_EQ(0, SSL_write(client_.get(), nullptr, 0));
+  uint64_t new_bytes_written = BIO_number_written(SSL_get_wbio(client_.get()));
+
+  // No new bytes should be written. We shouldn't write a zero-length record.
+  EXPECT_EQ(old_bytes_written, new_bytes_written);
+}
+
 // Test that post-handshake tickets consumed by `SSL_shutdown` are ignored.
 TEST(SSLTest, ShutdownIgnoresTickets) {
   bssl::UniquePtr<SSL_CTX> ctx(CreateContextWithTestCertificate(TLS_method()));
@@ -6647,218 +6999,6 @@ TEST(SSLTest, CertCompression) {
 
   EXPECT_TRUE(SSL_get_app_data(client.get()) == XORDecompressFunc);
   EXPECT_TRUE(SSL_get_app_data(server.get()) == XORCompressFunc);
-}
-
-void MoveBIOs(SSL *dest, SSL *src) {
-  BIO *rbio = SSL_get_rbio(src);
-  BIO_up_ref(rbio);
-  SSL_set0_rbio(dest, rbio);
-
-  BIO *wbio = SSL_get_wbio(src);
-  BIO_up_ref(wbio);
-  SSL_set0_wbio(dest, wbio);
-
-  SSL_set0_rbio(src, nullptr);
-  SSL_set0_wbio(src, nullptr);
-}
-
-void VerifyHandoff(bool use_new_alps_codepoint) {
-  static const uint8_t alpn[] = {0x03, 'f', 'o', 'o'};
-  static const uint8_t proto[] = {'f', 'o', 'o'};
-  static const uint8_t alps[] = {0x04, 'a', 'l', 'p', 's'};
-
-  bssl::UniquePtr<SSL_CTX> client_ctx(SSL_CTX_new(TLS_method()));
-  bssl::UniquePtr<SSL_CTX> server_ctx(SSL_CTX_new(TLS_method()));
-  bssl::UniquePtr<SSL_CTX> handshaker_ctx(
-      CreateContextWithTestCertificate(TLS_method()));
-  ASSERT_TRUE(client_ctx);
-  ASSERT_TRUE(server_ctx);
-  ASSERT_TRUE(handshaker_ctx);
-
-  if (!use_new_alps_codepoint) {
-    SetUpExpectedOldCodePoint(server_ctx.get());
-  } else {
-    SetUpExpectedNewCodePoint(server_ctx.get());
-  }
-
-  SSL_CTX_set_session_cache_mode(client_ctx.get(), SSL_SESS_CACHE_CLIENT);
-  SSL_CTX_sess_set_new_cb(client_ctx.get(), SaveLastSession);
-  SSL_CTX_set_handoff_mode(server_ctx.get(), true);
-  uint8_t keys[48];
-  SSL_CTX_get_tlsext_ticket_keys(server_ctx.get(), &keys, sizeof(keys));
-  SSL_CTX_set_tlsext_ticket_keys(handshaker_ctx.get(), &keys, sizeof(keys));
-  SSL_CTX_set_custom_verify(client_ctx.get(), SSL_VERIFY_PEER,
-                            AcceptAnyCertificate);
-
-  for (bool early_data : {false, true}) {
-    SCOPED_TRACE(early_data);
-    for (bool is_resume : {false, true}) {
-      SCOPED_TRACE(is_resume);
-      bssl::UniquePtr<SSL> client, server;
-      ASSERT_TRUE(CreateClientAndServer(&client, &server, client_ctx.get(),
-                                        server_ctx.get()));
-      SSL_set_early_data_enabled(client.get(), early_data);
-
-      // Set up client ALPS settings.
-      SSL_set_alps_use_new_codepoint(client.get(), use_new_alps_codepoint);
-      ASSERT_TRUE(SSL_set_alpn_protos(client.get(), alpn, sizeof(alpn)) == 0);
-      ASSERT_TRUE(SSL_add_application_settings(client.get(), proto,
-                                               sizeof(proto), nullptr, 0));
-      if (is_resume) {
-        ASSERT_TRUE(g_last_session);
-        SSL_set_session(client.get(), g_last_session.get());
-        if (early_data) {
-          EXPECT_GT(g_last_session->ticket_max_early_data, 0u);
-        }
-      }
-
-
-      int client_ret = SSL_do_handshake(client.get());
-      int client_err = SSL_get_error(client.get(), client_ret);
-
-      uint8_t byte_written;
-      if (early_data && is_resume) {
-        ASSERT_EQ(client_err, 0);
-        EXPECT_TRUE(SSL_in_early_data(client.get()));
-        // Attempt to write early data.
-        byte_written = 43;
-        EXPECT_EQ(SSL_write(client.get(), &byte_written, 1), 1);
-      } else {
-        ASSERT_EQ(client_err, SSL_ERROR_WANT_READ);
-      }
-
-      int server_ret = SSL_do_handshake(server.get());
-      int server_err = SSL_get_error(server.get(), server_ret);
-      ASSERT_EQ(server_err, SSL_ERROR_HANDOFF);
-
-      ScopedCBB cbb;
-      Array<uint8_t> handoff;
-      SSL_CLIENT_HELLO hello;
-      ASSERT_TRUE(CBB_init(cbb.get(), 256));
-      ASSERT_TRUE(SSL_serialize_handoff(server.get(), cbb.get(), &hello));
-      ASSERT_TRUE(CBBFinishArray(cbb.get(), &handoff));
-
-      bssl::UniquePtr<SSL> handshaker(SSL_new(handshaker_ctx.get()));
-      ASSERT_TRUE(handshaker);
-      // Note split handshakes determines 0-RTT support, for both the current
-      // handshake and newly-issued tickets, entirely by `handshaker`. There is
-      // no need to call `SSL_set_early_data_enabled` on `server`.
-      SSL_set_early_data_enabled(handshaker.get(), 1);
-
-      // Set up handshaker ALPS settings.
-      SSL_set_alps_use_new_codepoint(handshaker.get(), use_new_alps_codepoint);
-      SSL_CTX_set_alpn_select_cb(
-          handshaker_ctx.get(),
-          [](SSL *ssl, const uint8_t **out, uint8_t *out_len, const uint8_t *in,
-             unsigned in_len, void *arg) -> int {
-            return SSL_select_next_proto(const_cast<uint8_t **>(out), out_len,
-                                         in, in_len, alpn,
-                                         sizeof(alpn)) == OPENSSL_NPN_NEGOTIATED
-                       ? SSL_TLSEXT_ERR_OK
-                       : SSL_TLSEXT_ERR_NOACK;
-          },
-          nullptr);
-      ASSERT_TRUE(SSL_add_application_settings(
-          handshaker.get(), proto, sizeof(proto), alps, sizeof(alps)));
-
-      ASSERT_TRUE(SSL_apply_handoff(handshaker.get(), handoff));
-
-      MoveBIOs(handshaker.get(), server.get());
-
-      int handshake_ret = SSL_do_handshake(handshaker.get());
-      int handshake_err = SSL_get_error(handshaker.get(), handshake_ret);
-      ASSERT_EQ(handshake_err, SSL_ERROR_HANDBACK);
-
-      // Double-check that additional calls to `SSL_do_handshake` continue
-      // to get `SSL_ERROR_HANDBACK`.
-      handshake_ret = SSL_do_handshake(handshaker.get());
-      handshake_err = SSL_get_error(handshaker.get(), handshake_ret);
-      ASSERT_EQ(handshake_err, SSL_ERROR_HANDBACK);
-
-      ScopedCBB cbb_handback;
-      Array<uint8_t> handback;
-      ASSERT_TRUE(CBB_init(cbb_handback.get(), 1024));
-      ASSERT_TRUE(SSL_serialize_handback(handshaker.get(), cbb_handback.get()));
-      ASSERT_TRUE(CBBFinishArray(cbb_handback.get(), &handback));
-
-      bssl::UniquePtr<SSL> server2(SSL_new(server_ctx.get()));
-      ASSERT_TRUE(server2);
-      ASSERT_TRUE(SSL_apply_handback(server2.get(), handback));
-
-      MoveBIOs(server2.get(), handshaker.get());
-      ASSERT_TRUE(CompleteHandshakes(client.get(), server2.get()));
-      EXPECT_EQ(is_resume, SSL_session_reused(client.get()));
-      // Verify application settings.
-      ASSERT_TRUE(SSL_has_application_settings(client.get()));
-
-      if (early_data && is_resume) {
-        // In this case, one byte of early data has already been written above.
-        EXPECT_TRUE(SSL_early_data_accepted(client.get()));
-      } else {
-        byte_written = 42;
-        EXPECT_EQ(SSL_write(client.get(), &byte_written, 1), 1);
-      }
-      uint8_t byte;
-      EXPECT_EQ(SSL_read(server2.get(), &byte, 1), 1);
-      EXPECT_EQ(byte_written, byte);
-
-      byte = 44;
-      EXPECT_EQ(SSL_write(server2.get(), &byte, 1), 1);
-      EXPECT_EQ(SSL_read(client.get(), &byte, 1), 1);
-      EXPECT_EQ(44, byte);
-    }
-  }
-}
-
-TEST(SSLTest, Handoff) {
-  for (bool use_new_alps_codepoint : {false, true}) {
-    SCOPED_TRACE(use_new_alps_codepoint);
-    VerifyHandoff(use_new_alps_codepoint);
-  }
-}
-
-TEST(SSLTest, HandoffDeclined) {
-  bssl::UniquePtr<SSL_CTX> client_ctx(SSL_CTX_new(TLS_method()));
-  bssl::UniquePtr<SSL_CTX> server_ctx(
-      CreateContextWithTestCertificate(TLS_method()));
-  ASSERT_TRUE(client_ctx);
-  ASSERT_TRUE(server_ctx);
-
-  SSL_CTX_set_handoff_mode(server_ctx.get(), true);
-  ASSERT_TRUE(SSL_CTX_set_max_proto_version(server_ctx.get(), TLS1_2_VERSION));
-  SSL_CTX_set_custom_verify(client_ctx.get(), SSL_VERIFY_PEER,
-                            AcceptAnyCertificate);
-
-  bssl::UniquePtr<SSL> client, server;
-  ASSERT_TRUE(CreateClientAndServer(&client, &server, client_ctx.get(),
-                                    server_ctx.get()));
-
-  int client_ret = SSL_do_handshake(client.get());
-  int client_err = SSL_get_error(client.get(), client_ret);
-  ASSERT_EQ(client_err, SSL_ERROR_WANT_READ);
-
-  int server_ret = SSL_do_handshake(server.get());
-  int server_err = SSL_get_error(server.get(), server_ret);
-  ASSERT_EQ(server_err, SSL_ERROR_HANDOFF);
-
-  ScopedCBB cbb;
-  SSL_CLIENT_HELLO hello;
-  ASSERT_TRUE(CBB_init(cbb.get(), 256));
-  ASSERT_TRUE(SSL_serialize_handoff(server.get(), cbb.get(), &hello));
-
-  ASSERT_TRUE(SSL_decline_handoff(server.get()));
-
-  ASSERT_TRUE(CompleteHandshakes(client.get(), server.get()));
-
-  uint8_t byte = 42;
-  EXPECT_EQ(SSL_write(client.get(), &byte, 1), 1);
-  EXPECT_EQ(SSL_read(server.get(), &byte, 1), 1);
-  EXPECT_EQ(42, byte);
-
-  byte = 43;
-  EXPECT_EQ(SSL_write(server.get(), &byte, 1), 1);
-  EXPECT_EQ(SSL_read(client.get(), &byte, 1), 1);
-  EXPECT_EQ(43, byte);
 }
 
 static std::string SigAlgsToString(Span<const uint16_t> sigalgs) {
@@ -7008,87 +7148,6 @@ TEST(SSLTest, SigAlgsList) {
     ExpectSigAlgsEqual(test.expected,
                        FromOpaque(ctx.get())->cert->legacy_credential->sigalgs);
   }
-}
-
-TEST(SSLTest, ApplyHandoffRemovesUnsupportedCiphers) {
-  bssl::UniquePtr<SSL_CTX> server_ctx(SSL_CTX_new(TLS_method()));
-  ASSERT_TRUE(server_ctx);
-  bssl::UniquePtr<SSL> server(SSL_new(server_ctx.get()));
-  ASSERT_TRUE(server);
-
-  // handoff is a handoff message that has been artificially modified to pretend
-  // that only TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256 (0xc02f) is supported. When
-  // it is applied to `server`, all ciphers but that one should be removed.
-  //
-  // To make a new one of these, try sticking this in the `Handoff` test above:
-  //
-  // hexdump(stderr, "", handoff.data(), handoff.size());
-  // sed -e 's/\(..\)/0x\1, /g'
-  //
-  // and modify serialize_features() to emit only cipher 0x0A.
-
-  uint8_t handoff[] = {
-      0x30, 0x81, 0x9a, 0x02, 0x01, 0x00, 0x04, 0x00, 0x04, 0x81, 0x82, 0x01,
-      0x00, 0x00, 0x7e, 0x03, 0x03, 0x30, 0x8e, 0x8f, 0x79, 0xd2, 0x87, 0x39,
-      0xc2, 0x23, 0x23, 0x13, 0xca, 0x3c, 0x80, 0x44, 0xfd, 0x80, 0x83, 0x62,
-      0x3c, 0xcc, 0xf8, 0x76, 0xd3, 0x62, 0xbb, 0x54, 0xe3, 0xc4, 0x39, 0x24,
-      0xa5, 0x00, 0x00, 0x1e, 0xc0, 0x2b, 0xc0, 0x2f, 0xc0, 0x2c, 0xc0, 0x30,
-      0xcc, 0xa9, 0xcc, 0xa8, 0xc0, 0x09, 0xc0, 0x13, 0xc0, 0x0a, 0xc0, 0x14,
-      0x00, 0x9c, 0x00, 0x9d, 0x00, 0x2f, 0x00, 0x35, 0x00, 0x0a, 0x01, 0x00,
-      0x00, 0x37, 0x00, 0x17, 0x00, 0x00, 0xff, 0x01, 0x00, 0x01, 0x00, 0x00,
-      0x0a, 0x00, 0x08, 0x00, 0x06, 0x00, 0x1d, 0x00, 0x17, 0x00, 0x18, 0x00,
-      0x0b, 0x00, 0x02, 0x01, 0x00, 0x00, 0x23, 0x00, 0x00, 0x00, 0x0d, 0x00,
-      0x14, 0x00, 0x12, 0x04, 0x03, 0x08, 0x04, 0x04, 0x01, 0x05, 0x03, 0x08,
-      0x05, 0x05, 0x01, 0x08, 0x06, 0x06, 0x01, 0x02, 0x01, 0x04, 0x02, 0xc0,
-      0x2f, 0x04, 0x0a, 0x00, 0x15, 0x00, 0x17, 0x00, 0x18, 0x00, 0x19, 0x00,
-      0x1d,
-  };
-
-  EXPECT_LT(1u, sk_SSL_CIPHER_num(SSL_get_ciphers(server.get())));
-  ASSERT_TRUE(SSL_apply_handoff(server.get(), handoff));
-  EXPECT_EQ(1u, sk_SSL_CIPHER_num(SSL_get_ciphers(server.get())));
-}
-
-TEST(SSLTest, ApplyHandoffRemovesUnsupportedCurves) {
-  bssl::UniquePtr<SSL_CTX> server_ctx(SSL_CTX_new(TLS_method()));
-  ASSERT_TRUE(server_ctx);
-  bssl::UniquePtr<SSL> server(SSL_new(server_ctx.get()));
-  ASSERT_TRUE(server);
-
-  // handoff is a handoff message that has been artificially modified to pretend
-  // that only one ECDH group is supported.  When it is applied to `server`, all
-  // groups but that one should be removed.
-  //
-  // See `ApplyHandoffRemovesUnsupportedCiphers` for how to make a new one of
-  // these.
-  uint8_t handoff[] = {
-      0x30, 0x81, 0xc0, 0x02, 0x01, 0x00, 0x04, 0x00, 0x04, 0x81, 0x82, 0x01,
-      0x00, 0x00, 0x7e, 0x03, 0x03, 0x98, 0x30, 0xce, 0xd9, 0xb0, 0xdf, 0x5f,
-      0x82, 0x05, 0x4a, 0x43, 0x67, 0x7e, 0xdb, 0x6a, 0x4f, 0x21, 0x18, 0x4e,
-      0x0d, 0x94, 0x63, 0x18, 0x8b, 0x54, 0x89, 0xdb, 0x8b, 0x1d, 0x84, 0xbc,
-      0x09, 0x00, 0x00, 0x1e, 0xc0, 0x2b, 0xc0, 0x2f, 0xc0, 0x2c, 0xc0, 0x30,
-      0xcc, 0xa9, 0xcc, 0xa8, 0xc0, 0x09, 0xc0, 0x13, 0xc0, 0x0a, 0xc0, 0x14,
-      0x00, 0x9c, 0x00, 0x9d, 0x00, 0x2f, 0x00, 0x35, 0x00, 0x0a, 0x01, 0x00,
-      0x00, 0x37, 0x00, 0x17, 0x00, 0x00, 0xff, 0x01, 0x00, 0x01, 0x00, 0x00,
-      0x0a, 0x00, 0x08, 0x00, 0x06, 0x00, 0x1d, 0x00, 0x17, 0x00, 0x18, 0x00,
-      0x0b, 0x00, 0x02, 0x01, 0x00, 0x00, 0x23, 0x00, 0x00, 0x00, 0x0d, 0x00,
-      0x14, 0x00, 0x12, 0x04, 0x03, 0x08, 0x04, 0x04, 0x01, 0x05, 0x03, 0x08,
-      0x05, 0x05, 0x01, 0x08, 0x06, 0x06, 0x01, 0x02, 0x01, 0x04, 0x30, 0x00,
-      0x02, 0x00, 0x0a, 0x00, 0x2f, 0x00, 0x35, 0x00, 0x8c, 0x00, 0x8d, 0x00,
-      0x9c, 0x00, 0x9d, 0x13, 0x01, 0x13, 0x02, 0x13, 0x03, 0xc0, 0x09, 0xc0,
-      0x0a, 0xc0, 0x13, 0xc0, 0x14, 0xc0, 0x2b, 0xc0, 0x2c, 0xc0, 0x2f, 0xc0,
-      0x30, 0xc0, 0x35, 0xc0, 0x36, 0xcc, 0xa8, 0xcc, 0xa9, 0xcc, 0xac, 0x04,
-      0x02, 0x00, 0x17,
-  };
-
-  // The default list of groups is used before applying the handoff.
-  EXPECT_THAT(FromOpaque(server.get())->config->supported_group_list,
-              ElementsAreArray({SSL_GROUP_X25519_MLKEM768, SSL_GROUP_X25519,
-                                SSL_GROUP_SECP256R1, SSL_GROUP_SECP384R1}));
-  ASSERT_TRUE(SSL_apply_handoff(server.get(), handoff));
-  EXPECT_EQ(1u, FromOpaque(server.get())->config->supported_group_list.size());
-  EXPECT_EQ(SSL_GROUP_SECP256R1,
-            FromOpaque(server.get())->config->supported_group_list[0]);
 }
 
 TEST(SSLTest, ZeroSizedWiteFlushesHandshakeMessages) {
@@ -7972,8 +8031,12 @@ TEST_F(QUICMethodTest, Basic) {
   Span<const uint8_t> read_secret, write_secret;
   EXPECT_FALSE(
       SSL_get_traffic_secrets(client_.get(), &read_secret, &write_secret));
+  EXPECT_TRUE(
+      ErrorsAreAndClear({{ERR_LIB_SSL, ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED}}));
   EXPECT_FALSE(
       SSL_get_traffic_secrets(server_.get(), &read_secret, &write_secret));
+  EXPECT_TRUE(
+      ErrorsAreAndClear({{ERR_LIB_SSL, ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED}}));
 
   // The server sent NewSessionTicket messages in the handshake.
   EXPECT_FALSE(g_last_session);
@@ -8656,7 +8719,7 @@ TEST_F(QUICMethodTest, ForbidCrossProtocolResumptionClient) {
   ASSERT_TRUE(g_last_session);
 
   // Pretend that g_last_session came from a TLS-over-TCP connection.
-  g_last_session->is_quic = false;
+  FromOpaque(g_last_session.get())->is_quic = false;
 
   // Create a second connection and verify that resumption does not occur with
   // a session from a non-QUIC connection. This tests that the client does not
@@ -8713,7 +8776,7 @@ TEST_F(QUICMethodTest, ForbidCrossProtocolResumptionServer) {
 
   // The TLS-over-TCP client will refuse to resume with a quic session, so
   // mark is_quic = false to bypass the client check to test the server check.
-  g_last_session->is_quic = false;
+  FromOpaque(g_last_session.get())->is_quic = false;
   SSL_set_session(client.get(), g_last_session.get());
 
   BIO *bio1, *bio2;
@@ -10741,15 +10804,23 @@ TEST(SSLTest, InvalidSignatureAlgorithm) {
   static const uint16_t kInvalidPrefs[] = {1234};
   EXPECT_FALSE(SSL_CTX_set_signing_algorithm_prefs(ctx.get(), kInvalidPrefs,
                                                    std::size(kInvalidPrefs)));
+  EXPECT_TRUE(
+      ErrorsAreAndClear({{ERR_LIB_SSL, SSL_R_INVALID_SIGNATURE_ALGORITHM}}));
   EXPECT_FALSE(SSL_CTX_set_verify_algorithm_prefs(ctx.get(), kInvalidPrefs,
                                                   std::size(kInvalidPrefs)));
+  EXPECT_TRUE(
+      ErrorsAreAndClear({{ERR_LIB_SSL, SSL_R_INVALID_SIGNATURE_ALGORITHM}}));
 
   static const uint16_t kDuplicatePrefs[] = {SSL_SIGN_RSA_PKCS1_SHA256,
                                              SSL_SIGN_RSA_PKCS1_SHA256};
   EXPECT_FALSE(SSL_CTX_set_signing_algorithm_prefs(ctx.get(), kDuplicatePrefs,
                                                    std::size(kDuplicatePrefs)));
+  EXPECT_TRUE(
+      ErrorsAreAndClear({{ERR_LIB_SSL, SSL_R_DUPLICATE_SIGNATURE_ALGORITHM}}));
   EXPECT_FALSE(SSL_CTX_set_verify_algorithm_prefs(ctx.get(), kDuplicatePrefs,
                                                   std::size(kDuplicatePrefs)));
+  EXPECT_TRUE(
+      ErrorsAreAndClear({{ERR_LIB_SSL, SSL_R_DUPLICATE_SIGNATURE_ALGORITHM}}));
 }
 
 TEST(SSLTest, InvalidGroups) {
@@ -10759,21 +10830,27 @@ TEST(SSLTest, InvalidGroups) {
   static const uint16_t kInvalidIDs[] = {1234};
   EXPECT_FALSE(
       SSL_CTX_set1_group_ids(ctx.get(), kInvalidIDs, std::size(kInvalidIDs)));
+  EXPECT_TRUE(
+      ErrorsAreAndClear({{ERR_LIB_SSL, SSL_R_UNSUPPORTED_ELLIPTIC_CURVE}}));
 
   // This is a valid NID, but it is not a valid group.
   static const int kInvalidNIDs[] = {NID_rsaEncryption};
   EXPECT_FALSE(
       SSL_CTX_set1_groups(ctx.get(), kInvalidNIDs, std::size(kInvalidNIDs)));
+  EXPECT_TRUE(
+      ErrorsAreAndClear({{ERR_LIB_SSL, SSL_R_UNSUPPORTED_ELLIPTIC_CURVE}}));
 
   // Duplicates are not allowed.
   static const uint16_t kDuplicateIDs[] = {SSL_GROUP_X25519_MLKEM768,
                                            SSL_GROUP_X25519, SSL_GROUP_X25519};
   EXPECT_FALSE(SSL_CTX_set1_group_ids(ctx.get(), kDuplicateIDs,
                                       std::size(kDuplicateIDs)));
+  EXPECT_TRUE(ErrorsAreAndClear({{ERR_LIB_SSL, SSL_R_DUPLICATE_GROUP}}));
   static const int kDuplicateNIDs[] = {NID_X25519, NID_X9_62_prime256v1,
                                        NID_X25519};
   EXPECT_FALSE(SSL_CTX_set1_groups(ctx.get(), kDuplicateNIDs,
                                    std::size(kDuplicateNIDs)));
+  EXPECT_TRUE(ErrorsAreAndClear({{ERR_LIB_SSL, SSL_R_DUPLICATE_GROUP}}));
 }
 
 TEST(SSLTest, NameLists) {
@@ -11081,8 +11158,23 @@ TEST_P(SSLVersionTest, GetIVs) {
     size_t client_iv_len, server_iv_len;
     bool client_ivs_ok = SSL_get_ivs(client_.get(), &client_read_iv,
                                      &client_write_iv, &client_iv_len);
+    if (is_dtls()) {
+      EXPECT_TRUE(ErrorsAreAndClear(
+          {{ERR_LIB_SSL, ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED}}));
+    } else if (version() != TLS1_VERSION) {
+      EXPECT_TRUE(ErrorsAreAndClear(
+          {{ERR_LIB_CIPHER, ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED}}));
+    }
+
     bool server_ivs_ok = SSL_get_ivs(server_.get(), &server_read_iv,
                                      &server_write_iv, &server_iv_len);
+    if (is_dtls()) {
+      EXPECT_TRUE(ErrorsAreAndClear(
+          {{ERR_LIB_SSL, ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED}}));
+    } else if (version() != TLS1_VERSION) {
+      EXPECT_TRUE(ErrorsAreAndClear(
+          {{ERR_LIB_CIPHER, ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED}}));
+    }
 
     // Only TLS 1.0 should support `SSL_get_ivs`. Other cases should cleanly
     // fail this operation.
@@ -11201,8 +11293,8 @@ TEST(SSLTest, IDOnlyTLS13Session) {
   ASSERT_TRUE(session);
   EXPECT_TRUE(SSL_SESSION_is_resumable(session.get()));
 
-  session->ticket.Reset();
-  session->session_id.Resize(32);
+  FromOpaque(session.get())->ticket.Reset();
+  FromOpaque(session.get())->session_id.Resize(32);
   EXPECT_FALSE(SSL_SESSION_is_resumable(session.get()));
 }
 
@@ -11281,6 +11373,7 @@ TEST(SSLTest, SetGetCompliancePolicy) {
   EXPECT_EQ(SSL_get_compliance_policy(ssl.get()), ssl_compliance_policy_none);
 
   for (const auto policy : {ssl_compliance_policy_fips_202205,      //
+                            ssl_compliance_policy_fips_202609,      //
                             ssl_compliance_policy_wpa3_192_202304,  //
                             ssl_compliance_policy_cnsa_202407,      //
                             ssl_compliance_policy_cnsa1_202603,     //

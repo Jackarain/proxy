@@ -19,6 +19,7 @@ import (
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/ed25519"
+	"crypto/mldsa"
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -45,7 +46,6 @@ import (
 	"time"
 
 	"boringssl.googlesource.com/boringssl.git/util/testresult"
-	"filippo.io/mldsa"
 	"golang.org/x/crypto/cryptobyte"
 	"golang.org/x/term"
 )
@@ -70,6 +70,7 @@ var (
 	handshakerPath     = flag.String("handshaker-path", "../../../build/ssl/test/handshaker", "The location of the handshaker binary.")
 	fuzzer             = flag.Bool("fuzzer", false, "If true, tests against a BoringSSL built in fuzzer mode.")
 	transcriptDir      = flag.String("transcript-dir", "", "The directory in which to write transcripts.")
+	hintTracesDir      = flag.String("hint-traces-dir", "", "The directory in which to write or read traces of -Hints tests for recording and replaying.")
 	idleTimeout        = flag.Duration("idle-timeout", 15*time.Second, "The number of seconds to wait for a read or write to bssl_shim.")
 	deterministic      = flag.Bool("deterministic", false, "If true, uses a deterministic PRNG in the runner.")
 	allowUnimplemented = flag.Bool("allow-unimplemented", false, "If true, report pass even if some tests are unimplemented.")
@@ -79,6 +80,10 @@ var (
 	repeatUntilFailure = flag.Bool("repeat-until-failure", false, "If true, the first selected test will be run repeatedly until failure.")
 	keepTestCerts      = flag.Bool("keep-test-certs", false, "If true, causes the test certificate directory to be retained")
 )
+
+// hintTraces is the global recorder that collects hint trace entries across
+// all worker goroutines. It is nil unless -hint-traces-dir was passed.
+var hintTraces *hintTraceRecorder
 
 // ShimConfigurations is used with the “json” package and represents a shim
 // config file.
@@ -194,7 +199,7 @@ func initKeys() {
 	ed25519Key = k.(ed25519.PrivateKey)
 
 	for _, k := range []struct {
-		params *mldsa.Parameters
+		params mldsa.Parameters
 		key    **mldsa.PrivateKey
 	}{
 		{mldsa.MLDSA44(), &mldsa44Key},
@@ -221,8 +226,8 @@ var (
 )
 
 var (
-	testOCSPExtension = append([]byte{byte(extensionStatusRequest) >> 8, byte(extensionStatusRequest), 0, 8, statusTypeOCSP, 0, 0, 4}, testOCSPResponse...)
-	testSCTExtension  = append([]byte{byte(extensionSignedCertificateTimestamp) >> 8, byte(extensionSignedCertificateTimestamp), 0, byte(len(testSCTList))}, testSCTList...)
+	testOCSPExtension = append([]byte{byte(extensionStatusRequest >> 8), byte(extensionStatusRequest), 0, 8, statusTypeOCSP, 0, 0, 4}, testOCSPResponse...)
+	testSCTExtension  = append([]byte{byte(extensionSignedCertificateTimestamp >> 8), byte(extensionSignedCertificateTimestamp), 0, byte(len(testSCTList))}, testSCTList...)
 )
 
 var (
@@ -361,23 +366,9 @@ func initRawPublicKeyCredentials() {
 	}
 }
 
-func flagInts(flagName string, vals []int) []string {
-	ret := make([]string, 0, 2*len(vals))
-	for _, val := range vals {
-		ret = append(ret, flagName, strconv.Itoa(val))
-	}
-	return ret
-}
+type toIntFlag interface{ ~int | ~uint16 | ~uint8 }
 
-func flagCurves(flagName string, vals []CurveID) []string {
-	ret := make([]string, 0, 2*len(vals))
-	for _, val := range vals {
-		ret = append(ret, flagName, strconv.Itoa(int(val)))
-	}
-	return ret
-}
-
-func flagCertTypes(flagName string, vals []CertificateType) []string {
+func flagInts[T toIntFlag](flagName string, vals []T) []string {
 	ret := make([]string, 0, 2*len(vals))
 	for _, val := range vals {
 		ret = append(ret, flagName, strconv.Itoa(int(val)))
@@ -702,8 +693,16 @@ type testCase struct {
 	// shimCredentials is a list of credentials which should be configured at
 	// the shim. It differs from shimCertificate only in whether the old or
 	// new APIs are used.
-	shimCredentials       []*Credential
+	shimCredentials []*Credential
+	// resumeShimCredentials, if set, overrides shimCredentials for resumption
+	// connections.
 	resumeShimCredentials []*Credential
+	// hintTraceBaseName is non-empty if the test should generate a hints trace.
+	// If non-empty, it equals `name` but without the "-Hints" suffix.
+	hintTraceBaseName string
+	// hintTraceBaseFlags is a copy of the subset of `flags` that should be
+	// recorded into the hints trace.
+	hintTraceBaseFlags []string
 }
 
 var testCases []testCase
@@ -813,7 +812,7 @@ func doExchange(test *testCase, config *Config, conn net.Conn, isResume bool, tr
 		}
 		conn = connDebug
 		if *flagDebug {
-			defer connDebug.WriteTo(os.Stdout)
+			defer connDebug.WriteFlowsTo(os.Stdout)
 		}
 		if *transcriptDir != "" {
 			defer func() {
@@ -1451,6 +1450,12 @@ func doExchanges(test *testCase, shim *shimProcess, resumeCount int, transcripts
 		config.Rand = &deterministicRand{}
 	}
 
+	var ticketKey [32]byte
+	if _, err := io.ReadFull(config.rand(), ticketKey[:]); err != nil {
+		return err
+	}
+	config.SessionTicketKey = &ticketKey
+
 	conn, err := shim.accept()
 	if err != nil {
 		return err
@@ -1461,7 +1466,6 @@ func doExchanges(test *testCase, shim *shimProcess, resumeCount int, transcripts
 		return err
 	}
 
-	nextTicketKey := config.SessionTicketKey
 	for i := range resumeCount {
 		var resumeConfig Config
 		if test.resumeConfig != nil {
@@ -1477,20 +1481,21 @@ func doExchanges(test *testCase, shim *shimProcess, resumeCount int, transcripts
 		if test.newSessionsOnResume {
 			resumeConfig.ClientSessionCache = nil
 			resumeConfig.ServerSessionCache = nil
-			if _, err := resumeConfig.rand().Read(resumeConfig.SessionTicketKey[:]); err != nil {
+			if _, err := io.ReadFull(resumeConfig.rand(), ticketKey[:]); err != nil {
 				return err
 			}
+			resumeConfig.SessionTicketKey = &ticketKey
 		} else {
 			resumeConfig.ClientSessionCache = config.ClientSessionCache
 			resumeConfig.ServerSessionCache = config.ServerSessionCache
 			// Rotate the ticket keys between each connection, with each connection
 			// encrypting with next connection's keys. This ensures that we test
 			// the renewed sessions.
-			resumeConfig.SessionTicketKey = nextTicketKey
-			if _, err := resumeConfig.rand().Read(nextTicketKey[:]); err != nil {
+			resumeConfig.SessionTicketKey = new(ticketKey)
+			if _, err := io.ReadFull(resumeConfig.rand(), ticketKey[:]); err != nil {
 				return err
 			}
-			resumeConfig.Bugs.EncryptSessionTicketKey = &nextTicketKey
+			resumeConfig.Bugs.EncryptSessionTicketKey = &ticketKey
 		}
 
 		var connResume net.Conn
@@ -1614,6 +1619,7 @@ func appendCredentialFlags(flags []string, cred *Credential, prefix string, newC
 	if !cred.Properties.Empty() {
 		handleBase64Field("cert-properties", cred.Properties.Marshal())
 	}
+	handleBase64Field("session-id-context", cred.SessionIDContext)
 	return flags
 }
 
@@ -1646,6 +1652,10 @@ func runTest(dispatcher *shimDispatcher, statusChan chan statusMsg, test *testCa
 		flags = append(flags, "-server")
 	}
 
+	// Credential flags trigger state in the command-line parser, so append these
+	// flags first.
+	flags = append(flags, test.flags...)
+
 	// Configure the default credential.
 	shimCertificate := test.shimCertificate
 	if shimCertificate == nil && len(test.shimCredentials) == 0 && len(test.resumeShimCredentials) == 0 && test.testType == serverTest && len(test.config.PreSharedKey) == 0 {
@@ -1663,8 +1673,12 @@ func runTest(dispatcher *shimDispatcher, statusChan chan statusMsg, test *testCa
 	}
 
 	// Configure any additional credentials.
+	var initialPrefix string
+	if len(test.resumeShimCredentials) > 0 {
+		initialPrefix = "-on-initial"
+	}
 	for _, cred := range test.shimCredentials {
-		flags = appendCredentialFlags(flags, cred, "", true)
+		flags = appendCredentialFlags(flags, cred, initialPrefix, true)
 	}
 	for _, cred := range test.resumeShimCredentials {
 		flags = appendCredentialFlags(flags, cred, "-on-resume", true)
@@ -1826,6 +1840,17 @@ func runTest(dispatcher *shimDispatcher, statusChan chan statusMsg, test *testCa
 
 	var transcriptPrefix string
 	var transcripts [][]byte
+
+	// Determine if this is a -Hints test that should be traced.
+	// TODO(crbug.com/512856871): New traces are not yet merged with those already
+	// on disk. Until that is implemented, an invocation that supplies a -test
+	// filter to only run a subset of tests will erroneously drop traces for tests
+	// not run. Similarly, test sharding may result in only one shard emitting
+	// traces.
+	// TODO(crbug.com/512856871): In the final state, we will not overwrite traces
+	// unconditionally, and only do so if explicitly rebaselining.
+	hasHintsTrace := hintTraces != nil && test.hintTraceBaseName != ""
+
 	if *transcriptDir != "" {
 		protocol := "tls"
 		if test.protocol == dtls {
@@ -1847,14 +1872,23 @@ func runTest(dispatcher *shimDispatcher, statusChan chan statusMsg, test *testCa
 		flags = append(flags, "-write-settings", transcriptPrefix)
 	}
 
+	if hasHintsTrace {
+		hintPrefix, err := hintTraces.prepare(test.hintTraceBaseName)
+		if err != nil {
+			return err
+		}
+		defer hintTraces.cleanup(test.hintTraceBaseName, resumeCount+1)
+		// The flag tells the C++ shim to write a binary file containing the
+		// ClientHello and hints data, to be retrieved by the runner later.
+		flags = append(flags, "-write-hint-trace", hintPrefix)
+	}
+
 	if test.testType == clientTest && test.config.Credential == nil {
 		test.config.Credential = &rsaCertificate
 	}
 	if test.config.Credential != nil {
 		flags = append(flags, "-trust-cert", test.config.Credential.RootPath)
 	}
-
-	flags = append(flags, test.flags...)
 
 	var env []string
 	if mallocNumToFail >= 0 {
@@ -1969,6 +2003,20 @@ func runTest(dispatcher *shimDispatcher, statusChan chan statusMsg, test *testCa
 		return fmt.Errorf("valgrind error:\n%s\n%s", stderr, extraStderr)
 	}
 
+	// Record hint trace for successful -Hints tests across all connections.
+	if hasHintsTrace && !failed {
+		connections, err := hintTraces.readConnections(test.hintTraceBaseName, resumeCount+1)
+		if err != nil {
+			return err
+		}
+		if len(connections) > 0 {
+			if len(connections) != resumeCount+1 {
+				return fmt.Errorf("expected %d connection traces for %s, found %d", resumeCount+1, test.hintTraceBaseName, len(connections))
+			}
+			hintTraces.record(test.hintTraceBaseName, test.hintTraceBaseFlags, connections)
+		}
+	}
+
 	return nil
 }
 
@@ -2066,7 +2114,9 @@ func allVersions(protocol protocol) []tlsVersion {
 	return ret
 }
 
-func convertToHandshakeHintTests(tests []testCase) (handshakeHintTests []testCase, err error) {
+// isHandshakerSupported returns whether the shim was built with support for
+// the external handshaker, which -Hints tests require.
+func isHandshakerSupported() (bool, error) {
 	var stdout bytes.Buffer
 	var flags []string
 	if len(*shimExtraFlags) > 0 {
@@ -2076,16 +2126,26 @@ func convertToHandshakeHintTests(tests []testCase) (handshakeHintTests []testCas
 	shim := exec.Command(*shimPath, flags...)
 	shim.Stdout = &stdout
 	if err := shim.Run(); err != nil {
-		return nil, err
+		return false, err
 	}
 
 	switch strings.TrimSpace(stdout.String()) {
 	case "No":
-		return
+		return false, nil
 	case "Yes":
-		break
+		return true, nil
 	default:
-		return nil, fmt.Errorf("unknown output from shim: %q", stdout.Bytes())
+		return false, fmt.Errorf("unknown output from shim: %q", stdout.Bytes())
+	}
+}
+
+func convertToHandshakeHintTests(tests []testCase) (handshakeHintTests []testCase, err error) {
+	supported, err := isHandshakerSupported()
+	if err != nil {
+		return nil, err
+	}
+	if !supported {
+		return nil, nil
 	}
 
 	var allowHintMismatchPattern []string
@@ -2113,8 +2173,12 @@ func convertToHandshakeHintTests(tests []testCase) (handshakeHintTests []testCas
 		hintTest.flags = make([]string, len(test.flags), len(test.flags)+3)
 		copy(hintTest.flags, test.flags)
 		hintTest.flags = append(hintTest.flags, "-handshake-hints", "-handshaker-path", *handshakerPath)
+		// Don't record a trace for tests whose hint may have mismatched.
 		if matched {
 			hintTest.flags = append(hintTest.flags, "-allow-hint-mismatch")
+		} else {
+			hintTest.hintTraceBaseName = test.name
+			hintTest.hintTraceBaseFlags = slices.Clone(test.flags)
 		}
 
 		handshakeHintTests = append(handshakeHintTests, hintTest)
@@ -2295,6 +2359,9 @@ func checkTests() {
 
 func main() {
 	flag.Parse()
+	if *hintTracesDir != "" {
+		hintTraces = newHintTraceRecorder(*hintTracesDir)
+	}
 	var err error
 	if tmpDir, err = os.MkdirTemp("", "testing-certs"); err != nil {
 		fmt.Fprintf(os.Stderr, "failed to make temporary directory: %s", err)
@@ -2331,6 +2398,7 @@ func main() {
 	addMinimumVersionTests()
 	addExtensionTests()
 	addResumptionVersionTests()
+	addCredentialSessionIDContextTests()
 	addExtendedMasterSecretTests()
 	addRenegotiationTests()
 	addDTLSReplayTests()
@@ -2485,6 +2553,14 @@ func main() {
 	if *jsonOutput != "" {
 		if err := testOutput.WriteToFile(*jsonOutput); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %s\n", err)
+		}
+	}
+
+	if hintTraces != nil {
+		if err := hintTraces.writeTraces(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error writing hint traces: %s\n", err)
+		} else {
+			fmt.Printf("Wrote %d hint traces to %s\n", hintTraces.numTraces(), *hintTracesDir)
 		}
 	}
 

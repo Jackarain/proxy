@@ -124,6 +124,15 @@ class OPENSSL_EXPORT VerifyCertificateChainDelegate {
       const MTCAnchor* mtc_anchor,
       std::vector<std::vector<uint8_t>> valid_additional_cosigners) = 0;
 
+  // This is called during verification or path building to decide if debug
+  // logs will be sent to the delegate. No calls to DebugLog (below) will be
+  // made unless this returns true.
+  virtual bool IsDebugLogEnabled() = 0;
+
+  // This is called to send a debug log string `msg` to the delegate. These are
+  // only called if IsDebugLogEnabled (above) returns true.
+  virtual void DebugLog(std::string_view msg) = 0;
+
   virtual ~VerifyCertificateChainDelegate();
 };
 

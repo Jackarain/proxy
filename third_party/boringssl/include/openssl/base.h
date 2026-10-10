@@ -287,6 +287,7 @@ typedef struct cbs_st CBS;
 typedef struct cmac_ctx_st CMAC_CTX;
 typedef struct conf_st CONF;
 typedef struct conf_value_st CONF_VALUE;
+typedef struct cpace_ctx_st CPACE_CTX;
 typedef struct crypto_buffer_pool_st CRYPTO_BUFFER_POOL;
 typedef struct crypto_buffer_st CRYPTO_BUFFER;
 typedef struct crypto_ivec_st CRYPTO_IVEC;
@@ -395,6 +396,9 @@ typedef void *OPENSSL_BLOCK;
 
 #define BORINGSSL_MAKE_DELETER(type, deleter)
 #define BORINGSSL_MAKE_UP_REF(type, up_ref_func)
+#define BORINGSSL_MAKE_STACK_TRAITS(type, init_func, cleanup_func)
+#define BORINGSSL_MAKE_STACK_TRAITS_MOVABLE(type, init_func, cleanup_func, \
+                                            move_func)
 
 #else
 
@@ -427,12 +431,14 @@ struct Deleter {
   }
 };
 
-template <typename T, typename CleanupRet, void (*init)(T *),
-          CleanupRet (*cleanup)(T *)>
+template <typename T>
+struct StackAllocatedTraits {};
+
+template <typename T, typename Traits = StackAllocatedTraits<T> >
 class StackAllocated {
  public:
-  StackAllocated() { init(&ctx_); }
-  ~StackAllocated() { cleanup(&ctx_); }
+  StackAllocated() { Traits::Init(&ctx_); }
+  ~StackAllocated() { Traits::Cleanup(&ctx_); }
 
   StackAllocated(const StackAllocated &) = delete;
   StackAllocated &operator=(const StackAllocated &) = delete;
@@ -444,27 +450,29 @@ class StackAllocated {
   const T *operator->() const { return &ctx_; }
 
   void Reset() {
-    cleanup(&ctx_);
-    init(&ctx_);
+    Traits::Cleanup(&ctx_);
+    Traits::Init(&ctx_);
   }
 
  private:
   T ctx_;
 };
 
-template <typename T, typename CleanupRet, void (*init)(T *),
-          CleanupRet (*cleanup)(T *), void (*move)(T *, T *)>
+template <typename T>
+struct StackAllocatedMovableTraits {};
+
+template <typename T, typename Traits = StackAllocatedMovableTraits<T> >
 class StackAllocatedMovable {
  public:
-  StackAllocatedMovable() { init(&ctx_); }
-  ~StackAllocatedMovable() { cleanup(&ctx_); }
+  StackAllocatedMovable() { Traits::Init(&ctx_); }
+  ~StackAllocatedMovable() { Traits::Cleanup(&ctx_); }
 
   StackAllocatedMovable(StackAllocatedMovable &&other) {
-    init(&ctx_);
-    move(&ctx_, &other.ctx_);
+    Traits::Init(&ctx_);
+    Traits::Move(&ctx_, &other.ctx_);
   }
   StackAllocatedMovable &operator=(StackAllocatedMovable &&other) {
-    move(&ctx_, &other.ctx_);
+    Traits::Move(&ctx_, &other.ctx_);
     return *this;
   }
 
@@ -475,8 +483,8 @@ class StackAllocatedMovable {
   const T *operator->() const { return &ctx_; }
 
   void Reset() {
-    cleanup(&ctx_);
-    init(&ctx_);
+    Traits::Cleanup(&ctx_);
+    Traits::Init(&ctx_);
   }
 
  private:
@@ -491,6 +499,26 @@ class StackAllocatedMovable {
   struct DeleterImpl<type> {                      \
     static void Free(type *ptr) { deleter(ptr); } \
   };                                              \
+  }
+
+#define BORINGSSL_MAKE_STACK_TRAITS(type, init_func, cleanup_func) \
+  namespace internal {                                             \
+  template <>                                                      \
+  struct StackAllocatedTraits<type> {                              \
+    static void Init(type *ptr) { init_func(ptr); }                \
+    static void Cleanup(type *ptr) { cleanup_func(ptr); }          \
+  };                                                               \
+  }
+
+#define BORINGSSL_MAKE_STACK_TRAITS_MOVABLE(type, init_func, cleanup_func, \
+                                            move_func)                     \
+  namespace internal {                                                     \
+  template <>                                                              \
+  struct StackAllocatedMovableTraits<type> {                               \
+    static void Init(type *ptr) { init_func(ptr); }                        \
+    static void Cleanup(type *ptr) { cleanup_func(ptr); }                  \
+    static void Move(type *out, type *in) { move_func(out, in); }          \
+  };                                                                       \
   }
 
 // Holds ownership of heap-allocated BoringSSL structures. Sample usage:

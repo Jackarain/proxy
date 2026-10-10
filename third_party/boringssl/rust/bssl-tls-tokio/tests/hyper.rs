@@ -97,7 +97,7 @@ struct MockTcpConnector {
 }
 
 impl Service<hyper::http::Uri> for MockTcpConnector {
-    type Response = TcpStream;
+    type Response = HyperTokioIo<TcpStream>;
     type Error = std::io::Error;
     type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
 
@@ -107,7 +107,10 @@ impl Service<hyper::http::Uri> for MockTcpConnector {
 
     fn call(&mut self, _: hyper::http::Uri) -> Self::Future {
         let addr = self.addr;
-        Box::pin(TcpStream::connect(addr))
+        Box::pin(async move {
+            let stream = TcpStream::connect(addr).await?;
+            Ok(HyperTokioIo::new(stream))
+        })
     }
 }
 
@@ -134,7 +137,7 @@ async fn test_hyper_h2_roundtrip() {
 
         hyper::server::conn::http2::Builder::new(hyper_util::rt::TokioExecutor::new())
             .serve_connection(
-                HyperTokioIo::new(tls_stream),
+                tls_stream,
                 service_fn(|_req| async {
                     Ok::<_, hyper::Error>(hyper::Response::new(SimpleBody::new(
                         "hello from h2 server",
@@ -160,12 +163,10 @@ async fn test_hyper_h2_roundtrip() {
             .await
             .unwrap();
 
-        let (mut sender, conn) = hyper::client::conn::http2::handshake(
-            hyper_util::rt::TokioExecutor::new(),
-            HyperTokioIo::new(tls_stream),
-        )
-        .await
-        .unwrap();
+        let (mut sender, conn) =
+            hyper::client::conn::http2::handshake(hyper_util::rt::TokioExecutor::new(), tls_stream)
+                .await
+                .unwrap();
 
         // Drive the connection in the background.
         tokio::spawn(async move {

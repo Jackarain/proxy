@@ -332,12 +332,15 @@ static int aead_tls_openv(const EVP_AEAD_CTX *ctx,
   // Split the decrypted record into `iovecs_without_trailer` and `trailer`,
   // based on the public lower bound of where the plaintext ends. The plaintext
   // is followed by `mac_len` and then at most 256 bytes of padding.
-  InplaceVector<CRYPTO_IOVEC, CRYPTO_IOVEC_MAX> iovecs_without_trailer;
-  iovecs_without_trailer.CopyFrom(iovecs);
+  bssl::iovec::MaybeInplaceArray iovecs_without_trailer;
+  if (!iovecs_without_trailer.CopyFrom(iovecs)) {
+    return 0;
+  }
   uint8_t trailer_buf[EVP_MAX_MD_SIZE + 256];
   const size_t trailer_len = std::min(in_len, mac_len + 256);
-  std::optional<Span<const uint8_t>> trailer = bssl::iovec::GetAndRemoveOutSuffix(
-      Span(trailer_buf).first(trailer_len), Span(iovecs_without_trailer));
+  std::optional<Span<const uint8_t>> trailer =
+      bssl::iovec::GetAndRemoveOutSuffix(Span(trailer_buf).first(trailer_len),
+                                         Span(iovecs_without_trailer));
   BSSL_CHECK(trailer.has_value());
 
   // Remove CBC padding. Code from here on is timing-sensitive with respect to

@@ -31,6 +31,7 @@
 BSSL_NAMESPACE_BEGIN
 
 class ParsedCertificate;
+class VerifyCertificateChainDelegate;
 
 // OCSPCertID contains a representation of a DER-encoded RFC 6960 "CertID".
 //
@@ -273,12 +274,15 @@ OPENSSL_EXPORT bool ParseOCSPResponse(der::Input raw_tlv, OCSPResponse *out);
 // Checks the revocation status of `certificate` by using the DER-encoded
 // `raw_response`.
 //
-// Arguments are the same as above, except that it takes already parsed
-// instances of the certificate and issuer certificate.
+// Arguments are the same as the CheckOCSP from the public ocsp.h, except that
+// it takes already parsed instances of the certificate and issuer certificate
+// and takes a `delegate` for signature and certificate verification policy.
 [[nodiscard]] OPENSSL_EXPORT OCSPRevocationStatus CheckOCSP(
-    std::string_view raw_response, const ParsedCertificate *certificate,
-    const ParsedCertificate *issuer_certificate,
+    std::string_view raw_response,
+    const std::shared_ptr<const ParsedCertificate> &certificate,
+    const std::shared_ptr<const ParsedCertificate> &issuer_certificate,
     int64_t verify_time_epoch_seconds, std::optional<int64_t> max_age_seconds,
+    VerifyCertificateChainDelegate *delegate,
     OCSPVerifyResult::ResponseStatus *response_details);
 
 // Creates a DER-encoded OCSPRequest for `cert`. The request is fairly basic:

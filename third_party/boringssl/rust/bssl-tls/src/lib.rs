@@ -18,8 +18,6 @@
     clippy::missing_safety_doc,
     clippy::indexing_slicing,
     clippy::unwrap_used,
-    clippy::panic,
-    clippy::expect_used,
     clippy::undocumented_unsafe_blocks
 )]
 #![allow(private_bounds)]
@@ -33,6 +31,7 @@
 extern crate alloc;
 extern crate core;
 
+use alloc::boxed::Box;
 use core::panic::AssertUnwindSafe;
 
 pub mod alerts;

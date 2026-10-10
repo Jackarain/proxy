@@ -74,7 +74,7 @@ int ec_scalar_from_bytes(const EC_GROUP *group, EC_SCALAR *out,
                          const uint8_t *in, size_t len);
 
 // ec_scalar_reduce sets `out` to `words`, reduced modulo the group order.
-// `words` must be less than order^2. `num` must be at most twice the width of
+// `words` must be less than order². `num` must be at most twice the width of
 // group order. This function treats `words` as secret.
 void ec_scalar_reduce(const EC_GROUP *group, EC_SCALAR *out,
                       const BN_ULONG *words, size_t num);
@@ -168,10 +168,21 @@ int ec_felem_to_bignum(const EC_GROUP *group, BIGNUM *out, const EC_FELEM *in);
 void ec_felem_to_bytes(const EC_GROUP *group, uint8_t *out, size_t *out_len,
                        const EC_FELEM *in);
 
-// ec_felem_from_bytes deserializes `in` and stores the resulting field element
-// to `out`. It returns one on success and zero if `in` is invalid.
+// ec_felem_from_bytes deserializes `in` as a big-endian field element and
+// stores the result to `out`. It returns one on success and zero if `in` is
+// invalid.
 int ec_felem_from_bytes(const EC_GROUP *group, EC_FELEM *out, const uint8_t *in,
                         size_t len);
+
+// ec_felem_from_bytes_or_placeholder deserializes `in` as a big-endian field
+// element. On success, it stores the resulting field element to `out` and
+// returns `CONSTTIME_TRUE_W`. If `in` is out of range, it sets `out` to an
+// arbitrary field element and returns `CONSTTIME_FALSE_W`. Both `in`, and
+// whether it was in range, are treated as secret. `len` must be equal to
+// `BN_num_words(field)` or the function will abort.
+crypto_word_t ec_felem_from_bytes_or_placeholder(const EC_GROUP *group,
+                                                 EC_FELEM *out,
+                                                 const uint8_t *in, size_t len);
 
 // ec_felem_neg sets `out` to -`a`.
 void ec_felem_neg(const EC_GROUP *group, EC_FELEM *out, const EC_FELEM *a);
@@ -200,7 +211,7 @@ int ec_felem_equal(const EC_GROUP *group, const EC_FELEM *a, const EC_FELEM *b);
 void ec_felem_mul(const EC_GROUP *group, EC_FELEM *out, const EC_FELEM *a,
                   const EC_FELEM *b);
 
-// ec_felem_sqr sets `out` to `a`^2.
+// ec_felem_sqr sets `out` to `a`².
 void ec_felem_sqr(const EC_GROUP *group, EC_FELEM *out, const EC_FELEM *a);
 
 // ec_felem_to_montgomery sets `out` to `a` converted to Montgomery form.
@@ -212,7 +223,7 @@ void ec_felem_from_montgomery(const EC_GROUP *group, EC_FELEM *out,
                               const EC_FELEM *a);
 
 // ec_felem_reduce sets `out` to `words`, reduced modulo the field size, p.
-// `words` must be less than p^2. `num` must be at most twice the width of p.
+// `words` must be less than p². `num` must be at most twice the width of p.
 // This function treats `words` as secret.
 void ec_felem_reduce(const EC_GROUP *group, EC_FELEM *out,
                      const BN_ULONG *words, size_t num);
@@ -227,6 +238,23 @@ void ec_felem_reduce(const EC_GROUP *group, EC_FELEM *out,
 // chain. We also miss our specialized field arithmetic for P-256.
 void ec_felem_exp(const EC_GROUP *group, EC_FELEM *out, const EC_FELEM *a,
                   const BN_ULONG *exp, size_t num_exp);
+
+// ec_felem_sqrt sets `out` to the square root of `a` whose least significant
+// bit is `y_bit`. It returns one on success and zero on error or if `a` is not
+// a square.
+int ec_felem_sqrt(const EC_GROUP *group, EC_FELEM *out, const EC_FELEM *a,
+                  crypto_word_t y_bit);
+
+// ec_felem_sqrt_secret sets `out` to the square root of `a` whose least
+// significant bit is `y_bit`. It returns `CONSTTIME_TRUE_W` on success and
+// `CONSTTIME_FALSE_W` if `a` is not a square.
+//
+// This function treats `a`, `y_bit`, and whether `a` is a square, as secret. If
+// `a` is not a square, `out` will be set to some arbitrary field element. This
+// function is only implemented for curves whose field is 3 mod 4. (In
+// particular, it is *not* implemented for P-224.) It aborts on invalid group.
+crypto_word_t ec_felem_sqrt_secret(const EC_GROUP *group, EC_FELEM *out,
+                                   const EC_FELEM *a, crypto_word_t y_bit);
 
 
 // Points.
@@ -280,12 +308,21 @@ int ec_jacobian_to_affine(const EC_GROUP *group, EC_AFFINE *out,
 int ec_jacobian_to_affine_batch(const EC_GROUP *group, EC_AFFINE *out,
                                 const EC_JACOBIAN *in, size_t num);
 
-// ec_point_set_affine_coordinates sets `out`'s to a point with affine
-// coordinates `x` and `y`. It returns one if the point is on the curve and
-// zero otherwise. If the point is not on the curve, the value of `out` is
-// undefined.
+// ec_y_sqr_from_x sets `out` to `x^3 + ax + b`, the expected value of y^2.
+void ec_y_sqr_from_x(const EC_GROUP *group, EC_FELEM *out, const EC_FELEM *x);
+
+// ec_point_set_affine_coordinates sets `out` to a point with affine coordinates
+// `x` and `y`. It returns one if the point is on the curve and zero otherwise.
+// If the point is not on the curve, the value of `out` is undefined.
 int ec_point_set_affine_coordinates(const EC_GROUP *group, EC_AFFINE *out,
                                     const EC_FELEM *x, const EC_FELEM *y);
+
+// ec_point_set_compressed_coordinates sets `out` to a point with compressed
+// coordinates `x` and `y_bit`. It returns one if the point is on the curve and
+// zero otherwise. If the point is not on the curve, the value of `out` is
+// undefined.
+int ec_point_set_compressed_coordinates(const EC_GROUP *group, EC_AFFINE *out,
+                                        const EC_FELEM *x, crypto_word_t y_bit);
 
 // ec_point_mul_no_self_test does the same as `EC_POINT_mul`, but doesn't try to
 // run the self-test first. This is for use in the self tests themselves, to
@@ -440,10 +477,16 @@ size_t ec_point_to_bytes(const EC_GROUP *group, const EC_AFFINE *point,
                          size_t max_out);
 
 // ec_point_from_uncompressed parses `in` as a point in uncompressed form and
-// sets the result to `out`. It returns one on success and zero if the input was
+// sets `out` to the result. It returns one on success and zero if the input was
 // invalid.
 int ec_point_from_uncompressed(const EC_GROUP *group, EC_AFFINE *out,
                                const uint8_t *in, size_t len);
+
+// ec_point_from_compressed parses `in` as a point in compressed form and sets
+// `out` to the result`. It returns one on success and zero if the input was
+// invalid.
+int ec_point_from_compressed(const EC_GROUP *group, EC_AFFINE *out,
+                             const uint8_t *in, size_t len);
 
 // ec_set_to_safe_point sets `out` to an arbitrary point on `group`, either the
 // generator or the point at infinity. This is used to guard against callers of
@@ -578,16 +621,18 @@ struct ec_group_st {
   uint8_t oid[9];
   uint8_t oid_len;
 
-  // a_is_minus3 is one if `a` is -3 mod `field` and zero otherwise. Point
-  // arithmetic is optimized for -3.
-  int a_is_minus3;
+  // a_is_minus3 is whether `a` is -3 mod `field`. Point arithmetic is optimized
+  // for -3.
+  bool a_is_minus3;
 
-  // has_order is one if `generator` and `order` have been initialized.
-  int has_order;
+  // field_is_3_mod_4 is whether `field` is 3 mod 4.
+  bool field_is_3_mod_4;
 
-  // field_greater_than_order is one if `field` is greater than `order` and zero
-  // otherwise.
-  int field_greater_than_order;
+  // has_order is whether `generator` and `order` have been initialized.
+  bool has_order;
+
+  // field_greater_than_order is whether `field` is greater than `order`.
+  bool field_greater_than_order;
 } /* EC_GROUP */;
 
 BSSL_NAMESPACE_BEGIN

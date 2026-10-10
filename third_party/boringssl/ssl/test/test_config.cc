@@ -334,6 +334,7 @@ const Flag<TestConfig> *FindFlag(const char *name) {
         BoolFlag("-quic", &TestConfig::is_quic),
         IntFlag("-resume-count", &TestConfig::resume_count),
         StringFlag("-write-settings", &TestConfig::write_settings),
+        StringFlag("-write-hint-trace", &TestConfig::write_hint_trace),
 #if defined(FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION)
         BoolFlag("-fuzzer-mode", &TestConfig::fuzzer_mode),
 #endif
@@ -343,6 +344,8 @@ const Flag<TestConfig> *FindFlag(const char *name) {
                       &TestConfig::expect_peer_verify_prefs),
         IntVectorFlag("-curves", &TestConfig::curves),
         IntVectorFlag("-curves-flags", &TestConfig::curves_flags),
+        IntVectorFlag("-tls13-ciphers", &TestConfig::tls13_ciphers),
+        IntVectorFlag("-tls13-ciphers-flags", &TestConfig::tls13_ciphers_flags),
         OptionalIntVectorFlag("-key-shares", &TestConfig::key_shares),
         SetValueFlag("-no-key-shares", &TestConfig::key_shares,
                      std::vector<uint16_t>{}),
@@ -441,6 +444,8 @@ const Flag<TestConfig> *FindFlag(const char *name) {
         BoolFlag("-install-ddos-callback", &TestConfig::install_ddos_callback),
         BoolFlag("-fail-ddos-callback", &TestConfig::fail_ddos_callback),
         BoolFlag("-fail-cert-callback", &TestConfig::fail_cert_callback),
+        IntFlag("-fail-cert-callback-alert",
+                &TestConfig::fail_cert_callback_alert),
         StringFlag("-cipher", &TestConfig::cipher),
         BoolFlag("-handshake-never-done", &TestConfig::handshake_never_done),
         IntFlag("-export-keying-material", &TestConfig::export_keying_material),
@@ -560,6 +565,7 @@ const Flag<TestConfig> *FindFlag(const char *name) {
         IntFlag("-early-write-after-message",
                 &TestConfig::early_write_after_message),
         BoolFlag("-fips-202205", &TestConfig::fips_202205),
+        BoolFlag("-fips-202609", &TestConfig::fips_202609),
         BoolFlag("-wpa-202304", &TestConfig::wpa_202304),
         BoolFlag("-cnsa-202407", &TestConfig::cnsa_202407),
         BoolFlag("-cnsa1-202603", &TestConfig::cnsa1_202603),
@@ -631,6 +637,10 @@ const Flag<TestConfig> *FindFlag(const char *name) {
                                     &CredentialConfig::psk_hash, EVP_sha384())),
         CredentialFlag(
             Base64Flag("-cert-properties", &CredentialConfig::cert_properties)),
+        CredentialFlagWithDefault(
+            Base64Flag("-session-id-context", &TestConfig::session_id_context),
+            Base64Flag("-session-id-context",
+                       &CredentialConfig::session_id_context)),
         IntFlag("-private-key-delay-ms", &TestConfig::private_key_delay_ms),
         BoolFlag("-resumption-across-names-enabled",
                  &TestConfig::resumption_across_names_enabled),
@@ -1651,6 +1661,13 @@ static bssl::UniquePtr<SSL_CREDENTIAL> CredentialFromConfig(
     }
   }
 
+  if (!cred_config.session_id_context.empty() &&
+      !SSL_CREDENTIAL_set1_session_id_context(
+          cred.get(), cred_config.session_id_context.data(),
+          cred_config.session_id_context.size())) {
+    return nullptr;
+  }
+
   if (!SetCredentialInfo(cred.get(), std::move(info))) {
     return nullptr;
   }
@@ -2161,6 +2178,12 @@ bssl::UniquePtr<SSL_CTX> TestConfig::SetupCtx(SSL_CTX *old_ctx) const {
     SSL_CTX_set_resumption_across_names_enabled(ssl_ctx.get(), 1);
   }
 
+  if (!session_id_context.empty() &&
+      !SSL_CTX_set_session_id_context(ssl_ctx.get(), session_id_context.data(),
+                                      session_id_context.size())) {
+    return nullptr;
+  }
+
   if (old_ctx) {
     uint8_t keys[48];
     if (!SSL_CTX_get_tlsext_ticket_keys(old_ctx, &keys, sizeof(keys)) ||
@@ -2341,7 +2364,7 @@ static ssl_verify_result_t VerifyRawPublicKeyCallback(SSL *ssl,
   return ssl_verify_ok;
 }
 
-static int CertCallback(SSL *ssl, void *arg) {
+static int CertCallback(SSL *ssl, void *arg, uint8_t *out_alert) {
   const TestConfig *config = GetTestConfig(ssl);
 
   // Check the peer certificate metadata is as expected.
@@ -2351,6 +2374,9 @@ static int CertCallback(SSL *ssl, void *arg) {
   }
 
   if (config->fail_cert_callback) {
+    if (config->fail_cert_callback_alert != 0) {
+      *out_alert = static_cast<uint8_t>(config->fail_cert_callback_alert);
+    }
     return 0;
   }
 
@@ -2394,7 +2420,7 @@ bssl::UniquePtr<SSL> TestConfig::NewSSL(
     return nullptr;
   }
   if (!use_old_client_cert_callback) {
-    SSL_set_cert_cb(ssl.get(), CertCallback, nullptr);
+    SSL_set_cert_cb_ex(ssl.get(), CertCallback, nullptr);
   }
   int mode = SSL_VERIFY_NONE;
   if (require_any_client_certificate) {
@@ -2597,6 +2623,21 @@ bssl::UniquePtr<SSL> TestConfig::NewSSL(
       }
     }
   }
+  if (!tls13_ciphers.empty()) {
+    if (!tls13_ciphers_flags.empty()) {
+      if (tls13_ciphers.size() != tls13_ciphers_flags.size() ||
+          !SSL_set1_tls13_ciphers(ssl.get(), tls13_ciphers.data(),
+                                  tls13_ciphers_flags.data(),
+                                  tls13_ciphers.size())) {
+        return nullptr;
+      }
+    } else {
+      if (!SSL_set1_tls13_ciphers(ssl.get(), tls13_ciphers.data(),
+                                  /*flags=*/nullptr, tls13_ciphers.size())) {
+        return nullptr;
+      }
+    }
+  }
   if (key_shares.has_value() &&
       !SSL_set1_client_key_shares(ssl.get(), key_shares->data(),
                                   key_shares->size())) {
@@ -2685,6 +2726,7 @@ bssl::UniquePtr<SSL> TestConfig::NewSSL(
     ssl_compliance_policy_t policy;
   } compliance_options[] = {
       {&fips_202205, ssl_compliance_policy_fips_202205},
+      {&fips_202609, ssl_compliance_policy_fips_202609},
       {&wpa_202304, ssl_compliance_policy_wpa3_192_202304},
       {&cnsa_202407, ssl_compliance_policy_cnsa_202407},
       {&cnsa1_202603, ssl_compliance_policy_cnsa1_202603},

@@ -14,9 +14,11 @@
 
 #include <openssl/ec.h>
 
+#include <openssl/bn.h>
 #include <openssl/digest.h>
 #include <openssl/err.h>
 #include <openssl/hkdf.h>
+#include <openssl/hmac.h>
 #include <openssl/nid.h>
 #include <openssl/span.h>
 
@@ -242,17 +244,13 @@ BN_ULONG sgn0(const EC_GROUP *group, const EC_FELEM *a) {
   return buf[len - 1] & 1;
 }
 
-[[maybe_unused]] static int is_3mod4(const EC_GROUP *group) {
-  return group->field.N.width > 0 && (group->field.N.d[0] & 3) == 3;
-}
-
 // sqrt_ratio_3mod4 implements the operation described in appendix F.2.1.2
 // of RFC 9380.
 BN_ULONG sqrt_ratio_3mod4(const EC_GROUP *group, const EC_FELEM *Z,
                           const BN_ULONG *c1, size_t num_c1, const EC_FELEM *c2,
                           EC_FELEM *out_y, const EC_FELEM *u,
                           const EC_FELEM *v) {
-  assert(is_3mod4(group));
+  assert(group->field_is_3_mod_4);
 
   EC_FELEM tv1, tv2, tv3, y1, y2;
   ec_felem_sqr(group, &tv1, v);                // 1. tv1 = v^2
@@ -283,7 +281,7 @@ void map_to_curve_simple_swu(const EC_GROUP *group, const EC_FELEM *Z,
                              const EC_FELEM *c2, EC_JACOBIAN *out,
                              const EC_FELEM *u) {
   // This function requires the prime be 3 mod 4, and that A = -3.
-  assert(is_3mod4(group));
+  assert(group->field_is_3_mod_4);
   assert(group->a_is_minus3);
 
   EC_FELEM tv1, tv2, tv3, tv4, tv5, tv6, x, y, y1;
@@ -605,6 +603,127 @@ int EC_wpa3_sae_hash_to_curve_p256(const EC_GROUP *group, EC_POINT *out,
   ec_felem_neg(group, &Z, &Z);
 
   return sswu_and_add(group, &Z, &c2, &out->raw, &u1, &u2);
+}
+
+// See IEEE Std 802.11-2020, Section 12.7.1.6.2.
+static int kdf_hash_length(const EVP_MD *md, Span<uint8_t> out,
+                           Span<const uint8_t> key, Span<const uint8_t> label,
+                           Span<const uint8_t> context) {
+  ScopedHMAC_CTX hmac;
+  if (!HMAC_Init_ex(hmac.get(), key.data(), key.size(), md, nullptr)) {
+    return 0;
+  }
+
+  assert(out.size() <= 0xffff);
+  uint8_t len_bytes[2];
+  CRYPTO_store_u16_le(len_bytes, static_cast<uint16_t>(out.size() * 8));
+  const size_t md_len = HMAC_size(hmac.get());
+  for (uint16_t i = 1; !out.empty(); i++) {
+    uint8_t i_bytes[2];
+    CRYPTO_store_u16_le(i_bytes, i);
+    if (!HMAC_Init_ex(hmac.get(), nullptr, 0, nullptr, nullptr) ||  // Reset
+        !HMAC_Update(hmac.get(), i_bytes, sizeof(i_bytes)) ||
+        !HMAC_Update(hmac.get(), label.data(), label.size()) ||
+        !HMAC_Update(hmac.get(), context.data(), context.size()) ||
+        !HMAC_Update(hmac.get(), len_bytes, sizeof(len_bytes))) {
+      return 0;
+    }
+
+    if (out.size() < md_len) {
+      uint8_t tmp[EVP_MAX_MD_SIZE];
+      if (!HMAC_Final(hmac.get(), tmp, nullptr)) {
+        return 0;
+      }
+      OPENSSL_memcpy(out.data(), tmp, out.size());
+      break;
+    }
+
+    if (!HMAC_Final(hmac.get(), out.data(), nullptr)) {
+      return 0;
+    }
+    out = out.subspan(md_len);
+  }
+
+  return 1;
+}
+
+int EC_wpa3_sae_hunt_and_peck_p256(const EC_GROUP *group, EC_POINT *out,
+                                   const uint8_t *salt, size_t salt_len,
+                                   const uint8_t *password, size_t password_len,
+                                   uint8_t min_iterations) {
+  if (EC_GROUP_cmp(group, out->group, nullptr) != 0) {
+    OPENSSL_PUT_ERROR(EC, EC_R_INCOMPATIBLE_OBJECTS);
+    return 0;
+  }
+  if (EC_GROUP_get_curve_name(group) != NID_X9_62_prime256v1) {
+    OPENSSL_PUT_ERROR(EC, EC_R_GROUP_MISMATCH);
+    return 0;
+  }
+
+  static constexpr size_t kFieldBytes = 32;
+  static constexpr size_t kFieldWords = 32 / sizeof(BN_ULONG);
+  assert(static_cast<int>(kFieldBytes) == BN_num_bytes(&group->field.N));
+  assert(static_cast<int>(kFieldWords) == group->field.N.width);
+  const EVP_MD *md = EVP_sha256();
+  static const char kPWDValueLabel[] = "SAE Hunting and Pecking";
+
+  // The KDF uses the field as the context value.
+  uint8_t p_bytes[kFieldBytes];
+  BSSL_CHECK(BN_bn2bin_padded(p_bytes, kFieldBytes, &group->field.N));
+
+  crypto_word_t ok = CONSTTIME_FALSE_W;
+  EC_AFFINE affine = {};
+  for (uint8_t counter = 1; counter != 0; counter++) {
+    // Compute `pwd_seed`. This is an HKDF-Extract, or HMAC.
+    ScopedHMAC_CTX hmac;
+    uint8_t pwd_seed[EVP_MAX_MD_SIZE];
+    unsigned pwd_seed_len;
+    if (!HMAC_Init_ex(hmac.get(), salt, salt_len, md, nullptr) ||
+        !HMAC_Update(hmac.get(), password, password_len) ||
+        !HMAC_Update(hmac.get(), &counter, 1) ||
+        !HMAC_Final(hmac.get(), pwd_seed, &pwd_seed_len)) {
+      return 0;
+    }
+
+    // Compute `pwd_value`. This uses something custom instead of HKDF-Expand.
+    uint8_t pwd_value[kFieldBytes];
+    if (!kdf_hash_length(md, Span(pwd_value), Span(pwd_seed, pwd_seed_len),
+                         StringAsBytes(kPWDValueLabel), p_bytes)) {
+      return 0;
+    }
+
+    // Try to import `pwd_value` as a compressed point.
+    // The parity of y is determined by the least significant bit of `pwd_seed`.
+    uint8_t y_bit = pwd_seed[pwd_seed_len - 1] & 1;
+    EC_FELEM x, y2, y;
+    crypto_word_t iter_ok =
+        ec_felem_from_bytes_or_placeholder(group, &x, pwd_value, kFieldBytes);
+    ec_y_sqr_from_x(group, &y2, &x);
+    iter_ok &= ec_felem_sqrt_secret(group, &y, &y2, y_bit);
+
+    // Save the first valid point.
+    crypto_word_t save = iter_ok & ~ok;
+    constant_time_conditional_memcpy(affine.X.words, x.words,
+                                     sizeof(BN_ULONG) * kFieldWords, save);
+    constant_time_conditional_memcpy(affine.Y.words, y.words,
+                                     sizeof(BN_ULONG) * kFieldWords, save);
+    ok |= save;
+
+    // Stop if we've found something and iterated at least `min_iterations`.
+    if (constant_time_declassify_int(
+            ok & constant_time_ge_8(counter, min_iterations))) {
+      break;
+    }
+  }
+
+  if (constant_time_declassify_w(ok) == 0) {
+    // This should be impossible. It can only fail with probabilty 2^-256.
+    OPENSSL_PUT_ERROR(EC, ERR_R_INTERNAL_ERROR);
+    return 0;
+  }
+
+  ec_affine_to_jacobian(group, &out->raw, &affine);
+  return 1;
 }
 
 int bssl::ec_hash_to_scalar_p384_xmd_sha384(const EC_GROUP *group,

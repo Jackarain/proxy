@@ -55,7 +55,7 @@ static void ec_group_init_static_mont(BN_MONT_CTX *mont, size_t num_words,
 
 static void ec_group_set_a_minus3(EC_GROUP *group) {
   const EC_FELEM *one = ec_felem_one(group);
-  group->a_is_minus3 = 1;
+  group->a_is_minus3 = true;
   ec_felem_neg(group, &group->a, one);
   ec_felem_sub(group, &group->a, &group->a, one);
   ec_felem_sub(group, &group->a, &group->a, one);
@@ -82,8 +82,9 @@ DEFINE_METHOD_FUNCTION(EC_GROUP, EC_group_p224) {
   out->generator.group = out;
 
   ec_group_set_a_minus3(out);
-  out->has_order = 1;
-  out->field_greater_than_order = 1;
+  out->field_is_3_mod_4 = false;
+  out->has_order = true;
+  out->field_greater_than_order = true;
 }
 
 DEFINE_METHOD_FUNCTION(EC_GROUP, EC_group_p256) {
@@ -113,8 +114,9 @@ DEFINE_METHOD_FUNCTION(EC_GROUP, EC_group_p256) {
   OPENSSL_memcpy(out->b.words, kP256MontB, sizeof(kP256MontB));
 
   ec_group_set_a_minus3(out);
-  out->has_order = 1;
-  out->field_greater_than_order = 1;
+  out->field_is_3_mod_4 = true;
+  out->has_order = true;
+  out->field_greater_than_order = true;
 }
 
 DEFINE_METHOD_FUNCTION(EC_GROUP, EC_group_p384) {
@@ -138,8 +140,9 @@ DEFINE_METHOD_FUNCTION(EC_GROUP, EC_group_p384) {
   OPENSSL_memcpy(out->b.words, kP384MontB, sizeof(kP384MontB));
 
   ec_group_set_a_minus3(out);
-  out->has_order = 1;
-  out->field_greater_than_order = 1;
+  out->field_is_3_mod_4 = true;
+  out->has_order = true;
+  out->field_greater_than_order = true;
 }
 
 DEFINE_METHOD_FUNCTION(EC_GROUP, EC_group_p521) {
@@ -163,8 +166,9 @@ DEFINE_METHOD_FUNCTION(EC_GROUP, EC_group_p521) {
   OPENSSL_memcpy(out->b.words, kP521MontB, sizeof(kP521MontB));
 
   ec_group_set_a_minus3(out);
-  out->has_order = 1;
-  out->field_greater_than_order = 1;
+  out->field_is_3_mod_4 = true;
+  out->has_order = true;
+  out->field_greater_than_order = true;
 }
 
 EC_GROUP *EC_GROUP_new_curve_GFp(const BIGNUM *p, const BIGNUM *a,
@@ -252,7 +256,7 @@ int EC_GROUP_set_generator(EC_GROUP *group, const EC_POINT *generator,
   group->generator.raw.X = affine.X;
   group->generator.raw.Y = affine.Y;
   // `raw.Z` was set to 1 by `EC_GROUP_new_curve_GFp`.
-  group->has_order = 1;
+  group->has_order = true;
   return 1;
 }
 
@@ -548,16 +552,21 @@ int bssl::ec_jacobian_to_affine_batch(const EC_GROUP *group, EC_AFFINE *out,
   return group->meth->jacobian_to_affine_batch(group, out, in, num);
 }
 
+void bssl::ec_y_sqr_from_x(const EC_GROUP *group, EC_FELEM *out,
+                           const EC_FELEM *x) {
+  ec_felem_sqr(group, out, x);               // out = x²
+  ec_felem_add(group, out, out, &group->a);  // out = x² + a
+  ec_felem_mul(group, out, out, x);          // out = x³ + ax
+  ec_felem_add(group, out, out, &group->b);  // out = x³ + ax + b
+}
+
 int bssl::ec_point_set_affine_coordinates(const EC_GROUP *group, EC_AFFINE *out,
                                           const EC_FELEM *x,
                                           const EC_FELEM *y) {
   // Check if the point is on the curve.
   EC_FELEM lhs, rhs;
-  ec_felem_sqr(group, &lhs, y);                // lhs = y^2
-  ec_felem_sqr(group, &rhs, x);                // rhs = x^2
-  ec_felem_add(group, &rhs, &rhs, &group->a);  // rhs = x^2 + a
-  ec_felem_mul(group, &rhs, &rhs, x);          // rhs = x^3 + ax
-  ec_felem_add(group, &rhs, &rhs, &group->b);  // rhs = x^3 + ax + b
+  ec_felem_sqr(group, &lhs, y);     // lhs = y²
+  ec_y_sqr_from_x(group, &rhs, x);  // rhs = x³ + ax + b
   if (!ec_felem_equal(group, &lhs, &rhs)) {
     OPENSSL_PUT_ERROR(EC, EC_R_POINT_IS_NOT_ON_CURVE);
     // In the event of an error, defend against the caller not checking the
@@ -573,6 +582,29 @@ int bssl::ec_point_set_affine_coordinates(const EC_GROUP *group, EC_AFFINE *out,
 
   out->X = *x;
   out->Y = *y;
+  return 1;
+}
+
+int bssl::ec_point_set_compressed_coordinates(const EC_GROUP *group,
+                                              EC_AFFINE *out, const EC_FELEM *x,
+                                              crypto_word_t y_bit) {
+  EC_FELEM y2, y;
+  ec_y_sqr_from_x(group, &y2, x);
+  if (!ec_felem_sqrt(group, &y, &y2, y_bit)) {
+    OPENSSL_PUT_ERROR(EC, EC_R_POINT_IS_NOT_ON_CURVE);
+    // In the event of an error, defend against the caller not checking the
+    // return value by setting a known safe value. Note this may not be possible
+    // if the caller is in the process of constructing an arbitrary group and
+    // the generator is missing.
+    if (group->has_order) {
+      out->X = group->generator.raw.X;
+      out->Y = group->generator.raw.Y;
+    }
+    return 0;
+  }
+
+  out->X = *x;
+  out->Y = y;
   return 1;
 }
 
@@ -608,6 +640,28 @@ int EC_POINT_set_affine_coordinates(const EC_GROUP *group, EC_POINT *point,
                                     const BIGNUM *x, const BIGNUM *y,
                                     BN_CTX *ctx) {
   return EC_POINT_set_affine_coordinates_GFp(group, point, x, y, ctx);
+}
+
+int EC_POINT_set_compressed_coordinates_GFp(const EC_GROUP *group,
+                                            EC_POINT *point, const BIGNUM *x,
+                                            int y_bit, BN_CTX *ctx) {
+  if (EC_GROUP_cmp(group, point->group, nullptr) != 0) {
+    OPENSSL_PUT_ERROR(EC, EC_R_INCOMPATIBLE_OBJECTS);
+    return 0;
+  }
+
+  EC_FELEM x_felem;
+  EC_AFFINE affine;
+  if (!ec_bignum_to_felem(group, &x_felem, x) ||
+      !ec_point_set_compressed_coordinates(group, &affine, &x_felem, y_bit)) {
+    // In the event of an error, defend against the caller not checking the
+    // return value by setting a known safe value.
+    ec_set_to_safe_point(group, &point->raw);
+    return 0;
+  }
+
+  ec_affine_to_jacobian(group, &point->raw, &affine);
+  return 1;
 }
 
 int EC_POINT_add(const EC_GROUP *group, EC_POINT *r, const EC_POINT *a,

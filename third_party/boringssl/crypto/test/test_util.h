@@ -65,6 +65,12 @@ inline std::vector<uint8_t> Declassified(bssl::Span<const uint8_t> in) {
   return copy;
 }
 
+inline std::vector<uint8_t> SecretCopy(bssl::Span<const uint8_t> in) {
+  std::vector<uint8_t> copy(in.begin(), in.end());
+  CONSTTIME_SECRET(copy.data(), copy.size());
+  return copy;
+}
+
 std::ostream &operator<<(std::ostream &os, const Bytes &in);
 
 // DecodeHex decodes `in` from hexadecimal and writes the output to `out`. It

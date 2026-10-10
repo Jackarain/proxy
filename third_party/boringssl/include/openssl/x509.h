@@ -2311,8 +2311,6 @@ typedef struct DIST_POINT_NAME_st {
     GENERAL_NAMES *fullname;
     STACK_OF(X509_NAME_ENTRY) *relativename;
   } name;
-  // If relativename then this contains the full distribution point name
-  X509_NAME *dpname;
 } DIST_POINT_NAME;
 
 // DIST_POINT_NAME_new returns a newly-allocated, empty `DIST_POINT_NAME`
@@ -2802,6 +2800,10 @@ OPENSSL_EXPORT X509_STORE *X509_STORE_new(void);
 // Although `store` is not const, this function's use of `store` is thread-safe.
 OPENSSL_EXPORT int X509_STORE_up_ref(X509_STORE *store);
 
+// X509_STORE_dup_ref adds one to the reference count of `store` and returns
+// the same handle.
+OPENSSL_EXPORT X509_STORE *X509_STORE_dup_ref(const X509_STORE *store);
+
 // X509_STORE_free releases memory associated with `store`.
 OPENSSL_EXPORT void X509_STORE_free(X509_STORE *store);
 
@@ -2847,13 +2849,12 @@ OPENSSL_EXPORT int X509_STORE_add_crl(X509_STORE *store, X509_CRL *crl);
 // explicitly unset after creating the `X509_STORE_CTX`.
 //
 // As of writing these late defaults are a depth limit (see
-// `X509_VERIFY_PARAM_set_depth`) and the `X509_V_FLAG_TRUSTED_FIRST` flag. This
-// warning does not apply if the parameters were set in `store`.
+// `X509_VERIFY_PARAM_set_depth`). This warning does not apply if the parameters
+// were set in `store`.
 //
 // TODO(crbug.com/boringssl/441): This behavior is very surprising. Can we
 // remove this notion of late defaults? The unsettable value at `X509_STORE` is
 // -1, which rejects everything but explicitly-trusted self-signed certificates.
-// `X509_V_FLAG_TRUSTED_FIRST` is mostly a workaround for poor path-building.
 OPENSSL_EXPORT X509_VERIFY_PARAM *X509_STORE_get0_param(X509_STORE *store);
 
 // X509_STORE_set1_param copies verification parameters from `param` as in
@@ -3276,19 +3277,23 @@ OPENSSL_EXPORT int X509_VERIFY_PARAM_set1(X509_VERIFY_PARAM *to,
 // X509_V_FLAG_CHECK_SS_SIGNATURE checks the redundant signature on self-signed
 // trust anchors. This check provides no security benefit and only wastes CPU.
 #define X509_V_FLAG_CHECK_SS_SIGNATURE 0x4000
-// X509_V_FLAG_TRUSTED_FIRST, during path-building, checks for a match in the
-// trust store before considering an untrusted intermediate. This flag is
-// enabled by default.
-#define X509_V_FLAG_TRUSTED_FIRST 0x8000
+// X509_V_FLAG_TRUSTED_FIRST does nothing. The behavior it controls is always
+// enabled.
+#define X509_V_FLAG_TRUSTED_FIRST 0x0
 // X509_V_FLAG_PARTIAL_CHAIN treats all trusted certificates as trust anchors,
 // independent of the `X509_VERIFY_PARAM_set_trust` setting.
 #define X509_V_FLAG_PARTIAL_CHAIN 0x80000
-// X509_V_FLAG_NO_ALT_CHAINS disables building alternative chains if the initial
-// one was rejected.
-#define X509_V_FLAG_NO_ALT_CHAINS 0x100000
+// X509_V_FLAG_NO_ALT_CHAINS does nothing.
+#define X509_V_FLAG_NO_ALT_CHAINS 0x0
 // X509_V_FLAG_NO_CHECK_TIME disables all time checks in certificate
 // verification.
 #define X509_V_FLAG_NO_CHECK_TIME 0x200000
+// X509_V_FLAG_ALLOW_TIMEZONE_OFFSET allows `notBefore` and `notAfter` fields
+// to contain a time zone offset.
+#define X509_V_FLAG_ALLOW_TIMEZONE_OFFSET 0x1000000
+// X509_V_FLAG_USE_MTC_DRAFT_PLANTS_05 enables the verification of Merkle Tree
+// Certificates as specified in draft-ietf-plants-merkle-tree-certs-05.
+#define X509_V_FLAG_USE_MTC_DRAFT_PLANTS_05 0x400000
 
 // X509_VERIFY_PARAM_set_flags enables all values in `flags` in `param`'s
 // verification flags and returns one. `flags` should be a combination of
@@ -4352,9 +4357,23 @@ OPENSSL_EXPORT int X509_cmp_time(const ASN1_TIME *s, const time_t *t);
 // negative number if `s` <= `t` and a positive number if `s` > `t`. On error,
 // it returns zero.
 //
+// If `s` has a time zone offset, it returns an error (0).
+//
 // WARNING: Unlike most comparison functions, this function returns zero on
 // error, not equality.
 OPENSSL_EXPORT int X509_cmp_time_posix(const ASN1_TIME *s, int64_t t);
+
+// X509_cmp_time_posix_nonstandard compares `s` against `t`. On success, it
+// returns a negative number if `s` <= `t` and a positive number if `s` > `t`.
+// On error, it returns zero.
+//
+// If `s` has a time zone offset, it applies it before comparing to `t`. See
+// `ASN1_TIME_to_posix_nonstandard` for more details.
+//
+// WARNING: Unlike most comparison functions, this function returns zero on
+// error, not equality.
+OPENSSL_EXPORT int X509_cmp_time_posix_nonstandard(const ASN1_TIME *s,
+                                                   int64_t t);
 
 // X509_cmp_current_time behaves like `X509_cmp_time` but compares `s` against
 // the current time.
@@ -5299,8 +5318,10 @@ BORINGSSL_MAKE_DELETER(BASIC_CONSTRAINTS, BASIC_CONSTRAINTS_free)
 // TODO(davidben): Move this to conf.h and rename to CONF_VALUE_free.
 BORINGSSL_MAKE_DELETER(CONF_VALUE, X509V3_conf_free)
 BORINGSSL_MAKE_DELETER(DIST_POINT, DIST_POINT_free)
+BORINGSSL_MAKE_DELETER(DIST_POINT_NAME, DIST_POINT_NAME_free)
 BORINGSSL_MAKE_DELETER(GENERAL_NAME, GENERAL_NAME_free)
 BORINGSSL_MAKE_DELETER(GENERAL_SUBTREE, GENERAL_SUBTREE_free)
+BORINGSSL_MAKE_DELETER(ISSUING_DIST_POINT, ISSUING_DIST_POINT_free)
 BORINGSSL_MAKE_DELETER(NAME_CONSTRAINTS, NAME_CONSTRAINTS_free)
 BORINGSSL_MAKE_DELETER(NETSCAPE_SPKI, NETSCAPE_SPKI_free)
 BORINGSSL_MAKE_DELETER(NOTICEREF, NOTICEREF_free)
@@ -5333,7 +5354,7 @@ BORINGSSL_MAKE_DELETER(X509_VERIFY_PARAM, X509_VERIFY_PARAM_free)
 
 BSSL_NAMESPACE_END
 
-}       // extern C++
+}  // extern C++
 #endif  // !BORINGSSL_NO_CXX
 
 #define X509_R_AKID_MISMATCH 100
@@ -5381,5 +5402,7 @@ BSSL_NAMESPACE_END
 #define X509_R_NO_CERTIFICATE_OR_CRL_FOUND 142
 #define X509_R_NO_CRL_FOUND 143
 #define X509_R_INVALID_POLICY_EXTENSION 144
+#define X509_R_INVALID_MTC_CA 145
+#define X509_R_INVALID_MTC_PROOF 146
 
 #endif  // OPENSSL_HEADER_X509_H

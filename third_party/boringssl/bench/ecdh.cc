@@ -30,7 +30,20 @@ namespace {
 static constexpr size_t kMaxCoordinateSize = 66;
 static constexpr size_t kMaxPointBytes = 1 + 2 * kMaxCoordinateSize;
 
-void BM_SpeedECDH(benchmark::State &state, const EC_GROUP *group) {
+void BM_SpeedECDHKeyGen(benchmark::State &state, const EC_GROUP *group) {
+  for (auto _ : state) {
+    UniquePtr<EC_KEY> key(EC_KEY_new());
+    if (!key || !EC_KEY_set_group(key.get(), group) ||
+        !EC_KEY_generate_key(key.get())) {
+      state.SkipWithError("self keygen failed.");
+      return;
+    }
+
+    benchmark::DoNotOptimize(key.get());
+  }
+}
+
+void BM_SpeedECDHComputeKey(benchmark::State &state, const EC_GROUP *group) {
   UniquePtr<EC_KEY> peer_key(EC_KEY_new());
   if (!peer_key || !EC_KEY_set_group(peer_key.get(), group) ||
       !EC_KEY_generate_key(peer_key.get())) {
@@ -109,6 +122,7 @@ void BM_SpeedECDHEphemeral(benchmark::State &state, const EC_GROUP *group) {
     benchmark::ClobberMemory();
 
     // Generate an ephemeral keypair.
+    // This part is basically `EC_KEY_generate_key`.
     UniquePtr<BIGNUM> priv(BN_new());
     UniquePtr<EC_POINT> pub(EC_POINT_new(group));
     if (!priv || !pub ||
@@ -119,6 +133,7 @@ void BM_SpeedECDHEphemeral(benchmark::State &state, const EC_GROUP *group) {
       return;
     }
 
+    // Serialize the public key to bytes.
     ScopedCBB cbb;
     if (!CBB_init(cbb.get(), kMaxPointBytes) ||
         !EC_POINT_point2cbb(cbb.get(), group, pub.get(),
@@ -128,7 +143,7 @@ void BM_SpeedECDHEphemeral(benchmark::State &state, const EC_GROUP *group) {
     }
     benchmark::DoNotOptimize(CBB_data(cbb.get()));
 
-    // Parse the peer's public key point and compute the shared secret.
+    // Parse the peer's public key point.
     UniquePtr<EC_POINT> peer_point(EC_POINT_new(group));
     UniquePtr<EC_POINT> result(EC_POINT_new(group));
     UniquePtr<BIGNUM> x(BN_new());
@@ -145,6 +160,8 @@ void BM_SpeedECDHEphemeral(benchmark::State &state, const EC_GROUP *group) {
       return;
     }
 
+    // Compute the shared secret.
+    // This part is basically `ECDH_compute_key`.
     if (!EC_POINT_mul(group, result.get(), nullptr, peer_point.get(),
                       priv.get(), nullptr) ||
         !EC_POINT_get_affine_coordinates_GFp(group, result.get(), x.get(),
@@ -164,13 +181,22 @@ void BM_SpeedECDHEphemeral(benchmark::State &state, const EC_GROUP *group) {
 }
 
 BSSL_BENCH_LAZY_REGISTER() {
-  BENCHMARK_CAPTURE(BM_SpeedECDH, p224, EC_group_p224())
+  BENCHMARK_CAPTURE(BM_SpeedECDHKeyGen, p224, EC_group_p224())
       ->Apply(bench::SetThreads);
-  BENCHMARK_CAPTURE(BM_SpeedECDH, p256, EC_group_p256())
+  BENCHMARK_CAPTURE(BM_SpeedECDHKeyGen, p256, EC_group_p256())
       ->Apply(bench::SetThreads);
-  BENCHMARK_CAPTURE(BM_SpeedECDH, p384, EC_group_p384())
+  BENCHMARK_CAPTURE(BM_SpeedECDHKeyGen, p384, EC_group_p384())
       ->Apply(bench::SetThreads);
-  BENCHMARK_CAPTURE(BM_SpeedECDH, p521, EC_group_p521())
+  BENCHMARK_CAPTURE(BM_SpeedECDHKeyGen, p521, EC_group_p521())
+      ->Apply(bench::SetThreads);
+
+  BENCHMARK_CAPTURE(BM_SpeedECDHComputeKey, p224, EC_group_p224())
+      ->Apply(bench::SetThreads);
+  BENCHMARK_CAPTURE(BM_SpeedECDHComputeKey, p256, EC_group_p256())
+      ->Apply(bench::SetThreads);
+  BENCHMARK_CAPTURE(BM_SpeedECDHComputeKey, p384, EC_group_p384())
+      ->Apply(bench::SetThreads);
+  BENCHMARK_CAPTURE(BM_SpeedECDHComputeKey, p521, EC_group_p521())
       ->Apply(bench::SetThreads);
 
   BENCHMARK_CAPTURE(BM_SpeedECDHEphemeral, p224, EC_group_p224())

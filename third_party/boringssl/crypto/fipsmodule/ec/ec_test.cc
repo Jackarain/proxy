@@ -31,7 +31,7 @@
 #include <openssl/span.h>
 
 #include "../../ec/internal.h"
-#include "../../mem_internal.h"
+#include "../../internal.h"
 #include "../../test/file_test.h"
 #include "../../test/test_util.h"
 #include "../bn/internal.h"
@@ -1471,16 +1471,17 @@ TEST(ECTest, HashToCurve) {
     SCOPED_TRACE(test.dst);
     SCOPED_TRACE(test.msg);
 
+    auto msg = SecretCopy(StringAsBytes(test.msg));
+    auto dst = StringAsBytes(test.dst);
     UniquePtr<EC_POINT> p(EC_POINT_new(test.group));
     ASSERT_TRUE(p);
-    ASSERT_TRUE(test.hash_to_curve(
-        test.group, p.get(), reinterpret_cast<const uint8_t *>(test.dst),
-        strlen(test.dst), reinterpret_cast<const uint8_t *>(test.msg),
-        strlen(test.msg)));
+    ASSERT_TRUE(test.hash_to_curve(test.group, p.get(), dst.data(), dst.size(),
+                                   msg.data(), msg.size()));
 
     std::vector<uint8_t> buf;
     ASSERT_TRUE(EncodeECPoint(&buf, test.group, p.get(),
                               POINT_CONVERSION_UNCOMPRESSED));
+    CONSTTIME_DECLASSIFY(buf.data(), buf.size());
     size_t field_len = (buf.size() - 1) / 2;
     EXPECT_EQ(test.x_hex, EncodeHex(Span(buf).subspan(1, field_len)));
     EXPECT_EQ(test.y_hex,
@@ -1521,10 +1522,10 @@ TEST(ECTest, HashToCurve) {
 // of IEEE Std 802.11-2024.
 TEST(ECTest, WPA3SAEHashToCurve) {
   static const uint8_t kSalt[] = {0x62, 0x79, 0x74, 0x65, 0x6d, 0x65};
-  static const uint8_t kIKM[] = {0x6d, 0x65, 0x6b, 0x6d, 0x69, 0x74, 0x61,
-                                 0x73, 0x64, 0x69, 0x67, 0x6f, 0x61, 0x74,
-                                 0x70, 0x73, 0x6b, 0x34, 0x69, 0x6e, 0x74,
-                                 0x65, 0x72, 0x6e, 0x65, 0x74};
+  uint8_t ikm[] = {0x6d, 0x65, 0x6b, 0x6d, 0x69, 0x74, 0x61, 0x73, 0x64,
+                   0x69, 0x67, 0x6f, 0x61, 0x74, 0x70, 0x73, 0x6b, 0x34,
+                   0x69, 0x6e, 0x74, 0x65, 0x72, 0x6e, 0x65, 0x74};
+  CONSTTIME_SECRET(ikm, sizeof(ikm));
   static const uint8_t kExpected[] = {
       0x04, 0xb6, 0xe3, 0x8c, 0x98, 0x75, 0x0c, 0x68, 0x4b, 0x5d, 0x17,
       0xc3, 0xd8, 0xc9, 0xa4, 0x10, 0x0b, 0x39, 0x93, 0x12, 0x79, 0x18,
@@ -1536,25 +1537,104 @@ TEST(ECTest, WPA3SAEHashToCurve) {
   const EC_GROUP *group = EC_group_p256();
   UniquePtr<EC_POINT> point(EC_POINT_new(group));
   ASSERT_TRUE(point);
-  ASSERT_TRUE(EC_wpa3_sae_hash_to_curve_p256(
-      group, point.get(), kSalt, sizeof(kSalt), kIKM, sizeof(kIKM)));
+  ASSERT_TRUE(EC_wpa3_sae_hash_to_curve_p256(group, point.get(), kSalt,
+                                             sizeof(kSalt), ikm, sizeof(ikm)));
 
   std::vector<uint8_t> buf;
   ASSERT_TRUE(
       EncodeECPoint(&buf, group, point.get(), POINT_CONVERSION_UNCOMPRESSED));
-  EXPECT_EQ(Bytes(kExpected), Bytes(buf));
+  EXPECT_EQ(Bytes(kExpected), Bytes(Declassified(buf)));
 
   // The function should check for the wrong group.
   UniquePtr<EC_POINT> point_p384(EC_POINT_new(EC_group_p384()));
   ASSERT_TRUE(point_p384);
   EXPECT_FALSE(EC_wpa3_sae_hash_to_curve_p256(EC_group_p384(), point_p384.get(),
-                                              kSalt, sizeof(kSalt), kIKM,
-                                              sizeof(kIKM)));
+                                              kSalt, sizeof(kSalt), ikm,
+                                              sizeof(ikm)));
   EXPECT_FALSE(EC_wpa3_sae_hash_to_curve_p256(EC_group_p256(), point_p384.get(),
-                                              kSalt, sizeof(kSalt), kIKM,
-                                              sizeof(kIKM)));
+                                              kSalt, sizeof(kSalt), ikm,
+                                              sizeof(ikm)));
   EXPECT_FALSE(EC_wpa3_sae_hash_to_curve_p256(
-      EC_group_p384(), point.get(), kSalt, sizeof(kSalt), kIKM, sizeof(kIKM)));
+      EC_group_p384(), point.get(), kSalt, sizeof(kSalt), ikm, sizeof(ikm)));
+}
+
+// Test the WPA3 SAE hunt-and-peck construction.
+TEST(ECTest, WPA3SAEHuntAndPeck) {
+  // Test vector from Appendix J.10 of IEEE Std 802.11-2024. The earlier MAC
+  // address goes first, so the order is flipped from the test vector.
+  static const uint8_t kSalt[] = {0xa5, 0xd8, 0xaa, 0x95, 0x8e, 0x3c,
+                                  0x4d, 0x3f, 0x2f, 0xff, 0xe3, 0x87};
+  uint8_t ikm[] = {0x6d, 0x65, 0x6b, 0x6d, 0x69, 0x74, 0x61,
+                   0x73, 0x64, 0x69, 0x67, 0x6f, 0x61, 0x74};
+  CONSTTIME_SECRET(ikm, sizeof(ikm));
+  static const uint8_t kExpected[] = {
+      0x04, 0xda, 0x6e, 0xb7, 0xb0, 0x6a, 0x1a, 0xc5, 0x62, 0x49, 0x74,
+      0xf9, 0x0a, 0xfd, 0xd6, 0xa8, 0xe9, 0xd5, 0x72, 0x26, 0x34, 0xcf,
+      0x98, 0x7c, 0x34, 0xde, 0xfc, 0x91, 0xa9, 0x87, 0x4e, 0x56, 0x58,
+      0xf4, 0xfe, 0xfd, 0x13, 0x0b, 0xd5, 0xbe, 0x08, 0xfe, 0x68, 0xaf,
+      0x3e, 0x4a, 0x29, 0x02, 0x72, 0xec, 0x06, 0x5f, 0xd3, 0x67, 0x1f,
+      0x3c, 0x25, 0xbf, 0x8e, 0xc4, 0x19, 0xdd, 0xc9, 0xb8, 0x22};
+  static const uint8_t kMinIterations = 40;
+
+  const EC_GROUP *group = EC_group_p256();
+  UniquePtr<EC_POINT> point(EC_POINT_new(group));
+  ASSERT_TRUE(point);
+  ASSERT_TRUE(EC_wpa3_sae_hunt_and_peck_p256(group, point.get(), kSalt,
+                                             sizeof(kSalt), ikm, sizeof(ikm),
+                                             kMinIterations));
+  std::vector<uint8_t> buf;
+  ASSERT_TRUE(
+      EncodeECPoint(&buf, group, point.get(), POINT_CONVERSION_UNCOMPRESSED));
+  EXPECT_EQ(Bytes(kExpected), Bytes(Declassified(buf)));
+
+  // This test vector takes two iterations. Running with fewer iterations than
+  // expected should still work.
+  point.reset(EC_POINT_new(group));
+  ASSERT_TRUE(point);
+  ASSERT_TRUE(EC_wpa3_sae_hunt_and_peck_p256(
+      group, point.get(), kSalt, sizeof(kSalt), ikm, sizeof(ikm), 1));
+  ASSERT_TRUE(
+      EncodeECPoint(&buf, group, point.get(), POINT_CONVERSION_UNCOMPRESSED));
+  EXPECT_EQ(Bytes(kExpected), Bytes(Declassified(buf)));
+
+  // This is an IKM value that takes 25 iterations before it finds a point. This
+  // was found via brute force, so it has only been tested against our own
+  // implementation.
+  uint8_t ikm2[] = {0x0f, 0xd8, 0x44, 0x7d, 0xb4, 0xa6,
+                                 0x02, 0x24, 0x66, 0x46, 0x49, 0xed,
+                                 0xe9, 0xcb, 0xdd, 0xb1};
+  CONSTTIME_SECRET(ikm2, sizeof(ikm2));
+  static const uint8_t kExpected2[] = {
+      0x04, 0x80, 0x22, 0x98, 0x77, 0x74, 0x4b, 0x3c, 0x85, 0xd4, 0x0c,
+      0xef, 0x54, 0x10, 0x8c, 0xfd, 0xb9, 0x45, 0x8c, 0xe8, 0x8f, 0x47,
+      0xb6, 0x93, 0xf4, 0x30, 0x19, 0x43, 0xe1, 0x6f, 0x12, 0xd0, 0x6d,
+      0x7c, 0x78, 0xa7, 0x3e, 0x86, 0xd3, 0xa7, 0xa9, 0xf4, 0x9d, 0x71,
+      0x93, 0x48, 0xca, 0x19, 0xba, 0x25, 0x4c, 0x7f, 0x53, 0x24, 0x50,
+      0x25, 0x85, 0xe3, 0x9f, 0x83, 0x2c, 0x58, 0x5e, 0x97, 0xc2};
+  for (uint8_t min_iterations = 0; min_iterations < 32; min_iterations++) {
+    SCOPED_TRACE(int{min_iterations});
+    point.reset(EC_POINT_new(group));
+    ASSERT_TRUE(point);
+    ASSERT_TRUE(EC_wpa3_sae_hunt_and_peck_p256(group, point.get(), kSalt,
+                                               sizeof(kSalt), ikm2,
+                                               sizeof(ikm2), min_iterations));
+    ASSERT_TRUE(
+        EncodeECPoint(&buf, group, point.get(), POINT_CONVERSION_UNCOMPRESSED));
+    EXPECT_EQ(Bytes(kExpected2), Bytes(Declassified(buf)));
+  }
+
+  // The function should check for the wrong group.
+  UniquePtr<EC_POINT> point_p384(EC_POINT_new(EC_group_p384()));
+  ASSERT_TRUE(point_p384);
+  EXPECT_FALSE(EC_wpa3_sae_hunt_and_peck_p256(EC_group_p384(), point_p384.get(),
+                                              kSalt, sizeof(kSalt), ikm,
+                                              sizeof(ikm), kMinIterations));
+  EXPECT_FALSE(EC_wpa3_sae_hunt_and_peck_p256(EC_group_p256(), point_p384.get(),
+                                              kSalt, sizeof(kSalt), ikm,
+                                              sizeof(ikm), kMinIterations));
+  EXPECT_FALSE(EC_wpa3_sae_hunt_and_peck_p256(EC_group_p384(), point.get(),
+                                              kSalt, sizeof(kSalt), ikm,
+                                              sizeof(ikm), kMinIterations));
 }
 
 #if !defined(BORINGSSL_SHARED_LIBRARY)
@@ -1597,15 +1677,15 @@ TEST(ECTest, HashToScalar) {
     SCOPED_TRACE(test.dst);
     SCOPED_TRACE(test.msg);
 
+    auto msg = SecretCopy(StringAsBytes(test.msg));
+    auto dst = StringAsBytes(test.dst);
     EC_SCALAR scalar;
-    ASSERT_TRUE(test.hash_to_scalar(
-        test.group, &scalar, reinterpret_cast<const uint8_t *>(test.dst),
-        strlen(test.dst), reinterpret_cast<const uint8_t *>(test.msg),
-        strlen(test.msg)));
+    ASSERT_TRUE(test.hash_to_scalar(test.group, &scalar, dst.data(), dst.size(),
+                                    msg.data(), msg.size()));
     uint8_t buf[EC_MAX_BYTES];
     size_t len;
     ec_scalar_to_bytes(test.group, buf, &len, &scalar);
-    EXPECT_EQ(test.result_hex, EncodeHex(Span(buf, len)));
+    EXPECT_EQ(test.result_hex, EncodeHex(Declassified(Span(buf, len))));
   }
 
   // hash-to-scalar functions should check for the wrong group.

@@ -26,11 +26,8 @@
 #include <bitset>
 #include <cstdint>
 #include <initializer_list>
-#include <limits>
-#include <new>
 #include <optional>
 #include <string_view>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -60,6 +57,7 @@
 DECLARE_OPAQUE_STRUCT(ssl_credential_st, SSLCredential)
 DECLARE_OPAQUE_STRUCT(ssl_ctx_st, SSLContext)
 DECLARE_OPAQUE_STRUCT(ssl_st, SSLImpl)
+DECLARE_OPAQUE_STRUCT(ssl_session_st, SSLSession)
 DECLARE_OPAQUE_STRUCT(ssl_ech_keys_st, SSLECHKeys)
 
 BSSL_NAMESPACE_BEGIN
@@ -287,20 +285,61 @@ BSSL_NAMESPACE_BEGIN
 //    A         E
 //    B -> D -> F
 //    C
-struct SSLCipherPreferenceList {
+class SSLCipherPreferenceList {
+ public:
   static constexpr bool kAllowUniquePtr = true;
 
   SSLCipherPreferenceList() = default;
-  ~SSLCipherPreferenceList();
+  ~SSLCipherPreferenceList() = default;
 
+  // Initializes a list with the specified ciphers and flags. Calling Init on a
+  // previously initialized list discards the previous contents.
   bool Init(UniquePtr<STACK_OF(SSL_CIPHER)> ciphers,
-            Span<const bool> in_group_flags);
-  bool Init(const SSLCipherPreferenceList &);
+            Array<bool> in_group_flags);
+  // Same as above, but takes a list of cipher protocol IDs.
+  bool Init(Span<const uint16_t> cipher_ids, Span<const bool> in_group_flags);
 
+  // Reset clears any contents previously set by `Init`.
+  void Reset();
+
+  // Makes `this` a deep copy of another (already initialized) instance.
+  bool CopyFrom(const SSLCipherPreferenceList &);
+
+  // Removes `cipher` from the preference list.
   void Remove(const SSL_CIPHER *cipher);
 
-  UniquePtr<STACK_OF(SSL_CIPHER)> ciphers;
-  bool *in_group_flags = nullptr;
+  // Contains returns whether a cipher whose protocol ID is `cipher_id` appears
+  // in the list.
+  bool Contains(uint16_t cipher_id) const;
+
+  // ChooseCipher implements the logic for a server to select the most-preferred
+  // cipher satisfying the constraints that is listed in both `*this` and the
+  // client's preference list in `client_cipher_list`, which contains an ordered
+  // list of 2-byte cipher suite protocol IDs. The returned cipher must be
+  // supported for the SSL protocol `version`, and must match the key exchange
+  // algorithm mask `mask_k` and the server authentication mask `mask_a`. If
+  // `prioritize_client_pref` is true, then the client's preference list is
+  // prioritized over the list in `*this`. Otherwise, the server's preference
+  // list (`*this`) is prioritized. This function returns a pointer to the
+  // most-preferred shared cipher, or nullptr if no shared cipher was found.
+  const SSL_CIPHER *ChooseCipher(const CBS *client_cipher_list,
+                                 bool prioritize_client_pref, uint16_t version,
+                                 uint32_t mask_k, uint32_t mask_a) const;
+
+  size_t size() const { return sk_SSL_CIPHER_num(ciphers_.get()); }
+
+  const STACK_OF(SSL_CIPHER) *ciphers() const { return ciphers_.get(); }
+  Span<const bool> in_group_flags() const { return in_group_flags_; }
+
+  // TODO(crbug.com/550501994): Remove the non-const overload. This may result
+  // in callers mutating the internal state in an inconsistent way.
+  STACK_OF(SSL_CIPHER) *ciphers() { return ciphers_.get(); }
+
+ private:
+  // SSL_CIPHERs are maintained in a stack so they are easily accessible in the
+  // form required for `SSL{_CTX}_get_ciphers`.
+  UniquePtr<STACK_OF(SSL_CIPHER)> ciphers_;
+  Array<bool> in_group_flags_;
 };
 
 // AllCiphers returns an array of all supported ciphers, sorted by id.
@@ -321,15 +360,23 @@ bool ssl_cipher_get_evp_aead(const EVP_AEAD **out_aead,
 const EVP_MD *ssl_get_handshake_digest(uint16_t version,
                                        const SSL_CIPHER *cipher);
 
-// ssl_create_cipher_list evaluates `rule_str`. It sets `*out_cipher_list` to a
-// newly-allocated `SSLCipherPreferenceList` containing the result. It returns
-// true on success and false on failure. If `strict` is true, nonsense will be
-// rejected. If false, nonsense will be silently ignored. An empty result is
-// considered an error regardless of `strict`. `has_aes_hw` indicates if the
-// list should be ordered based on having support for AES in hardware or not.
+// ssl_create_cipher_list evaluates `rule_str` to create the TLS 1.2 cipher
+// list. It sets `*out_cipher_list` to a newly-allocated
+// `SSLCipherPreferenceList` containing the result. It returns true on success
+// and false on failure. If `strict` is true, nonsense will be rejected. If
+// false, nonsense will be silently ignored. An empty result is considered an
+// error regardless of `strict`. The resulting list will be ordered based on
+// having support for AES in hardware or not.
 bool ssl_create_cipher_list(UniquePtr<SSLCipherPreferenceList> *out_cipher_list,
-                            const bool has_aes_hw, const char *rule_str,
-                            bool strict);
+                            const char *rule_str, bool strict);
+
+// ssl_create_default_tls13_cipher_list populates the default TLS 1.3 cipher
+// list, clearing any previous contents in `*out_cipher_list` and replacing them
+// with the result. It returns true on success and false on failure. The
+// resulting list will be ordered based on having support for AES in hardware or
+// not.
+bool ssl_create_default_tls13_cipher_list(
+    SSLCipherPreferenceList *out_cipher_list);
 
 // ssl_cipher_auth_mask_for_key returns the mask of cipher `algorithm_auth`
 // values suitable for use with `key` in TLS 1.2 and below. `sign_ok` indicates
@@ -351,19 +398,6 @@ bool ssl_cipher_requires_server_key_exchange(const SSL_CIPHER *cipher);
 // length of an encrypted 1-byte record, for use in record-splitting. Otherwise
 // it returns zero.
 size_t ssl_cipher_get_record_split_len(const SSL_CIPHER *cipher);
-
-// ssl_choose_tls13_cipher returns an `SSL_CIPHER` corresponding with the best
-// available from `cipher_suites` compatible with `version` and `policy`. It
-// returns NULL if there isn't a compatible cipher. `has_aes_hw` indicates if
-// the choice should be made as if support for AES in hardware is available.
-const SSL_CIPHER *ssl_choose_tls13_cipher(CBS cipher_suites, bool has_aes_hw,
-                                          uint16_t version,
-                                          enum ssl_compliance_policy_t policy);
-
-// ssl_tls13_cipher_meets_policy returns true if `cipher_id` is acceptable given
-// `policy`.
-bool ssl_tls13_cipher_meets_policy(uint16_t cipher_id,
-                                   enum ssl_compliance_policy_t policy);
 
 // ssl_cipher_is_deprecated returns true if `cipher` is deprecated.
 bool ssl_cipher_is_deprecated(const SSL_CIPHER *cipher);
@@ -434,7 +468,7 @@ class SSLTranscript {
   // pointed by `out` and writes the number of bytes to `*out_len`. `out` must
   // have room for `EVP_MAX_MD_SIZE` bytes. It returns true on success and false
   // on failure.
-  bool GetFinishedMAC(uint8_t *out, size_t *out_len, const SSL_SESSION *session,
+  bool GetFinishedMAC(uint8_t *out, size_t *out_len, const SSLSession *session,
                       bool from_server) const;
 
  private:
@@ -1177,7 +1211,7 @@ bool tls13_init_key_schedule(SSL_HANDSHAKE *hs, Span<const uint8_t> psk);
 // derivation state from `session` for use with 0-RTT. It returns one on success
 // and zero on error.
 bool tls13_init_early_key_schedule(SSL_HANDSHAKE *hs,
-                                   const SSL_SESSION *session);
+                                   const SSLSession *session);
 
 // tls13_advance_key_schedule incorporates `in` into the key schedule with
 // HKDF-Extract. It returns true on success and false on error.
@@ -1188,7 +1222,7 @@ bool tls13_advance_key_schedule(SSL_HANDSHAKE *hs, Span<const uint8_t> in);
 // It returns true on success and false on error.
 bool tls13_set_traffic_key(SSLImpl *ssl, enum ssl_encryption_level_t level,
                            enum evp_aead_direction_t direction,
-                           const SSL_SESSION *session,
+                           const SSLSession *session,
                            Span<const uint8_t> traffic_secret);
 
 // tls13_derive_early_secret derives the early traffic secret. It returns true
@@ -1229,7 +1263,7 @@ bool tls13_finished_mac(SSL_HANDSHAKE *hs, uint8_t *out, size_t *out_len,
 // tls13_derive_session_psk calculates the PSK for this session based on the
 // resumption master secret and `nonce`. It returns true on success, and false
 // on failure.
-bool tls13_derive_session_psk(SSL_SESSION *session, Span<const uint8_t> nonce,
+bool tls13_derive_session_psk(SSLSession *session, Span<const uint8_t> nonce,
                               bool is_dtls);
 
 struct SSLImportedPSK {
@@ -1259,7 +1293,7 @@ bool tls13_compare_imported_psk_identity(Span<const uint8_t> id,
                                          uint16_t protocol,
                                          const EVP_MD *hkdf_md);
 
-using SSLPreSharedKey = std::variant<SSLImportedPSK, UniquePtr<SSL_SESSION>>;
+using SSLPreSharedKey = std::variant<SSLImportedPSK, UniquePtr<SSLSession>>;
 BORINGSSL_MAKE_DELETER(SSLPreSharedKey, Delete)
 
 // ssl_pre_shared_key_hash return's `psk`'s hash.
@@ -1431,14 +1465,6 @@ enum class SSLCredentialType {
   kRawPublicKey,
 };
 
-struct SSLTrustAnchorRange {
-  Array<uint8_t> base;
-  uint64_t min = 0;
-  uint64_t max = 0;
-
-  bool Contains(Span<const uint8_t> id) const;
-};
-
 class SSLCredential : public ssl_credential_st,
                       public RefCounted<SSLCredential> {
  public:
@@ -1529,6 +1555,10 @@ class SSLCredential : public ssl_credential_st,
   // OCSP response to be sent to the client, if requested.
   UniquePtr<CRYPTO_BUFFER> ocsp_response;
 
+  // sid_ctx partitions the session space within a shared session cache or
+  // ticket key. If empty, the session ID context in `SSL` will be used.
+  InplaceVector<uint8_t, SSL_MAX_SID_CTX_LENGTH> sid_ctx;
+
   // SPAKE2+-specific information.
   Array<uint8_t> pake_context;
   Array<uint8_t> client_identity;
@@ -1561,9 +1591,9 @@ class SSLCredential : public ssl_credential_st,
   // chain in `chain`.
   Array<uint8_t> trust_anchor_id;
 
-  // trust_anchor_group_inclusions describes trust anchor groups that also match
+  // trust_anchor_group_patterns describes trust anchor groups that also match
   // this credential.
-  Vector<SSLTrustAnchorRange> trust_anchor_group_inclusions;
+  Vector<Array<uint8_t>> trust_anchor_group_patterns;
 
   CRYPTO_EX_DATA ex_data;
 
@@ -1578,6 +1608,11 @@ class SSLCredential : public ssl_credential_st,
   friend RefCounted;
   ~SSLCredential();
 };
+
+// ssl_trust_anchor_pattern_matches_id returns whether `pattern`, a trust anchor
+// ID pattern, matches `id`, a trust anchor ID.
+bool ssl_trust_anchor_pattern_matches_id(Span<const uint8_t> pattern,
+                                         Span<const uint8_t> id);
 
 // ssl_get_full_credential_list computes `hs`'s full credential list, including
 // the legacy credential. On success, it writes it to `*out` and returns true.
@@ -1660,8 +1695,6 @@ enum ssl_hs_wait_t {
   ssl_hs_read_message,
   ssl_hs_flush,
   ssl_hs_certificate_selection_pending,
-  ssl_hs_handoff,
-  ssl_hs_handback,
   ssl_hs_x509_lookup,
   ssl_hs_private_key_operation,
   ssl_hs_pending_session,
@@ -1684,61 +1717,6 @@ enum ssl_grease_index_t {
   ssl_grease_ech_config_id,
   ssl_grease_signature_algorithm,
   ssl_grease_last_index = ssl_grease_signature_algorithm,
-};
-
-enum tls12_server_hs_state_t {
-  state12_start_accept = 0,
-  state12_read_client_hello,
-  state12_read_client_hello_after_ech,
-  state12_cert_callback,
-  state12_tls13,
-  state12_select_parameters,
-  state12_send_server_hello,
-  state12_send_server_certificate,
-  state12_send_server_key_exchange,
-  state12_send_server_hello_done,
-  state12_read_client_certificate,
-  state12_verify_client_certificate,
-  state12_read_client_key_exchange,
-  state12_read_client_certificate_verify,
-  state12_read_change_cipher_spec,
-  state12_process_change_cipher_spec,
-  state12_read_next_proto,
-  state12_read_channel_id,
-  state12_read_client_finished,
-  state12_send_server_finished,
-  state12_finish_server_handshake,
-  state12_done,
-};
-
-enum tls13_server_hs_state_t {
-  state13_select_parameters = 0,
-  state13_select_session,
-  state13_send_hello_retry_request,
-  state13_read_second_client_hello,
-  state13_send_server_hello,
-  state13_send_server_certificate_verify,
-  state13_send_server_finished,
-  state13_send_half_rtt_ticket,
-  state13_read_second_client_flight,
-  state13_process_end_of_early_data,
-  state13_read_client_encrypted_extensions,
-  state13_read_client_certificate,
-  state13_read_client_certificate_verify,
-  state13_read_channel_id,
-  state13_read_client_finished,
-  state13_send_new_session_ticket,
-  state13_done,
-};
-
-// handback_t lists the points in the state machine where a handback can occur.
-// These are the different points at which key material is no longer needed.
-enum handback_t {
-  handback_after_session_resumption = 0,
-  handback_after_ecdhe = 1,
-  handback_after_handshake = 2,
-  handback_tls13 = 3,
-  handback_max_value = handback_tls13,
 };
 
 // SSL_HANDSHAKE_HINTS contains handshake hints for a connection. See
@@ -1981,11 +1959,11 @@ struct SSL_HANDSHAKE {
 
   // new_session is the new mutable session being established by the current
   // handshake. It should not be cached.
-  UniquePtr<SSL_SESSION> new_session;
+  UniquePtr<SSLSession> new_session;
 
   // early_session is the session corresponding to the current 0-RTT state on
   // the client if `in_early_data` is true.
-  UniquePtr<SSL_SESSION> early_session;
+  UniquePtr<SSLSession> early_session;
 
   // ssl_ech_keys, for servers, is the set of ECH keys to use with this
   // handshake. This is copied from `SSL_CTX` to ensure consistent behavior as
@@ -2084,12 +2062,6 @@ struct SSL_HANDSHAKE {
   // pending_private_key_op is true if there is a pending private key operation
   // in progress.
   bool pending_private_key_op : 1;
-
-  // handback indicates that a server should pause the handshake after
-  // finishing operations that require private key material, in such a way that
-  // `SSL_get_error` returns `SSL_ERROR_HANDBACK`.  It is set by
-  // `SSL_apply_handoff`.
-  bool handback : 1;
 
   // cert_compression_negotiated is true iff `cert_compression_alg_id` is valid.
   bool cert_compression_negotiated : 1;
@@ -2231,8 +2203,7 @@ enum ssl_private_key_result_t tls13_add_certificate_verify(SSL_HANDSHAKE *hs);
 
 bool tls13_add_finished(SSL_HANDSHAKE *hs);
 bool tls13_process_new_session_ticket(SSLImpl *ssl, const SSLMessage &msg);
-UniquePtr<SSL_SESSION> tls13_create_session_with_ticket(SSLImpl *ssl,
-                                                        CBS *body);
+UniquePtr<SSLSession> tls13_create_session_with_ticket(SSLImpl *ssl, CBS *body);
 
 // ssl_setup_extension_permutation computes a ClientHello extension permutation
 // for `hs`, if applicable. It returns true on success and false on error.
@@ -2387,8 +2358,11 @@ bool ssl_get_local_application_settings(const SSL_HANDSHAKE *hs,
 bool ssl_negotiate_alps(SSL_HANDSHAKE *hs, uint8_t *out_alert,
                         const SSL_CLIENT_HELLO *client_hello);
 
+// ssl_is_valid_trust_anchor_id returns whether `in` is a valid trust anchor ID.
+bool ssl_is_valid_trust_anchor_id(Span<const uint8_t> id);
+
 // ssl_is_valid_trust_anchor_list returns whether `in` is a valid trust anchor
-// identifiers list.
+// ID list.
 bool ssl_is_valid_trust_anchor_list(Span<const uint8_t> in);
 
 struct SSLExtension {
@@ -2431,7 +2405,7 @@ bool ssl_send_tls12_certificate(SSL_HANDSHAKE *hs);
 
 // ssl_handshake_session returns the `SSL_SESSION` corresponding to the current
 // handshake. Note, in TLS 1.2 resumptions, this session is immutable.
-const SSL_SESSION *ssl_handshake_session(const SSL_HANDSHAKE *hs);
+const SSLSession *ssl_handshake_session(const SSL_HANDSHAKE *hs);
 
 // ssl_done_writing_client_hello is called after the last ClientHello is written
 // by `hs`. It releases some memory that is no longer needed.
@@ -2549,6 +2523,29 @@ bool tls12_check_peer_sigalg(const SSL_HANDSHAKE *hs, uint8_t *out_alert,
 // From RFC 4492, used in encoding the curve type in ECParameters
 #define NAMED_CURVE_TYPE 3
 
+struct CertCb {
+  using OldCallback = int (*)(SSL *ssl, void *arg);
+  using NewCallback = int (*)(SSL *ssl, void *arg, uint8_t *out_alert);
+
+  std::variant<std::monostate, OldCallback, NewCallback> cb;
+
+  explicit operator bool() const {
+    return !std::holds_alternative<std::monostate>(cb);
+  }
+
+  int operator()(SSL *ssl, void *arg, uint8_t *out_alert) const {
+    switch (cb.index()) {
+      default:
+      case 0:
+        return 0;
+      case 1:
+        return std::get<1>(cb)(ssl, arg);
+      case 2:
+        return std::get<2>(cb)(ssl, arg, out_alert);
+    }
+  }
+};
+
 struct CERT {
   static constexpr bool kAllowUniquePtr = true;
 
@@ -2596,7 +2593,7 @@ struct CERT {
   // certificates required. This allows advanced applications
   // to select certificates on the fly: for example based on
   // supported signature algorithms or curves.
-  int (*cert_cb)(SSL *ssl, void *arg) = nullptr;
+  CertCb cert_cb = {};
   void *cert_cb_arg = nullptr;
 
   // Optional X509_STORE for certificate validation. If NULL the parent SSL_CTX
@@ -2732,16 +2729,16 @@ struct SSL_X509_METHOD {
   // session_cache_objects fills out `sess->x509_peer` and `sess->x509_chain`
   // from `sess->certs` and erases `sess->x509_chain_without_leaf`. It returns
   // true on success or false on error.
-  bool (*session_cache_objects)(SSL_SESSION *session);
+  bool (*session_cache_objects)(SSLSession *session);
   // session_dup duplicates any needed fields from `session` to `new_session`.
   // It returns true on success or false on error.
-  bool (*session_dup)(SSL_SESSION *new_session, const SSL_SESSION *session);
+  bool (*session_dup)(SSLSession *new_session, const SSLSession *session);
   // session_clear frees any X509-related state from `session`.
-  void (*session_clear)(SSL_SESSION *session);
+  void (*session_clear)(SSLSession *session);
   // session_verify_cert_chain verifies the certificate chain in `session`,
   // sets `session->verify_result` and returns true on success or false on
   // error.
-  bool (*session_verify_cert_chain)(SSL_SESSION *session, SSL_HANDSHAKE *ssl,
+  bool (*session_verify_cert_chain)(SSLSession *session, SSL_HANDSHAKE *ssl,
                                     uint8_t *out_alert);
 
   // hs_flush_cached_ca_names drops any cached `X509_NAME`s from `hs`.
@@ -2795,6 +2792,8 @@ struct CertCompressionAlg {
   uint16_t alg_id = 0;
 };
 
+// TODO(crbug.com/565766495): Switch this to `SSLSession`. bssl_shim calls
+// `lh_SSL_SESSION_*` directly, so this is still defined on the public type.
 DEFINE_LHASH_OF(SSL_SESSION)
 
 // An ssl_shutdown_t describes the shutdown state of one end of the connection,
@@ -2999,7 +2998,7 @@ struct SSL3_STATE {
   // established_session is the session established by the connection. This
   // session is only filled upon the completion of the handshake and is
   // immutable.
-  UniquePtr<SSL_SESSION> established_session;
+  UniquePtr<SSLSession> established_session;
 
   // Next protocol negotiation. For the client, this is the protocol that we
   // sent in NextProtocol and is set when handling ServerHello extensions.
@@ -3419,7 +3418,10 @@ struct SSL_CONFIG {
   X509_VERIFY_PARAM *param = nullptr;
 
   // crypto
-  UniquePtr<SSLCipherPreferenceList> cipher_list;
+  UniquePtr<SSLCipherPreferenceList> cipher_list;  // for TLS 1.2 ciphers.
+
+  // Inherited from `SSL_CTX`.
+  SSLCipherPreferenceList tls13_cipher_list;
 
   // This is used to hold the local certificate used (i.e. the server
   // certificate for a server or the client certificate for a client).
@@ -3559,12 +3561,6 @@ struct SSL_CONFIG {
   // session space. Only effective on the server side.
   bool retain_only_sha256_of_client_certs : 1;
 
-  // handoff indicates that a server should stop after receiving the
-  // ClientHello and pause the handshake in such a way that `SSL_get_error`
-  // returns `SSL_ERROR_HANDOFF`. This is copied in `SSL_new` from the `SSL_CTX`
-  // element of the same name and may be cleared if the handoff is declined.
-  bool handoff : 1;
-
   // shed_handshake_config indicates that the handshake config (this object!)
   // should be freed after the handshake completes.
   bool shed_handshake_config : 1;
@@ -3579,15 +3575,6 @@ struct SSL_CONFIG {
 
   // permute_extensions is whether to permute extensions when sending messages.
   bool permute_extensions : 1;
-
-  // aes_hw_override if set indicates we should override checking for aes
-  // hardware support, and use the value in aes_hw_override_value instead.
-  bool aes_hw_override : 1;
-
-  // aes_hw_override_value is used for testing to indicate the support or lack
-  // of support for AES hw. The value is only considered if `aes_hw_override` is
-  // true.
-  bool aes_hw_override_value : 1;
 
   // alps_use_new_codepoint if set indicates we use new ALPS extension codepoint
   // to negotiate and convey application settings.
@@ -3619,14 +3606,13 @@ bool ssl_get_new_session(SSL_HANDSHAKE *hs);
 // ssl_encrypt_ticket encrypt a ticket for `session` and writes the result to
 // `out`. It returns true on success and false on error. If, on success, nothing
 // was written to `out`, the caller should skip sending a ticket.
-bool ssl_encrypt_ticket(SSL_HANDSHAKE *hs, CBB *out,
-                        const SSL_SESSION *session);
+bool ssl_encrypt_ticket(SSL_HANDSHAKE *hs, CBB *out, const SSLSession *session);
 
 bool ssl_ctx_rotate_ticket_encryption_key(SSLContext *ctx);
 
 // ssl_session_new returns a newly-allocated blank `SSL_SESSION` or nullptr on
 // error.
-UniquePtr<SSL_SESSION> ssl_session_new(const SSL_X509_METHOD *x509_method);
+UniquePtr<SSLSession> ssl_session_new(const SSL_X509_METHOD *x509_method);
 
 // ssl_hash_session_id returns a hash of `session_id`, suitable for a hash table
 // keyed on session IDs.
@@ -3634,14 +3620,14 @@ uint32_t ssl_hash_session_id(Span<const uint8_t> session_id);
 
 // SSL_SESSION_parse parses an `SSL_SESSION` from `cbs` and advances `cbs` over
 // the parsed data.
-UniquePtr<SSL_SESSION> SSL_SESSION_parse(CBS *cbs,
-                                         const SSL_X509_METHOD *x509_method,
-                                         CRYPTO_BUFFER_POOL *pool);
+UniquePtr<SSLSession> SSL_SESSION_parse(CBS *cbs,
+                                        const SSL_X509_METHOD *x509_method,
+                                        CRYPTO_BUFFER_POOL *pool);
 
 // ssl_session_serialize writes `in` to `cbb` as if it were serialising a
 // session for Session-ID resumption. It returns true on success and false on
 // error.
-bool ssl_session_serialize(const SSL_SESSION *in, CBB *cbb);
+bool ssl_session_serialize(const SSLSession *in, CBB *cbb);
 
 enum class SSLSessionType {
   // The session is not resumable.
@@ -3655,35 +3641,38 @@ enum class SSLSessionType {
 };
 
 // ssl_session_get_type returns the type of `session`.
-SSLSessionType ssl_session_get_type(const SSL_SESSION *session);
+SSLSessionType ssl_session_get_type(const SSLSession *session);
 
 // ssl_session_is_context_valid returns whether `session`'s session ID context
 // matches the one set on `hs`.
 bool ssl_session_is_context_valid(const SSL_HANDSHAKE *hs,
-                                  const SSL_SESSION *session);
+                                  const SSLSession *session);
 
 // ssl_session_is_time_valid returns true if `session` is still valid and false
 // if it has expired.
-bool ssl_session_is_time_valid(const SSLImpl *ssl, const SSL_SESSION *session);
+bool ssl_session_is_time_valid(const SSLImpl *ssl, const SSLSession *session);
 
 // ssl_session_is_resumable returns whether `session` is resumable for `hs`.
 bool ssl_session_is_resumable(const SSL_HANDSHAKE *hs,
-                              const SSL_SESSION *session);
+                              const SSLSession *session);
 
 // ssl_session_protocol_version returns the protocol version associated with
 // `session`. Note that despite the name, this is not the same as
 // `SSL_SESSION_get_protocol_version`. The latter is based on upstream's name.
-uint16_t ssl_session_protocol_version(const SSL_SESSION *session);
+uint16_t ssl_session_protocol_version(const SSLSession *session);
 
 // ssl_session_get_digest returns the digest used in `session`.
-const EVP_MD *ssl_session_get_digest(const SSL_SESSION *session);
+const EVP_MD *ssl_session_get_digest(const SSLSession *session);
 
 // ssl_session_has_peer_cred returns whether `session` contains the peer's
 // (non-PSK) credentials (either X.509 cert chain or raw public key, depending
 // on the peer's certificate type) or a valid SHA-256 hash thereof.
-bool ssl_session_has_peer_cred(const SSL_SESSION *session);
+bool ssl_session_has_peer_cred(const SSLSession *session);
 
-void ssl_set_session(SSLImpl *ssl, SSL_SESSION *session);
+void ssl_set_session(SSLImpl *ssl, SSLSession *session);
+
+// ssl_get_session implements `SSL_get_session`.
+SSLSession *ssl_get_session(const SSLImpl *ssl);
 
 // ssl_get_prev_session looks up the previous session based on `client_hello`.
 // On success, it sets `*out_session` to the session or nullptr if none was
@@ -3692,7 +3681,7 @@ void ssl_set_session(SSLImpl *ssl, SSL_SESSION *session);
 // decrypted immediately it returns `ssl_hs_pending_ticket` and should also
 // be called again. Otherwise, it returns `ssl_hs_error`.
 enum ssl_hs_wait_t ssl_get_prev_session(SSL_HANDSHAKE *hs,
-                                        UniquePtr<SSL_SESSION> *out_session,
+                                        UniquePtr<SSLSession> *out_session,
                                         bool *out_tickets_supported,
                                         bool *out_renew_ticket,
                                         const SSL_CLIENT_HELLO *client_hello);
@@ -3707,17 +3696,16 @@ enum ssl_hs_wait_t ssl_get_prev_session(SSL_HANDSHAKE *hs,
 // SSL_SESSION_dup returns a newly-allocated `SSL_SESSION` with a copy of the
 // fields in `session` or nullptr on error. The new session is non-resumable and
 // must be explicitly marked resumable once it has been filled in.
-OPENSSL_EXPORT UniquePtr<SSL_SESSION> SSL_SESSION_dup(
-    const SSL_SESSION *session, int dup_flags);
+UniquePtr<SSLSession> SSL_SESSION_dup(const SSLSession *session, int dup_flags);
 
 // ssl_session_rebase_time updates `session`'s start time to the current time,
 // adjusting the timeout so the expiration time is unchanged.
-void ssl_session_rebase_time(SSLImpl *ssl, SSL_SESSION *session);
+void ssl_session_rebase_time(SSLImpl *ssl, SSLSession *session);
 
 // ssl_session_renew_timeout calls `ssl_session_rebase_time` and renews
 // `session`'s timeout to `timeout` (measured from the current time). The
 // renewal is clamped to the session's auth_timeout.
-void ssl_session_renew_timeout(SSLImpl *ssl, SSL_SESSION *session,
+void ssl_session_renew_timeout(SSLImpl *ssl, SSLSession *session,
                                uint32_t timeout);
 
 void ssl_update_cache(SSLImpl *ssl);
@@ -3819,7 +3807,7 @@ int dtls1_dispatch_alert(SSLImpl *ssl);
 // it. It returns true on success or false on error.
 bool tls1_configure_aead(SSLImpl *ssl, evp_aead_direction_t direction,
                          Array<uint8_t> *key_block_cache,
-                         const SSL_SESSION *session,
+                         const SSLSession *session,
                          Span<const uint8_t> iv_override);
 
 bool tls1_change_cipher_state(SSL_HANDSHAKE *hs,
@@ -3870,7 +3858,7 @@ bool ssl_parse_serverhello_tlsext(SSL_HANDSHAKE *hs, const CBS *extensions);
 // If `save_ticket` is true, `*out_session` will have a copy of the ticket saved
 // in its `ticket` field.
 enum ssl_ticket_aead_result_t ssl_process_ticket(
-    SSL_HANDSHAKE *hs, UniquePtr<SSL_SESSION> *out_session,
+    SSL_HANDSHAKE *hs, UniquePtr<SSLSession> *out_session,
     bool *out_renew_ticket, Span<const uint8_t> ticket,
     Span<const uint8_t> session_id, bool save_ticket);
 
@@ -3909,31 +3897,6 @@ void ssl_reset_error_state(SSLImpl *ssl);
 // current state of the error queue.
 void ssl_set_read_error(SSLImpl *ssl);
 
-BSSL_NAMESPACE_END
-
-
-// Opaque C types.
-//
-// The following types are exported to C code as public typedefs, so they must
-// be defined outside of the namespace.
-//
-// TODO(crbug.com/500444613): Move these to the bssl namespace.
-
-// ssl_method_st backs the public `SSL_METHOD` type. It is a compatibility
-// structure to support the legacy version-locked methods.
-struct ssl_method_st {
-  // version, if non-zero, is the only protocol version acceptable to an
-  // SSL_CTX initialized from this method.
-  uint16_t version;
-  // method is the underlying SSL_PROTOCOL_METHOD that initializes the
-  // SSL_CTX.
-  const bssl::SSL_PROTOCOL_METHOD *method;
-  // x509_method contains pointers to functions that might deal with `X509`
-  // compatibility, or might be a no-op, depending on the application.
-  const bssl::SSL_X509_METHOD *x509_method;
-};
-
-BSSL_NAMESPACE_BEGIN
 class SSLContext : public ssl_ctx_st, public RefCounted<SSLContext> {
  public:
   explicit SSLContext(const SSL_METHOD *ssl_method);
@@ -3964,15 +3927,17 @@ class SSLContext : public ssl_ctx_st, public RefCounted<SSLContext> {
   // quic_method is the method table corresponding to the QUIC hooks.
   const SSL_QUIC_METHOD *quic_method = nullptr;
 
-  UniquePtr<SSLCipherPreferenceList> cipher_list;
+  UniquePtr<SSLCipherPreferenceList> cipher_list;  // for TLS 1.2 ciphers.
+  SSLCipherPreferenceList tls13_cipher_list;
 
   X509_STORE *cert_store = nullptr;
+  // TODO(crbug.com/565766495): Switch this to `SSLSession`.
   LHASH_OF(SSL_SESSION) *sessions = nullptr;
   // Most session-ids that will be cached, default is
   // SSL_SESSION_CACHE_MAX_SIZE_DEFAULT. 0 is unlimited.
   unsigned long session_cache_size = SSL_SESSION_CACHE_MAX_SIZE_DEFAULT;
-  SSL_SESSION *session_cache_head = nullptr;
-  SSL_SESSION *session_cache_tail = nullptr;
+  SSLSession *session_cache_head = nullptr;
+  SSLSession *session_cache_tail = nullptr;
 
   // handshakes_since_cache_flush is the number of successful handshakes since
   // the last cache flush.
@@ -4240,22 +4205,8 @@ class SSLContext : public ssl_ctx_st, public RefCounted<SSLContext> {
   // `SSL_MODE_ENABLE_FALSE_START` is enabled) is allowed without ALPN.
   bool false_start_allowed_without_alpn : 1;
 
-  // handoff indicates that a server should stop after receiving the
-  // ClientHello and pause the handshake in such a way that `SSL_get_error`
-  // returns `SSL_ERROR_HANDOFF`.
-  bool handoff : 1;
-
   // If enable_early_data is true, early data can be sent and accepted.
   bool enable_early_data : 1;
-
-  // aes_hw_override if set indicates we should override checking for AES
-  // hardware support, and use the value in aes_hw_override_value instead.
-  bool aes_hw_override : 1;
-
-  // aes_hw_override_value is used for testing to indicate the support or lack
-  // of support for AES hardware. The value is only considered if
-  // `aes_hw_override` is true.
-  bool aes_hw_override_value : 1;
 
   // resumption_across_names_enabled indicates whether a TLS 1.3 server should
   // signal its sessions may be resumed across names in the server certificate.
@@ -4316,7 +4267,7 @@ class SSLImpl : public ssl_st {
 
   // session is the configured session to be offered by the client. This session
   // is immutable.
-  UniquePtr<SSL_SESSION> session;
+  UniquePtr<SSLSession> session;
 
   void (*info_callback)(const SSL *ssl, int type, int value) = nullptr;
 
@@ -4356,12 +4307,12 @@ class SSLImpl : public ssl_st {
   // signal its sessions may be resumed across names in the server certificate.
   bool resumption_across_names_enabled : 1;
 };
-BSSL_NAMESPACE_END
 
-struct ssl_session_st : public bssl::RefCounted<ssl_session_st> {
-  explicit ssl_session_st(const bssl::SSL_X509_METHOD *method);
-  ssl_session_st(const ssl_session_st &) = delete;
-  ssl_session_st &operator=(const ssl_session_st &) = delete;
+class SSLSession : public ssl_session_st, public RefCounted<SSLSession> {
+ public:
+  explicit SSLSession(const SSL_X509_METHOD *method);
+  SSLSession(const SSLSession &) = delete;
+  SSLSession &operator=(const SSLSession &) = delete;
 
   // ssl_version is the (D)TLS version that established the session.
   uint16_t ssl_version = 0;
@@ -4378,22 +4329,22 @@ struct ssl_session_st : public bssl::RefCounted<ssl_session_st> {
   // session. In TLS 1.3 and up, it is the resumption PSK for sessions handed to
   // the caller, but it stores the resumption secret when stored on `SSL`
   // objects.
-  bssl::InplaceVector<uint8_t, SSL_MAX_MASTER_KEY_LENGTH> secret;
+  InplaceVector<uint8_t, SSL_MAX_MASTER_KEY_LENGTH> secret;
 
-  bssl::InplaceVector<uint8_t, SSL_MAX_SSL_SESSION_ID_LENGTH> session_id;
+  InplaceVector<uint8_t, SSL_MAX_SSL_SESSION_ID_LENGTH> session_id;
 
   // this is used to determine whether the session is being reused in
   // the appropriate context. It is up to the application to set this,
   // via SSL_new
-  bssl::InplaceVector<uint8_t, SSL_MAX_SID_CTX_LENGTH> sid_ctx;
+  InplaceVector<uint8_t, SSL_MAX_SID_CTX_LENGTH> sid_ctx;
 
-  bssl::UniquePtr<char> psk_identity;
+  UniquePtr<char> psk_identity;
 
   // certs contains the certificate chain from the peer, starting with the leaf
   // certificate. This must be null if `peer_raw_public_key` is non-null.
-  bssl::UniquePtr<STACK_OF(CRYPTO_BUFFER)> certs;
+  UniquePtr<STACK_OF(CRYPTO_BUFFER)> certs;
 
-  const bssl::SSL_X509_METHOD *x509_method = nullptr;
+  const SSL_X509_METHOD *x509_method = nullptr;
 
   // x509_peer is the peer's certificate. This must be null if
   // `peer_raw_public_key` is non-null.
@@ -4435,14 +4386,19 @@ struct ssl_session_st : public bssl::RefCounted<ssl_session_st> {
 
   // These are used to make removal of session-ids more efficient and to
   // implement a maximum cache size.
-  SSL_SESSION *prev = nullptr, *next = nullptr;
+  //
+  // TODO(crbug.com/527997772): At the ends of the list, `prev` and `next` point
+  // to `session_cache_head` and `session_cache_tail` on `SSLContext`. These
+  // sentinel values are not real sessions, so they must never be dereferenced
+  // or converted to `SSL_SESSION`.
+  SSLSession *prev = nullptr, *next = nullptr;
 
-  bssl::Array<uint8_t> ticket;
+  Array<uint8_t> ticket;
 
-  bssl::UniquePtr<CRYPTO_BUFFER> signed_cert_timestamp_list;
+  UniquePtr<CRYPTO_BUFFER> signed_cert_timestamp_list;
 
   // The OCSP response that came with the session.
-  bssl::UniquePtr<CRYPTO_BUFFER> ocsp_response;
+  UniquePtr<CRYPTO_BUFFER> ocsp_response;
 
   // peer_sha256 contains the SHA-256 hash of the peer's X.509 certificate or
   // raw public key if `peer_sha256_valid` is true. (`peer_cert_type` indicates
@@ -4452,7 +4408,7 @@ struct ssl_session_st : public bssl::RefCounted<ssl_session_st> {
   // original_handshake_hash contains the handshake hash (either SHA-1+MD5 or
   // SHA-2, depending on TLS version) for the original, full handshake that
   // created a session. This is used by Channel IDs during resumption.
-  bssl::InplaceVector<uint8_t, SSL_MAX_MD_SIZE> original_handshake_hash;
+  InplaceVector<uint8_t, SSL_MAX_MD_SIZE> original_handshake_hash;
 
   uint32_t ticket_lifetime_hint = 0;  // Session lifetime hint in seconds
 
@@ -4466,15 +4422,15 @@ struct ssl_session_st : public bssl::RefCounted<ssl_session_st> {
   // stored for TLS 1.3 and above in order to enforce ALPN matching for 0-RTT
   // resumptions. For the current connection's ALPN protocol, see
   // `alpn_selected` on `SSL3_STATE`.
-  bssl::Array<uint8_t> early_alpn;
+  Array<uint8_t> early_alpn;
 
   // local_application_settings, if `has_application_settings` is true, is the
   // local ALPS value for this connection.
-  bssl::Array<uint8_t> local_application_settings;
+  Array<uint8_t> local_application_settings;
 
   // peer_application_settings, if `has_application_settings` is true, is the
   // peer ALPS value for this connection.
-  bssl::Array<uint8_t> peer_application_settings;
+  Array<uint8_t> peer_application_settings;
 
   // extended_master_secret is whether the master secret in this session was
   // generated using EMS and thus isn't vulnerable to the Triple Handshake
@@ -4506,21 +4462,45 @@ struct ssl_session_st : public bssl::RefCounted<ssl_session_st> {
 
   // quic_early_data_context is used to determine whether early data must be
   // rejected when performing a QUIC handshake.
-  bssl::Array<uint8_t> quic_early_data_context;
+  Array<uint8_t> quic_early_data_context;
 
   // peer_cert_type is the peer's cert type (`TLSEXT_cert_type_*` value), which
   // determines the type of Certificate the peer used for this session: which of
   // `certs` xor `peer_raw_public_key` is populated for an authenticated
   // session.
-  uint8_t peer_cert_type = bssl::kDefaultCertType;
+  uint8_t peer_cert_type = kDefaultCertType;
 
   // peer_raw_public_key, if non-null, is the raw public key received from the
   // peer. This must be null if `certs` is non-null.
-  bssl::UniquePtr<EVP_PKEY> peer_raw_public_key;
+  UniquePtr<EVP_PKEY> peer_raw_public_key;
 
  private:
   friend RefCounted;
-  ~ssl_session_st();
+  ~SSLSession();
 };
+
+BSSL_NAMESPACE_END
+
+
+// Opaque C types.
+//
+// `SSL_METHOD` is exported to C code as public typedefs, so it must be defined
+// outside of the namespace. We can switch it to `DECLARE_OPAQUE_STRUCT` if
+// becomes more complex than a plain struct.
+
+// ssl_method_st backs the public `SSL_METHOD` type. It is a compatibility
+// structure to support the legacy version-locked methods.
+struct ssl_method_st {
+  // version, if non-zero, is the only protocol version acceptable to an
+  // SSL_CTX initialized from this method.
+  uint16_t version;
+  // method is the underlying SSL_PROTOCOL_METHOD that initializes the
+  // SSL_CTX.
+  const bssl::SSL_PROTOCOL_METHOD *method;
+  // x509_method contains pointers to functions that might deal with `X509`
+  // compatibility, or might be a no-op, depending on the application.
+  const bssl::SSL_X509_METHOD *x509_method;
+};
+
 
 #endif  // OPENSSL_HEADER_SSL_INTERNAL_H

@@ -44,6 +44,7 @@ use crate::{
         TlsMode, //
     },
     errors::Error,
+    ffi::ReceiveBuffer,
     tests::{
         P256_SERVER_CERT,
         P256_SERVER_CERT_DER,
@@ -442,7 +443,7 @@ fn psk_rpk_fallback_test() -> Result<(), Box<dyn std::error::Error + Send + Sync
 
     let rpk_cred = TlsCredentialBuilder::<RawPublicKeyMode>::new_raw_public_key(priv_key.clone())
         .build()
-        .ok_or("raw public key failed to parse".to_string())?;
+        .ok_or("raw public key failed to parse")?;
 
     let server_certs =
         crate::credentials::Certificate::parse_all_from_pem(crate::tests::RSA_SERVER_CERT, None)?;
@@ -452,14 +453,14 @@ fn psk_rpk_fallback_test() -> Result<(), Box<dyn std::error::Error + Send + Sync
         .with_private_key(priv_key.clone())?;
     let server_cred = server_cred_builder
         .build()
-        .ok_or("credential is incomplete".to_string())?;
+        .ok_or("credential is incomplete")?;
 
     let x509_cert = bssl_x509::certificates::X509Certificate::parse_one_from_pem(
         crate::tests::RSA_SERVER_CERT,
     )?;
     let expected_rpk_der = x509_cert
         .public_key()
-        .ok_or("public key is missing in x509".to_string())?
+        .ok_or("public key is missing in x509")?
         .to_der();
 
     let key = b"test-key-test-key-test-key-test-key";
@@ -584,14 +585,16 @@ fn psk_rpk_fallback_test() -> Result<(), Box<dyn std::error::Error + Send + Sync
             client_conn.as_pin_mut().async_write(b"hello").await?;
 
             let mut server_buf = [0u8; 5];
-            let read_len = server_conn.as_pin_mut().async_read(&mut server_buf).await?;
+            let mut recv_buf = ReceiveBuffer::new(&mut server_buf);
+            let read_len = server_conn.as_pin_mut().async_read(&mut recv_buf).await?;
             assert!(matches!(read_len, IoStatus::Ok(5)));
             assert_eq!(&server_buf, b"hello");
 
             server_conn.as_pin_mut().async_write(b"world").await?;
 
             let mut client_buf = [0u8; 5];
-            let read_len = client_conn.as_pin_mut().async_read(&mut client_buf).await?;
+            let mut recv_buf = ReceiveBuffer::new(&mut client_buf);
+            let read_len = client_conn.as_pin_mut().async_read(&mut recv_buf).await?;
             assert!(matches!(read_len, IoStatus::Ok(5)));
             assert_eq!(&client_buf, b"world");
 

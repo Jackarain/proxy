@@ -270,10 +270,6 @@ OPENSSL_timeval ssl_ctx_get_current_time(const SSLContext *ctx) {
 #endif
 }
 
-void SSL_CTX_set_handoff_mode(SSL_CTX *ctx, bool on) {
-  FromOpaque(ctx)->handoff = on;
-}
-
 static bool ssl_can_renegotiate(const SSLImpl *ssl) {
   if (ssl->server || SSL_is_dtls(ssl)) {
     return false;
@@ -316,14 +312,6 @@ static void ssl_maybe_shed_handshake_config(SSLImpl *ssl) {
   ssl->config.reset();
 }
 
-void SSL_set_handoff_mode(SSL *ssl, bool on) {
-  auto *ssl_impl = FromOpaque(ssl);
-  if (!ssl_impl->config) {
-    return;
-  }
-  ssl_impl->config->handoff = on;
-}
-
 bool SSL_get_traffic_secrets(const SSL *ssl,
                              Span<const uint8_t> *out_read_traffic_secret,
                              Span<const uint8_t> *out_write_traffic_secret) {
@@ -351,19 +339,6 @@ bool SSL_get_traffic_secrets(const SSL *ssl,
   return true;
 }
 
-void SSL_CTX_set_aes_hw_override_for_testing(SSL_CTX *ctx,
-                                             bool override_value) {
-  auto *ctx_impl = FromOpaque(ctx);
-  ctx_impl->aes_hw_override = true;
-  ctx_impl->aes_hw_override_value = override_value;
-}
-
-void SSL_set_aes_hw_override_for_testing(SSL *ssl, bool override_value) {
-  auto *ssl_impl = FromOpaque(ssl);
-  ssl_impl->config->aes_hw_override = true;
-  ssl_impl->config->aes_hw_override_value = override_value;
-}
-
 BSSL_NAMESPACE_END
 
 using namespace bssl;
@@ -374,12 +349,14 @@ int OPENSSL_init_ssl(uint64_t opts, const OPENSSL_INIT_SETTINGS *settings) {
   return 1;
 }
 
+// TODO(crbug.com/565766495): Take `SSLSession` when the lhash does.
 static uint32_t ssl_session_hash(const SSL_SESSION *sess) {
-  return ssl_hash_session_id(sess->session_id);
+  return ssl_hash_session_id(FromOpaque(sess)->session_id);
 }
 
+// TODO(crbug.com/565766495): Take `SSLSession` when the lhash does.
 static int ssl_session_cmp(const SSL_SESSION *a, const SSL_SESSION *b) {
-  return Span(a->session_id) == b->session_id ? 0 : 1;
+  return Span(FromOpaque(a)->session_id) == FromOpaque(b)->session_id ? 0 : 1;
 }
 
 bssl::SSLContext::SSLContext(const SSL_METHOD *ssl_method)
@@ -396,10 +373,7 @@ bssl::SSLContext::SSLContext(const SSL_METHOD *ssl_method)
       permute_extensions(false),
       allow_unknown_alpn_protos(false),
       false_start_allowed_without_alpn(false),
-      handoff(false),
       enable_early_data(false),
-      aes_hw_override(false),
-      aes_hw_override_value(false),
       resumption_across_names_enabled(false) {
   CRYPTO_new_ex_data(&ex_data);
 }
@@ -441,6 +415,7 @@ SSL_CTX *SSL_CTX_new(const SSL_METHOD *method) {
   }
 
   if (!SSL_CTX_set_strict_cipher_list(ret.get(), SSL_DEFAULT_CIPHER_LIST) ||
+      !ssl_create_default_tls13_cipher_list(&ret->tls13_cipher_list) ||
       // Lock the SSL_CTX to the specified version, for compatibility with
       // legacy uses of SSL_METHOD.
       !SSL_CTX_set_max_proto_version(ret.get(), method->version) ||
@@ -463,6 +438,15 @@ SSL_CTX *SSL_CTX_new(const SSL_METHOD *method) {
 int SSL_CTX_up_ref(SSL_CTX *ctx) {
   FromOpaque(ctx)->UpRefInternal();
   return 1;
+}
+
+SSL_CTX *SSL_CTX_dup_ref(const SSL_CTX *ctx) {
+  if (ctx == nullptr) {
+    return nullptr;
+  }
+  auto *ptr = const_cast<SSL_CTX *>(ctx);
+  SSL_CTX_up_ref(ptr);
+  return ptr;
 }
 
 void SSL_CTX_free(SSL_CTX *ctx) {
@@ -527,9 +511,11 @@ SSL *SSL_new(SSL_CTX *ctx) {
   ssl->config->retain_only_sha256_of_client_certs =
       ctx_impl->retain_only_sha256_of_client_certs;
   ssl->config->permute_extensions = ctx_impl->permute_extensions;
-  ssl->config->aes_hw_override = ctx_impl->aes_hw_override;
-  ssl->config->aes_hw_override_value = ctx_impl->aes_hw_override_value;
   ssl->config->compliance_policy = ctx_impl->compliance_policy;
+
+  if (!ssl->config->tls13_cipher_list.CopyFrom(ctx_impl->tls13_cipher_list)) {
+    return nullptr;
+  }
 
   if (!ssl->config->supported_group_list.CopyFrom(
           ctx_impl->supported_group_list) ||
@@ -569,7 +555,6 @@ SSL *SSL_new(SSL_CTX *ctx) {
   ssl->config->signed_cert_timestamps_enabled =
       ctx_impl->signed_cert_timestamps_enabled;
   ssl->config->ocsp_stapling_enabled = ctx_impl->ocsp_stapling_enabled;
-  ssl->config->handoff = ctx_impl->handoff;
   ssl->quic_method = ctx_impl->quic_method;
 
   if (!ssl->method->ssl_new(ssl.get()) ||
@@ -588,7 +573,6 @@ SSL_CONFIG::SSL_CONFIG(SSLImpl *ssl_arg)
       ocsp_stapling_enabled(false),
       channel_id_enabled(false),
       retain_only_sha256_of_client_certs(false),
-      handoff(false),
       shed_handshake_config(false),
       jdk11_workaround(false),
       quic_use_legacy_codepoint(false),
@@ -1253,8 +1237,6 @@ int SSL_get_error(const SSL *ssl, int ret_code) {
   switch (ssl_impl->s3->rwstate) {
     case SSL_ERROR_PENDING_SESSION:
     case SSL_ERROR_PENDING_CERTIFICATE:
-    case SSL_ERROR_HANDOFF:
-    case SSL_ERROR_HANDBACK:
     case SSL_ERROR_WANT_X509_LOOKUP:
     case SSL_ERROR_WANT_PRIVATE_KEY_OPERATION:
     case SSL_ERROR_PENDING_TICKET:
@@ -1341,10 +1323,6 @@ const char *SSL_error_description(int err) {
       return "EARLY_DATA_REJECTED";
     case SSL_ERROR_WANT_CERTIFICATE_VERIFY:
       return "WANT_CERTIFICATE_VERIFY";
-    case SSL_ERROR_HANDOFF:
-      return "HANDOFF";
-    case SSL_ERROR_HANDBACK:
-      return "HANDBACK";
     case SSL_ERROR_WANT_RENEGOTIATE:
       return "WANT_RENEGOTIATE";
     case SSL_ERROR_HANDSHAKE_HINTS_READY:
@@ -1881,14 +1859,14 @@ int SSL_CTX_set_tlsext_ticket_key_cb(
   return 1;
 }
 
-static bool check_no_duplicates(Span<const uint16_t> list) {
+static bool check_no_duplicates(Span<const uint16_t> list, int reason) {
   if (list.size() < 2) {
     return true;
   }
   for (size_t i = 0; i < list.size() - 1; ++i) {
     for (size_t j = i + 1; j < list.size(); ++j) {
       if (list[i] == list[j]) {
-        OPENSSL_PUT_ERROR(SSL, SSL_R_DUPLICATE_GROUP);
+        OPENSSL_PUT_ERROR(SSL, reason);
         return false;
       }
     }
@@ -1903,7 +1881,7 @@ static bool check_group_ids(Span<const uint16_t> group_ids) {
       return false;
     }
   }
-  return check_no_duplicates(group_ids);
+  return check_no_duplicates(group_ids, SSL_R_DUPLICATE_GROUP);
 }
 
 // validate_key_shares returns whether the `requested_key_shares` are free of
@@ -1911,7 +1889,7 @@ static bool check_group_ids(Span<const uint16_t> group_ids) {
 // `groups`.
 static bool validate_key_shares(Span<const uint16_t> requested_key_shares,
                                 Span<const uint16_t> groups) {
-  if (!check_no_duplicates(requested_key_shares)) {
+  if (!check_no_duplicates(requested_key_shares, SSL_R_DUPLICATE_GROUP)) {
     return false;
   }
   if (requested_key_shares.size() > groups.size()) {
@@ -2004,6 +1982,76 @@ int SSL_set1_group_ids_with_flags(SSL *ssl, const uint16_t *group_ids,
   return 0;
 }
 
+static bool check_tls13_cipher_flags(Span<const uint32_t> flags) {
+  if (flags.empty()) {
+    return true;
+  }
+  // The last element must not have the "equal preference with next" flag,
+  // because there is no next element.
+  if ((flags.back() & SSL_CIPHER_FLAG_EQUAL_PREFERENCE_WITH_NEXT) != 0) {
+    OPENSSL_PUT_ERROR(SSL, SSL_R_INVALID_CIPHER_FLAGS);
+    return false;
+  }
+  return true;
+}
+
+static bool check_tls13_cipher_ids(Span<const uint16_t> cipher_ids) {
+  for (uint16_t cipher_id : cipher_ids) {
+    const SSL_CIPHER *cipher = SSL_get_cipher_by_value(cipher_id);
+    if (cipher == nullptr ||
+        SSL_CIPHER_get_min_version(cipher) != TLS1_3_VERSION) {
+      OPENSSL_PUT_ERROR(SSL, SSL_R_UNKNOWN_CIPHER_TYPE);
+      return false;
+    }
+  }
+  return check_no_duplicates(cipher_ids, SSL_R_DUPLICATE_CIPHER);
+}
+
+static bool set_tls13_ciphers(const uint16_t *cipher_ids, const uint32_t *flags,
+                              size_t num_cipher_ids,
+                              SSLCipherPreferenceList *out) {
+  if (num_cipher_ids == 0) {
+    return ssl_create_default_tls13_cipher_list(out);
+  }
+  Span<const uint16_t> ciphers_span(cipher_ids, num_cipher_ids);
+  if (!check_tls13_cipher_ids(ciphers_span)) {
+    return false;
+  }
+  Array<bool> in_group_flags;
+  if (!in_group_flags.Init(num_cipher_ids)) {
+    return false;
+  }
+  if (flags == nullptr) {
+    return out->Init(ciphers_span, in_group_flags);
+  }
+  Span<const uint32_t> flags_span = Span(flags, num_cipher_ids);
+  if (!check_tls13_cipher_flags(flags_span)) {
+    return false;
+  }
+  for (size_t i = 0; i < flags_span.size(); ++i) {
+    in_group_flags[i] =
+        (flags_span[i] & SSL_CIPHER_FLAG_EQUAL_PREFERENCE_WITH_NEXT) != 0;
+  }
+  return out->Init(ciphers_span, in_group_flags);
+}
+
+int SSL_CTX_set1_tls13_ciphers(SSL_CTX *ctx, const uint16_t *cipher_ids,
+                               const uint32_t *flags, size_t num_cipher_ids) {
+  auto *ctx_impl = FromOpaque(ctx);
+  return set_tls13_ciphers(cipher_ids, flags, num_cipher_ids,
+                           &ctx_impl->tls13_cipher_list);
+}
+
+int SSL_set1_tls13_ciphers(SSL *ssl, const uint16_t *cipher_ids,
+                           const uint32_t *flags, size_t num_cipher_ids) {
+  auto *ssl_impl = FromOpaque(ssl);
+  if (!ssl_impl->config) {
+    return 0;
+  }
+  return set_tls13_ciphers(cipher_ids, flags, num_cipher_ids,
+                           &ssl_impl->config->tls13_cipher_list);
+}
+
 static bool ssl_nids_to_group_ids(Array<uint16_t> *out_group_ids,
                                   Span<const int> nids) {
   if (nids.empty()) {
@@ -2020,7 +2068,7 @@ static bool ssl_nids_to_group_ids(Array<uint16_t> *out_group_ids,
       return false;
     }
   }
-  if (!check_no_duplicates(group_ids)) {
+  if (!check_no_duplicates(group_ids, SSL_R_DUPLICATE_GROUP)) {
     return false;
   }
 
@@ -2084,7 +2132,7 @@ static bool ssl_str_to_group_ids(Array<uint16_t> *out_group_ids,
   } while (col);
 
   assert(i == count);
-  if (!check_no_duplicates(group_ids)) {
+  if (!check_no_duplicates(group_ids, SSL_R_DUPLICATE_GROUP)) {
     return false;
   }
   *out_group_ids = std::move(group_ids);
@@ -2113,7 +2161,7 @@ int SSL_set1_groups_list(SSL *ssl, const char *groups) {
 }
 
 uint16_t SSL_get_group_id(const SSL *ssl) {
-  SSL_SESSION *session = SSL_get_session(ssl);
+  SSLSession *session = ssl_get_session(FromOpaque(ssl));
   if (session == nullptr) {
     return 0;
   }
@@ -2163,15 +2211,15 @@ int SSL_CTX_set_tmp_dh(SSL_CTX *ctx, const DH *dh) { return 1; }
 int SSL_set_tmp_dh(SSL *ssl, const DH *dh) { return 1; }
 
 STACK_OF(SSL_CIPHER) *SSL_CTX_get_ciphers(const SSL_CTX *ctx) {
-  return FromOpaque(ctx)->cipher_list->ciphers.get();
+  return FromOpaque(ctx)->cipher_list->ciphers();
 }
 
 int SSL_CTX_cipher_in_group(const SSL_CTX *ctx, size_t i) {
   auto *ctx_impl = FromOpaque(ctx);
-  if (i >= sk_SSL_CIPHER_num(ctx_impl->cipher_list->ciphers.get())) {
+  if (i >= sk_SSL_CIPHER_num(ctx_impl->cipher_list->ciphers())) {
     return 0;
   }
-  return ctx_impl->cipher_list->in_group_flags[i];
+  return ctx_impl->cipher_list->in_group_flags()[i];
 }
 
 STACK_OF(SSL_CIPHER) *SSL_get_ciphers(const SSL *ssl) {
@@ -2185,8 +2233,8 @@ STACK_OF(SSL_CIPHER) *SSL_get_ciphers(const SSL *ssl) {
   }
 
   return ssl_impl->config->cipher_list
-             ? ssl_impl->config->cipher_list->ciphers.get()
-             : ssl_impl->ctx->cipher_list->ciphers.get();
+             ? ssl_impl->config->cipher_list->ciphers()
+             : ssl_impl->ctx->cipher_list->ciphers();
 }
 
 const char *SSL_get_cipher_list(const SSL *ssl, int n) {
@@ -2194,8 +2242,9 @@ const char *SSL_get_cipher_list(const SSL *ssl, int n) {
     return nullptr;
   }
 
-  STACK_OF(SSL_CIPHER) *sk = SSL_get_ciphers(ssl);
-  if (sk == nullptr || n < 0 || (size_t)n >= sk_SSL_CIPHER_num(sk)) {
+  const STACK_OF(SSL_CIPHER) *sk = SSL_get_ciphers(ssl);
+  if (sk == nullptr || n < 0 ||
+      static_cast<size_t>(n) >= sk_SSL_CIPHER_num(sk)) {
     return nullptr;
   }
 
@@ -2209,20 +2258,13 @@ const char *SSL_get_cipher_list(const SSL *ssl, int n) {
 
 int SSL_CTX_set_cipher_list(SSL_CTX *ctx, const char *str) {
   auto *ctx_impl = FromOpaque(ctx);
-  const bool has_aes_hw = ctx_impl->aes_hw_override
-                              ? ctx_impl->aes_hw_override_value
-                              : EVP_has_aes_hardware();
-  return ssl_create_cipher_list(&ctx_impl->cipher_list, has_aes_hw, str,
+  return ssl_create_cipher_list(&ctx_impl->cipher_list, str,
                                 false /* not strict */);
 }
 
 int SSL_CTX_set_strict_cipher_list(SSL_CTX *ctx, const char *str) {
   auto *ctx_impl = FromOpaque(ctx);
-  const bool has_aes_hw = ctx_impl->aes_hw_override
-                              ? ctx_impl->aes_hw_override_value
-                              : EVP_has_aes_hardware();
-  return ssl_create_cipher_list(&ctx_impl->cipher_list, has_aes_hw, str,
-                                true /* strict */);
+  return ssl_create_cipher_list(&ctx_impl->cipher_list, str, true /* strict */);
 }
 
 int SSL_set_cipher_list(SSL *ssl, const char *str) {
@@ -2230,10 +2272,7 @@ int SSL_set_cipher_list(SSL *ssl, const char *str) {
   if (!ssl_impl->config) {
     return 0;
   }
-  const bool has_aes_hw = ssl_impl->config->aes_hw_override
-                              ? ssl_impl->config->aes_hw_override_value
-                              : EVP_has_aes_hardware();
-  return ssl_create_cipher_list(&ssl_impl->config->cipher_list, has_aes_hw, str,
+  return ssl_create_cipher_list(&ssl_impl->config->cipher_list, str,
                                 false /* not strict */);
 }
 
@@ -2242,10 +2281,7 @@ int SSL_set_strict_cipher_list(SSL *ssl, const char *str) {
   if (!ssl_impl->config) {
     return 0;
   }
-  const bool has_aes_hw = ssl_impl->config->aes_hw_override
-                              ? ssl_impl->config->aes_hw_override_value
-                              : EVP_has_aes_hardware();
-  return ssl_create_cipher_list(&ssl_impl->config->cipher_list, has_aes_hw, str,
+  return ssl_create_cipher_list(&ssl_impl->config->cipher_list, str,
                                 true /* strict */);
 }
 
@@ -2316,7 +2352,7 @@ void SSL_enable_ocsp_stapling(SSL *ssl) {
 
 void SSL_get0_signed_cert_timestamp_list(const SSL *ssl, const uint8_t **out,
                                          size_t *out_len) {
-  SSL_SESSION *session = SSL_get_session(ssl);
+  SSLSession *session = ssl_get_session(FromOpaque(ssl));
   if (FromOpaque(ssl)->server || !session ||
       !session->signed_cert_timestamp_list) {
     *out_len = 0;
@@ -2330,7 +2366,7 @@ void SSL_get0_signed_cert_timestamp_list(const SSL *ssl, const uint8_t **out,
 
 void SSL_get0_ocsp_response(const SSL *ssl, const uint8_t **out,
                             size_t *out_len) {
-  SSL_SESSION *session = SSL_get_session(ssl);
+  SSLSession *session = ssl_get_session(FromOpaque(ssl));
   if (FromOpaque(ssl)->server || !session || !session->ocsp_response) {
     *out_len = 0;
     *out = nullptr;
@@ -2521,7 +2557,7 @@ int SSL_add_application_settings(SSL *ssl, const uint8_t *proto,
 void SSL_get0_peer_application_settings(const SSL *ssl,
                                         const uint8_t **out_data,
                                         size_t *out_len) {
-  const SSL_SESSION *session = SSL_get_session(ssl);
+  const SSLSession *session = ssl_get_session(FromOpaque(ssl));
   Span<const uint8_t> settings =
       session ? session->peer_application_settings : Span<const uint8_t>();
   *out_data = settings.data();
@@ -2529,7 +2565,7 @@ void SSL_get0_peer_application_settings(const SSL *ssl,
 }
 
 int SSL_has_application_settings(const SSL *ssl) {
-  const SSL_SESSION *session = SSL_get_session(ssl);
+  const SSLSession *session = ssl_get_session(FromOpaque(ssl));
   return session && session->has_application_settings;
 }
 
@@ -2661,7 +2697,7 @@ EVP_PKEY *SSL_CTX_get0_privatekey(const SSL_CTX *ctx) {
 }
 
 const SSL_CIPHER *SSL_get_current_cipher(const SSL *ssl) {
-  const SSL_SESSION *session = SSL_get_session(ssl);
+  const SSLSession *session = ssl_get_session(FromOpaque(ssl));
   return session == nullptr ? nullptr : session->cipher;
 }
 
@@ -2909,7 +2945,7 @@ const char *SSL_get_psk_identity(const SSL *ssl) {
   if (ssl == nullptr) {
     return nullptr;
   }
-  SSL_SESSION *session = SSL_get_session(ssl);
+  SSLSession *session = ssl_get_session(FromOpaque(ssl));
   if (session == nullptr) {
     return nullptr;
   }
@@ -3210,7 +3246,7 @@ int SSL_get_dtls_write_traffic_secret(const SSL *ssl, const uint8_t **out_data,
 }
 
 uint16_t SSL_get_peer_signature_algorithm(const SSL *ssl) {
-  SSL_SESSION *session = SSL_get_session(ssl);
+  SSLSession *session = ssl_get_session(FromOpaque(ssl));
   if (session == nullptr) {
     return 0;
   }
@@ -3337,7 +3373,7 @@ int SSL_clear(SSL *ssl) {
   // In OpenSSL, reusing a client `SSL` with `SSL_clear` causes the previously
   // established session to be offered the next time around. wpa_supplicant
   // depends on this behavior, so emulate it.
-  UniquePtr<SSL_SESSION> session;
+  UniquePtr<SSLSession> session;
   if (!ssl_impl->server && ssl_impl->s3->established_session != nullptr) {
     session = UpRef(ssl_impl->s3->established_session);
   }
@@ -3435,7 +3471,7 @@ SSL_SESSION *SSL_process_tls13_new_session_ticket(SSL *ssl, const uint8_t *buf,
     return nullptr;
   }
 
-  UniquePtr<SSL_SESSION> session =
+  UniquePtr<SSLSession> session =
       tls13_create_session_with_ticket(ssl_impl, &body);
   if (!session) {
     // `tls13_create_session_with_ticket` puts the correct error.
@@ -3561,6 +3597,15 @@ static const char kTLS12Ciphers[] =
     "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384:"
     "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384";
 
+static const uint16_t kTLS13Ciphers[] = {
+    SSL_CIPHER_AES_128_GCM_SHA256,
+    SSL_CIPHER_AES_256_GCM_SHA384,
+};
+static const bool kTLS13CiphersInGroup[] = {
+    true,
+    false,
+};
+
 static int Configure(SSLContext *ctx) {
   ctx->compliance_policy = ssl_compliance_policy_fips_202205;
 
@@ -3577,6 +3622,8 @@ static int Configure(SSLContext *ctx) {
       // Encrypt-then-MAC extension is required for all CBC cipher suites and so
       // it's easier to drop them.
       SSL_CTX_set_strict_cipher_list(ctx, kTLS12Ciphers) &&
+      ctx->tls13_cipher_list.Init(Span(kTLS13Ciphers),
+                                  Span(kTLS13CiphersInGroup)) &&
       SSL_CTX_set1_group_ids(ctx, kGroups, std::size(kGroups)) &&
       SSL_CTX_set_signing_algorithm_prefs(ctx, kSigAlgs, std::size(kSigAlgs)) &&
       SSL_CTX_set_verify_algorithm_prefs(ctx, kSigAlgs, std::size(kSigAlgs));
@@ -3589,12 +3636,105 @@ static int Configure(SSLImpl *ssl) {
   return SSL_set_min_proto_version(ssl, TLS1_2_VERSION) &&
          SSL_set_max_proto_version(ssl, TLS1_3_VERSION) &&
          SSL_set_strict_cipher_list(ssl, kTLS12Ciphers) &&
+         ssl->config->tls13_cipher_list.Init(Span(kTLS13Ciphers),
+                                             Span(kTLS13CiphersInGroup)) &&
          SSL_set1_group_ids(ssl, kGroups, std::size(kGroups)) &&
          SSL_set_signing_algorithm_prefs(ssl, kSigAlgs, std::size(kSigAlgs)) &&
          SSL_set_verify_algorithm_prefs(ssl, kSigAlgs, std::size(kSigAlgs));
 }
 
 }  // namespace fips202205
+
+namespace fips202609 {
+
+// (References are to SP 800-52r2):
+
+static const uint16_t kGroups[] = {
+    SSL_GROUP_X25519_MLKEM768,
+    SSL_GROUP_MLKEM1024,
+    SSL_GROUP_SECP256R1,
+    SSL_GROUP_SECP384R1,
+};
+static const uint32_t kGroupsFlags[] = {
+    SSL_GROUP_FLAG_EQUAL_PREFERENCE_WITH_NEXT,
+    0,
+    0,
+    0,
+};
+
+// Prefer post-quantum groups equally if the client supports them.
+static const uint32_t kOptions = SSL_OP_CIPHER_SERVER_PREFERENCE;
+
+static const uint16_t kSigAlgs[] = {
+    SSL_SIGN_RSA_PKCS1_SHA256,
+    SSL_SIGN_RSA_PKCS1_SHA384,
+    SSL_SIGN_RSA_PKCS1_SHA512,
+    // Table 4.1:
+    // "The curve should be P-256 or P-384"
+    SSL_SIGN_ECDSA_SECP256R1_SHA256,
+    SSL_SIGN_ECDSA_SECP384R1_SHA384,
+    SSL_SIGN_RSA_PSS_RSAE_SHA256,
+    SSL_SIGN_RSA_PSS_RSAE_SHA384,
+    SSL_SIGN_RSA_PSS_RSAE_SHA512,
+};
+
+static const char kTLS12Ciphers[] =
+    "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256:"
+    "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256:"
+    "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384:"
+    "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384";
+
+static const uint16_t kTLS13Ciphers[] = {
+    SSL_CIPHER_AES_128_GCM_SHA256,
+    SSL_CIPHER_AES_256_GCM_SHA384,
+};
+static const bool kTLS13CiphersInGroup[] = {
+    true,
+    false,
+};
+
+static int Configure(SSLContext *ctx) {
+  ctx->compliance_policy = ssl_compliance_policy_fips_202609;
+
+  return
+      // Section 3.1:
+      // "Servers that support government-only applications shall be
+      // configured to use TLS 1.2 and should be configured to use TLS 1.3
+      // as well. These servers should not be configured to use TLS 1.1 and
+      // shall not use TLS 1.0, SSL 3.0, or SSL 2.0.
+      SSL_CTX_set_min_proto_version(ctx, TLS1_2_VERSION) &&
+      SSL_CTX_set_max_proto_version(ctx, TLS1_3_VERSION) &&
+      // Sections 3.3.1.1.1 and 3.3.1.1.2 are ambiguous about whether
+      // HMAC-SHA-1 cipher suites are permitted with TLS 1.2. However, later the
+      // Encrypt-then-MAC extension is required for all CBC cipher suites and so
+      // it's easier to drop them.
+      SSL_CTX_set_strict_cipher_list(ctx, kTLS12Ciphers) &&
+      ctx->tls13_cipher_list.Init(Span(kTLS13Ciphers),
+                                  Span(kTLS13CiphersInGroup)) &&
+      SSL_CTX_set1_group_ids_with_flags(ctx, kGroups, kGroupsFlags,
+                                        std::size(kGroups)) &&
+      SSL_CTX_set_options(ctx, kOptions) &&
+      SSL_CTX_set_signing_algorithm_prefs(ctx, kSigAlgs, std::size(kSigAlgs)) &&
+      SSL_CTX_set_verify_algorithm_prefs(ctx, kSigAlgs, std::size(kSigAlgs));
+}
+
+static int Configure(SSLImpl *ssl) {
+  ssl->config->compliance_policy = ssl_compliance_policy_fips_202609;
+
+  // See `Configure(SSL_CTX)`, above, for reasoning.
+  return SSL_set_min_proto_version(ssl, TLS1_2_VERSION) &&
+         SSL_set_max_proto_version(ssl, TLS1_3_VERSION) &&
+         SSL_set_strict_cipher_list(ssl, kTLS12Ciphers) &&
+         ssl->config->tls13_cipher_list.Init(Span(kTLS13Ciphers),
+                                             Span(kTLS13CiphersInGroup)) &&
+         SSL_set1_group_ids_with_flags(ssl, kGroups, kGroupsFlags,
+                                       std::size(kGroups)) &&
+         SSL_set_options(ssl, kOptions) &&
+         SSL_set_signing_algorithm_prefs(ssl, kSigAlgs, std::size(kSigAlgs)) &&
+         SSL_set_verify_algorithm_prefs(ssl, kSigAlgs, std::size(kSigAlgs));
+}
+
+}  // namespace fips202609
 
 namespace wpa202304 {
 
@@ -3614,6 +3754,13 @@ static const char kTLS12Ciphers[] =
     "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384:"
     "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384";
 
+static const uint16_t kTLS13Ciphers[] = {
+    SSL_CIPHER_AES_256_GCM_SHA384,
+};
+static const bool kTLS13CiphersInGroup[] = {
+    false,
+};
+
 static int Configure(SSLContext *ctx) {
   ctx->compliance_policy = ssl_compliance_policy_wpa3_192_202304;
 
@@ -3621,6 +3768,8 @@ static int Configure(SSLContext *ctx) {
          SSL_CTX_set_max_proto_version(ctx, TLS1_3_VERSION) &&
          SSL_CTX_set_strict_cipher_list(ctx, kTLS12Ciphers) &&
          SSL_CTX_set1_group_ids(ctx, kGroups, std::size(kGroups)) &&
+         ctx->tls13_cipher_list.Init(Span(kTLS13Ciphers),
+                                     Span(kTLS13CiphersInGroup)) &&
          SSL_CTX_set_signing_algorithm_prefs(ctx, kSigAlgs,
                                              std::size(kSigAlgs)) &&
          SSL_CTX_set_verify_algorithm_prefs(ctx, kSigAlgs, std::size(kSigAlgs));
@@ -3632,6 +3781,8 @@ static int Configure(SSLImpl *ssl) {
   return SSL_set_min_proto_version(ssl, TLS1_2_VERSION) &&
          SSL_set_max_proto_version(ssl, TLS1_3_VERSION) &&
          SSL_set_strict_cipher_list(ssl, kTLS12Ciphers) &&
+         ssl->config->tls13_cipher_list.Init(Span(kTLS13Ciphers),
+                                             Span(kTLS13CiphersInGroup)) &&
          SSL_set1_group_ids(ssl, kGroups, std::size(kGroups)) &&
          SSL_set_signing_algorithm_prefs(ssl, kSigAlgs, std::size(kSigAlgs)) &&
          SSL_set_verify_algorithm_prefs(ssl, kSigAlgs, std::size(kSigAlgs));
@@ -3641,14 +3792,27 @@ static int Configure(SSLImpl *ssl) {
 
 namespace cnsa202407 {
 
+static const uint16_t kTLS13Ciphers[] = {
+    SSL_CIPHER_AES_256_GCM_SHA384,
+    SSL_CIPHER_AES_128_GCM_SHA256,
+    SSL_CIPHER_CHACHA20_POLY1305_SHA256,
+};
+static const bool kTLS13CiphersInGroup[] = {
+    false,
+    false,
+    false,
+};
+
 static int Configure(SSLContext *ctx) {
   ctx->compliance_policy = ssl_compliance_policy_cnsa_202407;
-  return 1;
+  return ctx->tls13_cipher_list.Init(Span(kTLS13Ciphers),
+                                     Span(kTLS13CiphersInGroup));
 }
 
 static int Configure(SSLImpl *ssl) {
   ssl->config->compliance_policy = ssl_compliance_policy_cnsa_202407;
-  return 1;
+  return ssl->config->tls13_cipher_list.Init(Span(kTLS13Ciphers),
+                                             Span(kTLS13CiphersInGroup));
 }
 
 }  // namespace cnsa202407
@@ -3673,12 +3837,21 @@ static const char kTLS12Ciphers[] =
     "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384:"
     "TLS_RSA_WITH_AES_256_GCM_SHA384";
 
+static const uint16_t kTLS13Ciphers[] = {
+    SSL_CIPHER_AES_256_GCM_SHA384,
+};
+static const bool kTLS13CiphersInGroup[] = {
+    false,
+};
+
 static int Configure(SSLContext *ctx) {
   ctx->compliance_policy = ssl_compliance_policy_cnsa1_202603;
 
   return SSL_CTX_set_min_proto_version(ctx, TLS1_2_VERSION) &&
          SSL_CTX_set_max_proto_version(ctx, TLS1_3_VERSION) &&
          SSL_CTX_set_strict_cipher_list(ctx, kTLS12Ciphers) &&
+         ctx->tls13_cipher_list.Init(Span(kTLS13Ciphers),
+                                     Span(kTLS13CiphersInGroup)) &&
          SSL_CTX_set1_group_ids(ctx, kGroups, std::size(kGroups)) &&
          SSL_CTX_set_options(ctx, kOptions) &&
          SSL_CTX_set_signing_algorithm_prefs(ctx, kSigAlgs,
@@ -3692,6 +3865,8 @@ static int Configure(SSLImpl *ssl) {
   return SSL_set_min_proto_version(ssl, TLS1_2_VERSION) &&
          SSL_set_max_proto_version(ssl, TLS1_3_VERSION) &&
          SSL_set_strict_cipher_list(ssl, kTLS12Ciphers) &&
+         ssl->config->tls13_cipher_list.Init(Span(kTLS13Ciphers),
+                                             Span(kTLS13CiphersInGroup)) &&
          SSL_set1_group_ids(ssl, kGroups, std::size(kGroups)) &&
          SSL_set_options(ssl, kOptions) &&
          SSL_set_signing_algorithm_prefs(ssl, kSigAlgs, std::size(kSigAlgs)) &&
@@ -3712,11 +3887,20 @@ static const uint16_t kSigAlgs[] = {
     SSL_SIGN_RSA_PKCS1_SHA384,
 };
 
+static const uint16_t kTLS13Ciphers[] = {
+    SSL_CIPHER_AES_256_GCM_SHA384,
+};
+static const bool kTLS13CiphersInGroup[] = {
+    false,
+};
+
 static int Configure(SSLContext *ctx) {
   ctx->compliance_policy = ssl_compliance_policy_cnsa2_202603;
 
   return SSL_CTX_set_min_proto_version(ctx, TLS1_3_VERSION) &&
          SSL_CTX_set_max_proto_version(ctx, TLS1_3_VERSION) &&
+         ctx->tls13_cipher_list.Init(Span(kTLS13Ciphers),
+                                     Span(kTLS13CiphersInGroup)) &&
          SSL_CTX_set1_group_ids(ctx, kGroups, std::size(kGroups)) &&
          SSL_CTX_set_signing_algorithm_prefs(ctx, kSigAlgs,
                                              std::size(kSigAlgs)) &&
@@ -3728,6 +3912,8 @@ static int Configure(SSLImpl *ssl) {
 
   return SSL_set_min_proto_version(ssl, TLS1_3_VERSION) &&
          SSL_set_max_proto_version(ssl, TLS1_3_VERSION) &&
+         ssl->config->tls13_cipher_list.Init(Span(kTLS13Ciphers),
+                                             Span(kTLS13CiphersInGroup)) &&
          SSL_set1_group_ids(ssl, kGroups, std::size(kGroups)) &&
          SSL_set_signing_algorithm_prefs(ssl, kSigAlgs, std::size(kSigAlgs)) &&
          SSL_set_verify_algorithm_prefs(ssl, kSigAlgs, std::size(kSigAlgs));
@@ -3741,6 +3927,8 @@ int SSL_CTX_set_compliance_policy(SSL_CTX *ctx,
   switch (policy) {
     case ssl_compliance_policy_fips_202205:
       return fips202205::Configure(ctx_impl);
+    case ssl_compliance_policy_fips_202609:
+      return fips202609::Configure(ctx_impl);
     case ssl_compliance_policy_wpa3_192_202304:
       return wpa202304::Configure(ctx_impl);
     case ssl_compliance_policy_cnsa_202407:
@@ -3763,6 +3951,8 @@ int SSL_set_compliance_policy(SSL *ssl, enum ssl_compliance_policy_t policy) {
   switch (policy) {
     case ssl_compliance_policy_fips_202205:
       return fips202205::Configure(ssl_impl);
+    case ssl_compliance_policy_fips_202609:
+      return fips202609::Configure(ssl_impl);
     case ssl_compliance_policy_wpa3_192_202304:
       return wpa202304::Configure(ssl_impl);
     case ssl_compliance_policy_cnsa_202407:
@@ -3915,14 +4105,16 @@ int SSL_set1_available_client_cert_types(SSL *ssl, const uint8_t *values,
 }
 
 int SSL_get_peer_cert_type(const SSL *ssl) {
-  if (const SSL_SESSION *session = SSL_get_session(ssl); session != nullptr) {
+  if (const SSLSession *session = ssl_get_session(FromOpaque(ssl));
+      session != nullptr) {
     return session->peer_cert_type;
   }
   return kDefaultCertType;
 }
 
 EVP_PKEY *SSL_get0_peer_rpk(const SSL *ssl) {
-  if (const SSL_SESSION *session = SSL_get_session(ssl); session != nullptr) {
+  if (const SSLSession *session = ssl_get_session(FromOpaque(ssl));
+      session != nullptr) {
     return session->peer_raw_public_key.get();
   }
   return nullptr;

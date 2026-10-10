@@ -16,7 +16,6 @@
 
 use alloc::boxed::Box;
 use core::{
-    ffi::c_int,
     marker::PhantomData,
     mem::{
         forget,
@@ -36,11 +35,6 @@ use crate::{
         methods::waker_data_ref_from_ssl, //
     },
     context::TlsMode,
-    errors::{
-        Error,
-        TlsRetryReason, //
-    },
-    io::IoStatus,
     sessions::TlsSession, //
 };
 
@@ -116,7 +110,10 @@ where
 
     /// Disable session creation.
     pub fn disable_session(&mut self) -> &mut Self {
-        self.as_in_handshake().disable_session();
+        unsafe {
+            // Safety: the validity of the handle `ptr` is witnessed by `self`.
+            bssl_sys::SSL_set_mode(self.ptr(), ConnectionMode::MODE_NO_SESSION_CREATION.bits());
+        }
         self
     }
 
@@ -133,7 +130,10 @@ where
 
     /// Set the session for resumption.
     pub fn with_session(&mut self, session: &TlsSession) -> &mut Self {
-        self.as_in_handshake().set_session(session);
+        unsafe {
+            // Safety: self.ptr and session.0 are valid.
+            bssl_sys::SSL_set_session(self.ptr(), session.ptr());
+        }
         self
     }
 
@@ -172,24 +172,6 @@ impl<R, M> Drop for TlsConnection<R, M> {
 }
 
 impl<R, M> TlsConnection<R, M> {
-    /// Call this method whenever I/O is performed on the connection.
-    pub(crate) fn categorise_error_for_io(&self, rc: c_int) -> Result<IoStatus, Error> {
-        let reason = unsafe {
-            // Safety: we only want to extract the last I/O error on an existing valid connection.
-            bssl_sys::SSL_get_error(self.ptr(), rc)
-        };
-        let res = match TlsRetryReason::try_from(reason) {
-            Ok(TlsRetryReason::PeerCloseNotify) => Ok(IoStatus::EndOfStream),
-            Ok(reason) => Ok(IoStatus::Retry(reason)),
-            Err(_) => Err(Error::extract_lib_err()),
-        };
-        unsafe {
-            // Safety: we only clear the error on the current thread.
-            bssl_sys::ERR_clear_error();
-        }
-        res
-    }
-
     /// Get a handle of the connection object.
     ///
     /// # Safety

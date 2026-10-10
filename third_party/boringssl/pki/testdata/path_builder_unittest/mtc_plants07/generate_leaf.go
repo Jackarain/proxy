@@ -43,7 +43,7 @@ func do() error {
 	}
 
 	leafTempl := &x509.Certificate{
-		Subject: pkix.Name{CommonName: "ICA 1"},
+		Subject: pkix.Name{CommonName: "Leaf 1"},
 		SerialNumber: big.NewInt(1),
 		KeyUsage: x509.KeyUsageDigitalSignature,
 		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
@@ -58,7 +58,7 @@ func do() error {
 		return err
 	}
 
-	pemBlock := &pem.Block{"CERTIFICATE", nil, cert}
+	pemBlock := &pem.Block{Type: "CERTIFICATE", Bytes: cert}
 	pem.Encode(os.Stdout, pemBlock)
 	ica_spki := base64.StdEncoding.EncodeToString(icaCert.RawSubjectPublicKeyInfo)
 	fmt.Printf("ICA SPKI: %s\n", ica_spki)

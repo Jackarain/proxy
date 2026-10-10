@@ -163,8 +163,9 @@ fn test_private_key_methods() -> Result<(), Box<dyn std::error::Error + Send + S
         }
 
         let mut message = [0; 21];
+        let mut recv_buf = crate::ffi::ReceiveBuffer::new(&mut message);
         assert!(matches!(
-            server_conn.as_pin_mut().async_read(&mut message).await?,
+            server_conn.as_pin_mut().async_read(&mut recv_buf).await?,
             IoStatus::Ok(21)
         ));
         assert_eq!(message, *b"BoringSSL is awesome!");

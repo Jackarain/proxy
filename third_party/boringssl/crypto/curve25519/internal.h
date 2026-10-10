@@ -15,9 +15,11 @@
 #ifndef OPENSSL_HEADER_CRYPTO_CURVE25519_INTERNAL_H
 #define OPENSSL_HEADER_CRYPTO_CURVE25519_INTERNAL_H
 
+#include <openssl/base.h>
 #include <openssl/curve25519.h>
 
-#include "../internal.h"
+#include "../mem_internal.h"
+
 
 BSSL_NAMESPACE_BEGIN
 
@@ -51,33 +53,41 @@ void x25519_ge_scalarmult_base_adx(uint8_t h[4][32], const uint8_t a[32]);
 #endif
 
 #if defined(OPENSSL_64_BIT)
-// fe means field element. Here the field is \Z/(2^255-19). An element t,
-// entries t[0]...t[4], represents the integer t[0]+2^51 t[1]+2^102 t[2]+2^153
-// t[3]+2^204 t[4].
+// fe means field element. Here the field is ℤ/(2^255-19). An element t,
+// entries t[0]...t[4], represents the integer
+// t[0] + 2^51 t[1] + 2^102 t[2] + 2^153 t[3] + 2^204 t[4].
 // fe limbs are bounded by 1.125*2^51.
 // Multiplication and carrying produce fe from fe_loose.
-typedef struct fe { uint64_t v[5]; } fe;
+typedef struct fe {
+  uint64_t v[5];
+} fe;
 
 // fe_loose limbs are bounded by 3.375*2^51.
 // Addition and subtraction produce fe_loose from (fe, fe).
-typedef struct fe_loose { uint64_t v[5]; } fe_loose;
+typedef struct fe_loose {
+  uint64_t v[5];
+} fe_loose;
 #else
-// fe means field element. Here the field is \Z/(2^255-19). An element t,
-// entries t[0]...t[9], represents the integer t[0]+2^26 t[1]+2^51 t[2]+2^77
-// t[3]+2^102 t[4]+...+2^230 t[9].
+// fe means field element. Here the field is ℤ/(2^255-19).
+// An element t, entries t[0]...t[9], represents the integer
+// t[0] + 2^26 t[1] + 2^51 t[2] + 2^77 t[3] + 2^102 t[4] + ... + 2^230 t[9].
 // fe limbs are bounded by 1.125*2^26,1.125*2^25,1.125*2^26,1.125*2^25,etc.
 // Multiplication and carrying produce fe from fe_loose.
-typedef struct fe { uint32_t v[10]; } fe;
+typedef struct fe {
+  uint32_t v[10];
+} fe;
 
-// fe_loose limbs are bounded by 3.375*2^26,3.375*2^25,3.375*2^26,3.375*2^25,etc.
-// Addition and subtraction produce fe_loose from (fe, fe).
-typedef struct fe_loose { uint32_t v[10]; } fe_loose;
+// fe_loose limbs are bounded by 3.375*2^26, 3.375*2^25, 3.375*2^26, 3.375*2^25,
+// etc. Addition and subtraction produce fe_loose from (fe, fe).
+typedef struct fe_loose {
+  uint32_t v[10];
+} fe_loose;
 #endif
 
 // ge means group element.
 //
 // Here the group is the set of pairs (x,y) of field elements (see fe.h)
-// satisfying -x^2 + y^2 = 1 + d x^2y^2
+// satisfying -x² + y² = 1 + d x²y²
 // where d = -121665/121666.
 //
 // Representations:
@@ -138,6 +148,9 @@ enum spake2_state_t {
   spake2_state_key_generated,
 };
 
+void map_to_curve_curve25519_elligator2(uint8_t out_qx[32], uint8_t out_qy[32],
+                                        const uint8_t u[32]);
+
 BSSL_NAMESPACE_END
 
 struct spake2_ctx_st {
@@ -154,7 +167,33 @@ struct spake2_ctx_st {
   char disable_password_scalar_hack;
 };
 
+DECLARE_OPAQUE_STRUCT(cpace_ctx_st, CpaceCtx)
+
 BSSL_NAMESPACE_BEGIN
+
+class CpaceCtx : public cpace_ctx_st {
+ public:
+  enum cpace_role_t our_role;
+  enum cpace_state_t {
+    cpace_state_init = 0,
+    cpace_state_msg_generated,
+    cpace_state_key_generated,
+  } state = cpace_state_init;
+  Array<uint8_t> our_aad;
+  Array<uint8_t> our_password;
+  Array<uint8_t> channel_id;
+  Array<uint8_t> session_id;
+  uint8_t our_public_key[32];
+  uint8_t our_private_key[32];
+
+  static constexpr bool kAllowUniquePtr = true;
+
+  void ComputeGeneratorStrHash(uint8_t out_gen_str_hash[32]) const;
+  bool ComputeMessage(uint8_t msg[32]);
+  bool ComputeISK(const uint8_t msg[32], Span<const uint8_t> peer_assoc_data,
+                  uint8_t shared_secret[64],
+                  uint8_t out_sid[SHA512_DIGEST_LENGTH]);
+};
 
 extern const uint8_t k25519Precomp[32][8][3][32];
 

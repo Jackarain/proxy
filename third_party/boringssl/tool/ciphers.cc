@@ -44,7 +44,7 @@ bool Ciphers(const std::vector<std::string> &args) {
     return false;
   }
 
-  STACK_OF(SSL_CIPHER) *ciphers = SSL_CTX_get_ciphers(ctx.get());
+  const STACK_OF(SSL_CIPHER) *ciphers = SSL_CTX_get_ciphers(ctx.get());
 
   bool last_in_group = false;
   for (size_t i = 0; i < sk_SSL_CIPHER_num(ciphers); i++) {

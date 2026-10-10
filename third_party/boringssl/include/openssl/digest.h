@@ -381,9 +381,9 @@ BSSL_NAMESPACE_BEGIN
 
 BORINGSSL_MAKE_DELETER(EVP_MD_CTX, EVP_MD_CTX_free)
 
-using ScopedEVP_MD_CTX =
-    internal::StackAllocatedMovable<EVP_MD_CTX, int, EVP_MD_CTX_init,
-                                    EVP_MD_CTX_cleanup, EVP_MD_CTX_move>;
+BORINGSSL_MAKE_STACK_TRAITS_MOVABLE(EVP_MD_CTX, EVP_MD_CTX_init,
+                                    EVP_MD_CTX_cleanup, EVP_MD_CTX_move)
+using ScopedEVP_MD_CTX = internal::StackAllocatedMovable<EVP_MD_CTX>;
 
 BSSL_NAMESPACE_END
 

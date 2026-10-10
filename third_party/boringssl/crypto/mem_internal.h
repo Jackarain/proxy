@@ -665,6 +665,41 @@ class InplaceVector {
   PackedSize<N> size_ = 0;
 };
 
+// A MaybeInplaceArray is like an `Array`, but backed by an `InplaceVector` if
+// `size() <= N`, and by an `Array` if `size() > N`.
+template <typename T, size_t N>
+class MaybeInplaceArray {
+ public:
+  // CopyFrom replaces the array with a newly-allocated copy of `in`. It returns
+  // true on success and false on error.
+  //
+  // `in` may not alias `this`.
+  [[nodiscard]] bool CopyFrom(Span<const T> in) {
+    if (in.size() <= N) {
+      small_.CopyFrom(in);
+      large_.Reset();
+    } else {
+      if (!large_.CopyFrom(in)) {
+        return false;
+      }
+      small_.clear();
+    }
+    return true;
+  }
+
+  // Minimal methods to allow conversion to a `Span`.
+  const T *data() const { return IsSmall() ? small_.data() : large_.data(); }
+  T *data() { return IsSmall() ? small_.data() : large_.data(); }
+  size_t size() const { return IsSmall() ? small_.size() : large_.size(); }
+
+ private:
+  bool IsSmall() const { return large_.empty(); }
+
+  // TODO(crbug.com/548222332): Optimize storage by putting this on the stack.
+  // Invariant: at least one of these two is empty.
+  Array<T> large_;
+  InplaceVector<T, N> small_;
+};
 
 BSSL_NAMESPACE_END
 

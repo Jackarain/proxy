@@ -16,13 +16,21 @@
 
 use alloc::ffi::CString;
 use core::{
-    ffi::{c_int, c_uint, c_ulong},
-    ptr::NonNull,
+    ffi::{
+        c_int,
+        c_uint,
+        c_ulong, //
+    },
+    ptr::NonNull, //
 };
 
-use bssl_macros::bssl_enum;
+use bssl_crypto::bssl_enum;
 
-use crate::{check_lib_error, errors::PkiError, ffi::slice_into_ffi_raw_parts};
+use crate::{
+    check_lib_error,
+    errors::PkiError,
+    ffi::slice_into_ffi_raw_parts, //
+};
 
 bssl_enum! {
     /// Trust settings for certificate verification.
@@ -98,8 +106,6 @@ bitflags::bitflags! {
         /// Treat all trusted certificates as trust anchors regardless of the
         /// [`CertificateVerificationParams::set_trust`] setting.
         const PARTIAL_CHAIN = bssl_sys::X509_V_FLAG_PARTIAL_CHAIN as c_ulong;
-        /// Disable building of alternative chains, when the first built chain was rejected.
-        const NO_ALT_CHAINS = bssl_sys::X509_V_FLAG_NO_ALT_CHAINS as c_ulong;
         /// Disable all time checks during certificate verification.
         const NO_CHECK_TIME = bssl_sys::X509_V_FLAG_NO_CHECK_TIME as c_ulong;
     }

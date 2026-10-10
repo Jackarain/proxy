@@ -362,7 +362,7 @@ var supportedSignatureAlgorithms = []signatureAlgorithm{
 // SRTP protection profiles (See RFC 5764, section 4.1.2)
 const (
 	SRTP_AES128_CM_HMAC_SHA1_80 uint16 = 0x0001
-	SRTP_AES128_CM_HMAC_SHA1_32        = 0x0002
+	SRTP_AES128_CM_HMAC_SHA1_32 uint16 = 0x0002
 )
 
 // PskKeyExchangeMode values (see RFC 8446, section 4.2.9)
@@ -672,15 +672,14 @@ type Config struct {
 	// (resumption) support.
 	SessionTicketsDisabled bool
 
-	// SessionTicketKey is used by TLS servers to provide session
-	// resumption. See RFC 5077. If zero, it will be filled with
-	// random data before the first server handshake.
+	// SessionTicketKey, if not nil, is used by TLS servers to provide
+	// session resumption. See RFC 5077.
 	//
 	// If multiple servers are terminating connections for the same host
 	// they should all have the same SessionTicketKey. If the
 	// SessionTicketKey leaks, previously recorded and future TLS
 	// connections using that key are compromised.
-	SessionTicketKey [32]byte
+	SessionTicketKey *[32]byte
 
 	// ClientSessionCache is a cache of ClientSessionState entries
 	// for TLS session resumption.
@@ -789,8 +788,6 @@ type Config struct {
 	// Bugs specifies optional misbehaviour to be used for testing other
 	// implementations.
 	Bugs ProtocolBugs
-
-	serverInitOnce sync.Once // guards calling (*Config).serverInit
 }
 
 type BadValue int
@@ -2306,23 +2303,6 @@ type ProtocolBugs struct {
 	ExpectedServerPadding bool
 }
 
-func (c *Config) serverInit() {
-	if c.SessionTicketsDisabled {
-		return
-	}
-
-	// If the key has already been set then we have nothing to do.
-	for _, b := range c.SessionTicketKey {
-		if b != 0 {
-			return
-		}
-	}
-
-	if _, err := io.ReadFull(c.rand(), c.SessionTicketKey[:]); err != nil {
-		c.SessionTicketsDisabled = true
-	}
-}
-
 func (c *Config) rand() io.Reader {
 	r := c.Rand
 	if r == nil {
@@ -2433,45 +2413,44 @@ func (c *Config) verifySignatureAlgorithms() []signatureAlgorithm {
 	return supportedSignatureAlgorithms
 }
 
-type TrustAnchorRange struct {
-	Base     []byte
-	Min, Max uint64
-}
-
 const (
-	certPropTrustAnchorID              uint16 = 0
-	certPropTrustAnchorGroupInclusions uint16 = 1
+	certPropTrustAnchorID          uint16 = 0
+	certPropTrustAnchorGroups      uint16 = 1
+	certPropTrustAnchorNegotiation uint16 = 2
 )
 
 type CertificatePropertyList struct {
-	TrustAnchorID              []byte
-	TrustAnchorGroupInclusions []TrustAnchorRange
+	TrustAnchorID          []byte
+	TrustAnchorGroups      [][]byte
+	TrustAnchorNegotiation bool
 }
 
 func (c *CertificatePropertyList) Empty() bool {
-	return len(c.TrustAnchorID) == 0 && len(c.TrustAnchorGroupInclusions) == 0
+	return c.TrustAnchorID == nil && c.TrustAnchorGroups == nil
 }
 
 func (c *CertificatePropertyList) Marshal() []byte {
 	bb := cryptobyte.NewBuilder(nil)
 	bb.AddUint16LengthPrefixed(func(props *cryptobyte.Builder) {
-		if len(c.TrustAnchorID) != 0 {
+		if c.TrustAnchorID != nil {
 			props.AddUint16(certPropTrustAnchorID)
 			// The ID is encoded directly in the property data, with
 			// no additional length prefix.
 			addUint16LengthPrefixedBytes(props, c.TrustAnchorID)
 		}
-		if len(c.TrustAnchorGroupInclusions) != 0 {
-			props.AddUint16(certPropTrustAnchorGroupInclusions)
+		if c.TrustAnchorGroups != nil {
+			props.AddUint16(certPropTrustAnchorGroups)
 			props.AddUint16LengthPrefixed(func(prop *cryptobyte.Builder) {
 				prop.AddUint16LengthPrefixed(func(ranges *cryptobyte.Builder) {
-					for _, r := range c.TrustAnchorGroupInclusions {
-						addUint8LengthPrefixedBytes(ranges, r.Base)
-						ranges.AddUint64(r.Min)
-						ranges.AddUint64(r.Max)
+					for _, p := range c.TrustAnchorGroups {
+						addUint8LengthPrefixedBytes(ranges, p)
 					}
 				})
 			})
+		}
+		if c.TrustAnchorNegotiation {
+			props.AddUint16(certPropTrustAnchorNegotiation)
+			props.AddUint16(0) // Zero-length property
 		}
 	})
 	return bb.BytesOrPanic()
@@ -2569,11 +2548,19 @@ type Credential struct {
 	// Properties is the certificate properties (draft-ietf-tls-trust-anchor-ids)
 	// associated with this credential.
 	Properties CertificatePropertyList
+	// SessionIDContext is the session ID context to configure on the credential.
+	SessionIDContext []byte
 }
 
 func (c *Credential) WithSignatureAlgorithms(sigAlgs ...signatureAlgorithm) *Credential {
 	ret := *c
 	ret.SignatureAlgorithms = sigAlgs
+	return &ret
+}
+
+func (c *Credential) WithSessionIDContext(sidCtx []byte) *Credential {
+	ret := *c
+	ret.SessionIDContext = sidCtx
 	return &ret
 }
 

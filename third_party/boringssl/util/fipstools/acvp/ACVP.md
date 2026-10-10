@@ -144,6 +144,8 @@ The other commands are as follows. (Note that you only need to implement the com
 | ML-KEM-XX/encap      | Public key, entropy | Ciphertext, shared secret |
 | ML-KEM-XX/decap      | Private key, ciphertext | Shared secret |
 | ML-KEM-XX/decap/seed | Seed (d ‖ z), ciphertext | Shared secret |
+| ML-KEM-XX/encapKeyCheck | Public key | Single-byte validity flag |
+| ML-KEM-XX/decapKeyCheck | Private key | Single-byte validity flag |
 | SLH-DSA-XX/keyGen    | Seed | Private key, public key |
 | SLH-DSA-XX/sigGen    | Private key, message, entropy or empty | Signature |
 | SLH-DSA-XX/sigVer    | Public key, message, signature | Single-byte validity flag |
@@ -153,6 +155,8 @@ The other commands are as follows. (Note that you only need to implement the com
 | KTS-IFC/&lt;HASH&gt;/responder | iutN bytes, iutE bytes, iutP bytes, iutQ bytes, iutD bytes, ciphertext (serverC) bytes | derived keying material (dkm) |
 | KTS-IFC/&lt;HASH&gt;/responder/crt | iutN bytes, iutE bytes, iutP bytes, iutQ bytes, iutDmp1 bytes, iutDmq1 bytes, iutIqmp bytes, ciphertext (serverC) bytes | derived keying material (dkm) |
 | OneStepNoCounter/&lt;HASH&gt; | key, info, salt, output length bytes | derived key |
+
+Validity flags are encoded as a single byte: zero is false and non-zero is true.
 
 ¹ The iterated tests would result in excessive numbers of round trips if the module wrapper handled only basic operations. Thus some ACVP logic is pushed down for these tests so that the inner loop can be handled locally. Either read the NIST documentation ([block-ciphers](https://pages.nist.gov/ACVP/draft-celi-acvp-symmetric.html#name-monte-carlo-tests-for-block) [hashes](https://pages.nist.gov/ACVP/draft-celi-acvp-sha.html#name-monte-carlo-tests-for-sha-1)) to understand the iteration count and return values or, probably more fruitfully, see how these functions are handled in the `modulewrapper` directory.
 

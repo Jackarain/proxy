@@ -14,7 +14,10 @@
 
 #![cfg(unix)]
 
+use std::time::Duration;
+
 use bssl_tls::{
+    ReceiveBuffer,
     connection::{
         Client,
         Server,
@@ -24,7 +27,12 @@ use bssl_tls::{
         DtlsMode,
         TlsContextBuilder, //
     },
-    errors::Error, //
+    errors::Error,
+    io::IoStatus, //
+};
+use tokio::{
+    select,
+    time::sleep, //
 };
 
 use crate::{
@@ -40,90 +48,105 @@ fn dumb_dtls_server_client() -> (
     server_ctx_builder
         .with_credential(super::server_credential())
         .unwrap();
-    let server_conn = server_ctx_builder.build().new_server_connection().build();
+    let mut server_conn = server_ctx_builder.build().new_server_connection();
+    server_conn.with_mtu(500).unwrap();
+    let server_conn = server_conn.build();
 
     let mut client_ctx_builder = TlsContextBuilder::new_dtls();
     client_ctx_builder.with_certificate_store(&super::client_cert_store());
-    let client_conn = client_ctx_builder.build().new_client_connection().build();
+    let mut client_conn = client_ctx_builder.build().new_client_connection();
+    client_conn.with_mtu(500).unwrap();
+    let client_conn = client_conn.build();
 
     (server_conn, client_conn)
 }
 
-async fn async_ping_pong(
+async fn drive_async_dtls_handshake<R: Send + 'static>(
+    conn: &mut TlsConnection<R, DtlsMode>,
+) -> Result<(), Error> {
+    loop {
+        let timeout = conn.dtlsv1_get_timeout().unwrap_or(Duration::from_secs(5));
+        select! {
+            biased;
+            res = conn.async_handshake() => match res? {
+                None => break Ok(()),
+                Some(reason) => panic!("unexpected retry reason {reason:?}"),
+            },
+            _ = sleep(timeout) => {
+                conn.dtlsv1_handle_timeout()?;
+            }
+        }
+    }
+}
+
+async fn async_dtls_recv<R: Send + 'static>(
+    conn: &mut TlsConnection<R, DtlsMode>,
+    buf: &mut ReceiveBuffer<'_>,
+) -> Result<IoStatus, Error> {
+    conn.as_pin_mut().async_recv(buf).await
+}
+
+async fn async_dtls_send<R: Send + 'static>(
+    conn: &mut TlsConnection<R, DtlsMode>,
+    data: &[u8],
+) -> Result<IoStatus, Error> {
+    conn.as_pin_mut().async_send(data).await
+}
+
+async fn async_dtls_ping_pong(
     mut server_conn: TlsConnection<Server, DtlsMode>,
     mut client_conn: TlsConnection<Client, DtlsMode>,
 ) -> Result<(), Error> {
-    use bssl_tls::io::IoStatus;
-    use std::time::Duration;
-
     let task = tokio::spawn(async move {
-        server_conn.async_handshake().await?;
+        drive_async_dtls_handshake(&mut server_conn).await?;
 
-        let mut message = [0; 21];
-        let mut read_bytes = 0;
-        while read_bytes < 21 {
-            match server_conn
-                .as_pin_mut()
-                .async_read(&mut message[read_bytes..])
-                .await?
-            {
-                IoStatus::Ok(n) => read_bytes += n,
-                IoStatus::EndOfStream => break,
-                _ => {}
+        let mut buf = [0u8; 21];
+        let expected = b"BoringSSL is awesome!";
+        loop {
+            let mut message = ReceiveBuffer::new(&mut buf);
+            match async_dtls_recv(&mut server_conn, &mut message).await? {
+                IoStatus::Ok(n) if n == expected.len() => break,
+                _ => continue,
             }
         }
-        assert_eq!(&message, b"BoringSSL is awesome!");
-        tokio::time::sleep(Duration::from_secs(2)).await;
-        server_conn
-            .as_pin_mut()
-            .async_write(b"Oh yeah definitely!")
-            .await?;
-        server_conn.as_pin_mut().async_shutdown().await?;
+        assert_eq!(&buf, expected);
+        async_dtls_send(&mut server_conn, b"Oh yeah definitely!").await?;
         Ok::<_, Error>(())
     });
 
-    client_conn.async_handshake().await?;
-    client_conn
-        .as_pin_mut()
-        .async_write(b"BoringSSL is awesome!")
-        .await?;
-    let mut message = [0; 19];
-    let mut read_bytes = 0;
-    while read_bytes < 19 {
-        match client_conn
-            .as_pin_mut()
-            .async_read(&mut message[read_bytes..])
-            .await?
-        {
-            IoStatus::Ok(n) => read_bytes += n,
-            IoStatus::EndOfStream => break,
-            _ => {}
+    drive_async_dtls_handshake(&mut client_conn).await?;
+    async_dtls_send(&mut client_conn, b"BoringSSL is awesome!").await?;
+    let mut buf = [0u8; 19];
+    let expected = b"Oh yeah definitely!";
+    loop {
+        let mut message = ReceiveBuffer::new(&mut buf);
+        match async_dtls_recv(&mut client_conn, &mut message).await? {
+            IoStatus::Ok(n) if n == expected.len() => break,
+            _ => continue,
         }
     }
-    assert_eq!(&message, b"Oh yeah definitely!");
-    assert!(matches!(
-        client_conn.as_pin_mut().async_shutdown().await,
-        Ok(_) | Err(Error::Io(bssl_tls::errors::IoError::EndOfStream))
-    ));
+    assert_eq!(&buf, expected);
     task.await.unwrap()?;
     Ok(())
 }
 
 #[cfg(unix)]
 #[tokio::test]
-#[ignore = "https://crbug.com/532601068"]
 async fn async_dtls() -> Result<(), Error> {
     let (mut server_conn, mut client_conn) = dumb_dtls_server_client();
     let (server_sock, client_sock) = tokio::net::UnixDatagram::pair().unwrap();
-    server_conn.set_io(TokioDatagramIo(server_sock)).unwrap();
-    client_conn.set_io(TokioDatagramIo(client_sock)).unwrap();
+    server_conn
+        .set_datagram_socket(TokioDatagramIo(server_sock))
+        .unwrap();
+    client_conn
+        .set_datagram_socket(TokioDatagramIo(client_sock))
+        .unwrap();
 
-    async_ping_pong(server_conn, client_conn).await
+    async_dtls_ping_pong(server_conn, client_conn).await
 }
 
 #[cfg(unix)]
 #[tokio::test]
-#[ignore = "https://crbug.com/532601068"]
 async fn async_dtls_over_fd() -> Result<(), Error> {
     let (mut server_conn, mut client_conn) = dumb_dtls_server_client();
     let (server_sock, client_sock) = std::os::unix::net::UnixDatagram::pair().unwrap();
@@ -131,8 +154,8 @@ async fn async_dtls_over_fd() -> Result<(), Error> {
     client_sock.set_nonblocking(true).unwrap();
     let server_sock = new_std_datagram_with_tokio(server_sock).unwrap();
     let client_sock = new_std_datagram_with_tokio(client_sock).unwrap();
-    server_conn.set_io(server_sock).unwrap();
-    client_conn.set_io(client_sock).unwrap();
+    server_conn.set_datagram_socket(server_sock).unwrap();
+    client_conn.set_datagram_socket(client_sock).unwrap();
 
-    async_ping_pong(server_conn, client_conn).await
+    async_dtls_ping_pong(server_conn, client_conn).await
 }

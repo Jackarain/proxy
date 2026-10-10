@@ -492,8 +492,10 @@ int EVP_AEAD_CTX_openv(const EVP_AEAD_CTX *ctx, const CRYPTO_IOVEC *iovec,
   if (!ctx->aead->openv) {
     if (ctx->tag_len && ctx->aead->openv_detached) {
       // Try with a detached tag.
-      InplaceVector<CRYPTO_IOVEC, CRYPTO_IOVEC_MAX> detached_iovecs;
-      detached_iovecs.CopyFrom(iovecs);
+      bssl::iovec::MaybeInplaceArray detached_iovecs;
+      if (!detached_iovecs.CopyFrom(iovecs)) {
+        return 0;
+      }
 
       uint8_t tagbuf[EVP_AEAD_MAX_OVERHEAD];
       std::optional<Span<const uint8_t>> tag = bssl::iovec::GetAndRemoveSuffix(
