@@ -225,12 +225,12 @@ namespace proxy {
 		// 一条已建立的 DoH 连接（明文 tcp 或 TLS），供后续查询复用.
 		struct doh_conn
 		{
-			explicit doh_conn(doh_stream_type stream)
-				: stream_(std::move(stream))
+			explicit doh_conn(doh_stream_type doh_stream)
+				: stream(std::move(doh_stream))
 			{}
 
-			doh_stream_type stream_;
-			std::chrono::steady_clock::time_point idle_at_{};
+			doh_stream_type stream;
+			std::chrono::steady_clock::time_point idle_at{};
 		};
 
 		// 建立一条到 DoH 服务器的连接（TCP 连接 + 按需 TLS 握手），
@@ -281,6 +281,12 @@ namespace proxy {
 		void update_bind_interface() noexcept;
 
 	private:
+		// 空闲连接缓存上限.
+		static constexpr size_t k_doh_max_idle_conns{ 8 };
+
+		// 空闲连接超时：超过该时间未使用则丢弃，避免复用已被对端关闭的连接.
+		static constexpr std::chrono::seconds k_doh_idle_timeout{ 10 };
+
 		net::any_io_executor m_executor;
 		net::io_context& m_backend_context;
 		bool m_scheduler_locking;
@@ -298,19 +304,13 @@ namespace proxy {
 		// 在途查询协程计数（防 UDP 洪泛导致协程无界增长）.
 		std::atomic<int> m_inflight{ 0 };
 
-		// 停止标志（close() 置位）.
-		std::atomic_bool m_abort{ false };
-
 		// DoH 空闲连接池：缓存已建立（TCP/TLS 已完成）的连接供后续查询复用，
 		// 避免每个查询都重新进行 TCP/TLS 握手（该开销在查询频繁时成为 CPU 热点）.
 		// 仅缓存空闲连接，无空闲连接时新建，因此不限制并发查询数.
-		std::deque<doh_conn> m_doh_idle_conns_;
+		std::deque<doh_conn> m_doh_idle_conns;
 
-		// 空闲连接缓存上限.
-		static constexpr size_t k_doh_max_idle_conns{ 8 };
-
-		// 空闲连接超时：超过该时间未使用则丢弃，避免复用已被对端关闭的连接.
-		static constexpr std::chrono::seconds k_doh_idle_timeout{ 10 };
+		// 停止标志（close() 置位）.
+		std::atomic_bool m_abort{ false };
 	};
 
 }

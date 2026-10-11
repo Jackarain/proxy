@@ -951,7 +951,7 @@ namespace proxy {
 	void dns_server::close() noexcept
 	{
 		m_abort = true;
-		m_doh_idle_conns_.clear();
+		m_doh_idle_conns.clear();
 		stop_listen();
 	}
 
@@ -970,7 +970,7 @@ namespace proxy {
 		// DoH 上游或校验相关配置变化时, 池中连接已失效, 全部释放.
 		if (opt.dns_upstream_ != m_option.dns_upstream_ ||
 			opt.disable_check_cert_ != m_option.disable_check_cert_)
-			m_doh_idle_conns_.clear();
+			m_doh_idle_conns.clear();
 
 		m_option = opt;
 		if (cache_changed)
@@ -1594,13 +1594,13 @@ namespace proxy {
 	{
 		const auto now = std::chrono::steady_clock::now();
 
-		while (!m_doh_idle_conns_.empty())
+		while (!m_doh_idle_conns.empty())
 		{
-			auto conn = std::move(m_doh_idle_conns_.front());
-			m_doh_idle_conns_.pop_front();
+			auto conn = std::move(m_doh_idle_conns.front());
+			m_doh_idle_conns.pop_front();
 
 			// 空闲超时的连接可能已被对端关闭, 丢弃以免复用到失效连接.
-			if (now - conn.idle_at_ > k_doh_idle_timeout)
+			if (now - conn.idle_at > k_doh_idle_timeout)
 				continue;
 
 			return conn;
@@ -1613,11 +1613,11 @@ namespace proxy {
 	void dns_server::release_doh_conn(doh_conn&& conn)
 	{
 		// 超出缓存上限时直接丢弃(关闭连接).
-		if (m_doh_idle_conns_.size() >= k_doh_max_idle_conns)
+		if (m_doh_idle_conns.size() >= k_doh_max_idle_conns)
 			return;
 
-		conn.idle_at_ = std::chrono::steady_clock::now();
-		m_doh_idle_conns_.push_back(std::move(conn));
+		conn.idle_at = std::chrono::steady_clock::now();
+		m_doh_idle_conns.push_back(std::move(conn));
 	}
 
 	// doh_query_raw 通过 DoH (DNS over HTTPS) 上游转发 DNS 查询.
@@ -1650,7 +1650,7 @@ namespace proxy {
 				boost::variant2::visit([&sec](auto& s)
 					{
 						boost::beast::get_lowest_layer(s).close(sec);
-					}, (*cur)->stream_);
+					}, (*cur)->stream);
 			});
 
 		// DoH 服务器地址按需解析(复用池中已有连接时无需解析).
@@ -1686,13 +1686,13 @@ namespace proxy {
 
 			bool ok = false;
 			if (auto* plain = boost::variant2::get_if<tcp::socket>(
-				&(*cur)->stream_))
+				&(*cur)->stream))
 			{
 				ok = co_await doh_http_post(
 					*plain, *info, dns_query, output);
 			}
 			else if (auto* tls = boost::variant2::get_if<
-				net::ssl::stream<tcp::socket>>(&(*cur)->stream_))
+				net::ssl::stream<tcp::socket>>(&(*cur)->stream))
 			{
 				ok = co_await doh_http_post(
 					*tls, *info, dns_query, output);
