@@ -1137,9 +1137,6 @@ namespace proxy {
 		// m_proxy_pass 作为中继桥接的时候, 下游代理服务器的地址.
 		std::optional<urls::url> m_proxy_pass;
 
-		// 用于使用 ssl 加密通信与下游代理服务器通信时的 ssl context.
-		net::ssl::context m_ssl_cli_context{ net::ssl::context::sslv23_client };
-
 		// m_last_activity 用于双向超时检测, 在代理传输过程中, 只要有任何一个
 		// 方向上有数据传输，都不应触发超时。
 		std::atomic<int64_t> m_last_activity{ 0 };

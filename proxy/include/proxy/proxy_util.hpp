@@ -615,45 +615,61 @@ namespace proxy {
 		return ec;
 	}
 
-	// 返回进程内共享的 SSL 客户端 context, 按 (是否校验证书, 主机名, 自定义 CA 路径)
-	// 缓存并复用. 由于主机名校验回调与 context 绑定, 这里以主机名作为缓存键.
+	// 进程内共享的 SSL 客户端 context 缓存.
 	//
-	// 创建 SSL context 并加载内置 CA 根证书 bundle(含数百张证书) 开销很大, 而 DoH
-	// 等场景会为每个请求创建 context 并重复加载, 成为 CPU 热点. 复用 context 可避免
-	// 该开销. 共享的 SSL_CTX 可被多个连接/线程安全地并发使用.
+	// 创建 SSL context 并加载内置 CA 根证书 bundle(含数百张证书) 开销很大, 若为每个
+	// 连接/请求都创建 context 并重复加载, 会成为 CPU 热点. 这里按 tag 缓存并复用:
+	// tag 相同的调用共享同一个 context, setup 仅在首次创建时执行.
+	// setup 接收 context 引用并返回错误码, 返回错误时不缓存该 context.
+	// tag 必须唯一标识一组相同的 setup 与配置参数. 共享的 SSL_CTX 可被多个连接和
+	// 线程安全地并发使用.
+	template <typename Setup>
 	inline boost::system::result<std::shared_ptr<net::ssl::context>>
-	get_shared_ssl_client_ctx(bool disable_check_cert,
-		const std::string& hostname, const std::string& cacert_path = {}) noexcept
+	get_cached_ssl_client_ctx(const std::string& tag, Setup&& setup) noexcept
 	{
 		static std::mutex mutex;
 		static std::unordered_map<std::string,
 			std::shared_ptr<net::ssl::context>> cache;
 
-		std::string key;
-		key.reserve(hostname.size() + cacert_path.size() + 2);
-		key += disable_check_cert ? '1' : '0';
-		key += '\n';
-		key += hostname;
-		key += '\n';
-		key += cacert_path;
-
 		std::lock_guard<std::mutex> lock(mutex);
 
-		auto it = cache.find(key);
+		auto it = cache.find(tag);
 		if (it != cache.end())
 			return it->second;
 
 		auto ctx = std::make_shared<net::ssl::context>(
 			net::ssl::context::sslv23_client);
 
-		auto ec = configure_ssl_client_ctx(
-			*ctx, disable_check_cert, hostname, cacert_path);
+		auto ec = setup(*ctx);
 		if (ec)
 			return ec;
 
-		cache.emplace(key, ctx);
+		cache.emplace(tag, ctx);
 
 		return ctx;
+	}
+
+	// 返回进程内共享的 SSL 客户端 context, 按 (是否校验证书, 主机名, 自定义 CA 路径)
+	// 缓存并复用. 由于主机名校验回调与 context 绑定, 这里以主机名作为缓存键.
+	inline boost::system::result<std::shared_ptr<net::ssl::context>>
+	get_shared_ssl_client_ctx(bool disable_check_cert,
+		const std::string& hostname, const std::string& cacert_path = {}) noexcept
+	{
+		std::string key;
+		key.reserve(hostname.size() + cacert_path.size() + 3);
+		key += "doh\n";
+		key += disable_check_cert ? '1' : '0';
+		key += '\n';
+		key += hostname;
+		key += '\n';
+		key += cacert_path;
+
+		return get_cached_ssl_client_ctx(key,
+			[&](net::ssl::context& ctx) noexcept
+			{
+				return configure_ssl_client_ctx(
+					ctx, disable_check_cert, hostname, cacert_path);
+			});
 	}
 
 	// 将路径转换为 UNC 路径 (Windows 下处理长路径).

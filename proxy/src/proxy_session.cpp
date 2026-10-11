@@ -7106,24 +7106,51 @@ net::awaitable<void> proxy_session::unauthorized_http_route(const string_request
 		// 若用户配置了 SNI, 则使用用户配置的 SNI 否则使用默认 hostname.
 		std::string sni = m_option.proxy_ssl_name_.empty() ? proxy_host : m_option.proxy_ssl_name_;
 
-		// 使用通用函数配置 SSL context (验证模式、CA 证书、主机名验证).
-		ec = configure_ssl_client_ctx(m_ssl_cli_context,
-			m_option.disable_check_cert_,
-			sni,
-			m_option.ssl_cacert_path_);
-		if (ec)
+		// 获取进程内共享的 SSL context (按 是否校验证书/SNI/自定义 CA 路径 缓存),
+		// 避免每个会话都重新创建 context 并加载 CA 根证书; 该操作开销很大, 在连接
+		// 频繁时会成为 CPU 热点.
+		std::string ctx_tag;
+		ctx_tag.reserve(sni.size() + m_option.ssl_cacert_path_.size() + 16);
+		ctx_tag += "proxy_pass\n";
+		ctx_tag += m_option.disable_check_cert_ ? '1' : '0';
+		ctx_tag += '\n';
+		ctx_tag += sni;
+		ctx_tag += '\n';
+		ctx_tag += m_option.ssl_cacert_path_;
+
+		auto cli_ctx = get_cached_ssl_client_ctx(ctx_tag,
+			[this, &sni](net::ssl::context& ctx) noexcept
+				-> boost::system::error_code
+			{
+				// 使用通用函数配置 SSL context (验证模式、CA 证书、主机名验证).
+				boost::system::error_code cec = configure_ssl_client_ctx(ctx,
+					m_option.disable_check_cert_,
+					sni,
+					m_option.ssl_cacert_path_);
+				if (cec)
+				{
+					log_conn_warning()
+						<< ", configure ssl context error: " << cec.message();
+				}
+
+				// 额外的 SSL 上下文配置: DH 参数和 ALPN 协议.
+				ctx.use_tmp_dh(net::buffer(default_dh_param()), cec);
+				SSL_CTX_set_alpn_protos(ctx.native_handle(),
+					(const unsigned char *)"\x08http/1.1", 9);
+
+				return {};
+			});
+
+		if (cli_ctx.has_error())
 		{
 			log_conn_warning()
-				<< ", configure ssl context error: " << ec.message();
+				<< ", get ssl context error: " << cli_ctx.error().message();
+			co_return init_proxy_stream(std::move(remote_socket));
 		}
 
-		// 额外的 SSL 上下文配置: DH 参数和 ALPN 协议.
-		m_ssl_cli_context.use_tmp_dh(net::buffer(default_dh_param()), ec);
-		SSL_CTX_set_alpn_protos(m_ssl_cli_context.native_handle(),
-			(const unsigned char *)"\x08http/1.1", 9);
-
 		// 生成 ssl_tcp_stream 的 variant_stream_type 对象.
-		auto sock_stream = init_proxy_stream(std::move(remote_socket), m_ssl_cli_context);
+		auto sock_stream = init_proxy_stream(
+			std::move(remote_socket), *cli_ctx.value());
 
 		// get origin ssl stream type.
 		ssl_tcp_stream& ssl_socket = boost::variant2::get<ssl_tcp_stream>(sock_stream);
