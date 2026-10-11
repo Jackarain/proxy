@@ -334,7 +334,10 @@ if (ENABLE_USE_WOLFSSL)
 
 	# 新版 wolfssl 不再由 settings.h 自动包含生成的 options.h, 需要消费者显式声明.
 	# 只对 C++ 生效, 避免影响 wolfssl 自身的 C/ASM 构建(其配置来自 CFLAGS).
-	add_compile_definitions($<$<COMPILE_LANGUAGE:CXX>:WOLFSSL_USE_OPTIONS_H>)
+	# 该 options.h 会改写 _GNU_SOURCE/_POSIX_THREADS 等系统宏, C++ 消费者若在系统头
+	# 之前引入 wolfssl 头(version.cpp 即如此)会使 musl 下 libstdc++ 的 <atomic>
+	# 找不到 syscall, 故按 wolfssl 约定跳过系统宏改写.
+	add_compile_definitions($<$<COMPILE_LANGUAGE:CXX>:WOLFSSL_USE_OPTIONS_H> $<$<COMPILE_LANGUAGE:CXX>:WOLFSSL_OPTIONS_IGNORE_SYS>)
 
 	# 打开 wolfssl 的 asio 支持, 它会自动定义 asio 所用到的 openssl 函数以及相关的宏.
 	set(WOLFSSL_ASIO ON)
