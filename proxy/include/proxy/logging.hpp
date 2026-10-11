@@ -210,6 +210,9 @@ namespace xlogger {
 #include <atomic>
 #include <deque>
 #include <csignal>
+#if !defined(_WIN32) && !defined(WIN32)
+# include <time.h>
+#endif // !(_WIN32 || WIN32)
 #include <condition_variable>
 #include <optional>
 #include <string_view>
@@ -1462,9 +1465,22 @@ inline void signal_handler(int)
 // SIGSEGV/SIGILL/SIGFPE 由故障指令同步触发, 若处理函数返回, 处理器会重新执行
 // 引发信号的那条指令, 从而再次触发同一信号并陷入无限循环(表现为进程持续 100%
 // CPU 且无法恢复); SIGABRT 同理. 因此这里绝不从处理函数中返回.
+//
+// 处理函数运行在信号上下文, 只能调用 async-signal-safe 的函数. 因此这里不再
+// 销毁 logger(其析构会 join 日志后台线程并加锁, 若信号恰好打断了日志线程自身
+// 会造成自我 join 死锁), 仅原子地置位终止标志提示后台线程尽快落盘, 并给出一个
+// 有限的等待窗口; 无论落盘是否完成, 随后都恢复默认处理并重新触发信号终止进程.
 inline void fatal_signal_handler(int sig)
 {
-	global_logger_obj___.reset();
+	if (global_logger_obj___)
+		global_logger_obj___->stop();
+
+#if defined(_WIN32) || defined(WIN32)
+	::Sleep(100);
+#else
+	timespec delay{ 0, 100 * 1000 * 1000 };
+	nanosleep(&delay, nullptr);
+#endif
 
 	signal(sig, SIG_DFL);
 	raise(sig);
