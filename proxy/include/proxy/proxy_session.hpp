@@ -1175,7 +1175,7 @@ namespace proxy {
 		int64_t m_started_at{ 0 };
 
 		// 当前 session 是否被中止的状态.
-		std::atomic<bool> m_abort{ false };
+		std::atomic_bool m_abort{ false };
 	};
 }
 

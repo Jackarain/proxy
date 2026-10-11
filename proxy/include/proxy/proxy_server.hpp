@@ -454,7 +454,7 @@ namespace proxy {
 		bool m_backend_detached = false;
 
 		// backend 线程入口完成后置位 (close() 以其判断线程是否已退出).
-		std::atomic<bool> m_backend_finished{ false };
+		std::atomic_bool m_backend_finished{ false };
 
 		// 作为中继桥接的时候, 下游代理服务器解析的地址缓存.
 		dns_cache m_dns_cache{ 128 };

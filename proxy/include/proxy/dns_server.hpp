@@ -282,7 +282,7 @@ namespace proxy {
 
 	private:
 		// 空闲连接缓存上限.
-		static constexpr size_t k_doh_max_idle_conns{ 8 };
+		static constexpr size_t k_doh_max_idle_conns = 8;
 
 		// 空闲连接超时：超过该时间未使用则丢弃，避免复用已被对端关闭的连接.
 		static constexpr std::chrono::seconds k_doh_idle_timeout{ 10 };

@@ -2220,7 +2220,7 @@ boost::json::object proxy_server::snapshot_report()
 
 	// 按用户聚合的活跃连接列表, 供状态上报的连接明细使用.
 	std::map<std::string, boost::json::array> user_conns;
-	constexpr int max_conn_per_user = 200;
+	constexpr int k_max_conn_per_user = 200;
 
 	{
 		std::lock_guard<std::mutex> lock(stats.user_mutex_);
@@ -2265,7 +2265,7 @@ boost::json::object proxy_server::snapshot_report()
 
 			// 组装连接信息（限制每用户连接数，避免大连接数时 JSON 过大）.
 			auto& conns = user_conns[user];
-			if (conns.size() >= max_conn_per_user)
+			if (conns.size() >= k_max_conn_per_user)
 				continue;
 
 			boost::json::object conn;
@@ -2318,7 +2318,7 @@ boost::json::object proxy_server::snapshot_report()
 			auto& conns = user_conns[k_anon_user];
 			for (auto& c : tun_conns)
 			{
-				if (conns.size() >= max_conn_per_user)
+				if (conns.size() >= k_max_conn_per_user)
 					break;
 
 				boost::json::object conn;

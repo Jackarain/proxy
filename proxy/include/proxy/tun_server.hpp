@@ -597,9 +597,6 @@ namespace proxy {
 		// m_running 标记 accept 循环是否在运行（io_context 线程访问）.
 		bool m_running { false };
 
-		// m_abort 停止标志.
-		std::atomic<bool> m_abort { false };
-
 		// m_tcp_flows 保存当前所有 TCP 连接.
 		std::unordered_map<tcp_flow_key, std::shared_ptr<tun_tcp_flow>,
 			tcp_flow_key_hash> m_tcp_flows;
@@ -641,6 +638,9 @@ namespace proxy {
 
 		// m_domain_suffixes 保存 proxy_domains_ 中非空的后缀（构造时剔除空项）.
 		std::vector<std::string> m_domain_suffixes;
+
+		// m_abort 停止标志.
+		std::atomic_bool m_abort { false };
 	};
 
 #else // 不支持的平台

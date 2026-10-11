@@ -43,7 +43,7 @@ namespace proxy {
 	inline constexpr int k_dns_max_inflight = 256;
 
 	// 本地解析应答的 TTL（系统解析不暴露原始 TTL，统一使用该值）.
-	static constexpr uint32_t dns_local_ttl = 60;
+	static constexpr uint32_t k_dns_local_ttl = 60;
 
 	//////////////////////////////////////////////////////////////////////////
 	// DNS wire-format 工具函数实现（与 proxy_session 的 HTTP DoH 路径共享）.
@@ -1733,7 +1733,7 @@ namespace proxy {
 					reinterpret_cast<const char*>(bytes.data()),
 					bytes.size());
 				answers.push_back({
-					qname + ".", DNS_TYPE_A, dns_local_ttl,
+					qname + ".", DNS_TYPE_A, k_dns_local_ttl,
 					std::move(data) });
 			}
 			else
@@ -1745,7 +1745,7 @@ namespace proxy {
 					reinterpret_cast<const char*>(bytes.data()),
 					bytes.size());
 				answers.push_back({
-					qname + ".", DNS_TYPE_AAAA, dns_local_ttl,
+					qname + ".", DNS_TYPE_AAAA, k_dns_local_ttl,
 					std::move(data) });
 			}
 		}
