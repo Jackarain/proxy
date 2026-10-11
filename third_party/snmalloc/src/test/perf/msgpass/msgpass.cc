@@ -102,7 +102,10 @@ void consumer(const struct params* param, size_t qix)
            (queue_gate > param->N_CONSUMER));
 
   chatty("Cl %zu fini\n", qix);
-  snmalloc::dealloc(myq.destroy().unsafe_ptr());
+  myq.drain_and_reset(
+    domesticate_nop, domesticate_nop, [](freelist::HeadPtr o) {
+      snmalloc::dealloc(o.as_void().unsafe_ptr());
+    });
 }
 
 void proxy(const struct params* param, size_t qix)
@@ -134,7 +137,10 @@ void proxy(const struct params* param, size_t qix)
 
   chatty("Px %zu fini\n", qix);
 
-  snmalloc::dealloc(myq.destroy().unsafe_ptr());
+  myq.drain_and_reset(
+    domesticate_nop, domesticate_nop, [](freelist::HeadPtr o) {
+      snmalloc::dealloc(o.as_void().unsafe_ptr());
+    });
   queue_gate--;
 }
 
@@ -191,10 +197,16 @@ int main(int argc, char** argv)
   struct params param;
 
   opt::Opt opt(argc, argv);
+  // `--smoke` lowers the *default* per-producer batch count so ctest
+  // runs at modest cost. Explicit `--batches` on the command line
+  // still wins. The smoke value must remain large enough for the
+  // cross-thread remote-deallocation cache thresholds in
+  // `mem/remotecache.h` / `mem/remoteallocator.h` to fire.
+  size_t batches_default = opt.has("--smoke") ? 1u << 18 : 1024 * 1024;
   param.N_PRODUCER = opt.is<size_t>("--producers", 3);
   param.N_CONSUMER = opt.is<size_t>("--consumers", 3);
   param.N_PROXY = opt.is<size_t>("--proxies", 2);
-  param.N_PRODUCER_BATCH = opt.is<size_t>("--batches", 1024 * 1024);
+  param.N_PRODUCER_BATCH = opt.is<size_t>("--batches", batches_default);
   param.N_MAX_OUTSTANDING = opt.is<size_t>("--max-out", 4 * 1024);
   param.N_MAX_BATCH_SIZE = opt.is<size_t>("--max-batch", 16);
 
@@ -211,11 +223,6 @@ int main(int argc, char** argv)
 
   auto* producer_threads = new std::thread[param.N_PRODUCER];
   auto* queue_threads = new std::thread[param.N_QUEUE];
-
-  for (size_t i = 0; i < param.N_QUEUE; i++)
-  {
-    param.msgqueue[i].init();
-  }
 
   producers_live = true;
   queue_gate = param.N_QUEUE;
