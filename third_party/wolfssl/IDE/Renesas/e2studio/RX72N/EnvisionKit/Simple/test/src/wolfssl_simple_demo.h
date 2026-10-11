@@ -1,12 +1,12 @@
 /* wolfssl_simple_demo.h
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -36,9 +36,9 @@
 /* cannot enable with other definition */
 /* simplest tcp client*/
 /*#define SIMPLE_TCP_CLIENT */
-/* software TLS　client */
+/* software TLS client */
 /* #define SIMPLE_TLS_CLIENT */
-/* use TSIP　Acceleration */
+/* use TSIP Acceleration */
 /*#define SIMPLE_TLS_TSIP_CLIENT*/
 
 /* simplest tcp server */

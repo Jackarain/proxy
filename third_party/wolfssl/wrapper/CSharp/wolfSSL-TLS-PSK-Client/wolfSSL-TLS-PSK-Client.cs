@@ -1,12 +1,12 @@
 /* wolfSSL-TLS-PSK-Client.cs
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -82,7 +82,11 @@ public class wolfSSL_TLS_PSK_Client
 
         wolfssl.psk_client_delegate psk_cb = new wolfssl.psk_client_delegate(my_psk_client_cb);
 
-        StringBuilder dhparam = new StringBuilder("dh2048.pem");
+        StringBuilder dhparam = new StringBuilder(wolfssl.setPath("dh2048.pem"));
+        if (dhparam.Length == 0) {
+            Console.WriteLine("Platform not supported");
+            return;
+        }
 
         StringBuilder buff = new StringBuilder(1024);
         StringBuilder reply = new StringBuilder("Hello, this is the wolfSSL C# client psk wrapper");
@@ -154,6 +158,12 @@ public class wolfSSL_TLS_PSK_Client
             Console.WriteLine(wolfssl.get_error(ssl));
             tcp.Close();
             clean(ssl, ctx);
+            return;
+        }
+
+        if (!File.Exists(dhparam.ToString())) {
+            Console.WriteLine("Could not find dh file");
+            wolfssl.CTX_free(ctx);
             return;
         }
 

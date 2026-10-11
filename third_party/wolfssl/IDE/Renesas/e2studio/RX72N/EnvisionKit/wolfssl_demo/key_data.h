@@ -1,12 +1,12 @@
 /* key_data.h
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -44,13 +44,17 @@ typedef struct st_key_block_data
     /* update key (not used) */
     uint8_t encrypted_user_update_key[R_TSIP_AES256_KEY_BYTE_SIZE + 16];
     /* wrapped client RSA2048bit public key */
-    uint8_t encrypted_user_rsa2048_public_key[R_TSIP_RSA2048_NE_KEY_BYTE_SIZE + 16];
+    uint8_t encrypted_user_rsa2048_public_key[
+                                    R_TSIP_RSA2048_NE_KEY_BYTE_SIZE + 16];
     /* wrapped client RSA2048bit private key */
-    uint8_t encrypted_user_rsa2048_private_key[R_TSIP_RSA2048_ND_KEY_BYTE_SIZE + 16];
+    uint8_t encrypted_user_rsa2048_private_key[
+                                    R_TSIP_RSA2048_ND_KEY_BYTE_SIZE + 16];
     /* wrapped client ECC P256 public key */
-    uint8_t encrypted_user_ecc256_public_key[R_TSIP_ECC_PUBLIC_KEY_BYTE_SIZE + 16];
+    uint8_t encrypted_user_ecc256_public_key[
+                                    R_TSIP_ECC_PUBLIC_KEY_BYTE_SIZE + 16];
     /* wrapped client ECC P256 private key */
-    uint8_t encrypted_user_ecc256_private_key[R_TSIP_ECC_PRIVATE_KEY_BYTE_SIZE + 16];
+    uint8_t encrypted_user_ecc256_private_key[
+                                    R_TSIP_ECC_PRIVATE_KEY_BYTE_SIZE + 16];
 } st_key_block_data_t;
 
 

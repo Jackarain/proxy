@@ -1,12 +1,12 @@
-﻿/* server.c
+/* server.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -56,8 +56,8 @@ int azsphere_server_app(void)
 #endif
 {
     bool isNetworkingReady = false;
-    int                sockfd;
-    int                connd;
+    int                sockfd = -1;
+    int                connd = -1;
     struct sockaddr_in servAddr;
     struct sockaddr_in clientAddr;
     socklen_t          size = sizeof(clientAddr);
@@ -153,6 +153,7 @@ int azsphere_server_app(void)
         /* Create a WOLFSSL object */
         if ((ssl = wolfSSL_new(ctx)) == NULL) {
             fprintf(stderr, "ERROR: failed to create WOLFSSL object\n");
+            close(connd);
             util_Cleanup(sockfd, ctx, ssl);
             return -1;
         }
@@ -165,6 +166,7 @@ int azsphere_server_app(void)
         if (ret != SSL_SUCCESS) {
             fprintf(stderr, "wolfSSL_accept error = %d\n",
                 wolfSSL_get_error(ssl, ret));
+            close(connd);
             util_Cleanup(sockfd, ctx, ssl);
             return -1;
         }
@@ -175,6 +177,7 @@ int azsphere_server_app(void)
         memset(buff, 0, sizeof(buff));
         if (wolfSSL_read(ssl, buff, sizeof(buff)-1) == -1) {
             fprintf(stderr, "ERROR: failed to read\n");
+            close(connd);
             util_Cleanup(sockfd, ctx, ssl);
             return -1;
         }
@@ -196,13 +199,16 @@ int azsphere_server_app(void)
         /* Reply back to the client */
         if (wolfSSL_write(ssl, buff, (int)len) != len) {
             fprintf(stderr, "ERROR: failed to write\n");
+            close(connd);
             util_Cleanup(sockfd, ctx, ssl);
             return -1;
         }
 
         /* Cleanup after this connection */
         wolfSSL_free(ssl);      /* Free the wolfSSL object              */
+        ssl = NULL;
         close(connd);           /* Close the connection to the client   */
+        connd = -1;
     }
 
     printf("Shutdown complete\n");

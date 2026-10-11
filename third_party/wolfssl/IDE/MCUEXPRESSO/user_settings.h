@@ -1,12 +1,12 @@
 /* user_settings.h
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -40,19 +40,19 @@
     #include <stdarg.h>
     static void myPrintf(const char* fmt, ...)
     {
-	    int ret;
-	    char line[150];
-	    va_list ap;
+        int ret;
+        char line[150];
+        va_list ap;
 
-	    va_start(ap, fmt);
-	    ret = vsnprintf(line, sizeof(line), fmt, ap);
-	    line[sizeof(line)-1] = '\0';
+        va_start(ap, fmt);
+        ret = vsnprintf(line, sizeof(line), fmt, ap);
+        line[sizeof(line)-1] = '\0';
 
-	    DbgConsole_Printf("%s", line);
+        DbgConsole_Printf("%s", line);
 
-	    /* add CR on newlines */
-	    if (ret > 0 && line[ret-1] == '\n') {
-	        DbgConsole_Printf("\r");
+        /* add CR on newlines */
+        if (ret > 0 && line[ret-1] == '\n') {
+            DbgConsole_Printf("\r");
         }
     }
     #define XPRINTF myPrintf
@@ -70,9 +70,9 @@
 #define USE_FAST_MATH
 #ifdef USE_FAST_MATH
     /* big enough for even 4096 bit RSA key */
-	#define FP_MAX_BITS 8192
-	#define TFM_TIMING_RESISTANT
-	#define ECC_TIMING_RESISTANT
+    #define FP_MAX_BITS 8192
+    #define TFM_TIMING_RESISTANT
+    #define ECC_TIMING_RESISTANT
     #define ALT_ECC_SIZE
 #endif
 

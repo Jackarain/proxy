@@ -1,12 +1,12 @@
 /* stm32.h
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -23,33 +23,713 @@
 #define _WOLFPORT_STM32_H_
 
 /* Generic STM32 Hashing and Crypto Functions */
-/* Supports CubeMX HAL or Standard Peripheral Library */
+/* Supports CubeMX HAL, Standard Peripheral Library, or bare-metal direct
+ * register access (WOLFSSL_STM32_BARE). */
 
 #include <wolfssl/wolfcrypt/settings.h>
 #include <wolfssl/wolfcrypt/types.h> /* for MATH_INT_T */
 
+/* STM32H563 has a reduced "light" PKA: it performs ECDSA signature
+ * verification but not signing (per ST -- the H563 datasheet sec. 3.32
+ * lists ECDSA verification only; H573 supports full sign + verify).
+ * Auto-enable verify-only so wc_ecc_sign_hash routes to software while
+ * wc_ecc_verify_hash stays on the HW PKA. STM32H573xx keeps full PKA.
+ * Define WC_STM32_PKA_VERIFY_ONLY yourself for any other verify-only part. */
+#if defined(WOLFSSL_STM32_PKA) && defined(STM32H563xx) && \
+    !defined(STM32H573xx) && !defined(WC_STM32_PKA_VERIFY_ONLY)
+    #define WC_STM32_PKA_VERIFY_ONLY
+#endif
+
+/* STM32C5: the protected ECDSA SIGN (mode 0x24) works on the HW PKA (armed via
+ * wc_stm32_pka_arm_mode), but the plain ECDSA VERIFY (mode 0x26) has an
+ * unresolved wolfSSL-context failure (it returns OUT_RESULT=0 for a known-good
+ * signature, while the bare-metal probe verifies the same operands correctly).
+ * ECDSA verify is a public operation (no secret), so route it to software while
+ * keeping HW sign. Sign-only is the mirror of verify-only above.
+ * Define WC_STM32_PKA_SIGN_ONLY yourself to force this on any part. */
+#if defined(WOLFSSL_STM32_PKA) && defined(WOLFSSL_STM32C5) && \
+    !defined(WC_STM32_PKA_SIGN_ONLY) && !defined(WC_STM32_PKA_VERIFY_ONLY)
+    #define WC_STM32_PKA_SIGN_ONLY
+#endif
+
+#ifdef WOLFSSL_STM32_BARE
+/* Per-family direct-register clock-enable macros. CMSIS device header is
+ * already included via settings.h. RCC->...ENR bit names come from CMSIS.
+ *
+ * Clock enable/disable share one idiom across families: OR (enable) or
+ * AND-NOT (disable) the RCC enable register, with a read-back after enable
+ * so the bit is committed before the peripheral is touched. WC_STM32_CLK_EN
+ * / WC_STM32_CLK_DIS centralize that idiom; each family arm below just maps
+ * its peripheral macros onto the right RCC register + bit. (The MP13 arm
+ * keeps its own form -- it uses separate set/clear registers.) */
+#define WC_STM32_CLK_EN(reg, bit) \
+    do { RCC->reg |= (bit); (void)RCC->reg; } while (0)
+#define WC_STM32_CLK_DIS(reg, bit) \
+    do { RCC->reg &= ~(bit); } while (0)
+
+#if defined(WOLFSSL_STM32H5)
+    #define WC_STM32_AES_CLK_ENABLE() \
+        WC_STM32_CLK_EN(AHB2ENR, RCC_AHB2ENR_AESEN)
+    #define WC_STM32_AES_CLK_DISABLE() \
+        WC_STM32_CLK_DIS(AHB2ENR, RCC_AHB2ENR_AESEN)
+    #ifdef RCC_AHB2ENR_SAESEN
+        #define WC_STM32_SAES_CLK_ENABLE() \
+            WC_STM32_CLK_EN(AHB2ENR, RCC_AHB2ENR_SAESEN)
+        #define WC_STM32_SAES_CLK_DISABLE() \
+            WC_STM32_CLK_DIS(AHB2ENR, RCC_AHB2ENR_SAESEN)
+    #endif
+    #define WC_STM32_HASH_CLK_ENABLE() \
+        WC_STM32_CLK_EN(AHB2ENR, RCC_AHB2ENR_HASHEN)
+    #define WC_STM32_HASH_CLK_DISABLE() \
+        WC_STM32_CLK_DIS(AHB2ENR, RCC_AHB2ENR_HASHEN)
+    #define WC_STM32_RNG_CLK_ENABLE() \
+        WC_STM32_CLK_EN(AHB2ENR, RCC_AHB2ENR_RNGEN)
+#elif defined(WOLFSSL_STM32F2) || defined(WOLFSSL_STM32F4) || \
+      defined(WOLFSSL_STM32F7) || defined(WOLFSSL_STM32H7)
+    /* F2/F4/F7/H7 -- CRYP + HASH + RNG all on AHB2 with identical
+     * RCC bit names. */
+    #define WC_STM32_AES_CLK_ENABLE() \
+        WC_STM32_CLK_EN(AHB2ENR, RCC_AHB2ENR_CRYPEN)
+    #define WC_STM32_AES_CLK_DISABLE() \
+        WC_STM32_CLK_DIS(AHB2ENR, RCC_AHB2ENR_CRYPEN)
+    #define WC_STM32_HASH_CLK_ENABLE() \
+        WC_STM32_CLK_EN(AHB2ENR, RCC_AHB2ENR_HASHEN)
+    #define WC_STM32_HASH_CLK_DISABLE() \
+        WC_STM32_CLK_DIS(AHB2ENR, RCC_AHB2ENR_HASHEN)
+    #define WC_STM32_RNG_CLK_ENABLE() \
+        WC_STM32_CLK_EN(AHB2ENR, RCC_AHB2ENR_RNGEN)
+#elif defined(WOLFSSL_STM32MP13)
+    /* MP13 -- CRYP1/HASH1/RNG1 on AHB5; CMSIS device header may use
+     * symbol-suffixed RCC names. Gate each macro on the CMSIS bit so
+     * a partial device header still compiles. Separate set/clear
+     * registers, so this arm keeps its own form. */
+    #if defined(RCC_MP_AHB5ENSETR_CRYP1EN)
+        #define WC_STM32_AES_CLK_ENABLE() \
+            do { RCC->MP_AHB5ENSETR |= RCC_MP_AHB5ENSETR_CRYP1EN; \
+                 (void)RCC->MP_AHB5ENSETR; } while (0)
+        #define WC_STM32_AES_CLK_DISABLE() \
+            do { RCC->MP_AHB5ENCLRR = RCC_MP_AHB5ENSETR_CRYP1EN; } while (0)
+    #endif
+    #if defined(RCC_MP_AHB5ENSETR_HASH1EN)
+        #define WC_STM32_HASH_CLK_ENABLE() \
+            do { RCC->MP_AHB5ENSETR |= RCC_MP_AHB5ENSETR_HASH1EN; \
+                 (void)RCC->MP_AHB5ENSETR; } while (0)
+        #define WC_STM32_HASH_CLK_DISABLE() \
+            do { RCC->MP_AHB5ENCLRR = RCC_MP_AHB5ENSETR_HASH1EN; } while (0)
+    #endif
+    #if defined(RCC_MP_AHB5ENSETR_RNG1EN)
+        #define WC_STM32_RNG_CLK_ENABLE() \
+            do { RCC->MP_AHB5ENSETR |= RCC_MP_AHB5ENSETR_RNG1EN; \
+                 (void)RCC->MP_AHB5ENSETR; } while (0)
+    #endif
+#elif defined(WOLFSSL_STM32L4)
+    /* L4: RNG everywhere, AES on L48x/L4Ax, HASH on L4Ax. Gate each on the
+     * CMSIS bit so a device header without the IP still compiles. */
+    #ifdef RCC_AHB2ENR_AESEN
+        #define WC_STM32_AES_CLK_ENABLE() \
+            WC_STM32_CLK_EN(AHB2ENR, RCC_AHB2ENR_AESEN)
+        #define WC_STM32_AES_CLK_DISABLE() \
+            WC_STM32_CLK_DIS(AHB2ENR, RCC_AHB2ENR_AESEN)
+    #endif
+    #ifdef RCC_AHB2ENR_HASHEN
+        #define WC_STM32_HASH_CLK_ENABLE() \
+            WC_STM32_CLK_EN(AHB2ENR, RCC_AHB2ENR_HASHEN)
+        #define WC_STM32_HASH_CLK_DISABLE() \
+            WC_STM32_CLK_DIS(AHB2ENR, RCC_AHB2ENR_HASHEN)
+    #endif
+    #define WC_STM32_RNG_CLK_ENABLE() \
+        WC_STM32_CLK_EN(AHB2ENR, RCC_AHB2ENR_RNGEN)
+#elif defined(WOLFSSL_STM32L5)
+    /* L5: HASH + RNG on AHB2 (L552). L562 also adds AES + PKA. AES
+     * clock-enable is gated on the CMSIS symbol so headers that don't
+     * expose AESEN (L552) skip the define. */
+    #ifdef RCC_AHB2ENR_AESEN
+        #define WC_STM32_AES_CLK_ENABLE() \
+            WC_STM32_CLK_EN(AHB2ENR, RCC_AHB2ENR_AESEN)
+        #define WC_STM32_AES_CLK_DISABLE() \
+            WC_STM32_CLK_DIS(AHB2ENR, RCC_AHB2ENR_AESEN)
+    #endif
+    #define WC_STM32_HASH_CLK_ENABLE() \
+        WC_STM32_CLK_EN(AHB2ENR, RCC_AHB2ENR_HASHEN)
+    #define WC_STM32_HASH_CLK_DISABLE() \
+        WC_STM32_CLK_DIS(AHB2ENR, RCC_AHB2ENR_HASHEN)
+    #define WC_STM32_RNG_CLK_ENABLE() \
+        WC_STM32_CLK_EN(AHB2ENR, RCC_AHB2ENR_RNGEN)
+#elif defined(WOLFSSL_STM32U5) || defined(WOLFSSL_STM32U3)
+    /* U5 / U3 RCC uses AHB2ENR1 (not AHB2ENR). AES bit only present on
+     * variants that have the peripheral (U585+, U385+). SAES is on the
+     * same AHB2ENR1; gate on the CMSIS bit so headers without it (e.g.
+     * U575 which has neither AES nor SAES) skip. */
+    #ifdef RCC_AHB2ENR1_AESEN
+        #define WC_STM32_AES_CLK_ENABLE() \
+            WC_STM32_CLK_EN(AHB2ENR1, RCC_AHB2ENR1_AESEN)
+        #define WC_STM32_AES_CLK_DISABLE() \
+            WC_STM32_CLK_DIS(AHB2ENR1, RCC_AHB2ENR1_AESEN)
+    #endif
+    #ifdef RCC_AHB2ENR1_SAESEN
+        #define WC_STM32_SAES_CLK_ENABLE() \
+            WC_STM32_CLK_EN(AHB2ENR1, RCC_AHB2ENR1_SAESEN)
+        #define WC_STM32_SAES_CLK_DISABLE() \
+            WC_STM32_CLK_DIS(AHB2ENR1, RCC_AHB2ENR1_SAESEN)
+    #endif
+    #ifdef RCC_AHB2ENR1_HASHEN
+        #define WC_STM32_HASH_CLK_ENABLE() \
+            WC_STM32_CLK_EN(AHB2ENR1, RCC_AHB2ENR1_HASHEN)
+        #define WC_STM32_HASH_CLK_DISABLE() \
+            WC_STM32_CLK_DIS(AHB2ENR1, RCC_AHB2ENR1_HASHEN)
+    #endif
+    /* CCB (Coupling and Chaining Bridge) clock -- U3 only. */
+    #ifdef RCC_AHB2ENR1_CCBEN
+        #define WC_STM32_CCB_CLK_ENABLE() \
+            WC_STM32_CLK_EN(AHB2ENR1, RCC_AHB2ENR1_CCBEN)
+        #define WC_STM32_CCB_CLK_DISABLE() \
+            WC_STM32_CLK_DIS(AHB2ENR1, RCC_AHB2ENR1_CCBEN)
+    #endif
+    #define WC_STM32_RNG_CLK_ENABLE() \
+        WC_STM32_CLK_EN(AHB2ENR1, RCC_AHB2ENR1_RNGEN)
+#elif defined(WOLFSSL_STM32G0)
+    #define WC_STM32_AES_CLK_ENABLE() \
+        WC_STM32_CLK_EN(AHBENR, RCC_AHBENR_AESEN)
+    #define WC_STM32_AES_CLK_DISABLE() \
+        WC_STM32_CLK_DIS(AHBENR, RCC_AHBENR_AESEN)
+    #define WC_STM32_RNG_CLK_ENABLE() \
+        WC_STM32_CLK_EN(AHBENR, RCC_AHBENR_RNGEN)
+#elif defined(WOLFSSL_STM32WB)
+    /* WB55 dual-core: AES1 is the M4 (CPU1) application AES, on AHB2.
+     * AES2 sits on AHB4/AHB3 and is reserved for the M0+ side / shared use.
+     * The wolfcrypt port maps CRYP -> AES1 (see CRYP alias above), so use
+     * AES1's clock-enable bit. RNG is on AHB3. */
+    #define WC_STM32_AES_CLK_ENABLE() \
+        WC_STM32_CLK_EN(AHB2ENR, RCC_AHB2ENR_AES1EN)
+    #define WC_STM32_AES_CLK_DISABLE() \
+        WC_STM32_CLK_DIS(AHB2ENR, RCC_AHB2ENR_AES1EN)
+    #define WC_STM32_RNG_CLK_ENABLE() \
+        WC_STM32_CLK_EN(AHB3ENR, RCC_AHB3ENR_RNGEN)
+#elif defined(WOLFSSL_STM32WL)
+    /* WL55 dual-core: TinyAES + RNG + PKA on M4 (CPU1) side. AES on AHB3,
+     * RNG on AHB3, PKA on AHB3. No HASH peripheral. V1 PKA layout. */
+    #ifdef RCC_AHB3ENR_AESEN
+        #define WC_STM32_AES_CLK_ENABLE() \
+            WC_STM32_CLK_EN(AHB3ENR, RCC_AHB3ENR_AESEN)
+        #define WC_STM32_AES_CLK_DISABLE() \
+            WC_STM32_CLK_DIS(AHB3ENR, RCC_AHB3ENR_AESEN)
+    #endif
+    #define WC_STM32_RNG_CLK_ENABLE() \
+        WC_STM32_CLK_EN(AHB3ENR, RCC_AHB3ENR_RNGEN)
+#elif defined(WOLFSSL_STM32G4)
+    /* G4: TinyAES + RNG + PKA on AHB2. No HASH peripheral. */
+    #define WC_STM32_AES_CLK_ENABLE() \
+        WC_STM32_CLK_EN(AHB2ENR, RCC_AHB2ENR_AESEN)
+    #define WC_STM32_AES_CLK_DISABLE() \
+        WC_STM32_CLK_DIS(AHB2ENR, RCC_AHB2ENR_AESEN)
+    #define WC_STM32_RNG_CLK_ENABLE() \
+        WC_STM32_CLK_EN(AHB2ENR, RCC_AHB2ENR_RNGEN)
+#elif defined(WOLFSSL_STM32WBA)
+    /* WBA: TinyAES + HASH + RNG + PKA + SAES on AHB2 (PKA on AHB1). */
+    #define WC_STM32_AES_CLK_ENABLE() \
+        WC_STM32_CLK_EN(AHB2ENR, RCC_AHB2ENR_AESEN)
+    #define WC_STM32_AES_CLK_DISABLE() \
+        WC_STM32_CLK_DIS(AHB2ENR, RCC_AHB2ENR_AESEN)
+    #ifdef RCC_AHB2ENR_SAESEN
+        #define WC_STM32_SAES_CLK_ENABLE() \
+            WC_STM32_CLK_EN(AHB2ENR, RCC_AHB2ENR_SAESEN)
+        #define WC_STM32_SAES_CLK_DISABLE() \
+            WC_STM32_CLK_DIS(AHB2ENR, RCC_AHB2ENR_SAESEN)
+    #endif
+    #ifdef RCC_AHB2ENR_HASHEN
+        #define WC_STM32_HASH_CLK_ENABLE() \
+            WC_STM32_CLK_EN(AHB2ENR, RCC_AHB2ENR_HASHEN)
+        #define WC_STM32_HASH_CLK_DISABLE() \
+            WC_STM32_CLK_DIS(AHB2ENR, RCC_AHB2ENR_HASHEN)
+    #endif
+    #define WC_STM32_RNG_CLK_ENABLE() \
+        WC_STM32_CLK_EN(AHB2ENR, RCC_AHB2ENR_RNGEN)
+#elif defined(WOLFSSL_STM32C5)
+    /* C5: TinyAES + HASH + RNG + SAES + PKA all on AHB2. New-gen HASH IP
+     * (4-bit ALGO field, same as H5/U3/N6). */
+    #define WC_STM32_AES_CLK_ENABLE() \
+        WC_STM32_CLK_EN(AHB2ENR, RCC_AHB2ENR_AESEN)
+    #define WC_STM32_AES_CLK_DISABLE() \
+        WC_STM32_CLK_DIS(AHB2ENR, RCC_AHB2ENR_AESEN)
+    #ifdef RCC_AHB2ENR_SAESEN
+        #define WC_STM32_SAES_CLK_ENABLE() \
+            WC_STM32_CLK_EN(AHB2ENR, RCC_AHB2ENR_SAESEN)
+        #define WC_STM32_SAES_CLK_DISABLE() \
+            WC_STM32_CLK_DIS(AHB2ENR, RCC_AHB2ENR_SAESEN)
+    #endif
+    #define WC_STM32_HASH_CLK_ENABLE() \
+        WC_STM32_CLK_EN(AHB2ENR, RCC_AHB2ENR_HASHEN)
+    #define WC_STM32_HASH_CLK_DISABLE() \
+        WC_STM32_CLK_DIS(AHB2ENR, RCC_AHB2ENR_HASHEN)
+    #define WC_STM32_RNG_CLK_ENABLE() \
+        WC_STM32_CLK_EN(AHB2ENR, RCC_AHB2ENR_RNGEN)
+    /* CCB (Coupling and Chaining Bridge) clock -- C5 (un-banked AHB2ENR). */
+    #ifdef RCC_AHB2ENR_CCBEN
+        #define WC_STM32_CCB_CLK_ENABLE() \
+            WC_STM32_CLK_EN(AHB2ENR, RCC_AHB2ENR_CCBEN)
+        #define WC_STM32_CCB_CLK_DISABLE() \
+            WC_STM32_CLK_DIS(AHB2ENR, RCC_AHB2ENR_CCBEN)
+    #endif
+#elif defined(WOLFSSL_STM32U0)
+    /* U0: Cortex-M0+ low-end. AES + RNG only (no SAES, no HASH, no PKA,
+     * no CRYP). Both on the single AHBENR. TinyAES IP, KEYSIZE field
+     * for 128/256-bit. */
+    #define WC_STM32_AES_CLK_ENABLE() \
+        WC_STM32_CLK_EN(AHBENR, RCC_AHBENR_AESEN)
+    #define WC_STM32_AES_CLK_DISABLE() \
+        WC_STM32_CLK_DIS(AHBENR, RCC_AHBENR_AESEN)
+    #define WC_STM32_RNG_CLK_ENABLE() \
+        WC_STM32_CLK_EN(AHBENR, RCC_AHBENR_RNGEN)
+#elif defined(WOLFSSL_STM32N6)
+    /* N6: CRYP + HASH + RNG + SAES + PKA all on AHB3. Note that on N6
+     * the AES IP is the older "fat" CRYP (with AAD/header handling in
+     * register) -- SAES is the newer TinyAES-shape IP and is the one
+     * routed by the BARE driver when WOLFSSL_STM32_USE_SAES is set. */
+    #ifdef RCC_AHB3ENR_CRYPEN
+        #define WC_STM32_AES_CLK_ENABLE() \
+            WC_STM32_CLK_EN(AHB3ENR, RCC_AHB3ENR_CRYPEN)
+        #define WC_STM32_AES_CLK_DISABLE() \
+            WC_STM32_CLK_DIS(AHB3ENR, RCC_AHB3ENR_CRYPEN)
+    #endif
+    #ifdef RCC_AHB3ENR_SAESEN
+        #define WC_STM32_SAES_CLK_ENABLE() \
+            WC_STM32_CLK_EN(AHB3ENR, RCC_AHB3ENR_SAESEN)
+        #define WC_STM32_SAES_CLK_DISABLE() \
+            WC_STM32_CLK_DIS(AHB3ENR, RCC_AHB3ENR_SAESEN)
+    #endif
+    #define WC_STM32_HASH_CLK_ENABLE() \
+        WC_STM32_CLK_EN(AHB3ENR, RCC_AHB3ENR_HASHEN)
+    #define WC_STM32_HASH_CLK_DISABLE() \
+        WC_STM32_CLK_DIS(AHB3ENR, RCC_AHB3ENR_HASHEN)
+    #define WC_STM32_RNG_CLK_ENABLE() \
+        WC_STM32_CLK_EN(AHB3ENR, RCC_AHB3ENR_RNGEN)
+#elif defined(WOLFSSL_STM32V8)
+    /* V8 (Cortex-M85), per STM32V873.svd: CRYP + HASH + RNG + SAES + PKA
+     * on AHB3 bits 0/1/2/3/8 -- same topology as N6, including the "fat"
+     * CRYP (AES-192 capable, F4/H7 register shape) alongside a TinyAES-
+     * shape SAES. Unlike N6 (where the CRYP is locked to the security
+     * domain and AES must route through SAES), the V8 always runs Secure
+     * and the CRYP is reachable, so the default AES path is the fat CRYP;
+     * WOLFSSL_STM32_USE_SAES opts into the SAES instance instead (losing
+     * AES-192). The CCB peripheral (AHB3 bit 15) exists in silicon but is
+     * not supported (no V8 entry in the WC_STM32_HAS_DHUK / WC_STM32_HAS_CCB
+     * gates below). */
+    #ifdef RCC_AHB3ENR_CRYPEN
+        #define WC_STM32_AES_CLK_ENABLE() \
+            WC_STM32_CLK_EN(AHB3ENR, RCC_AHB3ENR_CRYPEN)
+        #define WC_STM32_AES_CLK_DISABLE() \
+            WC_STM32_CLK_DIS(AHB3ENR, RCC_AHB3ENR_CRYPEN)
+    #endif
+    #ifdef RCC_AHB3ENR_SAESEN
+        #define WC_STM32_SAES_CLK_ENABLE() \
+            WC_STM32_CLK_EN(AHB3ENR, RCC_AHB3ENR_SAESEN)
+        #define WC_STM32_SAES_CLK_DISABLE() \
+            WC_STM32_CLK_DIS(AHB3ENR, RCC_AHB3ENR_SAESEN)
+    #endif
+    #define WC_STM32_HASH_CLK_ENABLE() \
+        WC_STM32_CLK_EN(AHB3ENR, RCC_AHB3ENR_HASHEN)
+    #define WC_STM32_HASH_CLK_DISABLE() \
+        WC_STM32_CLK_DIS(AHB3ENR, RCC_AHB3ENR_HASHEN)
+    #define WC_STM32_RNG_CLK_ENABLE() \
+        WC_STM32_CLK_EN(AHB3ENR, RCC_AHB3ENR_RNGEN)
+#elif defined(WOLFSSL_STM32H7S)
+    /* H7RS/H7S3: classic H7 fat CRYP + classic H7 HASH (same register
+     * shapes as H753) but RCC clock-enable bits moved to AHB3ENR, and
+     * V2 PKA + SAES added. All five (CRYP/HASH/RNG/SAES/PKA) live on
+     * AHB3ENR. */
+    #ifdef RCC_AHB3ENR_CRYPEN
+        #define WC_STM32_AES_CLK_ENABLE() \
+            WC_STM32_CLK_EN(AHB3ENR, RCC_AHB3ENR_CRYPEN)
+        #define WC_STM32_AES_CLK_DISABLE() \
+            WC_STM32_CLK_DIS(AHB3ENR, RCC_AHB3ENR_CRYPEN)
+    #endif
+    #ifdef RCC_AHB3ENR_SAESEN
+        #define WC_STM32_SAES_CLK_ENABLE() \
+            WC_STM32_CLK_EN(AHB3ENR, RCC_AHB3ENR_SAESEN)
+        #define WC_STM32_SAES_CLK_DISABLE() \
+            WC_STM32_CLK_DIS(AHB3ENR, RCC_AHB3ENR_SAESEN)
+    #endif
+    #define WC_STM32_HASH_CLK_ENABLE() \
+        WC_STM32_CLK_EN(AHB3ENR, RCC_AHB3ENR_HASHEN)
+    #define WC_STM32_HASH_CLK_DISABLE() \
+        WC_STM32_CLK_DIS(AHB3ENR, RCC_AHB3ENR_HASHEN)
+    #define WC_STM32_RNG_CLK_ENABLE() \
+        WC_STM32_CLK_EN(AHB3ENR, RCC_AHB3ENR_RNGEN)
+#endif
+
+/* Build-time AES IP instance selector. Default is the regular AES/CRYP
+ * peripheral; defining WOLFSSL_STM32_USE_SAES routes the BARE TinyAES
+ * register-access block to SAES (Secure AES) instead. The TinyAES
+ * register layout is identical for AES and SAES on H5/U5/WBA/C5. */
+#ifndef WC_STM32_AES_INST
+    #if defined(WOLFSSL_STM32_USE_SAES) && defined(SAES)
+        #define WC_STM32_AES_INST  SAES
+    #elif defined(CRYP)
+        #define WC_STM32_AES_INST  CRYP
+    #elif defined(AES)
+        /* AES-only chips (G0/L0/U0) -- no fat CRYP, no SAES. The
+         * symbol CRYP is the legacy alias many newer family headers
+         * keep for compatibility, but bottom-end chips drop it. */
+        #define WC_STM32_AES_INST  AES
+    #elif defined(WOLFSSL_STM32WB) && defined(AES1)
+        /* WB55 dual-core: CMSIS exposes AES1 (M4-side application AES)
+         * and AES2 (M0+ Cortex-M0+ radio-side, not addressable from
+         * the application core). There is no plain `AES` or `CRYP`
+         * alias in the device header, so pick AES1 directly. */
+        #define WC_STM32_AES_INST  AES1
+    #elif defined(STM32_CRYPTO)
+        /* Only error when the board has actually asked for STM32_CRYPTO
+         * but no AES IP is reachable. Chips with NO_STM32_CRYPTO (e.g.
+         * F767/G491/F767 -- RNG-only parts) don't need an instance. */
+        #error "STM32 BARE: no AES/CRYP/SAES instance pointer found"
+    #endif
+#endif
+
+/* Named ALGOMODE values for the fat CRYP IP (3-bit field at CR bits 5:3
+ * plus the ALGOMODE[3] extension at bit 19 for GCM/CCM; same encoding on
+ * F2/F4/F7/H7/MP13/V8 per RM0090/RM0433). ST's official CMSIS device
+ * headers define these named forms; an SVD-generated bare header (e.g.
+ * STM32V8, where ST publishes no DFP yet) may carry only the raw field
+ * bits, so provide the named values from those. */
+#if defined(CRYP_CR_ALGOMODE_0) && !defined(CRYP_CR_ALGOMODE_AES_ECB)
+    #define CRYP_CR_ALGOMODE_AES_ECB  (CRYP_CR_ALGOMODE_2)
+    #define CRYP_CR_ALGOMODE_AES_CBC  (CRYP_CR_ALGOMODE_0 | \
+                                       CRYP_CR_ALGOMODE_2)
+    #define CRYP_CR_ALGOMODE_AES_CTR  (CRYP_CR_ALGOMODE_1 | \
+                                       CRYP_CR_ALGOMODE_2)
+    #define CRYP_CR_ALGOMODE_AES_KEY  (CRYP_CR_ALGOMODE_0 | \
+                                       CRYP_CR_ALGOMODE_1 | \
+                                       CRYP_CR_ALGOMODE_2)
+    #define CRYP_CR_ALGOMODE_AES_GCM  (0x00080000UL) /* ALGOMODE[3], bit 19 */
+#endif
+
+/* Companion macro for the IP-instance clock enable. Routes to
+ * WC_STM32_SAES_CLK_ENABLE when WOLFSSL_STM32_USE_SAES is set and the
+ * family arm above provided the SAES variant; otherwise falls back to
+ * the regular AES clock. The two are separate AHB enable bits on
+ * H5/U5/WBA/C5, so toggling the wrong one leaves the IP disabled. */
+#ifndef WC_STM32_AES_CLK_ENABLE_INST
+    #if defined(WOLFSSL_STM32_USE_SAES) && defined(WC_STM32_SAES_CLK_ENABLE)
+        #define WC_STM32_AES_CLK_ENABLE_INST()  WC_STM32_SAES_CLK_ENABLE()
+    #else
+        #define WC_STM32_AES_CLK_ENABLE_INST()  WC_STM32_AES_CLK_ENABLE()
+    #endif
+#endif
+
+/* Some new-gen chips (STM32N6, STM32H7S3) ship CMSIS headers that
+ * define SAES_TypeDef but not AES_TypeDef. The BARE TinyAES driver
+ * helpers in stm32.c declare their parameter as `AES_TypeDef*` so the
+ * same function pointer can target both the regular AES and SAES
+ * instances on chips that have both. Provide a typedef alias when AES
+ * is missing -- the IP layout is identical between AES and SAES on
+ * every family in scope. Gated on having SAES but not the AES_CR_EN
+ * symbol (used as a sentinel that the CMSIS lacks the AES alias). */
+#if defined(SAES) && !defined(AES_CR_EN) && \
+    !defined(WOLFSSL_STM32_AES_TYPEDEF_ALIAS)
+    typedef SAES_TypeDef AES_TypeDef;
+    #define WOLFSSL_STM32_AES_TYPEDEF_ALIAS
+#endif
+
+/* SAES-only chips (e.g. STM32N6) have the TinyAES register layout but
+ * the CMSIS device header only defines SAES_CR_*, SAES_SR_*, SAES_ISR_*,
+ * SAES_ICR_* without companion AES_CR_* aliases. The BARE driver in
+ * stm32.c uses the AES_CR_* names directly; provide aliases here so the
+ * existing code compiles on SAES-only parts. */
+#if !defined(AES_CR_EN) && defined(SAES_CR_EN)
+    #define AES_CR_EN          SAES_CR_EN
+    #define AES_CR_DATATYPE_1  SAES_CR_DATATYPE_1
+    #define AES_CR_MODE        SAES_CR_MODE
+    #define AES_CR_MODE_M      SAES_CR_MODE_Msk
+    #define AES_CR_MODE_Msk    SAES_CR_MODE_Msk
+    #define AES_CR_MODE_0      SAES_CR_MODE_0
+    #define AES_CR_MODE_1      SAES_CR_MODE_1
+    #define AES_CR_CHMOD_0     SAES_CR_CHMOD_0
+    #define AES_CR_CHMOD_1     SAES_CR_CHMOD_1
+    #define AES_CR_KEYSIZE     SAES_CR_KEYSIZE
+    #define AES_CR_KEYSEL_0    SAES_CR_KEYSEL_0
+    #define AES_CR_KMOD_0      SAES_CR_KMOD_0
+    #define AES_CR_KEYPROT     SAES_CR_KEYPROT
+    #define AES_CR_CCFC        SAES_CR_CCFC
+    #define AES_CR_IPRST       SAES_CR_IPRST
+    #define AES_SR_BUSY        SAES_SR_BUSY
+    #define AES_SR_CCF         SAES_SR_CCF
+    #define AES_ISR_CCF        SAES_ISR_CCF
+    #define AES_ICR_CCF        SAES_ICR_CCF
+#endif
+
+/* Per-family direct-register clock-enable macro for the PKA peripheral. */
+#if defined(WOLFSSL_STM32WB) || defined(WOLFSSL_STM32WL)
+    /* WB55 / WL55: PKA clock is on AHB3 (V1 layout) */
+    #define WC_STM32_PKA_CLK_ENABLE() \
+        do { RCC->AHB3ENR |= RCC_AHB3ENR_PKAEN; (void)RCC->AHB3ENR; } while (0)
+#elif defined(WOLFSSL_STM32U5) || defined(WOLFSSL_STM32U3)
+    /* U5 / U3: AHB2ENR1.PKAEN */
+    #ifdef RCC_AHB2ENR1_PKAEN
+        #define WC_STM32_PKA_CLK_ENABLE() \
+            do { RCC->AHB2ENR1 |= RCC_AHB2ENR1_PKAEN; (void)RCC->AHB2ENR1; } \
+                while (0)
+    #endif
+#elif defined(WOLFSSL_STM32H5)
+    #ifdef RCC_AHB2ENR_PKAEN
+        #define WC_STM32_PKA_CLK_ENABLE() \
+            do { RCC->AHB2ENR |= RCC_AHB2ENR_PKAEN; (void)RCC->AHB2ENR; } \
+                while (0)
+    #endif
+#elif defined(WOLFSSL_STM32L5)
+    /* L5: PKA on AHB2ENR.PKAEN (bit 19). Only present on L562/L592
+     * variants -- L552 has no PKA so the CMSIS bit is absent. */
+    #ifdef RCC_AHB2ENR_PKAEN
+        #define WC_STM32_PKA_CLK_ENABLE() \
+            do { RCC->AHB2ENR |= RCC_AHB2ENR_PKAEN; (void)RCC->AHB2ENR; } \
+                while (0)
+    #endif
+#elif defined(WOLFSSL_STM32G4)
+    #ifdef RCC_AHB2ENR_PKAEN
+        #define WC_STM32_PKA_CLK_ENABLE() \
+            do { RCC->AHB2ENR |= RCC_AHB2ENR_PKAEN; (void)RCC->AHB2ENR; } \
+                while (0)
+    #endif
+#elif defined(WOLFSSL_STM32WBA)
+    /* WBA52: PKA on AHB2ENR.PKAEN bit 21 (NOT AHB1 like the rest of
+     * the WBA crypto IPs in some other variants -- the WBA52 RM places
+     * PKA, SAES, RNG all on AHB2 alongside other crypto). The earlier
+     * AHB1 placement was a copy-paste error from another family;
+     * `RCC_AHB1ENR_PKAEN` doesn't exist on WBA52 so the macro never
+     * defined, the clock never got enabled, and HAL_PKA_Init timed
+     * out at the CR.EN-stick check (CR readback = 0 = clock gated). */
+    #ifdef RCC_AHB2ENR_PKAEN
+        #define WC_STM32_PKA_CLK_ENABLE() \
+            do { RCC->AHB2ENR |= RCC_AHB2ENR_PKAEN; (void)RCC->AHB2ENR; } \
+                while (0)
+    #endif
+#elif defined(WOLFSSL_STM32C5)
+    #ifdef RCC_AHB2ENR_PKAEN
+        #define WC_STM32_PKA_CLK_ENABLE() \
+            do { RCC->AHB2ENR |= RCC_AHB2ENR_PKAEN; (void)RCC->AHB2ENR; } \
+                while (0)
+    #endif
+#elif defined(WOLFSSL_STM32N6)
+    /* N6: PKA on AHB3 (same bank as HASH/RNG/CRYP/SAES). V2 layout. */
+    #ifdef RCC_AHB3ENR_PKAEN
+        #define WC_STM32_PKA_CLK_ENABLE() \
+            do { RCC->AHB3ENR |= RCC_AHB3ENR_PKAEN; (void)RCC->AHB3ENR; } \
+                while (0)
+    #endif
+#elif defined(WOLFSSL_STM32V8)
+    /* V8: PKA on AHB3 bit 8, V2 layout. PKA_CR.MODE has both 0x24 (sign) and
+     * 0x26 (verify), so unlike C5/H563 it needs neither _SIGN_ONLY nor
+     * _VERIFY_ONLY. */
+    #ifdef RCC_AHB3ENR_PKAEN
+        #define WC_STM32_PKA_CLK_ENABLE() \
+            do { RCC->AHB3ENR |= RCC_AHB3ENR_PKAEN; (void)RCC->AHB3ENR; } \
+                while (0)
+    #endif
+#elif defined(WOLFSSL_STM32H7S)
+    /* H7S: PKA on AHB3 alongside HASH/RNG/CRYP/SAES. V2 layout. */
+    #ifdef RCC_AHB3ENR_PKAEN
+        #define WC_STM32_PKA_CLK_ENABLE() \
+            do { RCC->AHB3ENR |= RCC_AHB3ENR_PKAEN; (void)RCC->AHB3ENR; } \
+                while (0)
+    #endif
+#endif
+
+/* HAL-legacy macros the direct-register HASH path depends on. ST's
+ * stm32XXxx_hal_hash.h also defines these HASH_ALGOSELECTION_* / HASH_ALGOMODE_*
+ * / HASH_DATATYPE_8B names, so each is wrapped in #ifndef: when the Cube HAL
+ * headers reach this TU (e.g. a Zephyr build) the HAL's copy wins (same register
+ * bits) instead of causing a redefinition; otherwise we define our own. */
+#if defined(WOLFSSL_STM32H5) || defined(WOLFSSL_STM32MP13) || \
+    defined(WOLFSSL_STM32N6) || defined(WOLFSSL_STM32H7S) || \
+    defined(WOLFSSL_STM32U3) || defined(WOLFSSL_STM32C5) || \
+    defined(WOLFSSL_STM32V8)
+    /* New-generation HASH IP. The CMSIS struct shape varies within the
+     * family list -- H5 renames the instance digest registers from
+     * `HR[5]` to `HRA[5]`, but U3 / N6 keep the legacy `HR[5]` name
+     * even though the IP otherwise behaves like the new generation.
+     * Gate the macro on H5 and V8 (verified by inspection of each
+     * family's CMSIS header). */
+    #if defined(WOLFSSL_STM32H5) || defined(WOLFSSL_STM32V8)
+        #define WC_STM32_HASH_INSTANCE_HRA
+    #endif
+    /* 4-bit ALGO field at bits 20:17 */
+    #ifndef HASH_ALGOSELECTION_SHA1
+        #define HASH_ALGOSELECTION_SHA1       0u
+    #endif
+    #ifndef HASH_ALGOSELECTION_SHA224
+        #define HASH_ALGOSELECTION_SHA224     HASH_CR_ALGO_1
+    #endif
+    #ifndef HASH_ALGOSELECTION_SHA256
+        #define HASH_ALGOSELECTION_SHA256     (HASH_CR_ALGO_0 | HASH_CR_ALGO_1)
+    #endif
+    #ifndef HASH_ALGOSELECTION_SHA384
+        #define HASH_ALGOSELECTION_SHA384     (HASH_CR_ALGO_2 | HASH_CR_ALGO_3)
+    #endif
+    #ifndef HASH_ALGOSELECTION_SHA512
+        #define HASH_ALGOSELECTION_SHA512     (HASH_CR_ALGO_0 | HASH_CR_ALGO_1 | \
+                                               HASH_CR_ALGO_2 | HASH_CR_ALGO_3)
+    #endif
+    #ifndef HASH_ALGOSELECTION_SHA512_224
+        #define HASH_ALGOSELECTION_SHA512_224 (HASH_CR_ALGO_0 | HASH_CR_ALGO_2 | \
+                                               HASH_CR_ALGO_3)
+    #endif
+    /* SHA-3 ALGO codes 0x4..0x7 (validated against NIST vectors on STM32V8
+     * silicon; SHAKE = 0x8/0x9 with a fixed-length squeeze). These fallback
+     * definitions serve BARE builds of SHA-3-capable parts whose device
+     * header does not carry the HAL names (MP13 bare today; V8 once its
+     * SHA-3 context-save procedure is known). CubeMX builds get them from
+     * the HAL, so the #ifndef guards keep those authoritative. */
+    #ifndef HASH_ALGOSELECTION_SHA3_224
+        #define HASH_ALGOSELECTION_SHA3_224   HASH_CR_ALGO_2
+    #endif
+    #ifndef HASH_ALGOSELECTION_SHA3_256
+        #define HASH_ALGOSELECTION_SHA3_256   (HASH_CR_ALGO_0 | HASH_CR_ALGO_2)
+    #endif
+    #ifndef HASH_ALGOSELECTION_SHA3_384
+        #define HASH_ALGOSELECTION_SHA3_384   (HASH_CR_ALGO_1 | HASH_CR_ALGO_2)
+    #endif
+    #ifndef HASH_ALGOSELECTION_SHA3_512
+        #define HASH_ALGOSELECTION_SHA3_512   (HASH_CR_ALGO_0 | \
+                                               HASH_CR_ALGO_1 | HASH_CR_ALGO_2)
+    #endif
+    #ifndef HASH_ALGOSELECTION_SHA512_256
+        #define HASH_ALGOSELECTION_SHA512_256 (HASH_CR_ALGO_1 | HASH_CR_ALGO_2 | \
+                                               HASH_CR_ALGO_3)
+    #endif
+#else
+    /* Older HASH IP (F4/F7/L4 family) ALGO bit mapping (per HAL):
+     *   SHA1   = 0
+     *   MD5    = ALGO_0
+     *   SHA224 = ALGO_1
+     *   SHA256 = ALGO_0 | ALGO_1
+     */
+    #ifndef HASH_ALGOSELECTION_SHA1
+        #define HASH_ALGOSELECTION_SHA1       0u
+    #endif
+    #ifndef HASH_ALGOSELECTION_MD5
+        #define HASH_ALGOSELECTION_MD5        HASH_CR_ALGO_0
+    #endif
+    #ifdef HASH_CR_ALGO_1
+        #ifndef HASH_ALGOSELECTION_SHA224
+            #define HASH_ALGOSELECTION_SHA224 HASH_CR_ALGO_1
+        #endif
+        #ifndef HASH_ALGOSELECTION_SHA256
+            #define HASH_ALGOSELECTION_SHA256 (HASH_CR_ALGO_0 | HASH_CR_ALGO_1)
+        #endif
+    #endif
+#endif
+
+/* Legacy CamelCase aliases */
+#if defined(HASH_ALGOSELECTION_SHA1) && !defined(HASH_AlgoSelection_SHA1)
+    #define HASH_AlgoSelection_SHA1       HASH_ALGOSELECTION_SHA1
+#endif
+#if defined(HASH_ALGOSELECTION_SHA224) && !defined(HASH_AlgoSelection_SHA224)
+    #define HASH_AlgoSelection_SHA224     HASH_ALGOSELECTION_SHA224
+#endif
+#if defined(HASH_ALGOSELECTION_SHA256) && !defined(HASH_AlgoSelection_SHA256)
+    #define HASH_AlgoSelection_SHA256     HASH_ALGOSELECTION_SHA256
+#endif
+#if defined(HASH_ALGOSELECTION_SHA384) && !defined(HASH_AlgoSelection_SHA384)
+    #define HASH_AlgoSelection_SHA384     HASH_ALGOSELECTION_SHA384
+#endif
+#if defined(HASH_ALGOSELECTION_SHA512) && !defined(HASH_AlgoSelection_SHA512)
+    #define HASH_AlgoSelection_SHA512     HASH_ALGOSELECTION_SHA512
+#endif
+#if defined(HASH_ALGOSELECTION_SHA512_224) && \
+    !defined(HASH_AlgoSelection_SHA512_224)
+    #define HASH_AlgoSelection_SHA512_224 HASH_ALGOSELECTION_SHA512_224
+#endif
+#if defined(HASH_ALGOSELECTION_SHA512_256) && \
+    !defined(HASH_AlgoSelection_SHA512_256)
+    #define HASH_AlgoSelection_SHA512_256 HASH_ALGOSELECTION_SHA512_256
+#endif
+#if defined(HASH_ALGOSELECTION_MD5) && !defined(HASH_AlgoSelection_MD5)
+    #define HASH_AlgoSelection_MD5        HASH_ALGOSELECTION_MD5
+#endif
+
+#ifndef HASH_ALGOMODE_HASH
+    #define HASH_ALGOMODE_HASH             0u
+#endif
+#if defined(HASH_CR_MODE) && !defined(HASH_ALGOMODE_HMAC)
+    #define HASH_ALGOMODE_HMAC             HASH_CR_MODE
+#endif
+/* Byte-stream input (auto byte-swap) */
+#ifndef HASH_DATATYPE_8B
+    #ifdef HASH_CR_DATATYPE_1
+        #define HASH_DATATYPE_8B           HASH_CR_DATATYPE_1
+    #elif defined(HASH_CR_DATATYPE_0)
+        #define HASH_DATATYPE_8B           HASH_CR_DATATYPE_0
+    #endif
+#endif
+
+#endif /* WOLFSSL_STM32_BARE */
+
+
 #ifdef STM32_HASH
+
+#include <stdint.h> /* for uint32_t */
 
 #define WOLFSSL_NO_HASH_RAW
 
 #ifdef HASH_DIGEST
     /* The HASH_DIGEST register indicates SHA224/SHA256 support */
     #define STM32_HASH_SHA2
-    #if defined(WOLFSSL_STM32H5)
+    #if defined(WOLFSSL_STM32MP13) || defined(WOLFSSL_STM32H7S) || \
+        defined(WOLFSSL_STM32N6) || defined(WOLFSSL_STM32H5) || \
+        defined(WOLFSSL_STM32U3) || defined(WOLFSSL_STM32V8)
         #define HASH_CR_SIZE    103
         #define HASH_MAX_DIGEST 64 /* Up to SHA512 */
+
+        #define STM32_HASH_SHA512
+        #define STM32_HASH_SHA512_224
+        #define STM32_HASH_SHA512_256
+        #define STM32_HASH_SHA384
     #else
         #define HASH_CR_SIZE    54
         #define HASH_MAX_DIGEST 32
+    #endif
+    #if defined(WOLFSSL_STM32MP13)
+        #define STM32_HASH_SHA3
+    #endif
+    /* STM32V8: the HASH block's SHA-3 is real (ALGO codes 0x4..0x7 verified
+     * against NIST vectors at register level), but wolfSSL's context
+     * save/restore/copy fails on it -- wolfcrypt_test SHA-3 vector 0 breaks
+     * at the GetHash/Copy step. MP13 saves SHA3CFGR for this; V8 has no such
+     * register and its SHA-3 context-switch procedure is not yet known
+     * (no reference manual). SHA-3 stays software on V8 until it is. */
+    #if defined(WOLFSSL_STM32MP13)
+        /* SHA3CFGR (XOF length) is an MP13 register, not a universal part of
+         * the SHA-3 capability -- STM32V873.svd has SHA-3 ALGO codes but no
+         * such register. Gate the context field and its save/restore on this
+         * rather than on STM32_HASH_SHA3 so other parts still compile. */
+        #define WC_STM32_HASH_HAS_SHA3CFGR
     #endif
 #else
     #define HASH_CR_SIZE    50
     #define HASH_MAX_DIGEST 20
 #endif
 
+#ifdef WOLFSSL_STM32MP13
+    /* From stm32_hal_legacy.h, but that MP13 header has a bug in it */
+    #define HASH_AlgoSelection_MD5       HASH_ALGOSELECTION_MD5
+    #define HASH_AlgoSelection_SHA1      HASH_ALGOSELECTION_SHA1
+    #define HASH_AlgoSelection_SHA224    HASH_ALGOSELECTION_SHA224
+    #define HASH_AlgoSelection_SHA256    HASH_ALGOSELECTION_SHA256
+#endif
+
+/* These HASH HAL's have no MD5 implementation */
+#if defined(WOLFSSL_STM32MP13) || defined(WOLFSSL_STM32H7S) || \
+    defined(WOLFSSL_STM32N6) || defined(WOLFSSL_STM32H5) || \
+    defined(WOLFSSL_STM32U3) || defined(WOLFSSL_STM32C5) || \
+    defined(WOLFSSL_STM32V8)
+    #define STM32_NOMD5
+#endif
+
 /* Handle hash differences between CubeMX and StdPeriLib */
 #if !defined(HASH_ALGOMODE_HASH) && defined(HASH_AlgoMode_HASH)
     #define HASH_ALGOMODE_HASH HASH_AlgoMode_HASH
+#endif
+#if !defined(HASH_ALGOMODE_HMAC) && defined(HASH_AlgoMode_HMAC)
+    #define HASH_ALGOMODE_HMAC HASH_AlgoMode_HMAC
 #endif
 #if !defined(HASH_DATATYPE_8B)
     #if defined(HASH_DataType_8b)
@@ -69,27 +749,17 @@
 
 /* STM32 register size in bytes */
 #define STM32_HASH_REG_SIZE  4
-#define STM32_HASH_FIFO_SIZE 16 /* FIFO is 16 deep 32-bits wide */
-
-#if (defined(WOLFSSL_STM32U5) || defined(WOLFSSL_STM32H5) || \
-    defined(WOLFSSL_STM32H7)) && !defined(NO_STM32_HASH_FIFO_WORKAROUND)
-    /* workaround for hash FIFO to write one extra to finalize */
-    /* RM: Message Data Feeding: Data are entered into the HASH
-     * one 32-bit word at a time, by writing them into the HASH_DIN register.
-     * The current contents of the HASH_DIN register are transferred to the
-     * 16 words input FIFO each time the register is written with new data.
-     * Hence HASH_DIN and the FIFO form a seventeen 32-bit words length FIFO. */
-    #undef  STM32_HASH_BUFFER_SIZE
-    #define STM32_HASH_BUFFER_SIZE 17
-
-    #undef  STM32_HASH_FIFO_WORKAROUND
-    #define STM32_HASH_FIFO_WORKAROUND
+/* FIFO words, sized to the largest rate the HASH IP may accumulate: SHA-256
+ * 16, SHA-512 32, SHA3-224 36, SHAKE128 42. Was 36, which is 6 short of
+ * SHAKE128 -- unreachable while sha3.c forces WC_SHA3_SW_KECCAK for SHAKE,
+ * but a part with a usable hardware SHAKE would overrun it. */
+#if defined(STM32_HASH_SHA3)
+    #define STM32_HASH_FIFO_SIZE 42
+#elif defined(STM32_HASH_SHA512) || defined(STM32_HASH_SHA384)
+    #define STM32_HASH_FIFO_SIZE 32
+#else
+    #define STM32_HASH_FIFO_SIZE 16
 #endif
-
-#ifndef STM32_HASH_BUFFER_SIZE
-#define STM32_HASH_BUFFER_SIZE STM32_HASH_FIFO_SIZE
-#endif
-
 
 /* STM32 Hash Context */
 typedef struct {
@@ -98,15 +768,16 @@ typedef struct {
     uint32_t HASH_STR;
     uint32_t HASH_CR;
     uint32_t HASH_CSR[HASH_CR_SIZE];
+#ifdef WC_STM32_HASH_HAS_SHA3CFGR
+    uint32_t SHA3CFGR;
+#endif
 
     /* Hash state / buffers */
-    word32 buffer[STM32_HASH_BUFFER_SIZE]; /* partial word buffer */
+    word32 buffer[STM32_HASH_FIFO_SIZE+1]; /* partial word buffer */
     word32 buffLen; /* partial word remain */
     word32 loLen;   /* total update bytes
                  (only lsb 6-bits is used for nbr valid bytes in last word) */
-#ifdef STM32_HASH_FIFO_WORKAROUND
-    int    fifoBytes; /* number of currently filled FIFO bytes */
-#endif
+    word32 fifoBytes; /* number of currently filled FIFO bytes */
 } STM32_HASH_Context;
 
 
@@ -117,21 +788,71 @@ int  wc_Stm32_Hash_Update(STM32_HASH_Context* stmCtx, word32 algo,
 int  wc_Stm32_Hash_Final(STM32_HASH_Context* stmCtx, word32 algo,
     byte* hash, word32 digestSize);
 
+#ifdef STM32_HMAC
+/* STM32 Hardware HMAC API */
+int wc_Stm32_Hmac_GetAlgoInfo(int macType, word32* algo, word32* blockSize,
+    word32* digestSize);
+int wc_Stm32_Hmac_SetKey(STM32_HASH_Context* stmCtx, int macType,
+    const byte* key, word32 keySz);
+/* HMAC Update uses the same data feeding as Hash Update */
+#define wc_Stm32_Hmac_Update(stmCtx, algo, data, len, blockSize) \
+    wc_Stm32_Hash_Update((stmCtx), (algo), (data), (len), (blockSize))
+int wc_Stm32_Hmac_Final(STM32_HASH_Context* stmCtx, word32 algo,
+    const byte* key, word32 keySz, byte* hash, word32 digestSize);
+#endif /* STM32_HMAC */
+
 #endif /* STM32_HASH */
 
+/* Direct-register RNG builds (WOLFSSL_STM32_RNG_NOLIB / F427 / NuttX) expose a
+ * mutex-free RNG bring-up helper -- clock enable, new-gen (C5) NIST
+ * conditioning and RNGEN -- shared by wc_GenerateSeed and the SAES self-init
+ * path so a cold DHUK/SAES op needs no prior wc_InitRng. CubeMX HAL RNG builds
+ * condition the RNG via HAL_RNG_Init instead and do not define it. */
+#if defined(STM32_RNG) && (defined(WOLFSSL_STM32_RNG_NOLIB) || \
+    defined(WOLFSSL_STM32F427_RNG) || defined(STM32_NUTTX_RNG))
+    #define WC_STM32_HAS_RNG_READY
+    WOLFSSL_LOCAL int wc_stm32_rng_ensure_ready(void);
+#endif
+
+/* Forward declaration for the prototypes below. Declared here, outside the
+ * STM32_CRYPTO / NO_AES guards, because the DHUK key-wrap prototypes sit in a
+ * separate region and would otherwise declare it inside a parameter list. */
+struct Aes;
 
 #ifdef STM32_CRYPTO
 
+#if defined(WOLFSSL_STM32MP13)
+    #define RNG RNG1
+    #define CRYP CRYP1
+    #define hcryp hcryp1
+    #define FORMAT_BIN RTC_FORMAT_BIN
+    #define __HAL_RCC_RNG_CLK_ENABLE __HAL_RCC_RNG1_CLK_ENABLE
+    #define __HAL_RCC_HASH_CLK_ENABLE __HAL_RCC_HASH1_CLK_ENABLE
+    #define __HAL_RCC_HASH_CLK_DISABLE __HAL_RCC_HASH1_CLK_DISABLE
+#endif
+
 #ifndef NO_AES
-    #if !defined(STM32_CRYPTO_AES_GCM) && (defined(WOLFSSL_STM32F4) || \
+    #if !defined(STM32_CRYPTO_AES_GCM) && !defined(WOLFSSL_STM32_BARE) && \
+            (defined(WOLFSSL_STM32F4) || \
             defined(WOLFSSL_STM32F7) || defined(WOLFSSL_STM32L4) || \
             defined(WOLFSSL_STM32L5) || defined(WOLFSSL_STM32H7) || \
-            defined(WOLFSSL_STM32U5))
+            defined(WOLFSSL_STM32U5) || defined(WOLFSSL_STM32U3) || \
+            defined(WOLFSSL_STM32H5) || defined(WOLFSSL_STM32MP13) || \
+            defined(WOLFSSL_STM32H7S) || defined(WOLFSSL_STM32N6) || \
+            defined(WOLFSSL_STM32V8) || defined(WOLFSSL_STM32G0))
         /* Hardware supports AES GCM acceleration */
         #define STM32_CRYPTO_AES_GCM
     #endif
+    /* Under WOLFSSL_STM32_BARE the GCM HW phase machine (init/header/payload/
+     * final) runs for a 12-byte IV, both encrypt and decrypt-verify: the CRYP IP
+     * (F2/F4/F7/H7/MP13) handles whole-block payloads; the TinyAES IP additionally
+     * handles AAD and a partial trailing block via NPBLB. Cases the HW cannot
+     * serve (non-12-byte IV, or a partial block on CRYP) return CRYPTOCB_UNAVAILABLE
+     * so aes.c falls back to SW GHASH + HW ECB. See the wc_Stm32_Aes_* block below
+     * for the authoritative description. */
 
-    #if defined(WOLFSSL_STM32WB) || defined(WOLFSSL_STM32WL)
+    #if defined(WOLFSSL_STM32WB) || defined(WOLFSSL_STM32WL) || \
+        defined(WOLFSSL_STM32WBA)
         #define STM32_CRYPTO_AES_ONLY /* crypto engine only supports AES */
         #ifdef WOLFSSL_STM32WB
             #define CRYP AES1
@@ -141,9 +862,17 @@ int  wc_Stm32_Hash_Final(STM32_HASH_Context* stmCtx, word32 algo,
         #define STM32_HAL_V2
     #endif
     #if defined(WOLFSSL_STM32L4) || defined(WOLFSSL_STM32L5) || \
-        defined(WOLFSSL_STM32U5)
-        #if defined(WOLFSSL_STM32L4) || defined(WOLFSSL_STM32U5)
+        defined(WOLFSSL_STM32U5) || defined(WOLFSSL_STM32U3) || \
+        defined(WOLFSSL_STM32H5) || defined(WOLFSSL_STM32G0) || \
+        defined(WOLFSSL_STM32G4) || defined(WOLFSSL_STM32C5)
+        #if defined(WOLFSSL_STM32L4) || defined(WOLFSSL_STM32U5) || \
+            defined(WOLFSSL_STM32U3) || defined(WOLFSSL_STM32G0) || \
+            defined(WOLFSSL_STM32G4) || defined(WOLFSSL_STM32C5)
             #define STM32_CRYPTO_AES_ONLY /* crypto engine only supports AES */
+        #endif
+        #if defined(WOLFSSL_STM32H5) || defined(WOLFSSL_STM32C5)
+            #define __HAL_RCC_CRYP_CLK_DISABLE  __HAL_RCC_AES_CLK_DISABLE
+            #define __HAL_RCC_CRYP_CLK_ENABLE   __HAL_RCC_AES_CLK_ENABLE
         #endif
         #define CRYP AES
         #ifndef CRYP_AES_GCM
@@ -154,8 +883,11 @@ int  wc_Stm32_Hash_Final(STM32_HASH_Context* stmCtx, word32 algo,
     /* Detect newer CubeMX crypto HAL (HAL_CRYP_Encrypt / HAL_CRYP_Decrypt) */
     #if !defined(STM32_HAL_V2) && defined(CRYP_AES_GCM) && \
         (defined(WOLFSSL_STM32F7) || defined(WOLFSSL_STM32L5) || \
-         defined(WOLFSSL_STM32H7) || defined(WOLFSSL_STM32U5)) || \
-         defined(WOLFSSL_STM32H5)
+         defined(WOLFSSL_STM32H7) || defined(WOLFSSL_STM32U5) || \
+         defined(WOLFSSL_STM32U3) || defined(WOLFSSL_STM32H5) || \
+         defined(WOLFSSL_STM32MP13) || defined(WOLFSSL_STM32H7S) || \
+         defined(WOLFSSL_STM32N6) || defined(WOLFSSL_STM32V8) || \
+         defined(WOLFSSL_STM32G0))
         #define STM32_HAL_V2
     #endif
 
@@ -166,21 +898,269 @@ int  wc_Stm32_Hash_Final(STM32_HASH_Context* stmCtx, word32 algo,
         #define STM_CRYPT_TYPE uint8_t
     #endif
 
+    /* Determine minimum AES GCM alignment supported */
+    #ifndef STM_CRYPT_HEADER_WIDTH
+        /* newer crypt HAL requires auth header size as 4 bytes (word) */
+        #if defined(CRYP_HEADERWIDTHUNIT_BYTE) && \
+            !defined(WOLFSSL_STM32MP13) && !defined(WOLFSSL_STM32H7S) && \
+            !defined(WOLFSSL_STM32N6) && !defined(WOLFSSL_STM32V8)
+            #define STM_CRYPT_HEADER_WIDTH 1
+        #else
+            #define STM_CRYPT_HEADER_WIDTH 4
+        #endif
+    #endif
+
+    /* The Cube HAL always writes the auth header to the peripheral one
+     * 32-bit word at a time, including the trailing partial word (ST
+     * advisory SA0076), so the header buffer it reads must be zero padded
+     * up to a word, even where STM_CRYPT_HEADER_WIDTH is 1 and the header
+     * size itself is expressed in bytes.
+     * Unlike STM_CRYPT_HEADER_WIDTH, this is only ever used in ordinary C
+     * arithmetic and never in a preprocessor #if, so sizeof() is safe. */
+    #ifndef STM_CRYPT_HEADER_PAD_WIDTH
+        #define STM_CRYPT_HEADER_PAD_WIDTH sizeof(word32)
+    #endif
+
     /* CRYPT_AES_GCM starts the IV with 2 */
     #define STM32_GCM_IV_START 2
 
     struct Aes;
-    #ifdef WOLFSSL_STM32_CUBEMX
-        int wc_Stm32_Aes_Init(struct Aes* aes, CRYP_HandleTypeDef* hcryp);
+    #ifdef WOLFSSL_STM32_BARE
+        /* Bare-metal direct-register AES driver. ECB and CBC are HW-native;
+         * CTR is provided automatically via the ECB-as-transform path in
+         * aes.c (XTRANSFORM_AESCTRBLOCK). GCM is HW-native for the standard
+         * 12-byte IV, both encrypt and decrypt-verify: the TinyAES AES
+         * peripheral also handles AAD and a partial trailing block (via NPBLB);
+         * the older CRYP IP handles whole-block payloads. Cases the HW cannot
+         * serve (non-12-byte IV, or a partial block on CRYP) return
+         * CRYPTOCB_UNAVAILABLE so aes.c falls back to SW GHASH (which still uses
+         * HW ECB for the AES blocks). */
+        int wc_Stm32_Aes_Ecb(struct Aes* aes, byte* out, const byte* in,
+                word32 sz, int isEnc);
+        int wc_Stm32_Aes_Cbc(struct Aes* aes, byte* out, const byte* in,
+                word32 sz, int isEnc);
+        int wc_Stm32_Aes_Gcm(struct Aes* aes, byte* out, const byte* in,
+                word32 sz,
+                const byte* iv, word32 ivSz,
+                byte* tag, word32 tagSz,
+                const byte* aad, word32 aadSz, int isEnc);
+    #elif defined(WOLFSSL_STM32_CUBEMX)
+        int wc_Stm32_Aes_Init(struct Aes* aes, CRYP_HandleTypeDef* hcryp,
+                int useSAES);
         void wc_Stm32_Aes_Cleanup(void);
+        #ifdef STM32_CRYPTO_AES_GCM
+        /* HAL AES-GCM (hardware), exposed so the CubeMX crypto-callback device
+         * services AES-GCM in-callback rather than only via the aes.c
+         * fall-through. Both run the HAL GCM engine; keyed from aes->key. */
+        WOLFSSL_LOCAL int wc_AesGcmEncrypt_STM32(struct Aes* aes, byte* out,
+                const byte* in, word32 sz, const byte* iv, word32 ivSz,
+                byte* authTag, word32 authTagSz, const byte* authIn,
+                word32 authInSz);
+        WOLFSSL_LOCAL int wc_AesGcmDecrypt_STM32(struct Aes* aes, byte* out,
+                const byte* in, word32 sz, const byte* iv, word32 ivSz,
+                const byte* authTag, word32 authTagSz, const byte* authIn,
+                word32 authInSz);
+        #endif /* STM32_CRYPTO_AES_GCM */
     #else /* Standard Peripheral Library */
         int wc_Stm32_Aes_Init(struct Aes* aes, CRYP_InitTypeDef* cryptInit,
             CRYP_KeyInitTypeDef* keyInit);
         void wc_Stm32_Aes_Cleanup(void);
-    #endif /* WOLFSSL_STM32_CUBEMX */
+    #endif /* WOLFSSL_STM32_BARE / WOLFSSL_STM32_CUBEMX / StdPeriph */
 #endif /* !NO_AES */
 
 #endif /* STM32_CRYPTO */
+
+/* DHUK (Device Hardware Unique Key) -- SAES key wrap / unwrap using a
+ * silicon-bound key. Originally introduced for STM32U5 only; the
+ * underlying SAES + DHUK infrastructure is also present on U3, H5,
+ * WBA, and C5. Use WOLFSSL_DHUK going forward; WOLFSSL_STM32U5_DHUK
+ * is kept as a backwards-compatible alias for one release cycle. */
+#if defined(WOLFSSL_STM32U5_DHUK) && !defined(WOLFSSL_DHUK)
+    #define WOLFSSL_DHUK
+#endif
+#if defined(WOLFSSL_DHUK) && !defined(WOLFSSL_STM32U5_DHUK)
+    #define WOLFSSL_STM32U5_DHUK
+#endif
+
+/* Family gate: only families that actually have SAES + DHUK silicon.
+ * L5 has a "secure AES" instance but its CR layout does not include
+ * KMOD / KEYSEL fields -- it does not implement the same DHUK key-
+ * wrap protocol as U5/U3/H5/WBA/C5. L5 is intentionally excluded. */
+#if defined(WOLFSSL_DHUK) && \
+    (defined(WOLFSSL_STM32U5) || defined(WOLFSSL_STM32U3) || \
+     defined(WOLFSSL_STM32H5) || defined(WOLFSSL_STM32WBA) || \
+     defined(WOLFSSL_STM32C5) || defined(WOLFSSL_STM32H7S))
+    #define WC_STM32_HAS_DHUK
+#endif
+
+/* CCB (Coupling and Chaining Bridge) gate: STM32U3 (e.g. U385, RM0487 ch 31)
+ * and STM32C5 (e.g. C5A3, RM0522) carry the CCB peripheral that chains
+ * PKA <-> SAES <-> RNG over a local interconnect, so a DHUK-protected private
+ * key is used by the PKA without ever entering software / crossing the system
+ * bus. The shared bare OPSTEP state machine handles both; the family
+ * differences are the RCC reset-register names (WC_STM32_CCB_* below) and the
+ * SAES GCM-phase field name (CPHASE on C5 vs GCMPH on U3, abstracted via
+ * WC_STM32_AES_CR_PHASE below). STM32H5 also has CCB but is not enabled here.
+ * U5 / WBA do not have CCB. */
+#if defined(WOLFSSL_DHUK) && \
+    (defined(WOLFSSL_STM32U3) || defined(WOLFSSL_STM32C5))
+    #define WC_STM32_HAS_CCB
+#endif
+
+/* CCB register-name differences across families, so the bare CCB OPSTEP driver
+ * stays family-neutral (the state machine is shared; only these names differ).
+ * U3 uses the banked AHB2*1 RCC names + CCB_SR_BUSY; C5 uses the un-banked
+ * AHB2* names + CCB_SR_CCB_BUSY. */
+#ifdef WC_STM32_HAS_CCB
+    #if defined(WOLFSSL_STM32C5)
+        #define WC_STM32_CCB_SR_BUSY   CCB_SR_CCB_BUSY
+        #define WC_STM32_CCB_RSTR      AHB2RSTR
+        #define WC_STM32_CCB_RST_PKA   RCC_AHB2RSTR_PKARST
+        #define WC_STM32_CCB_RST_SAES  RCC_AHB2RSTR_SAESRST
+        #define WC_STM32_CCB_RST_RNG   RCC_AHB2RSTR_RNGRST
+    #else /* WOLFSSL_STM32U3 */
+        #define WC_STM32_CCB_SR_BUSY   CCB_SR_BUSY
+        #define WC_STM32_CCB_RSTR      AHB2RSTR1
+        #define WC_STM32_CCB_RST_PKA   RCC_AHB2RSTR1_PKARST
+        #define WC_STM32_CCB_RST_SAES  RCC_AHB2RSTR1_SAESRST
+        #define WC_STM32_CCB_RST_RNG   RCC_AHB2RSTR1_RNGRST
+    #endif
+
+    /* SAES GCM/chaining-phase field in AES_CR (bits 14:13): the STM32C5 CMSIS
+     * names it CPHASE; U3 and the other CRYP/SAES parts name it GCMPH. Same bit
+     * positions and values, name only. Self-selects on symbol presence. */
+    #ifdef AES_CR_CPHASE
+        #define WC_STM32_AES_CR_PHASE    AES_CR_CPHASE
+        #define WC_STM32_AES_CR_PHASE_0  AES_CR_CPHASE_0
+        #define WC_STM32_AES_CR_PHASE_1  AES_CR_CPHASE_1
+    #else
+        #define WC_STM32_AES_CR_PHASE    AES_CR_GCMPH
+        #define WC_STM32_AES_CR_PHASE_0  AES_CR_GCMPH_0
+        #define WC_STM32_AES_CR_PHASE_1  AES_CR_GCMPH_1
+    #endif
+#endif
+
+/* WOLFSSL_STM32_CCB opts in to the CCB-protected ECDSA path (on-device blob
+ * create + use). Supported on both build paths: the bare-metal direct-register
+ * driver (WOLFSSL_STM32_BARE) and the CubeMX/HAL path (WOLFSSL_STM32_CUBEMX,
+ * via ST's HAL_CCB_* driver). Requires CCB silicon (STM32U3 or STM32C5). */
+#if defined(WOLFSSL_STM32_CCB)
+    #if !defined(WOLFSSL_STM32_BARE) && !defined(WOLFSSL_STM32_CUBEMX)
+        #error "WOLFSSL_STM32_CCB requires WOLFSSL_STM32_BARE or WOLFSSL_STM32_CUBEMX"
+    #endif
+    #if !defined(WC_STM32_HAS_CCB)
+        #error "WOLFSSL_STM32_CCB requires CCB silicon (STM32U3/U385 or STM32C5/C5A3)"
+    #endif
+#endif
+
+/* Per-coordinate scratch size for the PKA/CCB ECDSA operand buffers (bytes).
+ * Sized for the largest supported curve plus PKA padding headroom. Defined
+ * here so the PKA and point-op TUs in stm32.c share one value. */
+#ifndef STM32_MAX_ECC_SIZE
+    #define STM32_MAX_ECC_SIZE (80)
+#endif
+
+/* Transparent DHUK crypto flows through the crypto-callback framework, so
+ * WOLF_CRYPTO_CB is mandatory whenever DHUK is enabled. */
+#if defined(WOLFSSL_DHUK) && !defined(WOLF_CRYPTO_CB)
+    #error "WOLFSSL_DHUK requires WOLF_CRYPTO_CB (crypto callback dispatch)"
+#endif
+
+#if defined(WOLFSSL_DHUK)
+    /* SAES / DHUK device IDs. wc_Stm32_Aes_Wrap selects the wrap-key source
+     * by aes->devId (HW DHUK vs a software key). Transparent DHUK crypto
+     * routes through the crypto-callback device registered at WC_DHUK_DEVID
+     * (see wc_Stm32_DhukRegister), not these markers.
+     *
+     * Each id is guarded separately. Defining one of them in user_settings.h
+     * must not suppress the others -- an earlier single #ifndef around the
+     * whole block meant that pre-defining WOLFSSL_DHUK_DEVID silently removed
+     * WC_DHUK_DEVID, WOLFSSL_SAES_DEVID and the WC_STM32_WRAP_ORDER_* macros
+     * as a side effect. */
+    #ifndef WOLFSSL_DHUK_DEVID
+        #define WOLFSSL_DHUK_DEVID          808
+    #endif
+    /* Wrap-key-source marker for wc_Stm32_Aes_Wrap[_ex](), NOT a device to
+     * register. That call uses the silicon DHUK when aes->devId is
+     * WOLFSSL_DHUK_DEVID and the Aes's own key otherwise, and this is the
+     * spelling for "otherwise". Passing it to wc_Stm32_DhukRegister() only
+     * registers a second copy of the DHUK device; for plaintext-key AES use
+     * wc_Stm32_AesRegister(WOLFSSL_STM32_AES_DEVID). */
+    #ifndef WOLFSSL_SAES_DEVID
+        #define WOLFSSL_SAES_DEVID          807
+    #endif
+    /* Crypto-callback device id for transparent DHUK crypto (same value as the
+     * SAES/DHUK marker; override before include if it collides). */
+    #ifndef WC_DHUK_DEVID
+        #define WC_DHUK_DEVID              WOLFSSL_DHUK_DEVID
+    #endif
+
+    /* Blob word order for wc_Stm32_Aes_Wrap_ex()'s rawOrder argument.
+     *
+     * WC_STM32_WRAP_ORDER_RAW (1): the blob words go to SAES exactly as they
+     *   sit in memory. One format both build paths agree on, and the one
+     *   wc_Stm32_Aes_DhukOp_ex() and the DHUK crypto-callback derive path use.
+     *   Prefer this for new provisioning.
+     * WC_STM32_WRAP_ORDER_LEGACY (0): byte-reverse input before the wrap and
+     *   output after, reproducing the CubeMX/HAL (HAL_CRYPEx_WrapKey)
+     *   implementation shipped in wolfSSL 5.9.0 - 5.9.2. Needed to read or
+     *   regenerate blobs provisioned by those releases.
+     *
+     * wc_Stm32_Aes_Wrap() defaults to RAW on both build paths. It used to
+     * default to LEGACY on CubeMX to keep blobs from 5.9.0 - 5.9.2
+     * reproducible, but a LEGACY blob does not unwrap back to its key, so that
+     * default handed CubeMX callers an unusable blob unless they knew to call
+     * wc_Stm32_Aes_Wrap_ex() instead. LEGACY stays reachable through _ex() for
+     * regenerating those older blobs offline. Override
+     * WC_STM32_WRAP_DEFAULT_RAW_ORDER before include to change the default
+     * build-wide. */
+    #define WC_STM32_WRAP_ORDER_LEGACY  0
+    #define WC_STM32_WRAP_ORDER_RAW     1
+    #ifndef WC_STM32_WRAP_DEFAULT_RAW_ORDER
+        #define WC_STM32_WRAP_DEFAULT_RAW_ORDER WC_STM32_WRAP_ORDER_RAW
+    #endif
+
+    /* Chip-bound DHUK wrap (KEYSEL=HW, deterministic, out size == inSz).
+     *
+     * This is the inverse of the SAES wrapped-key load: a blob produced here
+     * in WC_STM32_WRAP_ORDER_RAW unwraps back to the key it wrapped, and is
+     * byte-identical to what ST's HAL_CRYPEx_WrapKey() produces on the same
+     * die. WC_STM32_WRAP_ORDER_LEGACY blobs are byte-reversed and do NOT
+     * round-trip -- they exist only to regenerate key material provisioned by
+     * wolfSSL 5.9.0 - 5.9.2, so use RAW for anything new.
+     *
+     * Note the blob is still not a key: handing it to wc_AesSetKey() on a
+     * WC_DHUK_DEVID Aes makes that device treat it as a derivation seed, which
+     * is exactly the unwrap, so the recovered key is the one that was wrapped.
+     */
+    int wc_Stm32_Aes_Wrap(struct Aes* aes, const byte* in, word32 inSz, byte* out,
+        word32* outSz, const byte* iv, int ivSz);
+    int wc_Stm32_Aes_Wrap_ex(struct Aes* aes, const byte* in, word32 inSz,
+        byte* out, word32* outSz, const byte* iv, int ivSz, int rawOrder);
+#if defined(WOLFSSL_STM32_BARE) || defined(WOLFSSL_STM32_CUBEMX)
+    /* Explicit KEK primitive: SAES turns the 256-bit value in aes->key into a
+     * chip-bound key encryption key (KEK = DHUK-decrypt(input)) inside KEYR --
+     * the KEK never enters software -- then ECB/CBC's the caller's buffer with
+     * it. Use it to wrap key material before storing it in flash and to unwrap
+     * it again. _ex `isCbc`: 0=ECB, 1=CBC; CBC takes its IV from aes->reg.
+     *
+     * Same primitive the WC_DHUK_DEVID crypto-callback device derives from its
+     * seed, so blobs are interchangeable between the two APIs (verified
+     * byte-identical on STM32U385). Input and output are NOT byte-reversed on
+     * either build path.
+     *
+     * This IS the inverse of wc_Stm32_Aes_Wrap: unwrapping a blob that
+     * wc_Stm32_Aes_Wrap produced from K (in WC_STM32_WRAP_ORDER_RAW) puts K
+     * back in KEYR.
+     *
+     * Returns CRYPTOCB_UNAVAILABLE unless built with
+     * WOLFSSL_STM32_DHUK_UNWRAP. Not auto-routed -- call explicitly. */
+    int wc_Stm32_Aes_DhukOp(struct Aes* aes, byte* out, const byte* in,
+        word32 sz, int isEnc);
+    int wc_Stm32_Aes_DhukOp_ex(struct Aes* aes, byte* out, const byte* in,
+        word32 sz, int isEnc, int isCbc);
+#endif
+#endif
 
 #if defined(WOLFSSL_STM32_PKA) && defined(HAVE_ECC)
 struct ecc_key;
@@ -192,6 +1172,89 @@ int stm32_ecc_verify_hash_ex(MATH_INT_T *r, MATH_INT_T *s, const byte* hash,
 int stm32_ecc_sign_hash_ex(const byte* hash, word32 hashlen, struct WC_RNG* rng,
                      struct ecc_key* key, MATH_INT_T *r, MATH_INT_T *s);
 #endif /* WOLFSSL_STM32_PKA && HAVE_ECC */
+
+
+/* The STM32 DHUK crypto-callback device. Built on families with SAES + DHUK
+ * (the WC_STM32_HAS_DHUK gate) under either build path: the bare-metal
+ * direct-register driver (WOLFSSL_STM32_BARE) or the CubeMX/HAL build
+ * (WOLFSSL_STM32_CUBEMX). One merged device serving transparent DHUK-derived
+ * AES / AES-GCM / GMAC, DHUK seed-wrapped ECDSA sign, HW PKA ECDSA
+ * sign+verify, and -- when WOLFSSL_STM32_CCB is enabled -- CCB-protected
+ * ECDSA sign plus CCB keygen, alongside TRNG/SEED routing.
+ *
+ * After registering at WC_DHUK_DEVID, set an object's devId to it at init
+ * (wc_AesInit / wc_ecc_init_ex) and supply the 256-bit seed as the key
+ * (wc_AesSetKey / wc_AesGcmSetKey) or via wc_ecc_import_wrapped_private().
+ *
+ * AES dispatch rule: a 256-bit key on a WC_DHUK_DEVID Aes is treated as a DHUK
+ * derivation SEED, not as a literal key. Use WOLFSSL_STM32_AES_DEVID for
+ * plaintext-key AES. */
+#if defined(WC_STM32_HAS_DHUK) && defined(WOLF_CRYPTO_CB) && \
+    defined(STM32_CRYPTO) && !defined(NO_AES) && \
+    (defined(WOLFSSL_STM32_BARE) || defined(WOLFSSL_STM32_CUBEMX))
+    int  wc_Stm32_DhukRegister(int devId);
+    void wc_Stm32_DhukUnRegister(int devId);
+#endif
+
+/* Crypto-callback device id for the plaintext-key AES device, distinct from the
+ * DHUK/SAES device ids (WOLFSSL_SAES_DEVID 807, WOLFSSL_DHUK_DEVID /
+ * WC_DHUK_DEVID 808, defined above). Registering both devices lets an
+ * application choose, per Aes, whether its key is used verbatim (this devId) or
+ * as a DHUK derivation seed (WC_DHUK_DEVID) -- selected by the devId passed to
+ * wc_AesInit. Override this macro before include if 806 collides.
+ *
+ * The guard matches the two device definitions in stm32.c exactly. Both live
+ * inside that file's STM32_CRYPTO / !NO_AES block: the CubeMX device
+ * (WOLFSSL_STM32_CUBEMX && WOLF_CRYPTO_CB) and the bare device
+ * (WOLFSSL_STM32_BARE && STM32_CRYPTO && WOLF_CRYPTO_CB && !NO_AES). The
+ * CubeMX device also serves HW ECDSA, but it is still compiled out under
+ * NO_AES, so an ECDSA-only CubeMX build must leave AES enabled to use it. */
+#if defined(WOLF_CRYPTO_CB) && defined(STM32_CRYPTO) && !defined(NO_AES) && \
+    (defined(WOLFSSL_STM32_CUBEMX) || defined(WOLFSSL_STM32_BARE))
+    #ifndef WOLFSSL_STM32_AES_DEVID
+        #define WOLFSSL_STM32_AES_DEVID     806
+    #endif
+#endif
+
+/* CubeMX/HAL and bare-metal plaintext-key AES crypto-callback device. Register
+ * at a devId (e.g. WOLFSSL_STM32_AES_DEVID), then init an Aes with it
+ * (wc_AesInit) to run AES on the HW CRYP engine with the Aes's own key -- this
+ * makes WOLF_CRYPTO_CB_ONLY_AES work on both build paths. On the CubeMX build,
+ * when WOLFSSL_STM32_PKA && HAVE_ECC are also enabled it additionally routes
+ * ECDSA sign/verify to the HW PKA, satisfying WOLF_CRYPTO_CB_ONLY_ECC too (no
+ * CCB required). It is a separate device from the DHUK one (WC_DHUK_DEVID), so
+ * both can be registered at once and are selected per-Aes by devId. */
+#if defined(WOLF_CRYPTO_CB) && defined(STM32_CRYPTO) && !defined(NO_AES) && \
+    (defined(WOLFSSL_STM32_CUBEMX) || defined(WOLFSSL_STM32_BARE))
+    int wc_Stm32_AesRegister(int devId);
+    int wc_Stm32_AesUnRegister(int devId);
+#endif
+
+/* CCB (Coupling and Chaining Bridge) HW-protected DHUK->PKA ECDSA -- STM32U3
+ * (e.g. U385). Available on both build paths: WOLFSSL_STM32_BARE (direct
+ * register driver) and WOLFSSL_STM32_CUBEMX (ST HAL_CCB_* driver). The blob is
+ * an AES-GCM authenticated wrap of the ECC private scalar under the CCB-active
+ * DHUK; the scalar never enters software. Currently P-256 (ECC_SECP256R1). */
+#ifdef WOLFSSL_STM32_CCB
+    /* Bare-only: bring up the CCB and report usability (clocks + IPRST + BUSY
+     * clear, no OPERR). Returns 0 on success. */
+    int wc_Stm32_CcbInit(void);
+
+    /* Create a CCB ECDSA-signature blob from a clear private scalar d (and its
+     * derived public key) on-device. The scalar is wrapped under the DHUK; the
+     * blob (iv[16] + tag[16] + wrapped d) and public key (pubX[32]/pubY[32])
+     * are returned. The HW self-verifies the blob before returning. */
+    int wc_Stm32_Ccb_EccMakeBlob(int curveId, const byte* d, word32 dLen,
+        byte* iv, byte* tag, byte* wrapped, word32* wrappedSz,
+        byte* pubX, byte* pubY);
+
+    /* Sign hash with a CCB ECDSA blob. The scalar is unwrapped inside the
+     * hardware (SAES->PKA over the CCB local bus) and never enters software.
+     * r[32]/s[32] receive the signature. */
+    int wc_Stm32_Ccb_EccSign(int curveId, const byte* iv, const byte* tag,
+        const byte* wrapped, word32 wrappedSz, const byte* hash, word32 hashSz,
+        byte* r, byte* s);
+#endif
 
 
 #endif /* _WOLFPORT_STM32_H_ */

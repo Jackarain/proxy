@@ -1,12 +1,12 @@
 /* devices.h
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -24,6 +24,8 @@
  */
 #ifndef STM32L496_DEVICES
 #define STM32L496_DEVICES
+
+#include <stdint.h>
 
 /* CPU clock speed */
 //#define CLOCK_SPEED 14200000
@@ -95,8 +97,8 @@
 #define FLASH_ACR_LATENCY_MASK (0x03)
 
 /* RCC: Periph enable flags */
-#define USART1_APB2_CLOCK_ER_VAL 	(1 << 14)
-#define USART2_APB1_CLOCK_ER_VAL 	(1 << 17)
+#define USART1_APB2_CLOCK_ER_VAL    (1 << 14)
+#define USART2_APB1_CLOCK_ER_VAL    (1 << 17)
 #define PWR_APB1_CLOCK_ER_VAL       (1 << 28)
 #define GPIOA_AHB2_CLOCK_ER_VAL     (1 << 0)
 #define GPIOB_AHB2_CLOCK_ER_VAL     (1 << 1)
@@ -208,11 +210,11 @@
 #define SYSTICK_CALIB   (*(volatile uint32_t *)(SYSTICK_BASE + 0x0C))
 
 
-/* STMod+ connector pinout 
+/* STMod+ connector pinout
  *
  * Connector            STM32L4
  * pins                 pins
- * 
+ *
  * 1      11            PG11    PH2
  * 2      12            PB6     PB2
  * 3      13            PG10    PA4
@@ -243,7 +245,7 @@ void stmod_modem_disable(void);
 /* inline functions for GPIO */
 static inline void gpio_set(uint32_t port, uint32_t pin)
 {
-    GPIO_BSSR(port) |= (1 << pin);   
+    GPIO_BSSR(port) |= (1 << pin);
 }
 
 static inline void gpio_clear(uint32_t port, uint32_t pin)

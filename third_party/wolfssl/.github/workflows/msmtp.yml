@@ -1,0 +1,119 @@
+name: msmtp Tests
+
+# START OF COMMON SECTION
+on:
+  push:
+    branches: [ 'release/**' ]
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches: [ '*' ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+# END OF COMMON SECTION
+
+jobs:
+  build_wolfssl:
+    name: Build wolfSSL
+    # Just to keep it the same as the testing target
+    if: ${{ (github.repository_owner == 'wolfssl') && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
+    runs-on: ubuntu-24.04
+    # This should be a safe limit for the tests to run.
+    timeout-minutes: 4
+    steps:
+      - name: Build wolfSSL
+        uses: wolfSSL/actions-build-autotools-project@v1
+        with:
+          path: wolfssl
+          configure: --enable-opensslextra --enable-opensslall
+          install: true
+
+      - name: tar build-dir
+        run: tar -zcf build-dir.tgz build-dir
+
+      - name: Upload built lib
+        uses: actions/upload-artifact@v6
+        with:
+          name: wolf-install-msmtp
+          path: build-dir.tgz
+          retention-days: 5
+
+  msmtp_check:
+    strategy:
+      fail-fast: false
+      matrix:
+        ref: [ 1.8.28 ]
+    name: ${{ matrix.ref }}
+    if: ${{ (github.repository_owner == 'wolfssl') && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
+    runs-on: ubuntu-24.04
+    # This should be a safe limit for the tests to run.
+    timeout-minutes: 10
+    needs: build_wolfssl
+    steps:
+      - name: Checkout wolfSSL CI actions
+        uses: actions/checkout@v5
+        with:
+          sparse-checkout: .github/actions
+          fetch-depth: 1
+
+      - name: Download lib
+        uses: actions/download-artifact@v7
+        with:
+          name: wolf-install-msmtp
+
+      - name: untar build-dir
+        run: tar -xf build-dir.tgz
+
+      - name: Checkout OSP
+        uses: actions/checkout@v5
+        with:
+          repository: wolfssl/osp
+          path: osp
+          fetch-depth: 1
+
+      - name: Install dependencies
+        uses: ./.github/actions/install-apt-deps
+        with:
+          packages: autoconf automake libtool pkg-config gettext libidn2-dev libsecret-1-dev autopoint
+          ghcr-debs-tag: ubuntu-24.04-full
+
+      - name: Checkout msmtp
+        uses: actions/checkout@v5
+        with:
+          repository: marlam/msmtp
+          ref: msmtp-${{ matrix.ref }}
+          path: msmtp-${{ matrix.ref }}
+          fetch-depth: 1
+
+      - name: Apply wolfSSL patch
+        working-directory: msmtp-${{ matrix.ref }}
+        run: patch -p1 < $GITHUB_WORKSPACE/osp/msmtp/${{ matrix.ref }}/wolfssl-msmtp-${{ matrix.ref }}.patch
+
+      - name: Regenerate build system
+        working-directory: msmtp-${{ matrix.ref }}
+        run: autoreconf -ivf
+
+      - name: Configure msmtp with wolfSSL
+        working-directory: msmtp-${{ matrix.ref }}
+        run: |
+          PKG_CONFIG_PATH=$GITHUB_WORKSPACE/build-dir/lib/pkgconfig \
+            ./configure --with-tls=wolfssl
+
+      - name: Build msmtp
+        working-directory: msmtp-${{ matrix.ref }}
+        run: make -j$(nproc)
+
+      - name: Run msmtp tests
+        working-directory: msmtp-${{ matrix.ref }}
+        run: LD_LIBRARY_PATH=$GITHUB_WORKSPACE/build-dir/lib make check
+
+      - name: Confirm msmtp built with wolfSSL
+        run: ldd msmtp-${{ matrix.ref }}/src/msmtp | grep wolfssl
+
+      - name: Print test logs on failure
+        if: ${{ failure() }}
+        run: tail -n +1 msmtp-${{ matrix.ref }}/tests/*.log

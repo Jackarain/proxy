@@ -1,12 +1,12 @@
 /* pwdbased.h
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -30,11 +30,38 @@
 
 #ifndef NO_PWDBASED
 
+#if FIPS_VERSION3_GE(7,0,0)
+    #include <wolfssl/wolfcrypt/fips.h>
+#endif
 
 #ifdef __cplusplus
     extern "C" {
 #endif
 
+/* Maximum allowed PBKDF iteration count to prevent CPU exhaustion DoS.
+ * Attacker-controlled PKCS#12 files can specify iterations up to INT_MAX
+ * (2,147,483,647) in the MAC data, causing hours of CPU time.
+ * Override by defining WC_PBKDF_DEFAULT_MAX_ITERATIONS before including
+ * this header, and override at runtime by calling
+ * wc_PBKDF_max_iterations_set() at application startup.
+ *
+ * Note that typical PKCS12 files use 1k to 10k iterations.
+ */
+#ifndef WC_PBKDF_DEFAULT_MAX_ITERATIONS
+    #define WC_PBKDF_DEFAULT_MAX_ITERATIONS 10000000
+#endif
+
+/* Note that wc_PBKDF_max_iterations_set() has no provisions for thread
+ * synchronization.  Users should arrange to call it at startup or idle times,
+ * when there are no other PBKDF calls in progress.
+ */
+WOLFSSL_API int wc_PBKDF_max_iterations_set(int iters);
+WOLFSSL_API int wc_PBKDF_max_iterations_get(void);
+
+#if FIPS_VERSION3_GE(6,0,0)
+    extern const unsigned int wolfCrypt_FIPS_pbkdf_ro_sanity[2];
+    WOLFSSL_LOCAL int wolfCrypt_FIPS_PBKDF_sanity(void);
+#endif
 /*
  * hashType renamed to typeH to avoid shadowing global declaration here:
  * wolfssl/wolfcrypt/asn.h line 173 in enum Oid_Types
@@ -45,16 +72,16 @@ WOLFSSL_API int wc_PBKDF1_ex(byte* key, int keyLen, byte* iv, int ivLen,
                       int hashType, void* heap);
 WOLFSSL_API int wc_PBKDF1(byte* output, const byte* passwd, int pLen,
                       const byte* salt, int sLen, int iterations, int kLen,
-                      int typeH);
+                      int hashType);
 WOLFSSL_API int wc_PBKDF2_ex(byte* output, const byte* passwd, int pLen,
                     const byte* salt, int sLen, int iterations, int kLen,
-                    int typeH, void* heap, int devId);
+                    int hashType, void* heap, int devId);
 WOLFSSL_API int wc_PBKDF2(byte* output, const byte* passwd, int pLen,
                       const byte* salt, int sLen, int iterations, int kLen,
-                      int typeH);
-WOLFSSL_API int wc_PKCS12_PBKDF(byte* output, const byte* passwd, int pLen,
-                            const byte* salt, int sLen, int iterations,
-                            int kLen, int typeH, int purpose);
+                      int hashType);
+WOLFSSL_API int wc_PKCS12_PBKDF(byte* output, const byte* passwd, int passLen,
+                            const byte* salt, int saltLen, int iterations,
+                            int kLen, int hashType, int id);
 WOLFSSL_API int wc_PKCS12_PBKDF_ex(byte* output, const byte* passwd,int passLen,
                        const byte* salt, int saltLen, int iterations, int kLen,
                        int hashType, int id, void* heap);

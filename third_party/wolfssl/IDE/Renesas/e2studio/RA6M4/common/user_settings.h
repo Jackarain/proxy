@@ -1,12 +1,12 @@
 /* user_settings.h
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -63,18 +63,30 @@
 
 #define XVALIDATEDATE(d, f,t) (0)
 
-#define TFM_TIMING_RESISTANT
 #define ECC_TIMING_RESISTANT
 #define WC_RSA_BLINDING
 
 #define HAVE_AESGCM
+#define GCM_TABLE_4BIT
 #define WOLFSSL_SHA512
 #define HAVE_ECC
 #define HAVE_CURVE25519
 #define CURVE25519_SMALL
 
 #define WOLFSSL_SMALL_STACK
-#define USE_FAST_MATH
+
+/* SP math (replaces fastmath/TFM): faster and smaller for the fixed key
+ * sizes used here (RSA 2048, ECC P-256, Curve25519, FFDHE 2048). */
+#define SP_WORD_SIZE 32
+#define WOLFSSL_SP_MATH
+#define WOLFSSL_SP_SMALL
+#define WOLFSSL_SP_NO_MALLOC
+#define WOLFSSL_SP_NO_DYN_STACK
+#define WOLFSSL_SP_NO_3072
+#define WOLFSSL_HAVE_SP_RSA
+#define WOLFSSL_HAVE_SP_DH
+#define WOLFSSL_HAVE_SP_ECC
+#define WOLFSSL_SP_ARM_CORTEX_M_ASM
 
 /* static RSA */
 #define WOLFSSL_STATIC_RSA
@@ -91,7 +103,7 @@
 /* Enable the following definition to use TLS 1.3
  * For TLS1.3 use "extended-master" needs to turn on
  */
-/* #define WOLFSSL_TLS13 */
+#define WOLFSSL_TLS13
 
 #if defined(WOLFSSL_TLS13)
     #include <sys/time.h>
@@ -108,10 +120,10 @@
     #define WC_USE_DEVID 7890
     #define NO_AES_192
     #define NO_SW_BENCH
-#endif
-
-#if defined(WOLFSSL_RENESAS_SCEPROTECT_CRYPTONLY)
+    /* Use SCE RSAES-PKCS1-V1_5 RSA Function */
+    #define WOLF_CRYPTO_CB_RSA_PAD
     #define WOLFSSL_KEY_GEN
+    #define RSA_MIN_SIZE 512
 #endif
 
 #define CUSTOM_RAND_GENERATE_BLOCK wc_fspsm_GenerateRandBlock

@@ -1,12 +1,12 @@
 /* wolfssl_KEIL_RL.h
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -78,7 +78,7 @@ typedef int socklen_t ;
 #define tcp_listen      wolfssl_tcp_listen
 #define tcp_select     wolfssl_tcp_select
 
-extern int wolfssl_connect(int sd,  const  struct sockaddr* sa, 	int sz) ;
+extern int wolfssl_connect(int sd,  const  struct sockaddr* sa, int sz) ;
 extern int wolfssl_accept(int sd, struct sockaddr*addr, socklen_t *addrlen);
 extern int wolfssl_recv(int sd, void *buf, size_t len, int flags);
 extern int wolfssl_send(int sd, const void *buf, size_t len, int flags);

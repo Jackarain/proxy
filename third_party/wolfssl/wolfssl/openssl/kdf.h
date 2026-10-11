@@ -1,12 +1,12 @@
 /* kdf.h
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -26,9 +26,17 @@
     extern "C" {
 #endif
 
-#define EVP_PKEY_HKDEF_MODE_EXTRACT_AND_EXPAND 0
-#define EVP_PKEY_HKDEF_MODE_EXTRACT_ONLY 1
-#define EVP_PKEY_HKDEF_MODE_EXPAND_ONLY 2
+#define WOLFSSL_EVP_PKEY_HKDEF_MODE_EXTRACT_AND_EXPAND 0
+#define WOLFSSL_EVP_PKEY_HKDEF_MODE_EXTRACT_ONLY 1
+#define WOLFSSL_EVP_PKEY_HKDEF_MODE_EXPAND_ONLY 2
+
+#ifndef OPENSSL_COEXIST
+
+#define EVP_PKEY_HKDEF_MODE_EXTRACT_AND_EXPAND WOLFSSL_EVP_PKEY_HKDEF_MODE_EXTRACT_AND_EXPAND
+#define EVP_PKEY_HKDEF_MODE_EXTRACT_ONLY WOLFSSL_EVP_PKEY_HKDEF_MODE_EXTRACT_ONLY
+#define EVP_PKEY_HKDEF_MODE_EXPAND_ONLY WOLFSSL_EVP_PKEY_HKDEF_MODE_EXPAND_ONLY
+
+#endif /* !OPENSSL_COEXIST */
 
 #ifdef __cplusplus
     }  /* extern "C" */

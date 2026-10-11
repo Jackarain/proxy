@@ -1,12 +1,12 @@
 /* port/ti/ti_ccm.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -44,7 +44,7 @@
 #endif /* TI_DUMMY_BUILD */
 
 #define TIMEOUT  500000
-#define WAIT(stat) { volatile int i; for(i=0; i<TIMEOUT; i++)if(stat)break; if(i==TIMEOUT)return(false); }
+#define WAIT(stat) { volatile int i; for(i=0; i<TIMEOUT; i++)if(stat)break; if(i==TIMEOUT) { ccm_init = false; return(false); } }
 
 static bool ccm_init = false;
 int wolfSSL_TI_CCMInit(void)
@@ -59,8 +59,10 @@ int wolfSSL_TI_CCMInit(void)
                                        SYSCTL_USE_PLL |
                                        SYSCTL_CFG_VCO_480), 120000000);
 
-    if (!ROM_SysCtlPeripheralPresent(SYSCTL_PERIPH_CCM0))
+    if (!ROM_SysCtlPeripheralPresent(SYSCTL_PERIPH_CCM0)) {
+        ccm_init = false;
         return false;
+    }
 
          ROM_SysCtlPeripheralEnable(SYSCTL_PERIPH_CCM0);
     WAIT(ROM_SysCtlPeripheralReady(SYSCTL_PERIPH_CCM0));
@@ -68,8 +70,10 @@ int wolfSSL_TI_CCMInit(void)
     WAIT(ROM_SysCtlPeripheralReady(SYSCTL_PERIPH_CCM0));
 
 #ifndef SINGLE_THREADED
-    if (wc_InitMutex(&TI_CCM_Mutex))
+    if (wc_InitMutex(&TI_CCM_Mutex)) {
+        ccm_init = false;
         return false;
+    }
 #endif
 #endif /* !TI_DUMMY_BUILD */
 

@@ -1,12 +1,12 @@
 /* user_settings.h
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -34,8 +34,13 @@
 extern "C" {
 #endif
 
+#include <stdint.h>
+
 /* Usually comes from configure -> config.h */
 #define HAVE_SYS_TIME_H
+
+/* Explicitly define NETDB support */
+#define HAVE_NETDB_H
 
 /* Features */
 #define SINGLE_THREADED
@@ -75,13 +80,9 @@ extern "C" {
 #define WOLFSSL_TLS13_NO_PEEK_HANDSHAKE_DONE
 
 /* DTLS */
-#if 0
-    #define WOLFSSL_DTLS
-    #define WOLFSSL_MULTICAST
-
-    /* DTLS v1.3 is not yet included with enable-all */
-    //#define WOLFSSL_DTLS13
-#endif
+#define WOLFSSL_DTLS
+// #define WOLFSSL_MULTICAST
+#define WOLFSSL_DTLS13
 
 /* DG Disabled SSLv3 and TLSv1.0 - should avoid using */
 //#define WOLFSSL_ALLOW_SSLV3
@@ -104,7 +105,6 @@ extern "C" {
 #define WOLFSSL_POST_HANDSHAKE_AUTH
 #define WOLFSSL_SEND_HRR_COOKIE /* Used by DTLS v1.3 */
 #define HAVE_ANON /* anon cipher suites */
-#define HAVE_FALLBACK_SCSV /* TLS_FALLBACK_SCSV */
 #define WOLFSSL_EARLY_DATA
 #define HAVE_SERVER_RENEGOTIATION_INFO
 
@@ -235,7 +235,6 @@ extern "C" {
 #define HAVE_X963_KDF
 #define WOLFSSL_CMAC
 #define WOLFSSL_DES_ECB
-#define HAVE_BLAKE2
 #define HAVE_BLAKE2B
 #define HAVE_BLAKE2S
 #define WOLFSSL_SIPHASH
@@ -259,9 +258,9 @@ extern "C" {
 
 
 /* Openssl compatibility */
+#define OPENSSL_EXTRA
 #if 0 /* DG Disabled */
     /* Openssl compatibility API's */
-    #define OPENSSL_EXTRA
     #define OPENSSL_ALL
     #define HAVE_OPENSSL_CMD
     #define SSL_TXT_TLSV1_2

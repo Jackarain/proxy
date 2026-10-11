@@ -1,0 +1,100 @@
+name: Zephyr 4.x tests
+
+# START OF COMMON SECTION
+on:
+  push:
+    branches: [ 'release/**' ]
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches: [ '*' ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+# END OF COMMON SECTION
+
+env:
+  # West modules the builds need besides wolfSSL; the rest are not fetched
+  ZEPHYR_MODULES: cmsis cmsis_6 hal_nxp picolibc
+
+jobs:
+  # One job per Zephyr version, so image pull and setup run once per version
+  build:
+    name: ${{ matrix.zephyr-ref }}
+    if: ${{ (github.repository_owner == 'wolfssl') && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        zephyr-ref: [ v4.1.0, v4.3.0, v4.4.0 ]
+    steps:
+      - name: Checkout test driver
+        uses: actions/checkout@v5
+        with:
+          sparse-checkout: .github/scripts/zephyr-4.x
+          fetch-depth: 1
+
+      - name: Show free disk space
+        run: df -h /
+
+      - name: Resolve wolfSSL repo and branch
+        id: src
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            # Fetch via upstream PR ref so renames, deletes, or visibility changes on the fork do not break us.
+            # Use the /merge ref (PR merged into the base branch) instead of /head so we test master+PR,
+            # picking up fixes already on master rather than testing the PR branch in isolation.
+            echo "repo=https://github.com/${{ github.repository }}" >> "$GITHUB_OUTPUT"
+            echo "branch=refs/pull/${{ github.event.pull_request.number }}/merge" >> "$GITHUB_OUTPUT"
+          else
+            echo "repo=https://github.com/${{ github.repository }}" >> "$GITHUB_OUTPUT"
+            echo "branch=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build and run samples and tests
+        working-directory: .github/scripts/zephyr-4.x
+        run: |
+          bash ./zephyr-test.sh \
+            -r "${{ steps.src.outputs.repo }}" \
+            -b "${{ steps.src.outputs.branch }}" \
+            -z "${{ matrix.zephyr-ref }}" \
+            -m "${ZEPHYR_MODULES}" \
+            -l builds.txt
+
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: zephyr-4.x-${{ matrix.zephyr-ref }}
+          path: .github/scripts/zephyr-4.x/logs/
+          retention-days: 5
+          if-no-files-found: ignore
+
+      # Only the builds tracked on the Membrowse dashboard, to avoid duplicates
+      - name: Upload Membrowse artifacts (native_sim)
+        if: success() && matrix.zephyr-ref == 'v4.3.0'
+        uses: actions/upload-artifact@v6
+        with:
+          name: membrowse-zephyr-native_sim
+          path: |
+            .github/scripts/zephyr-4.x/artifacts/native_sim-wolfssl_test/zephyr.elf
+            .github/scripts/zephyr-4.x/artifacts/native_sim-wolfssl_test/linker.cmd
+            .github/scripts/zephyr-4.x/artifacts/native_sim-wolfssl_test/zephyr.map
+          if-no-files-found: warn
+          retention-days: 1
+
+      - name: Upload Membrowse artifacts (frdm_rw612)
+        if: success() && matrix.zephyr-ref == 'v4.3.0'
+        uses: actions/upload-artifact@v6
+        with:
+          name: membrowse-zephyr-frdm_rw612
+          path: |
+            .github/scripts/zephyr-4.x/artifacts/frdm_rw612-rw612-wolfssl_test/zephyr.elf
+            .github/scripts/zephyr-4.x/artifacts/frdm_rw612-rw612-wolfssl_test/linker.cmd
+            .github/scripts/zephyr-4.x/artifacts/frdm_rw612-rw612-wolfssl_test/zephyr.map
+          if-no-files-found: warn
+          retention-days: 1

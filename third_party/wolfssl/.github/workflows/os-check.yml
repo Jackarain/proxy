@@ -1,114 +1,417 @@
 name: Ubuntu-Macos-Windows Tests
 
+# START OF COMMON SECTION
 on:
-  workflow_call:
+  push:
+    branches: [ 'master', 'release/**' ]
+    # Docs-only changes cannot affect the build/test matrix - skip the
+    # run for them. Keep this list narrow (markdown + doc/ only);
+    # do not add cert/test data extensions here.
+    paths-ignore:
+      - '**/*.md'
+      - 'doc/**'
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches: [ '*' ]
+    paths-ignore:
+      - '**/*.md'
+      - 'doc/**'
+
+  # Run the build and update the ccache on:
+  # - Scheduled: weekday mornings at 10:00 UTC to keep the ccache.
+  #   This reseeds both platforms from scratch (a manual run reseeds
+  #   linux from scratch, but only refreshes macOS - see below).
+  # - Any push to master that changed headers or the build system since the
+  #   last seed (linux shards only; macOS is refreshed by the cron and
+  #   manual runs, since its runner pool is small and its cold-cache cost
+  #   minor).
+  # Note that Windows builds are skipped on a seed run since it uses Visual
+  # Studio and has no ccache to seed.
+  #
+  # The two platforms do not seed identically, so do not read "the seed" as
+  # one mechanism. Linux wires ccache by hand: CCACHE_RECACHE and no restore
+  # on a cron or manual seed run (a push seed is incremental), and a save
+  # only on seed runs. macOS goes through the shared ccache-setup composite,
+  # which sets CCACHE_RECACHE and skips the restore only on the cron (not on
+  # a dispatch seed) and saves on every run that is not read-only,
+  # i.e. every non-PR run, release pushes included. So a dispatch refills an
+  # empty macOS cache but only layers onto a stale one; only the cron
+  # rebuilds macOS from scratch. Left as-is deliberately; the note is here
+  # so the difference is not rediscovered from a surprising cache.
+  schedule:
+    - cron: '0 10 * * 1-5'
+  # Runs the same seed on demand. Needed whenever the cache is empty and
+  # waiting up to a day for the next cron is not acceptable - after a
+  # stretch where this workflow was not running, for instance, since a
+  # cache untouched for 7 days is evicted and only the seed refills it.
+  # Every PR run stays cold until it is refilled.
+  workflow_dispatch:
+    inputs:
+      seed:
+        description: >
+          Seed the ccache: compile only, no tests, and save the result.
+          Untick to run the full checks instead.
+        type: boolean
+        default: true
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # Merge to master triggers a reseed. Do not let a subseuent merge cancel it.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
+
+permissions:
+  contents: read
+# END OF COMMON SECTION
 
 jobs:
-  make_check:
+  # Determine if the merged changed anything which could significantly impact
+  # the ccache.
+  seed_gate:
+    name: seed needed
+    if: ${{ (github.repository_owner == 'wolfssl') && (github.ref == 'refs/heads/master') && (github.event_name == 'push' || github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.seed != 'false')) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      seed: ${{ steps.check.outputs.seed }}
+    steps:
+      - id: check
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          # Compare with the commit of the oldest shard seed rather than the
+          # previous push, so a reseed cancelled by a later push (the master
+          # runs share one concurrency group) is redone by that push.
+          # The compare endpoint lists at most 300 changed files, so a push
+          # that large is treated as wide-reaching without looking further.
+          seed=true
+          last=$(gh api -X GET "repos/$REPO/actions/caches" \
+                   -f key=os-check-linux-ccache- -f ref=refs/heads/master -F per_page=100 \
+                   --jq '[.actions_caches[] | select(.key | test("^os-check-linux-ccache-[1-4]-master-[0-9a-f]{40}$"))]
+                         | group_by(.key | split("-")[4])
+                         | if length == 4 then map(max_by(.created_at)) | min_by(.created_at).key
+                           else "incomplete" end') || last=
+          base=${last##*-}
+          [[ $base =~ ^[0-9a-f]{40}$ ]] || base=$BEFORE
+          # Build inputs the ccache is sensitive to. Headers live outside
+          # wolfssl/ too: examples/configs holds the user_settings variants
+          # the matrix stages, and wolfcrypt/src has a few private ones.
+          wide='^((wolfssl|tests|wolfcrypt|examples|testsuite)/.*\.h'
+          wide+='|wolfcrypt/src/misc\.c|configure\.ac|m4/.*|.*\.am'
+          wide+='|\.github/configs/os-check-.*\.json'
+          wide+='|\.github/workflows/os-check\.yml)$'
+          if [ "$GITHUB_EVENT_NAME" != push ]; then
+            # A seed of an already seeded commit would fail to save.
+            [ "$base" != "$SHA" ] || seed=false
+            echo "last seed ${base:0:10}, commit ${SHA:0:10}, seeding: $seed"
+          elif [ "$last" = incomplete ]; then
+            # Fewer than four shard seeds exist, so there is no complete set
+            # to compare against; comparing with the previous push instead
+            # would keep declining the seed that would refill it.
+            echo "incomplete shard seed set, seeding"
+          elif files=$(gh api "repos/$REPO/compare/$base...$SHA" --jq '.files[]?.filename' | sort -u); then
+            count=$(printf '%s\n' "$files" | grep -c . || true)
+            if [ "$count" -lt 300 ] && ! printf '%s\n' "$files" | grep -qE "$wide"; then
+              seed=false
+            fi
+            echo "last seed ${base:0:10}, changed files: $count, wide reach: $seed"
+          else
+            echo "compare unavailable, seeding to be safe"
+          fi
+          echo "seed=$seed" >> "$GITHUB_OUTPUT"
+
+  # Ubuntu config matrix. macOS is covered separately by make_check_macos
+  # below with a curated subset; configs here either have equivalent macOS
+  # coverage there or exercise no Darwin-specific code.
+  #
+  # The config list is built by a small fixed pool of shard runners: every
+  # shard job runs the generic .github/scripts/parallel-make-check.py on
+  # the same JSON list below with --shard K/N, which deals the configs
+  # across the N shards greedily by their "minutes" weight so every shard
+  # carries a similar load. Within a shard each config builds in its own
+  # out-of-tree ("VPATH") build directory off one checkout/autogen, and
+  # the checks run on a pool of one-per-CPU worker threads, longest first;
+  # per-config times and thread/CPU efficiency land in each shard's step
+  # summary (same machinery as smoke-test.yml). bubblewrap lets the script
+  # tests re-exec under bwrap --unshare-net so concurrent checks cannot
+  # collide on TCP/UDP ports (do not set AM_BWRAPPED here - that would
+  # disable it).
+  make_check_linux:
+    name: make check linux
+    needs: [seed_gate]
+    permissions:
+      contents: read
+      actions: write # allows deletion of old caches
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-latest, macos-latest ]
-        config: [
-          # Add new configs here
-          '',
-          '--enable-all --enable-asn=template',
-          '--enable-all --enable-asn=original',
-          '--enable-harden-tls',
-          '--enable-tls13 --enable-session-ticket --enable-dtls --enable-dtls13
-             --enable-opensslextra --enable-sessioncerts 
-             CPPFLAGS=''-DWOLFSSL_DTLS_NO_HVR_ON_RESUME -DHAVE_EXT_CACHE 
-             -DWOLFSSL_TICKET_HAVE_ID -DHAVE_EX_DATA -DSESSION_CACHE_DYNAMIC_MEM'' ',
-          '--enable-all --enable-secure-renegotiation',
-          '--enable-all --enable-haproxy --enable-quic',
-          '--enable-dtls --enable-dtls13 --enable-earlydata 
-             --enable-session-ticket --enable-psk 
-             CPPFLAGS=''-DWOLFSSL_DTLS13_NO_HRR_ON_RESUME'' ',
-        ]
-    name: make check
-    runs-on: ${{ matrix.os }}
-    # This should be a safe limit for the tests to run.
-    timeout-minutes: 14
+        shard: [1, 2, 3, 4]
+    # !cancelled() keeps this job alive when seed_gate is skipped.
+    if: ${{ !cancelled() && (github.repository_owner == 'wolfssl') && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
+    runs-on: ubuntu-24.04
+    # Measured cold on a completely empty cache (2026-08-03): ~102
+    # thread-minutes per shard / 4 worker threads, i.e. 24-27 min of wall
+    # per shard including checkout/deps/autogen; warm is well under 10.
+    # The timeout is set well above the cold figure on purpose - a cold
+    # run is normal whenever the seed has not run recently, and a shard
+    # dying on the timeout would look like a test failure rather than a
+    # cold cache.
+    timeout-minutes: 60
+    env:
+      CCACHE_MAXSIZE: 500M
+      # Skip every step of a declined seed so the job shows success.
+      SEED_DECLINED: ${{ needs.seed_gate.outputs.seed == 'false' }}
     steps:
-      - name: Build and test wolfSSL
-        uses: wolfSSL/actions-build-autotools-project@v1
+      - uses: actions/checkout@v5
+        if: ${{ env.SEED_DECLINED != 'true' }}
+
+      # tlslite-ng is consumed by scripts/multi-msg-record.test (run from
+      # `make check`); without it that test is SKIPped.
+      - uses: actions/setup-python@v6
+        if: ${{ env.SEED_DECLINED != 'true' }}
         with:
-          configure: ${{ matrix.config }}
-          check: true
+          python-version: '3.x'
+      - run: pip install 'tlslite-ng==0.8.2'
+        if: ${{ env.SEED_DECLINED != 'true' }}
 
-  make_user_settings:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ ubuntu-latest, macos-latest ]
-        user-settings: [
-          # Add new user_settings.h here
-          'examples/configs/user_settings_all.h',
-        ]
-    name: make user_setting.h
-    runs-on: ${{ matrix.os }}
-    # This should be a safe limit for the tests to run.
-    timeout-minutes: 14
-    steps:
-      - name: Build and test wolfSSL
-        uses: wolfSSL/actions-build-autotools-project@v1
+      - name: Install dependencies
+        if: ${{ env.SEED_DECLINED != 'true' }}
+        uses: ./.github/actions/install-apt-deps
         with:
-          configure: --enable-usersettings
-          check: true
-          user-settings: ${{ matrix.user-settings }}
+          packages: autoconf automake libtool build-essential bubblewrap ccache gcc-multilib zlib1g-dev
+          ghcr-debs-tag: ubuntu-24.04-minimal
 
-  make_user_settings_testwolfcrypt:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ ubuntu-latest, macos-latest ]
-        user-settings: [
-          # Add new user_settings.h here
-          'examples/configs/user_settings_min_ecc.h',
-          'examples/configs/user_settings_wolfboot_keytools.h',
-          'examples/configs/user_settings_wolftpm.h',
-        ]
-    name: make user_setting.h (testwolfcrypt only)
-    runs-on: ${{ matrix.os }}
-    # This should be a safe limit for the tests to run.
-    timeout-minutes: 14
-    steps:
-      - name: Build and test wolfSSL
-        uses: wolfSSL/actions-build-autotools-project@v1
+      # Ubuntu 24.04 can restrict unprivileged user namespaces via AppArmor,
+      # which would stop the test scripts from re-execing under
+      # bwrap --unshare-net (their port-isolation mechanism).
+      - name: Allow unprivileged user namespaces (for bwrap)
+        if: ${{ env.SEED_DECLINED != 'true' }}
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
+
+      # ccache's default cache dir (XDG ~/.cache/ccache) is what the
+      # actions/cache step below saves; pin it explicitly so the two
+      # cannot drift apart (e.g. if a later change sets CCACHE_DIR).
+      - name: Pin ccache directory
+        if: ${{ env.SEED_DECLINED != 'true' }}
+        run: echo "CCACHE_DIR=$HOME/.cache/ccache" >> "$GITHUB_ENV"
+
+      # PRs restore the cache a seed run writes but never save it, so PR
+      # runs add no per-shard ccache entries to the Actions cache. Only a
+      # seed run (a push to master, the cron, or a manual dispatch) saves,
+      # below.
+      # Don't restore on cron or manual since we will rebuild from scratch
+      # using CCACHE_RECACHE. Restore would bring the stale cache entry to the
+      # top of the Github LRU, above newly written entries.
+      - name: Restore ccache
+        if: ${{ env.SEED_DECLINED != 'true' && !(github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.seed != 'false')) }}
+        uses: actions/cache/restore@v5
         with:
-          configure: --enable-usersettings --disable-examples
-          check: false
-          user-settings: ${{ matrix.user-settings }}
+          path: ~/.cache/ccache
+          # Per-shard cache lineage: each shard compiles a distinct config
+          # subset. Re-balancing "minutes" can move configs between shards;
+          # that costs one rebuild of whatever moved.
+          key: os-check-linux-ccache-${{ matrix.shard }}-${{ github.base_ref || github.ref_name }}-${{ github.sha }}
+          restore-keys: |
+            os-check-linux-ccache-${{ matrix.shard }}-${{ github.base_ref || github.ref_name }}-
+            os-check-linux-ccache-${{ matrix.shard }}-
+            os-check-linux-ccache-
 
-      - name: Run wolfcrypt/test/testwolfcrypt
-        run: ./wolfcrypt/test/testwolfcrypt
+      - name: Force fresh compiles on a reseed
+        if: ${{ env.SEED_DECLINED != 'true' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.seed != 'false')) }}
+        run: echo "CCACHE_RECACHE=1" >> "$GITHUB_ENV"
 
-  # Has to be dedicated function due to the sed call
-  make_user_all:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ ubuntu-latest, macos-latest ]
-    name: make user_setting.h (with sed)
-    runs-on: ${{ matrix.os }}
-    # This should be a safe limit for the tests to run.
-    timeout-minutes: 14
+      - name: autogen
+        if: ${{ env.SEED_DECLINED != 'true' }}
+        run: |
+          ccache -z
+          ./autogen.sh
+
+      # The config list lives in .github/configs/os-check-linux.json; add new
+      # configs there as new entries (a "comment" key is allowed for notes).
+      # It is kept out of this file on purpose: a single `run:` step is
+      # capped at 21000 characters by GitHub, and inlining the list as a
+      # heredoc silently pushed this workflow past that cap - GitHub then
+      # refused to load the whole file and every run failed with zero jobs.
+      # "minutes" is the expected duration driving longest-first scheduling
+      # and shard balancing: take it from the Minutes column of a previous
+      # run's step summary, or omit it for a new config (defaults to 1) and
+      # refresh later - a stale value only packs the schedule worse. The
+      # list is kept sorted by minutes for readability, but the schedule
+      # sorts by the values, not list order.
+      # The CFLAGS that were previously passed to configure are applied at
+      # make time via --cflags, unchanged. --private-dir=certs gives every
+      # build dir its own certs/ copy: crl-gen-openssl.test writes generated
+      # CRLs under certs/crl/, which would race through the shared VPATH
+      # certs symlink.
+      - name: Build and make check this shard's configs (parallel, out-of-tree)
+        if: ${{ env.SEED_DECLINED != 'true' }}
+        run: |
+          .github/scripts/parallel-make-check.py \
+            ${{ (github.event_name == 'schedule' || (github.event_name == 'push' && github.ref == 'refs/heads/master') || (github.event_name == 'workflow_dispatch' && github.event.inputs.seed != 'false')) && '--build-only' || '' }} \
+            --shard "${{ matrix.shard }}/${{ strategy.job-total }}" \
+            --cflags='-pedantic -Wdeclaration-after-statement -Wnull-dereference -Wno-overlength-strings -DTEST_LIBWOLFSSL_SOURCES_INCLUSION_SEQUENCE' \
+            --private-dir=certs .github/configs/os-check-linux.json
+
+      # Seed runs (a push to master, the cron, or a manual dispatch with
+      # `seed` ticked) refresh the master-scoped ccache that PR runs restore
+      # above; PR and release-branch runs never save, so PRs add nothing.
+      - name: Save ccache (seed only)
+        if: ${{ env.SEED_DECLINED != 'true' && (github.event_name == 'schedule' || (github.event_name == 'push' && github.ref == 'refs/heads/master') || (github.event_name == 'workflow_dispatch' && github.event.inputs.seed != 'false')) }}
+        uses: actions/cache/save@v5
+        with:
+          path: ~/.cache/ccache
+          key: os-check-linux-ccache-${{ matrix.shard }}-${{ github.ref_name }}-${{ github.sha }}
+
+      # Delete old ccache seed entries. Note that cache-janitor.yml cleans
+      # entries which do not go through this flow.
+      - name: Prune this shard's stale seeds
+        continue-on-error: true
+        if: ${{ env.SEED_DECLINED != 'true' && (github.event_name == 'schedule' || (github.event_name == 'push' && github.ref == 'refs/heads/master') || (github.event_name == 'workflow_dispatch' && github.event.inputs.seed != 'false')) }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          REF: ${{ github.ref }}
+          PREFIX: os-check-linux-ccache-${{ matrix.shard }}-${{ github.ref_name }}-
+        run: |
+          # Housekeeping must not fail the build: an entry that vanished
+          # between the list and the delete is fine, anything else is
+          # surfaced as an annotation.
+          gh api -X GET "repos/$REPO/actions/caches" -f key="$PREFIX" -f ref="$REF" \
+            -f sort=created_at -f direction=desc -F per_page=100 \
+            --jq '.actions_caches[1:][] | "\(.id) \(.key)"' |
+          while read -r id key; do
+            if err=$(gh api -X DELETE "repos/$REPO/actions/caches/$id" 2>&1 >/dev/null); then
+              echo "deleted $key"
+            elif [[ $err == *"HTTP 404"* ]]; then
+              echo "$key already gone"
+            else
+              echo "::error::could not delete $key: $err"
+            fi
+          done
+
+      - name: ccache stats
+        if: ${{ always() && env.SEED_DECLINED != 'true' }}
+        run: ccache -s || true
+
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          retention-days: 7
+          name: os-check-linux-logs-${{ matrix.shard }}
+          path: |
+            build-*/make-check.log
+            build-*/test-suite.log
+            build-*/config.log
+          if-no-files-found: ignore
+
+  # Curated macOS subset. Each config exists for a Darwin-specific reason;
+  # do not add entries that only re-test platform-agnostic crypto already
+  # covered by the corresponding Linux run.
+  #
+  # All configs build on ONE macos runner via
+  # .github/scripts/parallel-make-check.py, each in its own out-of-tree
+  # ("VPATH") build directory. Unlike Linux, the checks run one config at
+  # a time (--threads 1): macOS has no bubblewrap, so concurrent make
+  # checks would race on TCP/UDP ports. The user_settings_all.h entry is
+  # the former macOS half of the make_user_settings job, and the
+  # apple-native-cert-validation entry is the former standalone
+  # macos-apple-native-cert-validation.yml workflow.
+  make_check_macos:
+    name: make check macos
+    # Runs on PRs/pushes and on a seed run (the cron or a manual dispatch),
+    # where it --build-only-seeds the macOS ccache like the linux shards.
+    # Windows is the only job skipped on a seed run (no ccache to seed).
+    # Not seeded on master pushes: macOS runner concurrency is small, so
+    # per-merge seeds would queue PR macOS jobs behind them, and a fresh
+    # macOS seed saves only about two minutes per PR job. The cron refreshes
+    # it from scratch; a manual dispatch only layers onto what is there.
+    if: ${{ (github.repository_owner == 'wolfssl') && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) && (github.event_name != 'push' || github.ref != 'refs/heads/master') }}
+    runs-on: macos-latest
+    # Serial checks: roughly the sum of the per-config minutes plus
+    # one-time setup, with headroom for a cold ccache.
+    timeout-minutes: 45
     steps:
-    - uses: actions/checkout@v3
-    - if: ${{ matrix.os == 'macos-latest' }}
-      run: brew install automake libtool
-    - run: ./autogen.sh
-    - name: user_settings_all.h with compatibility layer
-      run: |
-        cp ./examples/configs/user_settings_all.h user_settings.h
-        sed -i -e "s/if 0/if 1/" user_settings.h
-        ./configure --enable-usersettings
-        make
-        make check
+      - uses: actions/checkout@v5
+
+      # tlslite-ng is consumed by scripts/multi-msg-record.test (run from
+      # `make check`); without it that test is SKIPped.
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.x'
+      - run: pip install 'tlslite-ng==0.8.2'
+
+      # The macos runner images ship without autotools (the old per-config
+      # matrix got them via wolfSSL/actions-build-autotools-project).
+      - name: Install autotools (brew)
+        run: brew install autoconf automake libtool
+
+      # ccache via the cross-platform composite (brew install; compiler
+      # symlinks on PATH). The script is told --cc= so it does not also
+      # prefix the compiler with "ccache" - the PATH masquerade already
+      # intercepts cc/clang.
+      - name: Set up ccache
+        uses: ./.github/actions/ccache-setup
+        with:
+          workflow-id: os-check-macos
+          max-size: 500M
+          # PRs read the seeded macOS ccache and never write it. Note this
+          # is not the linux rule: there, saving is gated to seed runs, so
+          # a push writes nothing. Here every non-PR run writes, seed or
+          # not, so a release/** push and a dispatch with `seed` unticked
+          # both land in the shared macOS cache.
+          read-only: ${{ github.event_name == 'pull_request' }}
+
+      # Same JSON config format as make_check_linux above, in
+      # .github/configs/os-check-macos.json; "minutes" only orders the
+      # serial schedule here (longest first).
+      - name: Build and make check all configs (serial checks, out-of-tree)
+        run: |
+          .github/scripts/parallel-make-check.py \
+            ${{ (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.seed != 'false')) && '--build-only' || '' }} \
+            --threads 1 --cc= \
+            --cflags='-pedantic -Wdeclaration-after-statement -Wnull-dereference -Wno-overlength-strings -DTEST_LIBWOLFSSL_SOURCES_INCLUSION_SEQUENCE' \
+            --private-dir=certs .github/configs/os-check-macos.json
+
+      - name: ccache stats
+        if: always()
+        run: ccache -s || true
+
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          retention-days: 7
+          name: os-check-macos-logs
+          path: |
+            build-*/make-check.log
+            build-*/test-suite.log
+            build-*/config.log
+          if-no-files-found: ignore
 
   windows_build:
     name: Windows Build Test
+    # Skipped on any seed run - a push to master, the cron, or a manual
+    # dispatch that left `seed` ticked: there is no ccache to seed here.
+    if: ${{ (github.repository_owner == 'wolfssl') && (github.event_name != 'schedule') && (github.event_name != 'push' || github.ref != 'refs/heads/master') && (github.event_name != 'workflow_dispatch' || github.event.inputs.seed == 'false') && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
     runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [ x64, Win32, ARM64 ]
+        asm: [ false ]
+        include:
+          # Intel assembly build (x64 only): assembles the crypto .asm files
+          # and enables the matching USE_INTEL_SPEEDUP code paths.
+          - arch: x64
+            asm: true
     # This should be a safe limit for the tests to run.
     timeout-minutes: 6
     env:
@@ -119,12 +422,11 @@ jobs:
       # You can convert this to a build matrix if you need coverage of multiple configuration types.
       # https://docs.github.com/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
       BUILD_CONFIGURATION: Release
-      BUILD_PLATFORM: x64
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v5
 
     - name: Add MSBuild to PATH
-      uses: microsoft/setup-msbuild@v1
+      uses: microsoft/setup-msbuild@v3
 
     - name: Restore NuGet packages
       working-directory: ${{env.GITHUB_WORKSPACE}}
@@ -134,8 +436,9 @@ jobs:
       working-directory: ${{env.GITHUB_WORKSPACE}}
       # Add additional options to the MSBuild command line here (like platform or verbosity level).
       # See https://docs.microsoft.com/visualstudio/msbuild/msbuild-command-line-reference
-      run: msbuild /m /p:PlatformToolset=v142 /p:Platform=${{env.BUILD_PLATFORM}} /p:Configuration=${{env.BUILD_CONFIGURATION}} ${{env.SOLUTION_FILE_PATH}}
+      run: msbuild /m /p:PlatformToolset=v142 /p:Platform=${{matrix.arch}} /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:WolfSSLIntelAsm=${{matrix.asm}} ${{env.SOLUTION_FILE_PATH}}
 
-    - name: Run Test
+    - if: ${{ matrix.arch != 'ARM64' }}
+      name: Run Test
       working-directory: ${{env.GITHUB_WORKSPACE}}
-      run: Release/x64/testsuite.exe
+      run: Release/${{matrix.arch}}/testsuite.exe

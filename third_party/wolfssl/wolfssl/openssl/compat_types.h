@@ -1,12 +1,12 @@
 /* compat_types.h
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -50,7 +50,9 @@ typedef struct WOLFSSL_EVP_PKEY_CTX   WOLFSSL_EVP_PKEY_CTX;
 typedef struct WOLFSSL_EVP_CIPHER_CTX WOLFSSL_EVP_CIPHER_CTX;
 typedef struct WOLFSSL_ASN1_PCTX      WOLFSSL_ASN1_PCTX;
 
-#if defined(OPENSSL_EXTRA) || defined(OPENSSL_EXTRA_X509_SMALL)
+typedef struct WOLFSSL_BIO            WOLFSSL_BIO;
+
+#if !defined(OPENSSL_COEXIST) && (defined(OPENSSL_EXTRA) || defined(OPENSSL_EXTRA_X509_SMALL))
 typedef WOLFSSL_EVP_MD         EVP_MD;
 typedef WOLFSSL_EVP_MD_CTX     EVP_MD_CTX;
 typedef WOLFSSL_EVP_CIPHER     EVP_CIPHER;
@@ -61,7 +63,7 @@ typedef WOLFSSL_EVP_PKEY       PKCS8_PRIV_KEY_INFO;
 
 typedef WOLFSSL_ENGINE         ENGINE;
 typedef WOLFSSL_EVP_PKEY_CTX   EVP_PKEY_CTX;
-#endif /* OPENSSL_EXTRA || OPENSSL_EXTRA_X509_SMALL */
+#endif /* !OPENSSL_COEXIST && (OPENSSL_EXTRA || OPENSSL_EXTRA_X509_SMALL) */
 
 typedef unsigned long (*wolf_sk_hash_cb) (const void *v);
 

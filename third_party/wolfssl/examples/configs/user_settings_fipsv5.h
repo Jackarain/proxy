@@ -1,12 +1,12 @@
 /* user_settings_fipsv5.h
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -130,7 +130,6 @@ extern "C" {
 #define WOLFSSL_AES_COUNTER
 #define HAVE_AESCCM
 #define HAVE_AES_ECB
-#define WOLFSSL_AES_COUNTER
 #define WOLFSSL_AES_DIRECT
 #define WOLFSSL_AES_OFB
 #define HAVE_AESGCM
@@ -147,7 +146,6 @@ extern "C" {
 #define WOLFSSL_SHA224
 #define WOLFSSL_SHA512
 #define WOLFSSL_SHA384
-#define WOLFSSL_NO_SHAKE256
 #define WOLFSSL_NOSHA512_224
 #define WOLFSSL_NOSHA512_256
 #define WOLFSSL_SHA3
@@ -162,6 +160,7 @@ extern "C" {
 #define NO_MD4
 #define NO_MD5
 #define NO_DES3
+#define NO_DES3_TLS_SUITES
 #define NO_DSA
 #define NO_RABBIT
 #define NO_HC128

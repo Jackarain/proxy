@@ -1,12 +1,12 @@
 /* user_settings.h
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -250,10 +250,10 @@ extern "C" {
 /* AES */
 #undef NO_AES
 #if 1
-	#undef  HAVE_AES_CBC
-	#define HAVE_AES_CBC
+    #undef  HAVE_AES_CBC
+    #define HAVE_AES_CBC
 
-	#undef  HAVE_AESGCM
+    #undef  HAVE_AESGCM
     #define HAVE_AESGCM
 
     /* GCM Method: GCM_SMALL, GCM_WORD32 or GCM_TABLE */
@@ -419,6 +419,7 @@ extern "C" {
 
     /* prototypes for user heap override functions */
     /* Note: Realloc only required for normal math */
+    /* Note2: XFREE(NULL) must be properly handled */
     #include <stddef.h>  /* for size_t */
     extern void *myMalloc(size_t n, void* heap, int type);
     extern void myFree(void *p, void* heap, int type);
@@ -468,10 +469,10 @@ extern "C" {
 /* Override Current Time */
 /* Allows custom "custom_time()" function to be used for benchmark */
 #define WOLFSSL_USER_CURRTIME
-#define WOLFSSL_GMTIME
+#define TIME_OVERRIDES
 #define USER_TICKS
-extern unsigned long my_time(unsigned long* timer);
 #define XTIME my_time
+#define XGMTIME my_gmtime
 
 
 /* ------------------------------------------------------------------------- */
@@ -520,7 +521,7 @@ extern unsigned int my_rng_seed_gen(void);
     #define USE_WOLF_STRTOK
     #define XSTRTOK(s1,d,ptr) wc_strtok((s1),(d),(ptr))
 
-    #define XSTRNSTR(s1,s2,n) mystrnstr((s1),(s2),(n))
+    #define XSTRNSTR(s1,s2,n) wolfSSL_strnstr((s1),(s2),(n))
 
     #define XMEMCPY(d,s,l)    memcpy((d),(s),(l))
     #define XMEMSET(b,c,l)    memset((b),(c),(l))
@@ -536,6 +537,9 @@ extern unsigned int my_rng_seed_gen(void);
     #define XSTRNCASECMP(s1,s2,n) strncasecmp((s1),(s2),(n))
 
     #define XSNPRINTF snprintf
+
+    #include <stdlib.h>
+    #define XATOI(s)          atoi((s))
 #endif
 
 
@@ -655,4 +659,3 @@ extern unsigned int my_rng_seed_gen(void);
 #endif
 
 #endif /* WOLFSSL_USER_SETTINGS_H */
-

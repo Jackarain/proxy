@@ -1,12 +1,12 @@
 /* simple_client_example.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -40,7 +40,7 @@ int simple_client_example(void)
     WOLFSSL_CTX* ctx;
     WOLFSSL* ssl;
     int sockfd, ret;
-    
+
     /* Resolve the server address */
     struct addrinfo hints, *server_addr;
     memset(&hints, 0, sizeof(hints));
@@ -84,7 +84,7 @@ int simple_client_example(void)
         close(sockfd);
         return 1;
     }
-    
+
     /* Load CA certificate into WOLFSSL_CTX
      * NOTE: CERT_PATH macro is set relative to Xcode $(PROJECT_DIR) environment
      * variable in the preprocessor macros section of the project build settings

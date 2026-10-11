@@ -1,12 +1,12 @@
 /* cmac.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -19,12 +19,11 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1335, USA
  */
 
+#define WC_FIPS_LL_CRYPTO
+#define _WC_BUILDING_CMAC_C
 
-#ifdef HAVE_CONFIG_H
-    #include <config.h>
-#endif
+#include <wolfssl/wolfcrypt/libwolfssl_sources.h>
 
-#include <wolfssl/wolfcrypt/settings.h>
 #ifdef WOLFSSL_QNX_CAAM
 #include <wolfssl/wolfcrypt/port/caam/wolfcaam.h>
 #endif
@@ -32,15 +31,12 @@
 #include <wolfssl/wolfcrypt/hash.h>
 #endif
 
-#if defined(WOLFSSL_CMAC) && !defined(NO_AES) && defined(WOLFSSL_AES_DIRECT)
+#if defined(WOLFSSL_CMAC)
 
 #if defined(HAVE_FIPS) && defined(HAVE_FIPS_VERSION) && (HAVE_FIPS_VERSION >= 2)
-    /* set NO_WRAPPERS before headers, use direct internal f()s not wrappers */
-    #define FIPS_NO_WRAPPERS
-
     #ifdef USE_WINDOWS_API
-        #pragma code_seg(".fipsA$n")
-        #pragma const_seg(".fipsB$n")
+        #pragma code_seg(".fipsA$c")
+        #pragma const_seg(".fipsB$c")
     #endif
 #endif
 
@@ -51,12 +47,20 @@
     #include <wolfcrypt/src/misc.c>
 #endif
 
-#include <wolfssl/wolfcrypt/error-crypt.h>
 #include <wolfssl/wolfcrypt/aes.h>
 #include <wolfssl/wolfcrypt/cmac.h>
 
 #ifdef WOLF_CRYPTO_CB
     #include <wolfssl/wolfcrypt/cryptocb.h>
+#endif
+
+#if FIPS_VERSION3_GE(6,0,0)
+    const unsigned int wolfCrypt_FIPS_cmac_ro_sanity[2] =
+                                                     { 0x1a2b3c4d, 0x00000003 };
+    int wolfCrypt_FIPS_CMAC_sanity(void)
+    {
+        return 0;
+    }
 #endif
 
 #ifdef WOLFSSL_HASH_KEEP
@@ -67,11 +71,13 @@
  */
 int wc_CMAC_Grow(Cmac* cmac, const byte* in, int inSz)
 {
-    return _wc_Hash_Grow(&cmac->msg, &cmac->used, &cmac->len, in, inSz, NULL);
+    if ((cmac == NULL) || (in == NULL && inSz != 0))
+        return BAD_FUNC_ARG;
+    return _wc_Hash_Grow(&cmac->msg, &cmac->used, &cmac->len, in, inSz, cmac->aes.heap);
 }
 #endif /* WOLFSSL_HASH_KEEP */
 
-
+#if !defined(NO_AES) && defined(WOLFSSL_AES_DIRECT)
 /* Used by AES-SIV. See aes.c. */
 void ShiftAndXorRb(byte* out, byte* in)
 {
@@ -81,7 +87,7 @@ void ShiftAndXorRb(byte* out, byte* in)
 
     xorRb = (in[0] & 0x80) != 0;
 
-    for (i = 1, j = AES_BLOCK_SIZE - 1; i <= AES_BLOCK_SIZE; i++, j--) {
+    for (i = 1, j = WC_AES_BLOCK_SIZE - 1; i <= WC_AES_BLOCK_SIZE; i++, j--) {
         last = (in[j] & 0x80) ? 1 : 0;
         out[j] = (byte)((in[j] << 1) | mask);
         mask = last;
@@ -91,18 +97,24 @@ void ShiftAndXorRb(byte* out, byte* in)
         }
     }
 }
+#endif /* !NO_AES && WOLFSSL_AES_DIRECT */
 
-/* returns 0 on success */
-int wc_InitCmac_ex(Cmac* cmac, const byte* key, word32 keySz,
-                int type, void* unused, void* heap, int devId)
+#define CMAC_AES_INIT_PLAIN  0
+#ifdef WOLF_PRIVATE_KEY_ID
+#define CMAC_AES_INIT_ID     1
+#define CMAC_AES_INIT_LABEL  2
+#endif
+
+
+static int _InitCmac_common(Cmac* cmac, const byte* key, word32 keySz,
+                            int type, void* unused, void* heap, int devId,
+                            int aesInitType, unsigned char* id, int idLen,
+                            const char* label)
 {
-    int ret;
+    int ret = 0;
 #if defined(WOLFSSL_SE050) && defined(WOLFSSL_SE050_CRYPT)
     byte useSW = 0;
 #endif
-
-    (void)unused;
-    (void)heap;
 
     if (cmac == NULL || type != WC_CMAC_AES) {
         return BAD_FUNC_ARG;
@@ -114,9 +126,42 @@ int wc_InitCmac_ex(Cmac* cmac, const byte* key, word32 keySz,
 #endif
     XMEMSET(cmac, 0, sizeof(Cmac));
 
+    /* Stash heap so the cryptocb can read it from the zeroed cmac. */
+#ifndef NO_AES
+    cmac->aes.heap = heap;
+#else
+    cmac->heap = heap;
+#endif
+
+    /* Store id/label on the Cmac struct so the crypto callback can
+     * inspect them to determine the hardware key slot. */
+#ifdef WOLF_PRIVATE_KEY_ID
+    cmac->aesInitType = aesInitType;
+    if (aesInitType == CMAC_AES_INIT_ID && id != NULL && idLen > 0) {
+        if (idLen > (int)sizeof(cmac->id)) {
+            return BAD_FUNC_ARG;
+        }
+        XMEMCPY(cmac->id, id, (word32)idLen);
+        cmac->idLen = idLen;
+    }
+    else if (aesInitType == CMAC_AES_INIT_LABEL && label != NULL) {
+        int labelLen = (int)XSTRLEN(label);
+        if (labelLen > 0 && labelLen < (int)sizeof(cmac->label)) {
+            XMEMCPY(cmac->label, label, (word32)labelLen);
+            cmac->labelLen = labelLen;
+        }
+    }
+#endif
+    (void)aesInitType;
+    (void)id;
+    (void)idLen;
+    (void)label;
+
 #ifdef WOLF_CRYPTO_CB
     /* Set devId regardless of value (invalid or not) */
     cmac->devId = devId;
+    /* Set before the cryptocb early return so wc_CmacFree can clean up. */
+    cmac->type = (CmacType)type;
     #ifndef WOLF_CRYPTO_CB_FIND
     if (devId != INVALID_DEVID)
     #endif
@@ -125,43 +170,115 @@ int wc_InitCmac_ex(Cmac* cmac, const byte* key, word32 keySz,
 
         ret = wc_CryptoCb_Cmac(cmac, key, keySz, NULL, 0, NULL, NULL,
                 type, unused);
-        if (ret != CRYPTOCB_UNAVAILABLE)
+        if (ret != WC_NO_ERR_TRACE(CRYPTOCB_UNAVAILABLE)) {
             return ret;
-        /* fall-through when unavailable */
+        }
+        /* fall-through when unavailable, reset ret for software path */
+        ret = 0;
+        (void)ret;
     }
 #else
     (void)devId;
 #endif
+    (void)unused;
+    (void)heap;
 
     if (key == NULL || keySz == 0) {
         return BAD_FUNC_ARG;
     }
 
-    ret = wc_AesInit(&cmac->aes, heap, devId);
-
-#if defined(WOLFSSL_SE050) && defined(WOLFSSL_SE050_CRYPT)
-    cmac->useSWCrypt = useSW;
-    if (cmac->useSWCrypt == 1) {
-        cmac->aes.useSWCrypt = 1;
-    }
+    switch (type) {
+#if !defined(NO_AES) && defined(WOLFSSL_AES_DIRECT)
+    case WC_CMAC_AES:
+        cmac->type = WC_CMAC_AES;
+        switch (aesInitType) {
+#ifdef WOLF_PRIVATE_KEY_ID
+        case CMAC_AES_INIT_ID:
+            if (id == NULL || idLen == 0 || label != NULL) {
+                ret = BAD_FUNC_ARG;
+            }
+            else {
+                ret = wc_AesInit_Id(&cmac->aes, id, idLen, heap, devId);
+            }
+            break;
+        case CMAC_AES_INIT_LABEL:
+            if (label == NULL || id != NULL || idLen != 0) {
+                ret = BAD_FUNC_ARG;
+            }
+            else {
+                ret = wc_AesInit_Label(&cmac->aes, label, heap, devId);
+            }
+            break;
 #endif
+        default:
+            if (id != NULL || idLen != 0 || label != NULL) {
+                ret = BAD_FUNC_ARG;
+            }
+            else {
+                ret = wc_AesInit(&cmac->aes, heap, devId);
+            }
+            break;
+        }
+        if (ret != 0) {
+            return ret;
+        }
 
-    if (ret == 0) {
-        ret = wc_AesSetKey(&cmac->aes, key, keySz, NULL, AES_ENCRYPTION);
-    }
+    #if defined(WOLFSSL_SE050) && defined(WOLFSSL_SE050_CRYPT)
+        cmac->useSWCrypt = useSW;
+        if (cmac->useSWCrypt == 1) {
+            cmac->aes.useSWCrypt = 1;
+        }
+    #endif
 
-    if (ret == 0) {
-        byte l[AES_BLOCK_SIZE];
-
-        XMEMSET(l, 0, AES_BLOCK_SIZE);
-        ret = wc_AesEncryptDirect(&cmac->aes, l, l);
         if (ret == 0) {
+            ret = wc_AesSetKey(&cmac->aes, key, keySz, NULL, AES_ENCRYPTION);
+        }
+
+        if (ret == 0) {
+            byte l[WC_AES_BLOCK_SIZE];
+
+            XMEMSET(l, 0, WC_AES_BLOCK_SIZE);
+#ifdef WOLFSSL_CHECK_MEM_ZERO
+            wc_MemZero_Add("InitInternal l", l, WC_AES_BLOCK_SIZE);
+#endif
+#ifndef HAVE_SELFTEST
+            ret = wc_AesEncryptDirect(&cmac->aes, l, l);
+            if (ret == 0) {
+                ShiftAndXorRb(cmac->k1, l);
+                ShiftAndXorRb(cmac->k2, cmac->k1);
+            }
+#else
+            wc_AesEncryptDirect(&cmac->aes, l, l);
             ShiftAndXorRb(cmac->k1, l);
             ShiftAndXorRb(cmac->k2, cmac->k1);
-            ForceZero(l, AES_BLOCK_SIZE);
+#endif
+            ForceZero(l, WC_AES_BLOCK_SIZE);
+#ifdef WOLFSSL_CHECK_MEM_ZERO
+            wc_MemZero_Check(l, WC_AES_BLOCK_SIZE);
+#endif
         }
+
+        if (ret != 0) {
+            wc_AesFree(&cmac->aes);
+            cmac->type = WC_CMAC_NONE;
+        }
+
+        break;
+#endif /* !NO_AES && WOLFSSL_AES_DIRECT */
+    default:
+        return BAD_FUNC_ARG;
     }
+
     return ret;
+}
+
+
+/* returns 0 on success */
+int wc_InitCmac_ex(Cmac* cmac, const byte* key, word32 keySz,
+                int type, void* unused, void* heap, int devId)
+{
+    return _InitCmac_common(cmac, key, keySz, type, unused, heap, devId,
+                            CMAC_AES_INIT_PLAIN, NULL, 0, NULL);
 }
 
 
@@ -176,6 +293,27 @@ int wc_InitCmac(Cmac* cmac, const byte* key, word32 keySz,
     return wc_InitCmac_ex(cmac, key, keySz, type, unused, NULL, devId);
 }
 
+
+#ifdef WOLF_PRIVATE_KEY_ID
+/* returns 0 on success */
+int wc_InitCmac_Id(Cmac* cmac, const byte* key, word32 keySz,
+                   int type, void* unused, unsigned char* id, int len,
+                   void* heap, int devId)
+{
+    return _InitCmac_common(cmac, key, keySz, type, unused, heap, devId,
+                            CMAC_AES_INIT_ID, id, len, NULL);
+}
+
+
+/* returns 0 on success */
+int wc_InitCmac_Label(Cmac* cmac, const byte* key, word32 keySz,
+                      int type, void* unused, const char* label,
+                      void* heap, int devId)
+{
+    return _InitCmac_common(cmac, key, keySz, type, unused, heap, devId,
+                            CMAC_AES_INIT_LABEL, NULL, 0, label);
+}
+#endif /* WOLF_PRIVATE_KEY_ID */
 
 
 int wc_CmacUpdate(Cmac* cmac, const byte* in, word32 inSz)
@@ -192,43 +330,129 @@ int wc_CmacUpdate(Cmac* cmac, const byte* in, word32 inSz)
     #endif
     {
         ret = wc_CryptoCb_Cmac(cmac, NULL, 0, in, inSz,
-                NULL, NULL, 0, NULL);
-        if (ret != CRYPTOCB_UNAVAILABLE)
+            NULL, NULL, (int)cmac->type, NULL);
+        if (ret != WC_NO_ERR_TRACE(CRYPTOCB_UNAVAILABLE))
             return ret;
         /* fall-through when unavailable */
-        ret = 0; /* reset error code */
     }
 #endif
 
-    while (inSz != 0) {
-        word32 add = min(inSz, AES_BLOCK_SIZE - cmac->bufferSz);
-        XMEMCPY(&cmac->buffer[cmac->bufferSz], in, add);
+    /* Clear CRYPTOCB_UNAVAILABLE return code */
+    ret = 0;
 
-        cmac->bufferSz += add;
-        in += add;
-        inSz -= add;
+    switch (cmac->type) {
+#if !defined(NO_AES) && defined(WOLFSSL_AES_DIRECT)
+    case WC_CMAC_AES:
+    {
+#ifdef HAVE_SELFTEST
+        while ((ret == 0) && (inSz != 0)) {
+            word32 add = min(inSz, WC_AES_BLOCK_SIZE - cmac->bufferSz);
+            XMEMCPY(&cmac->buffer[cmac->bufferSz], in, add);
 
-        if (cmac->bufferSz == AES_BLOCK_SIZE && inSz != 0) {
-            if (cmac->totalSz != 0) {
-                xorbuf(cmac->buffer, cmac->digest, AES_BLOCK_SIZE);
-            }
-            ret = wc_AesEncryptDirect(&cmac->aes, cmac->digest, cmac->buffer);
-            if (ret == 0) {
-                cmac->totalSz += AES_BLOCK_SIZE;
+            cmac->bufferSz += add;
+            in += add;
+            inSz -= add;
+
+            if (cmac->bufferSz == WC_AES_BLOCK_SIZE && inSz != 0) {
+                xorbuf(cmac->buffer, cmac->digest, WC_AES_BLOCK_SIZE);
+                wc_AesEncryptDirect(&cmac->aes, cmac->digest,
+                        cmac->buffer);
+                cmac->totalSz += WC_AES_BLOCK_SIZE;
                 cmac->bufferSz = 0;
             }
         }
+#else
+        (void)ret;
+        ret = wc_local_CmacUpdateAes(cmac, in, inSz);
+#endif
+    }; break;
+#endif /* !NO_AES && WOLFSSL_AES_DIRECT */
+    case WC_CMAC_NONE:
+    default:
+        ret = BAD_FUNC_ARG;
     }
-
     return ret;
 }
 
-
-int wc_CmacFinal(Cmac* cmac, byte* out, word32* outSz)
+int wc_CmacFree(Cmac* cmac)
 {
-    int ret;
-    const byte* subKey;
-    word32 remainder;
+    if (cmac == NULL)
+        return BAD_FUNC_ARG;
+#if defined(WOLF_CRYPTO_CB) && defined(WOLF_CRYPTO_CB_FREE)
+    /* Let the device release any per-context state it hung off cmac->devCtx
+     * before the struct is zeroed (e.g. an offload context never finalized). */
+    #ifndef WOLF_CRYPTO_CB_FIND
+    if (cmac->devId != INVALID_DEVID)
+    #endif
+    {
+        (void)wc_CryptoCb_Free(cmac->devId, WC_ALGO_TYPE_CMAC, (int)cmac->type,
+            0, cmac);
+    }
+#endif
+#if defined(WOLFSSL_HASH_KEEP)
+    /* TODO: msg is leaked if wc_CmacFinal() is not called
+     * e.g. when multiple calls to wc_CmacUpdate() and one fails but
+     * wc_CmacFinal() not called. */
+    XFREE(cmac->msg, cmac->aes.heap, DYNAMIC_TYPE_TMP_BUFFER);
+#endif
+    switch (cmac->type) {
+#if !defined(NO_AES) && defined(WOLFSSL_AES_DIRECT)
+    case WC_CMAC_AES:
+        wc_AesFree(&cmac->aes);
+        break;
+#endif /* !NO_AES && WOLFSSL_AES_DIRECT */
+    case WC_CMAC_NONE:
+    default:
+        /* Nothing to do */
+        (void)cmac;
+    }
+    ForceZero(cmac, sizeof(Cmac));
+    return 0;
+}
+
+#ifdef WOLFSSL_CMAC_TAG_ASSOCIATION
+/* first use of the key fixes the length, per SP 800-38B 5.4
+ */
+static int CmacAssociateTagSz(Cmac* cmac, word32 tagSz)
+{
+    if (cmac == NULL) {
+        return BAD_FUNC_ARG;
+    }
+
+    if (cmac->aes.tagLen == WC_NO_TAG_ASSOCIATION) {
+        cmac->aes.tagLen = tagSz;
+        return 0;
+    }
+
+    if (tagSz != cmac->aes.tagLen) {
+        WOLFSSL_MSG("CMAC tag size is not the one associated with the key");
+        return BAD_FUNC_ARG;
+    }
+
+    return 0;
+}
+
+/* One tag length per key, per SP 800-38B 5.4, which gives a range not a
+ * list. Once set, only a new key changes it.
+ */
+int wc_CmacSetTagLen(Cmac* cmac, word32 tagLen)
+{
+    if (cmac == NULL) {
+        return BAD_FUNC_ARG;
+    }
+
+    if (tagLen < WC_CMAC_TAG_MIN_SZ || tagLen > WC_CMAC_TAG_MAX_SZ) {
+        return BAD_FUNC_ARG;
+    }
+
+    return wc_AesSetTagLen(&cmac->aes, tagLen);
+}
+#endif
+
+
+int wc_CmacFinalNoFree(Cmac* cmac, byte* out, word32* outSz)
+{
+    int ret = 0;
 
     if (cmac == NULL || out == NULL || outSz == NULL) {
         return BAD_FUNC_ARG;
@@ -236,57 +460,163 @@ int wc_CmacFinal(Cmac* cmac, byte* out, word32* outSz)
     if (*outSz < WC_CMAC_TAG_MIN_SZ || *outSz > WC_CMAC_TAG_MAX_SZ) {
         return BUFFER_E;
     }
+#ifdef WOLFSSL_CMAC_TAG_ASSOCIATION
+    if (CmacAssociateTagSz(cmac, *outSz) != 0) {
+        return BAD_FUNC_ARG;
+    }
+#endif
 
 #ifdef WOLF_CRYPTO_CB
     #ifndef WOLF_CRYPTO_CB_FIND
     if (cmac->devId != INVALID_DEVID)
     #endif
     {
-        ret = wc_CryptoCb_Cmac(cmac, NULL, 0, NULL, 0, out, outSz, 0, NULL);
-        if (ret != CRYPTOCB_UNAVAILABLE)
+        ret = wc_CryptoCb_Cmac(cmac, NULL, 0, NULL, 0, out, outSz,
+            (int)cmac->type, NULL);
+        if (ret != WC_NO_ERR_TRACE(CRYPTOCB_UNAVAILABLE))
             return ret;
+
+        /* Clear CRYPTOCB_UNAVAILABLE return code */
+       ret = 0;
+
+        /* fall-through when unavailable */
+    }
+#endif
+    if (ret == 0) {
+        switch (cmac->type) {
+    #if !defined(NO_AES) && defined(WOLFSSL_AES_DIRECT)
+        case WC_CMAC_AES:
+        {
+            const byte* subKey;
+            word32 remainder;
+
+            if (cmac->bufferSz == WC_AES_BLOCK_SIZE) {
+                subKey = cmac->k1;
+            }
+            else {
+                /* ensure we will have a valid remainder value */
+                if (cmac->bufferSz > WC_AES_BLOCK_SIZE) {
+                    ret = BAD_STATE_E;
+                    break;
+                }
+                remainder = WC_AES_BLOCK_SIZE - cmac->bufferSz;
+
+                if (remainder == 0) {
+                    remainder = WC_AES_BLOCK_SIZE;
+                }
+                if (remainder > 1) {
+                    XMEMSET(cmac->buffer + WC_AES_BLOCK_SIZE - remainder, 0,
+                            remainder);
+                }
+
+                cmac->buffer[WC_AES_BLOCK_SIZE - remainder] = 0x80;
+                subKey = cmac->k2;
+            }
+            xorbuf(cmac->buffer, cmac->digest, WC_AES_BLOCK_SIZE);
+            xorbuf(cmac->buffer, subKey, WC_AES_BLOCK_SIZE);
+#ifndef HAVE_SELFTEST
+            ret = wc_AesEncryptDirect(&cmac->aes, cmac->digest, cmac->buffer);
+            if (ret == 0) {
+                XMEMCPY(out, cmac->digest, *outSz);
+            }
+#else
+            wc_AesEncryptDirect(&cmac->aes, cmac->digest, cmac->buffer);
+            XMEMCPY(out, cmac->digest, *outSz);
+#endif
+        }; break;
+    #endif /* !NO_AES && WOLFSSL_AES_DIRECT */
+        case WC_CMAC_NONE:
+        default:
+            ret = BAD_FUNC_ARG;
+        }
+    }
+    return ret;
+}
+
+int wc_CmacFinal(Cmac* cmac, byte* out, word32* outSz)
+{
+    int ret = 0;
+
+    if (cmac == NULL)
+        return BAD_FUNC_ARG;
+    ret = wc_CmacFinalNoFree(cmac, out, outSz);
+    (void)wc_CmacFree(cmac);
+    return ret;
+}
+
+#if !defined(NO_AES) && defined(WOLFSSL_AES_DIRECT)
+int wc_AesCmacGenerate_ex(Cmac* cmac,
+                          byte* out, word32* outSz,
+                          const byte* in, word32 inSz,
+                          const byte* key, word32 keySz,
+                          void* heap, int devId)
+{
+    int ret = 0;
+
+    if (cmac == NULL) {
+        return BAD_FUNC_ARG;
+    }
+
+#ifdef WOLF_CRYPTO_CB
+    /* Set devId regardless of value (invalid or not) */
+    cmac->devId = devId;
+    #ifndef WOLF_CRYPTO_CB_FIND
+    if (devId != INVALID_DEVID)
+    #endif
+    {
+    #ifdef WOLFSSL_CMAC_TAG_ASSOCIATION
+        /* this path runs before the argument checks below, so associate
+         * only when the call would pass them */
+        if (key == NULL && keySz == 0 && out != NULL && outSz != NULL &&
+                (in != NULL || inSz == 0)) {
+            if (*outSz < WC_CMAC_TAG_MIN_SZ || *outSz > WC_CMAC_TAG_MAX_SZ) {
+                return BUFFER_E;
+            }
+            if (CmacAssociateTagSz(cmac, *outSz) != 0) {
+                return BAD_FUNC_ARG;
+            }
+        }
+    #endif
+        ret = wc_CryptoCb_Cmac(cmac, key, keySz, in, inSz, out, outSz,
+                WC_CMAC_AES, NULL);
+        if (ret != WC_NO_ERR_TRACE(CRYPTOCB_UNAVAILABLE)) {
+    #ifdef WOLFSSL_CMAC_TAG_ASSOCIATION
+            /* a key sets the key, so the length this call used becomes the
+             * one that key carries */
+            if (ret == 0 && key != NULL && outSz != NULL) {
+                cmac->aes.tagLen = *outSz;
+            }
+    #endif
+            return ret;
+        }
+
+         /* Clear CRYPTOCB_UNAVAILABLE return code */
+        ret = 0;
+
         /* fall-through when unavailable */
     }
 #endif
 
-    if (cmac->bufferSz == AES_BLOCK_SIZE) {
-        subKey = cmac->k1;
+    if ( ((out == NULL) && (outSz != NULL) && (*outSz > 0))
+         || (in == NULL && inSz > 0)
+         || (key == NULL && keySz > 0))  {
+        return BAD_FUNC_ARG;
     }
-    else {
-        /* ensure we will have a valid remainder value */
-        if (cmac->bufferSz > AES_BLOCK_SIZE) {
-            return BAD_STATE_E;
-        }
-        remainder = AES_BLOCK_SIZE - cmac->bufferSz;
 
-        if (remainder == 0) {
-            remainder = AES_BLOCK_SIZE;
-        }
-        if (remainder > 1) {
-            XMEMSET(cmac->buffer + AES_BLOCK_SIZE - remainder, 0, remainder);
-        }
-
-        cmac->buffer[AES_BLOCK_SIZE - remainder] = 0x80;
-        subKey = cmac->k2;
+    /* Init step is optional */
+    if (key != NULL) {
+        ret = wc_InitCmac_ex(cmac, key, keySz, WC_CMAC_AES, NULL, heap, devId);
     }
-    xorbuf(cmac->buffer, cmac->digest, AES_BLOCK_SIZE);
-    xorbuf(cmac->buffer, subKey, AES_BLOCK_SIZE);
-    ret = wc_AesEncryptDirect(&cmac->aes, cmac->digest, cmac->buffer);
     if (ret == 0) {
-        XMEMCPY(out, cmac->digest, *outSz);
+        ret = wc_CmacUpdate(cmac, in, inSz);
+        /* Ensure we are freed and zeroed if not calling wc_CmacFinal */
+        if (ret != 0) {
+            (void)wc_CmacFree(cmac);
+        }
     }
-
-#if defined(WOLFSSL_HASH_KEEP)
-    /* TODO: msg is leaked if wc_CmacFinal() is not called
-     * e.g. when multiple calls to wc_CmacUpdate() and one fails but
-     * wc_CmacFinal() not called. */
-    if (cmac->msg != NULL) {
-        XFREE(cmac->msg, cmac->heap, DYNAMIC_TYPE_TMP_BUFFER);
-        cmac->msg = NULL;
+    if (ret == 0) {
+        ret = wc_CmacFinal(cmac, out, outSz);
     }
-#endif
-    wc_AesFree(&cmac->aes);
-    ForceZero(cmac, sizeof(Cmac));
 
     return ret;
 }
@@ -296,12 +626,8 @@ int wc_AesCmacGenerate(byte* out, word32* outSz,
                        const byte* in, word32 inSz,
                        const byte* key, word32 keySz)
 {
-    int ret;
-#ifdef WOLFSSL_SMALL_STACK
-    Cmac *cmac;
-#else
-    Cmac cmac[1];
-#endif
+    int ret = 0;
+    WC_DECLARE_VAR(cmac, Cmac, 1, 0);
 
     if (out == NULL || (in == NULL && inSz > 0) || key == NULL || keySz == 0) {
         return BAD_FUNC_ARG;
@@ -313,29 +639,76 @@ int wc_AesCmacGenerate(byte* out, word32* outSz,
         return MEMORY_E;
     }
 #endif
+
 #ifdef WOLFSSL_CHECK_MEM_ZERO
     XMEMSET(((unsigned char *)cmac) + sizeof(Aes), 0xff,
         sizeof(Cmac) - sizeof(Aes));
     /* Aes part is checked by wc_AesFree. */
-    wc_MemZero_Add("wc_AesCmacGenerate cmac",
+    wc_MemZero_Add("wc_AesCmacGenerate_ex cmac",
         ((unsigned char *)cmac) + sizeof(Aes), sizeof(Cmac) - sizeof(Aes));
 #endif
 
-    ret = wc_InitCmac(cmac, key, keySz, WC_CMAC_AES, NULL);
-    if (ret == 0) {
-        ret = wc_CmacUpdate(cmac, in, inSz);
-    }
-    if (ret == 0) {
-        ret = wc_CmacFinal(cmac, out, outSz);
-    }
+    ret = wc_AesCmacGenerate_ex(cmac,
+                                out, outSz,
+                                in, inSz,
+                                key, keySz,
+                                NULL,
+                                INVALID_DEVID);
+
 
 #ifdef WOLFSSL_SMALL_STACK
-    if (cmac) {
-        XFREE(cmac, NULL, DYNAMIC_TYPE_CMAC);
-    }
+    XFREE(cmac, NULL, DYNAMIC_TYPE_CMAC);
 #elif defined(WOLFSSL_CHECK_MEM_ZERO)
     wc_MemZero_Check(cmac, sizeof(Cmac));
 #endif
+
+    return ret;
+}
+
+
+int wc_AesCmacVerify_ex(Cmac* cmac,
+                        const byte* check, word32 checkSz,
+                        const byte* in, word32 inSz,
+                        const byte* key, word32 keySz,
+                        void* heap, int devId)
+{
+    int ret = 0;
+    byte a[WC_AES_BLOCK_SIZE];
+    word32 aSz;
+    int compareRet;
+
+    if (cmac == NULL || check == NULL || checkSz < WC_CMAC_TAG_MIN_SZ ||
+            checkSz > WC_AES_BLOCK_SIZE || (in == NULL && inSz != 0)) {
+        return BAD_FUNC_ARG;
+    }
+
+#ifdef WOLFSSL_CMAC_TAG_ASSOCIATION
+    /* only associate a length for a keyed cmac, a key here means this call
+     * sets both the key and the length that goes with it */
+    if (key == NULL && CmacAssociateTagSz(cmac, checkSz) != 0) {
+        return BAD_FUNC_ARG;
+    }
+#endif
+
+    aSz = checkSz;
+    XMEMSET(a, 0, sizeof(a));
+    ret = wc_AesCmacGenerate_ex(cmac,
+                                a, &aSz,
+                                in, inSz,
+                                key, keySz,
+                                heap,
+                                devId);
+    /* aSz is passed by reference to wc_AesCmacGenerate_ex, which on the
+     * WOLF_CRYPTO_CB path forwards it to a user-supplied callback that may
+     * write back any value. Reject anything that does not match the user
+     * provided length. */
+    if (ret == 0 && aSz != checkSz) {
+        ret = BAD_STATE_E;
+    }
+    if (ret == 0) {
+        compareRet = ConstantCompare(check, a, (int)aSz);
+        ret = compareRet ? MAC_CMP_FAILED_E : 0;
+    }
 
     return ret;
 }
@@ -345,24 +718,45 @@ int wc_AesCmacVerify(const byte* check, word32 checkSz,
                      const byte* in, word32 inSz,
                      const byte* key, word32 keySz)
 {
-    int ret;
-    byte a[AES_BLOCK_SIZE];
-    word32 aSz = sizeof(a);
-    int compareRet;
+    int ret = 0;
+    WC_DECLARE_VAR(cmac, Cmac, 1, 0);
 
-    if (check == NULL || checkSz == 0 || (in == NULL && inSz != 0) ||
-        key == NULL || keySz == 0) {
+    if (check == NULL || checkSz < WC_CMAC_TAG_MIN_SZ ||
+            checkSz > WC_AES_BLOCK_SIZE || (in == NULL && inSz > 0) ||
+            key == NULL || keySz == 0) {
         return BAD_FUNC_ARG;
     }
 
-    XMEMSET(a, 0, aSz);
-    ret = wc_AesCmacGenerate(a, &aSz, in, inSz, key, keySz);
-    compareRet = ConstantCompare(check, a, (int)min(checkSz, aSz));
+#ifdef WOLFSSL_SMALL_STACK
+    if ((cmac = (Cmac *)XMALLOC(sizeof *cmac, NULL,
+                                DYNAMIC_TYPE_CMAC)) == NULL) {
+        return MEMORY_E;
+    }
+#endif
 
-    if (ret == 0)
-        ret = compareRet ? 1 : 0;
+#ifdef WOLFSSL_CHECK_MEM_ZERO
+    XMEMSET(((unsigned char *)cmac) + sizeof(Aes), 0xff,
+        sizeof(Cmac) - sizeof(Aes));
+    /* Aes part is checked by wc_AesFree. */
+    wc_MemZero_Add("wc_AesCmacGenerate_ex cmac",
+        ((unsigned char *)cmac) + sizeof(Aes), sizeof(Cmac) - sizeof(Aes));
+#endif
+
+    ret = wc_AesCmacVerify_ex(cmac,
+                              check, checkSz,
+                              in, inSz,
+                              key, keySz,
+                              NULL,
+                              INVALID_DEVID);
+
+#ifdef WOLFSSL_SMALL_STACK
+    XFREE(cmac, NULL, DYNAMIC_TYPE_CMAC);
+#elif defined(WOLFSSL_CHECK_MEM_ZERO)
+    wc_MemZero_Check(cmac, sizeof(Cmac));
+#endif
 
     return ret;
 }
+#endif /* !NO_AES && WOLFSSL_AES_DIRECT */
 
-#endif /* WOLFSSL_CMAC && NO_AES && WOLFSSL_AES_DIRECT */
+#endif /* WOLFSSL_CMAC */

@@ -1,12 +1,12 @@
 /* wc_devcrypto.h
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -38,6 +38,7 @@
 
 typedef struct WC_CRYPTODEV {
     int cfd;
+    WC_BITFIELD inited : 1; /* is this object initialized (1) or not (0) */
     struct session_op sess;
 } WC_CRYPTODEV;
 

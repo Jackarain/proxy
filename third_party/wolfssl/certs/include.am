@@ -6,6 +6,7 @@ EXTRA_DIST += \
              certs/ca-cert-chain.der \
              certs/ca-cert.pem \
              certs/ca-key.pem \
+             certs/ca-key-pkcs8-attribute.der \
              certs/client-cert.pem \
              certs/client-keyEnc.pem \
              certs/client-key.pem \
@@ -29,10 +30,24 @@ EXTRA_DIST += \
              certs/ecc-keyPkcs8.der \
              certs/ecc-client-key.pem \
              certs/ecc-client-keyPub.pem \
+             certs/empty-issuer-cert.pem \
              certs/client-ecc-cert.pem \
+             certs/client-ecc-ca-cert.pem \
              certs/client-ca.pem \
+             certs/client-ca-cert.pem \
              certs/dh2048.pem \
              certs/server-cert.pem \
+             certs/server-cert-sha1.pem \
+             certs/server-cert-sha1-root.pem \
+             certs/client-cert-sha1.pem \
+             certs/tsa-bad-ku-cert.pem \
+             certs/tsa-extra-eku-cert.pem \
+             certs/tsa-chain-cert.pem \
+             certs/tsa-chain-key.pem \
+             certs/tsa-cert.pem \
+             certs/tsa-ecc-cert.pem \
+             certs/tsa-ecc-key.pem \
+             certs/tsa-key.pem \
              certs/server-ecc.pem \
              certs/server-ecc-self.pem \
              certs/server-ecc-comp.pem \
@@ -51,6 +66,11 @@ EXTRA_DIST += \
              certs/server-revoked-key.pem \
              certs/wolfssl-website-ca.pem \
              certs/test-degenerate.p7b \
+             certs/test-multiple-recipients.p7b \
+             certs/test-stream-sign.p7b \
+             certs/test-stream-dec.p7b \
+             certs/test-stream-dec-aes256.p7b \
+             certs/test-stream-dec-aes256gcm.p7b \
              certs/test-ber-exp02-05-2022.p7b \
              certs/test-servercert.p12 \
              certs/test-servercert-rc2.p12 \
@@ -72,7 +92,19 @@ EXTRA_DIST += \
              certs/x942dh2048.der \
              certs/x942dh2048.pem \
              certs/fpki-cert.der \
-             certs/rid-cert.der
+             certs/fpki-certpol-cert.der \
+             certs/rid-cert.der \
+             certs/dh-priv-2048.der \
+             certs/dh-priv-2048.pem \
+             certs/dh-pub-2048.der \
+             certs/dh-pub-2048.pem \
+             certs/dsa2048.pem
+
+EXTRA_DIST += \
+             certs/aia/ca-issuers-cert.pem \
+             certs/aia/multi-aia-cert.pem \
+             certs/aia/overflow-aia-cert.pem \
+             certs/sia/timestamping-sia-cert.pem
 
 EXTRA_DIST += \
              certs/ca-key.der \
@@ -80,6 +112,8 @@ EXTRA_DIST += \
              certs/client-cert.der \
              certs/client-key.der \
              certs/client-ecc-cert.der \
+             certs/client-ecc-ca-cert.der \
+             certs/client-ca-cert.der \
              certs/client-keyPub.der \
              certs/client-keyPub.pem \
              certs/dh2048.der \
@@ -98,6 +132,14 @@ EXTRA_DIST += \
              certs/ecc-keyPub.der \
              certs/server-key.der \
              certs/server-cert.der \
+             certs/tsa-key.der \
+             certs/tsa-cert.der \
+             certs/tsa-ecc-key.der \
+             certs/tsa-ecc-cert.der \
+             certs/tsa-bad-ku-cert.der \
+             certs/tsa-extra-eku-cert.der \
+             certs/tsa-chain-cert.der \
+             certs/tsa-chain-key.der \
              certs/server-ecc-comp.der \
              certs/server-ecc.der \
              certs/server-ecc-self.der \
@@ -135,10 +177,14 @@ include certs/ocsp/include.am
 include certs/statickeys/include.am
 include certs/test/include.am
 include certs/test-pathlen/include.am
+include certs/test-serial0/include.am
 include certs/intermediate/include.am
 include certs/falcon/include.am
 include certs/rsapss/include.am
-include certs/dilithium/include.am
-include certs/sphincs/include.am
+include certs/slhdsa/include.am
+include certs/lms/include.am
 include certs/rpk/include.am
-
+include certs/acert/include.am
+include certs/mldsa/include.am
+include certs/mlkem/include.am
+include certs/frodokem/include.am

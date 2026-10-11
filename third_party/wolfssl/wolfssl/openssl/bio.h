@@ -1,12 +1,12 @@
 /* bio.h
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -25,6 +25,7 @@
 #ifndef WOLFSSL_BIO_H_
 #define WOLFSSL_BIO_H_
 
+#include <wolfssl/openssl/ssl.h>
 
 #ifdef __cplusplus
     extern "C" {
@@ -32,11 +33,63 @@
 
 #if defined(OPENSSL_EXTRA) || defined(OPENSSL_EXTRA_X509_SMALL)
 
+/* helper to set specific retry/read flags */
+#define wolfSSL_BIO_set_retry_read(bio)\
+    wolfSSL_BIO_set_flags((bio), WOLFSSL_BIO_FLAG_RETRY | WOLFSSL_BIO_FLAG_READ)
+#define wolfSSL_BIO_set_retry_write(bio)\
+    wolfSSL_BIO_set_flags((bio), WOLFSSL_BIO_FLAG_RETRY | WOLFSSL_BIO_FLAG_WRITE)
+
+/* BIO CTRL */
+#define WOLFSSL_BIO_CTRL_RESET             1
+#define WOLFSSL_BIO_CTRL_EOF               2
+#define WOLFSSL_BIO_CTRL_INFO              3
+#define WOLFSSL_BIO_CTRL_SET               4
+#define WOLFSSL_BIO_CTRL_GET               5
+#define WOLFSSL_BIO_CTRL_PUSH              6
+#define WOLFSSL_BIO_CTRL_POP               7
+#define WOLFSSL_BIO_CTRL_GET_CLOSE         8
+#define WOLFSSL_BIO_CTRL_SET_CLOSE         9
+#define WOLFSSL_BIO_CTRL_PENDING           10
+#define WOLFSSL_BIO_CTRL_FLUSH             11
+#define WOLFSSL_BIO_CTRL_DUP               12
+#define WOLFSSL_BIO_CTRL_WPENDING          13
+
+#define WOLFSSL_BIO_C_SET_FILE_PTR              106
+#define WOLFSSL_BIO_C_GET_FILE_PTR              107
+#define WOLFSSL_BIO_C_SET_FILENAME              108
+#define WOLFSSL_BIO_C_SET_BUF_MEM               114
+#define WOLFSSL_BIO_C_GET_BUF_MEM_PTR           115
+#define WOLFSSL_BIO_C_FILE_SEEK                 128
+#define WOLFSSL_BIO_C_SET_BUF_MEM_EOF_RETURN    130
+#define WOLFSSL_BIO_C_SET_WRITE_BUF_SIZE        136
+#define WOLFSSL_BIO_C_MAKE_WOLFSSL_BIO_PAIR             138
+
+#define WOLFSSL_BIO_CTRL_DGRAM_CONNECT       31
+#define WOLFSSL_BIO_CTRL_DGRAM_SET_CONNECTED 32
+#define WOLFSSL_BIO_CTRL_DGRAM_QUERY_MTU     40
+#define WOLFSSL_BIO_CTRL_DGRAM_SET_PEER      44
+
+#define WOLFSSL_BIO_FP_TEXT                0x00
+#define WOLFSSL_BIO_NOCLOSE                0x00
+#define WOLFSSL_BIO_CLOSE                  0x01
+
+#define WOLFSSL_BIO_FP_WRITE               0x04
+
+#define WOLFSSL_BIO_TYPE_DESCRIPTOR  0x0100
+#define WOLFSSL_BIO_TYPE_SOURCE_SINK 0x0400
+/* Application BIO type indexes are handed out starting after this value
+ * by wolfSSL_BIO_get_new_index(), like OpenSSL's BIO_TYPE_START. */
+#define WOLFSSL_BIO_TYPE_START       128
+
+#ifndef OPENSSL_COEXIST
+
 #define BIO_FLAGS_BASE64_NO_NL WOLFSSL_BIO_FLAG_BASE64_NO_NL
 #define BIO_FLAGS_READ         WOLFSSL_BIO_FLAG_READ
 #define BIO_FLAGS_WRITE        WOLFSSL_BIO_FLAG_WRITE
 #define BIO_FLAGS_IO_SPECIAL   WOLFSSL_BIO_FLAG_IO_SPECIAL
 #define BIO_FLAGS_SHOULD_RETRY WOLFSSL_BIO_FLAG_RETRY
+/* You shouldn't free up or change the data if BIO_FLAGS_MEM_RDONLY is set */
+#define BIO_FLAGS_MEM_RDONLY   WOLFSSL_BIO_FLAG_MEM_RDONLY
 
 #define BIO_new_fp                      wolfSSL_BIO_new_fp
 #if defined(OPENSSL_ALL) \
@@ -57,9 +110,11 @@
 #endif
 #define BIO_int_ctrl                    wolfSSL_BIO_int_ctrl
 #define BIO_reset                       wolfSSL_BIO_reset
+#define BIO_s_null                      wolfSSL_BIO_s_null
 #define BIO_s_file                      wolfSSL_BIO_s_file
 #define BIO_s_bio                       wolfSSL_BIO_s_bio
 #define BIO_s_socket                    wolfSSL_BIO_s_socket
+#define BIO_s_datagram                  wolfSSL_BIO_s_datagram
 #define BIO_s_accept                    wolfSSL_BIO_s_socket
 #define BIO_set_fd                      wolfSSL_BIO_set_fd
 #define BIO_set_close                   wolfSSL_BIO_set_close
@@ -110,6 +165,7 @@
 
 /* BIO for 1.1.0 or later */
 #define BIO_set_init               wolfSSL_BIO_set_init
+#define BIO_get_init               wolfSSL_BIO_get_init
 #define BIO_get_data               wolfSSL_BIO_get_data
 #define BIO_set_data               wolfSSL_BIO_set_data
 #define BIO_get_shutdown           wolfSSL_BIO_get_shutdown
@@ -122,10 +178,8 @@
 #define BIO_get_ex_data            wolfSSL_BIO_get_ex_data
 
 /* helper to set specific retry/read flags */
-#define BIO_set_retry_read(bio)\
-    wolfSSL_BIO_set_flags((bio), WOLFSSL_BIO_FLAG_RETRY | WOLFSSL_BIO_FLAG_READ)
-#define BIO_set_retry_write(bio)\
-    wolfSSL_BIO_set_flags((bio), WOLFSSL_BIO_FLAG_RETRY | WOLFSSL_BIO_FLAG_WRITE)
+#define BIO_set_retry_read(bio) wolfSSL_BIO_set_retry_read(bio)
+#define BIO_set_retry_write(bio) wolfSSL_BIO_set_retry_write(bio)
 
 #define BIO_clear_retry_flags      wolfSSL_BIO_clear_retry_flags
 
@@ -140,43 +194,66 @@
 #define BIO_meth_set_create        wolfSSL_BIO_meth_set_create
 #define BIO_meth_set_destroy       wolfSSL_BIO_meth_set_destroy
 
+#define BIO_TYPE_DESCRIPTOR        WOLFSSL_BIO_TYPE_DESCRIPTOR
+#define BIO_TYPE_SOURCE_SINK       WOLFSSL_BIO_TYPE_SOURCE_SINK
+#define BIO_TYPE_START             WOLFSSL_BIO_TYPE_START
+
+/* Like OpenSSL, back app_data with BIO ex_data slot 0 so it does not share
+ * storage with BIO_get_data()/BIO_set_data(). Left undefined without
+ * HAVE_EX_DATA so use of app_data fails loudly at compile time. */
+#ifdef HAVE_EX_DATA
+#define BIO_get_app_data(bio)       wolfSSL_BIO_get_ex_data((bio), 0)
+#define BIO_set_app_data(bio, data) wolfSSL_BIO_set_ex_data((bio), 0, (data))
+#endif
+
+#define BIO_get_new_index          wolfSSL_BIO_get_new_index
+#define BIO_meth_get_gets          wolfSSL_BIO_meth_get_gets
+#define BIO_meth_get_puts          wolfSSL_BIO_meth_get_puts
+#define BIO_meth_get_ctrl          wolfSSL_BIO_meth_get_ctrl
+#define BIO_meth_get_create        wolfSSL_BIO_meth_get_create
+#define BIO_meth_get_destroy       wolfSSL_BIO_meth_get_destroy
+#define BIO_meth_get_callback_ctrl wolfSSL_BIO_meth_get_callback_ctrl
+#define BIO_meth_set_callback_ctrl wolfSSL_BIO_meth_set_callback_ctrl
+
 #define BIO_snprintf               XSNPRINTF
 
 /* BIO CTRL */
-#define BIO_CTRL_RESET             1
-#define BIO_CTRL_EOF               2
-#define BIO_CTRL_INFO              3
-#define BIO_CTRL_SET               4
-#define BIO_CTRL_GET               5
-#define BIO_CTRL_PUSH              6
-#define BIO_CTRL_POP               7
-#define BIO_CTRL_GET_CLOSE         8
-#define BIO_CTRL_SET_CLOSE         9
-#define BIO_CTRL_PENDING           10
-#define BIO_CTRL_FLUSH             11
-#define BIO_CTRL_DUP               12
-#define BIO_CTRL_WPENDING          13
+#define BIO_CTRL_RESET              WOLFSSL_BIO_CTRL_RESET
+#define BIO_CTRL_EOF                WOLFSSL_BIO_CTRL_EOF
+#define BIO_CTRL_INFO               WOLFSSL_BIO_CTRL_INFO
+#define BIO_CTRL_SET                WOLFSSL_BIO_CTRL_SET
+#define BIO_CTRL_GET                WOLFSSL_BIO_CTRL_GET
+#define BIO_CTRL_PUSH               WOLFSSL_BIO_CTRL_PUSH
+#define BIO_CTRL_POP                WOLFSSL_BIO_CTRL_POP
+#define BIO_CTRL_GET_CLOSE          WOLFSSL_BIO_CTRL_GET_CLOSE
+#define BIO_CTRL_SET_CLOSE          WOLFSSL_BIO_CTRL_SET_CLOSE
+#define BIO_CTRL_PENDING            WOLFSSL_BIO_CTRL_PENDING
+#define BIO_CTRL_FLUSH              WOLFSSL_BIO_CTRL_FLUSH
+#define BIO_CTRL_DUP                WOLFSSL_BIO_CTRL_DUP
+#define BIO_CTRL_WPENDING           WOLFSSL_BIO_CTRL_WPENDING
 
-#define BIO_C_SET_FILE_PTR              106
-#define BIO_C_GET_FILE_PTR              107
-#define BIO_C_SET_FILENAME              108
-#define BIO_C_SET_BUF_MEM               114
-#define BIO_C_GET_BUF_MEM_PTR           115
-#define BIO_C_FILE_SEEK                 128
-#define BIO_C_SET_BUF_MEM_EOF_RETURN    130
-#define BIO_C_SET_WRITE_BUF_SIZE        136
-#define BIO_C_MAKE_BIO_PAIR             138
+#define BIO_C_SET_FILE_PTR               WOLFSSL_BIO_C_SET_FILE_PTR
+#define BIO_C_GET_FILE_PTR               WOLFSSL_BIO_C_GET_FILE_PTR
+#define BIO_C_SET_FILENAME               WOLFSSL_BIO_C_SET_FILENAME
+#define BIO_C_SET_BUF_MEM                WOLFSSL_BIO_C_SET_BUF_MEM
+#define BIO_C_GET_BUF_MEM_PTR            WOLFSSL_BIO_C_GET_BUF_MEM_PTR
+#define BIO_C_FILE_SEEK                  WOLFSSL_BIO_C_FILE_SEEK
+#define BIO_C_SET_BUF_MEM_EOF_RETURN     WOLFSSL_BIO_C_SET_BUF_MEM_EOF_RETURN
+#define BIO_C_SET_WRITE_BUF_SIZE         WOLFSSL_BIO_C_SET_WRITE_BUF_SIZE
+#define BIO_C_MAKE_BIO_PAIR              WOLFSSL_BIO_C_MAKE_BIO_PAIR
 
-#define BIO_CTRL_DGRAM_QUERY_MTU   40
+#define BIO_CTRL_DGRAM_CONNECT        WOLFSSL_BIO_CTRL_DGRAM_CONNECT
+#define BIO_CTRL_DGRAM_SET_CONNECTED  WOLFSSL_BIO_CTRL_DGRAM_SET_CONNECTED
+#define BIO_CTRL_DGRAM_QUERY_MTU      WOLFSSL_BIO_CTRL_DGRAM_QUERY_MTU
+#define BIO_CTRL_DGRAM_SET_PEER       WOLFSSL_BIO_CTRL_DGRAM_SET_PEER
 
-#define BIO_FP_TEXT                0x00
-#define BIO_NOCLOSE                0x00
-#define BIO_CLOSE                  0x01
+#define BIO_FP_TEXT                 WOLFSSL_BIO_FP_TEXT
+#define BIO_NOCLOSE                 WOLFSSL_BIO_NOCLOSE
+#define BIO_CLOSE                   WOLFSSL_BIO_CLOSE
 
-#define BIO_FP_WRITE               0x04
+#define BIO_FP_WRITE                WOLFSSL_BIO_FP_WRITE
 
-/* You shouldn't free up or change the data if BIO_FLAGS_MEM_RDONLY is set */
-#define BIO_FLAGS_MEM_RDONLY       0x200
+#endif /* !OPENSSL_COEXIST */
 
 #endif /* OPENSSL_EXTRA || OPENSSL_EXTRA_X509_SMALL */
 

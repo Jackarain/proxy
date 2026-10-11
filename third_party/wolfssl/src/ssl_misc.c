@@ -1,12 +1,12 @@
 /* ssl_misc.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -19,11 +19,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1335, USA
  */
 
-#ifdef HAVE_CONFIG_H
-    #include <config.h>
-#endif
-
-#include <wolfssl/wolfcrypt/settings.h>
+#include <wolfssl/wolfcrypt/libwolfssl_sources.h>
 
 #if !defined(WOLFSSL_SSL_MISC_INCLUDED)
     #ifndef WOLFSSL_IGNORE_FILE_WARN
@@ -34,7 +30,6 @@
 #if defined(OPENSSL_EXTRA) && !defined(WOLFCRYPT_ONLY)
 #ifndef NO_BIO
 
-#ifdef WOLFSSL_NO_FSEEK
 /* Amount of memory to allocate/add. */
 #define READ_BIO_FILE_CHUNK     128
 
@@ -54,7 +49,7 @@ static int wolfssl_read_bio_file(WOLFSSL_BIO* bio, char** data)
     char* p;
 
     /* Allocate buffer to hold a chunk of data. */
-    mem = (char*)XMALLOC(READ_BIO_FILE_CHUNK, bio->heap, DYNAMIC_TYPE_OPENSSL);
+    mem = (char*)XMALLOC(READ_BIO_FILE_CHUNK, NULL, DYNAMIC_TYPE_TMP_BUFFER);
     if (mem == NULL) {
         WOLFSSL_ERROR_MSG("Memory allocation error");
         ret = MEMORY_E;
@@ -75,6 +70,11 @@ static int wolfssl_read_bio_file(WOLFSSL_BIO* bio, char** data)
 
             /* Update total read. */
             ret += sz;
+            /* Cap total like the direct-file path to avoid int overflow. */
+            if (ret > MAX_WOLFSSL_FILE_SIZE) {
+                sz = BUFFER_E;
+                break;
+            }
             /* Calculate remaining unused memory. */
             remaining = READ_BIO_FILE_CHUNK - (ret % READ_BIO_FILE_CHUNK);
             /* Check for space remaining. */
@@ -86,8 +86,18 @@ static int wolfssl_read_bio_file(WOLFSSL_BIO* bio, char** data)
             }
             else {
                 /* No space left for more data to be read - add a chunk. */
-                p = (char*)XREALLOC(mem, ret + READ_BIO_FILE_CHUNK, bio->heap,
-                    DYNAMIC_TYPE_OPENSSL);
+            #ifdef WOLFSSL_NO_REALLOC
+                p = (char*)XMALLOC(ret + READ_BIO_FILE_CHUNK, NULL,
+                    DYNAMIC_TYPE_TMP_BUFFER);
+                if (p != NULL) {
+                    XMEMCPY(p, mem, ret);
+                    XFREE(mem, NULL, DYNAMIC_TYPE_TMP_BUFFER);
+                    mem = NULL;
+                }
+            #else
+                p = (char*)XREALLOC(mem, ret + READ_BIO_FILE_CHUNK, NULL,
+                    DYNAMIC_TYPE_TMP_BUFFER);
+            #endif
                 if (p == NULL) {
                     sz = MEMORY_E;
                     break;
@@ -103,7 +113,7 @@ static int wolfssl_read_bio_file(WOLFSSL_BIO* bio, char** data)
         }
         if ((sz < 0) || (ret == 0)) {
             /* Dispose of memory on error or no data read. */
-            XFREE(mem, bio->heap, DYNAMIC_TYPE_OPENSSL);
+            XFREE(mem, NULL, DYNAMIC_TYPE_TMP_BUFFER);
             mem = NULL;
             /* Return error. */
             ret = sz;
@@ -113,7 +123,6 @@ static int wolfssl_read_bio_file(WOLFSSL_BIO* bio, char** data)
     *data = mem;
     return ret;
 }
-#endif
 
 /* Read exactly the required amount into a newly allocated buffer.
  *
@@ -129,14 +138,14 @@ static int wolfssl_read_bio_len(WOLFSSL_BIO* bio, int sz, char** data)
     char* mem;
 
     /* Allocate buffer to hold data. */
-    mem = (char*)XMALLOC((size_t)sz, bio->heap, DYNAMIC_TYPE_OPENSSL);
+    mem = (char*)XMALLOC((size_t)sz, NULL, DYNAMIC_TYPE_TMP_BUFFER);
     if (mem == NULL) {
         WOLFSSL_ERROR_MSG("Memory allocation error");
         ret = MEMORY_E;
     }
     else if ((ret = wolfSSL_BIO_read(bio, mem, sz)) != sz) {
         /* Pending data not read. */
-        XFREE(mem, bio->heap, DYNAMIC_TYPE_OPENSSL);
+        XFREE(mem, NULL, DYNAMIC_TYPE_TMP_BUFFER);
         mem = NULL;
         ret = MEMORY_E;
     }
@@ -163,19 +172,19 @@ static int wolfssl_read_bio(WOLFSSL_BIO* bio, char** data, int* dataSz,
     if (bio->type == WOLFSSL_BIO_MEMORY) {
         ret = wolfSSL_BIO_get_mem_data(bio, data);
         if (ret > 0) {
-            bio->rdIdx += ret;
+            /* Advance the write index in the memory bio */
+            WOLFSSL_BIO* mem_bio = bio;
+            for (; mem_bio != NULL; mem_bio = mem_bio->next) {
+                if (mem_bio->type == WOLFSSL_BIO_MEMORY)
+                    break;
+            }
+            if (mem_bio == NULL)
+                mem_bio = bio; /* Default to input */
+            mem_bio->rdIdx += ret;
         }
         *memAlloced = 0;
     }
-#ifndef WOLFSSL_NO_FSEEK
     /* Get pending or, when a file BIO, get length of file. */
-    else if ((sz = wolfSSL_BIO_get_len(bio)) > 0) {
-        ret = wolfssl_read_bio_len(bio, sz, data);
-        if (ret > 0) {
-            *memAlloced = 1;
-        }
-    }
-#else
     else if ((sz = wolfSSL_BIO_pending(bio)) > 0) {
         ret = wolfssl_read_bio_len(bio, sz, data);
         if (ret > 0) {
@@ -188,7 +197,6 @@ static int wolfssl_read_bio(WOLFSSL_BIO* bio, char** data, int* dataSz,
             *memAlloced = 1;
         }
     }
-#endif
     else {
         WOLFSSL_ERROR_MSG("No data read from bio");
         *memAlloced = 0;
@@ -206,9 +214,7 @@ static int wolfssl_read_bio(WOLFSSL_BIO* bio, char** data, int* dataSz,
 #endif /* OPENSSL_EXTRA && !WOLFCRYPT_ONLY */
 
 #if (defined(OPENSSL_EXTRA) || defined(PERSIST_CERT_CACHE) || \
-     (!defined(NO_CERTS) && (!defined(NO_WOLFSSL_CLIENT) || \
-      !defined(WOLFSSL_NO_CLIENT_AUTH)))) && !defined(WOLFCRYPT_ONLY) && \
-    !defined(NO_FILESYSTEM)
+     !defined(NO_CERTS)) && !defined(WOLFCRYPT_ONLY) && !defined(NO_FILESYSTEM)
 /* Read all the data from a file.
  *
  * @param [in]  fp          File pointer to read with.
@@ -229,7 +235,15 @@ static int wolfssl_file_len(XFILE fp, long* fileSz)
         /* Get file offset at end of file. */
         curr = (long)XFTELL(fp);
         if (curr < 0) {
-            ret = WOLFSSL_BAD_FILE;
+#ifdef ESPIPE
+            if (errno == ESPIPE) {
+                WOLFSSL_ERROR_MSG("wolfssl_file_len: file is a pipe");
+                *fileSz = 0;
+                ret = WOLFSSL_BAD_FILETYPE;
+            }
+            else
+#endif
+                ret = WOLFSSL_BAD_FILE;
         }
     }
     /* Move to end of file. */
@@ -299,5 +313,204 @@ static int wolfssl_read_file(XFILE fp, char** data, int* dataSz)
 }
 #endif /* (OPENSSL_EXTRA || PERSIST_CERT_CACHE) && !WOLFCRYPT_ONLY &&
         * !NO_FILESYSTEM */
+
+#if !defined(WOLFCRYPT_ONLY) && !defined(NO_CERTS)
+
+#ifdef WOLFSSL_SMALL_STACK
+
+/* Buffer and size with no stack buffer. */
+typedef struct {
+    /* Dynamically allocated buffer. */
+    byte* buffer;
+    /* Size of buffer in bytes. */
+    word32 sz;
+} StaticBuffer;
+
+/* Initialize static buffer.
+ *
+ * @param [in, out] sb  Static buffer.
+ */
+static void static_buffer_init(StaticBuffer* sb)
+{
+    sb->buffer = NULL;
+    sb->sz = 0;
+}
+
+/* Set the size of the buffer.
+ *
+ * Can only set size once.
+ *
+ * @param [in] sb    Static buffer.
+ * @param [in] len   Length required.
+ * @param [in] heap  Dynamic memory allocation hint.
+ * @param [in] type  Type of dynamic memory.
+ * @return  0 on success.
+ * @return  MEMORY_E when dynamic memory allocation fails.
+ */
+static int static_buffer_set_size(StaticBuffer* sb, word32 len, void* heap,
+    int type)
+{
+    int ret = 0;
+
+    (void)heap;
+    (void)type;
+
+    sb->buffer = (byte*)XMALLOC(len, heap, type);
+    if (sb->buffer == NULL) {
+        ret = MEMORY_E;
+    }
+    else {
+        sb->sz = len;
+    }
+
+    return ret;
+}
+
+/* Dispose of dynamically allocated buffer.
+ *
+ * @param [in] sb    Static buffer.
+ * @param [in] heap  Dynamic memory allocation hint.
+ * @param [in] type  Type of dynamic memory.
+ */
+static void static_buffer_free(StaticBuffer* sb, void* heap, int type)
+{
+    (void)heap;
+    (void)type;
+    XFREE(sb->buffer, heap, type);
+}
+
+#else
+
+/* Buffer and size with stack buffer set and option to dynamically allocate. */
+typedef struct {
+    /* Stack or heap buffer. */
+    byte* buffer;
+    /* Size of buffer in bytes. */
+    word32 sz;
+    /* Indicates whether the buffer was dynamically allocated. */
+    int dyn;
+} StaticBuffer;
+
+/* Initialize static buffer.
+ *
+ * @param [in, out] sb           Static buffer.
+ * @param [in]      stackBuffer  Buffer allocated on the stack.
+ * @param [in]      len          Length of stack buffer.
+ */
+static void static_buffer_init(StaticBuffer* sb, byte* stackBuffer, word32 len)
+{
+    sb->buffer = stackBuffer;
+    sb->sz = len;
+    sb->dyn = 0;
+}
+
+/* Set the size of the buffer.
+ *
+ * Pre: Buffer on the stack set with its size.
+ * Can only set size once.
+ *
+ * @param [in] sb    Static buffer.
+ * @param [in] len   Length required.
+ * @param [in] heap  Dynamic memory allocation hint.
+ * @param [in] type  Type of dynamic memory.
+ * @return  0 on success.
+ * @return  MEMORY_E when dynamic memory allocation fails.
+ */
+static int static_buffer_set_size(StaticBuffer* sb, word32 len, void* heap,
+    int type)
+{
+    int ret = 0;
+
+    (void)heap;
+    (void)type;
+
+    if (len > sb->sz) {
+        byte* buff = (byte*)XMALLOC(len, heap, type);
+        if (buff == NULL) {
+            ret = MEMORY_E;
+        }
+        else {
+            sb->buffer = buff;
+            sb->sz = len;
+            sb->dyn = 1;
+        }
+    }
+
+    return ret;
+}
+
+/* Dispose of dynamically allocated buffer.
+ *
+ * @param [in] sb    Static buffer.
+ * @param [in] heap  Dynamic memory allocation hint.
+ * @param [in] type  Type of dynamic memory.
+ */
+static void static_buffer_free(StaticBuffer* sb, void* heap, int type)
+{
+    (void)heap;
+    (void)type;
+
+    if (sb->dyn) {
+        XFREE(sb->buffer, heap, type);
+    }
+}
+
+#endif /* WOLFSSL_SMALL_STACK */
+
+#ifndef NO_FILESYSTEM
+
+/* Read all the data from a file into content.
+ *
+ * @param [in]      fname    File pointer to read with.
+ * @param [in, out] content  Read data in an allocated buffer.
+ * @param [in]      heap     Dynamic memory allocation hint.
+ * @param [in]      type     Type of dynamic memory.
+ * @param [out]     size     Amount of data read in bytes.
+ * @return  0 on success.
+ * @return  WOLFSSL_BAD_FILE when reading fails.
+ * @return  MEMORY_E when memory allocation fails.
+ */
+static int wolfssl_read_file_static(const char* fname, StaticBuffer* content,
+    void* heap, int type, long* size)
+{
+    int ret = 0;
+    XFILE file = XBADFILE;
+    long sz = 0;
+
+    /* Check filename is usable. */
+    if (fname == NULL) {
+        ret = WOLFSSL_BAD_FILE;
+    }
+    /* Open file for reading. */
+    if ((ret == 0) && ((file = XFOPEN(fname, "rb")) == XBADFILE)) {
+        ret = WOLFSSL_BAD_FILE;
+    }
+    if (ret == 0) {
+        /* Get length of file. */
+        ret = wolfssl_file_len(file, &sz);
+    }
+    if (ret == 0) {
+        /* Set the buffer to be big enough to hold all data. */
+        ret = static_buffer_set_size(content, (word32)sz, heap, type);
+    }
+    /* Read data from file. */
+    if ((ret == 0) && ((size_t)XFREAD(content->buffer, 1, (size_t)sz, file) !=
+            (size_t)sz)) {
+        ret = WOLFSSL_BAD_FILE;
+    }
+
+    /* Close file if opened. */
+    if (file != XBADFILE) {
+        XFCLOSE(file);
+    }
+    /* Return size read. */
+    *size = sz;
+    return ret;
+}
+
+#endif /* !NO_FILESYSTEM */
+
+#endif /* !WOLFCRYPT_ONLY && !NO_CERTS */
+
 #endif /* !WOLFSSL_SSL_MISC_INCLUDED */
 

@@ -1,12 +1,12 @@
 /* wolfSSL-TLS-ServerThreaded.cs
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -116,9 +116,14 @@ public class wolfSSL_TLS_ServerThreaded
         IntPtr ctx;
 
         /* These paths should be changed for use */
-        string fileCert = @"server-cert.pem";
-        string fileKey = @"server-key.pem";
-        StringBuilder dhparam = new StringBuilder("dh2048.pem");
+        string fileCert = wolfssl.setPath("server-cert.pem");
+        string fileKey = wolfssl.setPath("server-key.pem");
+        StringBuilder dhparam = new StringBuilder(wolfssl.setPath("dh2048.pem"));
+
+        if (fileCert == "" || fileKey == "" || dhparam.Length == 0) {
+            Console.WriteLine("Platform not supported");
+            return;
+        }
 
         /* example of function used for setting logging */
         wolfssl.SetLogging(standard_log);
@@ -136,6 +141,12 @@ public class wolfSSL_TLS_ServerThreaded
         if (!File.Exists(fileCert) || !File.Exists(fileKey))
         {
             Console.WriteLine("Could not find cert or key file");
+            wolfssl.CTX_free(ctx);
+            return;
+        }
+
+        if (!File.Exists(dhparam.ToString())) {
+            Console.WriteLine("Could not find dh file");
             wolfssl.CTX_free(ctx);
             return;
         }

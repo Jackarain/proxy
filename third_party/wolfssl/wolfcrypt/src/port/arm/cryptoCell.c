@@ -1,12 +1,12 @@
 /* cryptoCell.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -19,11 +19,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1335, USA
  */
 
-#ifdef HAVE_CONFIG_H
-    #include <config.h>
-#endif
-
-#include <wolfssl/wolfcrypt/settings.h>
+#include <wolfssl/wolfcrypt/libwolfssl_sources.h>
 
 /* This source is included in wc_port.c */
 /* WOLFSSL_CRYPTOCELL_C is defined by wc_port.c in case compile tries to
@@ -32,8 +28,6 @@
 
 #ifdef WOLFSSL_CRYPTOCELL
 
-#include <wolfssl/wolfcrypt/error-crypt.h>
-#include <wolfssl/wolfcrypt/logging.h>
 #include <wolfssl/wolfcrypt/ecc.h>
 #include <wolfssl/wolfcrypt/port/arm/cryptoCell.h>
 
@@ -49,36 +43,26 @@ CRYS_RND_State_t     wc_rndState;
 CRYS_RND_WorkBuff_t  wc_rndWorkBuff;
 SaSiRndGenerateVectWorkFunc_t wc_rndGenVectFunc = CRYS_RND_GenerateVector;
 
-static word32 cc310_enableCount = 0;
+static int cc310_initialized = 0;
 
 static void cc310_enable(void)
 {
-    cc310_enableCount++;
-
-    /* Enable the CC310 HW/IQ once*/
-
     NRF_CRYPTOCELL->ENABLE = 1;
     NVIC_EnableIRQ(CRYPTOCELL_IRQn);
 }
 
 static void cc310_disable(void)
 {
-    cc310_enableCount--;
-
-    /* Disable HW/IRQ if no more users */
-    if (cc310_enableCount == 0) {
-        NRF_CRYPTOCELL->ENABLE = 0;
-        NVIC_DisableIRQ(CRYPTOCELL_IRQn);
-    }
+    NRF_CRYPTOCELL->ENABLE = 0;
+    NVIC_DisableIRQ(CRYPTOCELL_IRQn);
 }
 
 int cc310_Init(void)
 {
     int ret = 0;
-    static int initialized = 0;
 
-    if (!initialized) {
-        /* Enable the CC310 HW. */
+    if (!cc310_initialized) {
+        /* Enable the CC310 HW/IRQ once*/
         cc310_enable();
 
         /*Initialize the CC310 run-time library*/
@@ -86,6 +70,7 @@ int cc310_Init(void)
 
         if (ret != SA_SILIB_RET_OK) {
             WOLFSSL_MSG("Error SaSi_LibInit");
+            cc310_disable();
             return ret;
         }
 
@@ -93,25 +78,30 @@ int cc310_Init(void)
         ret = CRYS_RndInit(&wc_rndState, &wc_rndWorkBuff);
         if (ret != CRYS_OK) {
             WOLFSSL_MSG("Error CRYS_RndInit");
+            SaSi_LibFini();
+            cc310_disable();
             return ret;
         }
-        initialized = 1;
+        cc310_initialized = 1;
     }
     return ret;
 }
 
 void cc310_Free(void)
 {
-    CRYSError_t crys_result;
+    if (cc310_initialized) {
+        CRYSError_t crys_result;
 
-    SaSi_LibFini();
+        crys_result = CRYS_RND_UnInstantiation(&wc_rndState);
 
-    crys_result = CRYS_RND_UnInstantiation(&wc_rndState);
+        if (crys_result != CRYS_OK) {
+            WOLFSSL_MSG("Error CRYS_RND_UnInstantiation");
+        }
 
-    if (crys_result != CRYS_OK) {
-        WOLFSSL_MSG("Error RYS_RND_UnInstantiation");
+        SaSi_LibFini();
+        cc310_disable();
+        cc310_initialized = 0;
     }
-    cc310_disable();
 }
 
 int cc310_random_generate(byte* output, word32 size)
@@ -148,39 +138,72 @@ CRYS_ECPKI_DomainID_t cc310_mapCurve(int curve_id)
 #ifndef NO_RSA
 CRYS_RSA_HASH_OpMode_t cc310_hashModeRSA(enum wc_HashType hash_type, int isHashed)
 {
+    /* Every case assigns and breaks - a compiled-out algorithm gives the
+     * not-known mode rather than falling through. */
+    CRYS_RSA_HASH_OpMode_t hash_mode;
+
     switch(hash_type)
     {
         case WC_HASH_TYPE_MD5:
         #ifndef NO_MD5
-            return isHashed? CRYS_RSA_After_MD5_mode : CRYS_RSA_HASH_MD5_mode;
+            hash_mode = isHashed? CRYS_RSA_After_MD5_mode :
+                                  CRYS_RSA_HASH_MD5_mode;
+        #else
+            hash_mode = CRYS_RSA_After_HASH_NOT_KNOWN_mode;
         #endif
+            break;
         case WC_HASH_TYPE_SHA:
         #ifndef NO_SHA
-            return isHashed? CRYS_RSA_After_SHA1_mode : CRYS_RSA_HASH_SHA1_mode;
+            hash_mode = isHashed? CRYS_RSA_After_SHA1_mode :
+                                  CRYS_RSA_HASH_SHA1_mode;
+        #else
+            hash_mode = CRYS_RSA_After_HASH_NOT_KNOWN_mode;
         #endif
+            break;
         case WC_HASH_TYPE_SHA224:
         #ifdef WOLFSSL_SHA224
-            return isHashed? CRYS_RSA_After_SHA224_mode : CRYS_RSA_HASH_SHA224_mode;
+            hash_mode = isHashed? CRYS_RSA_After_SHA224_mode :
+                                  CRYS_RSA_HASH_SHA224_mode;
+        #else
+            hash_mode = CRYS_RSA_After_HASH_NOT_KNOWN_mode;
         #endif
+            break;
         case WC_HASH_TYPE_SHA256:
         #ifndef NO_SHA256
-            return isHashed? CRYS_RSA_After_SHA256_mode : CRYS_RSA_HASH_SHA256_mode;
+            hash_mode = isHashed? CRYS_RSA_After_SHA256_mode :
+                                  CRYS_RSA_HASH_SHA256_mode;
+        #else
+            hash_mode = CRYS_RSA_After_HASH_NOT_KNOWN_mode;
         #endif
+            break;
         case WC_HASH_TYPE_SHA384:
         #ifdef WOLFSSL_SHA384
-            return isHashed? CRYS_RSA_After_SHA384_mode : CRYS_RSA_HASH_SHA384_mode;
+            hash_mode = isHashed? CRYS_RSA_After_SHA384_mode :
+                                  CRYS_RSA_HASH_SHA384_mode;
+        #else
+            hash_mode = CRYS_RSA_After_HASH_NOT_KNOWN_mode;
         #endif
+            break;
         case WC_HASH_TYPE_SHA512:
         #ifdef WOLFSSL_SHA512
-            return isHashed? CRYS_RSA_After_SHA512_mode : CRYS_RSA_HASH_SHA512_mode;
+            hash_mode = isHashed? CRYS_RSA_After_SHA512_mode :
+                                  CRYS_RSA_HASH_SHA512_mode;
+        #else
+            hash_mode = CRYS_RSA_After_HASH_NOT_KNOWN_mode;
         #endif
+            break;
         case WC_HASH_TYPE_NONE:
             /* default to SHA256 */
-            return isHashed? CRYS_RSA_After_SHA256_mode : CRYS_RSA_HASH_SHA256_mode;
+            hash_mode = isHashed? CRYS_RSA_After_SHA256_mode :
+                                  CRYS_RSA_HASH_SHA256_mode;
+            break;
         default:
-            return CRYS_RSA_After_HASH_NOT_KNOWN_mode;
+            hash_mode = CRYS_RSA_After_HASH_NOT_KNOWN_mode;
+            break;
     }
+    return hash_mode;
 }
+
 #endif /* !NO_RSA */
 
 #ifdef HAVE_ECC

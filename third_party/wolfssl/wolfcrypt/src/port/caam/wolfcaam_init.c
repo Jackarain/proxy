@@ -1,11 +1,11 @@
 /*
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -79,7 +79,7 @@ int wc_caamSetResource(IODevice ioDev)
 /* used to route crypto operations through crypto callback */
 static int wc_CAAM_router(int devId, wc_CryptoInfo* info, void* ctx)
 {
-    int ret = CRYPTOCB_UNAVAILABLE;
+    int ret = WC_NO_ERR_TRACE(CRYPTOCB_UNAVAILABLE);
 
     (void)ctx;
     (void)devId;
@@ -238,7 +238,9 @@ static int wc_CAAM_router(int devId, wc_CryptoInfo* info, void* ctx)
             break;
 
         case WC_ALGO_TYPE_CIPHER:
-        #if defined(WOLFSSL_CAAM_CIPHER)
+        /* wc_CryptoInfo has no cipher member without AES, and every cipher
+         * this dispatches is an AES mode, so the whole case goes with it. */
+        #if defined(WOLFSSL_CAAM_CIPHER) && !defined(NO_AES)
         #ifdef WOLFSSL_SECO_CAAM
             if (devId != WOLFSSL_SECO_DEVID)
                 break; /* only call to SECO if using WOLFSSL_SECO_DEVID */
@@ -501,6 +503,11 @@ int wc_caamAddAndWait(CAAM_BUFFER* buf, int sz, word32 arg[4], word32 type)
             return RAN_BLOCK_E;
         }
 
+        if (ret == CRYPTOCB_UNAVAILABLE) {
+            WOLFSSL_MSG("Driver does not support requested operation");
+            return ret;
+        }
+
         if (ret == ResourceNotAvailable) {
             WOLFSSL_MSG("Waiting on CAAM driver");
             return WC_HW_WAIT_E;
@@ -694,7 +701,7 @@ int wc_caamOpenBlob(byte* data, word32 dataSz, byte* out, word32* outSz)
 }
 #endif /* WOLFSSL_CAAM_BLOB */
 
-/* outSz gets set to key size plus 16 for mac and padding 
+/* outSz gets set to key size plus 16 for mac and padding
  * return 0 on success
  */
 int wc_caamCoverKey(byte* in, word32 inSz, byte* out, word32* outSz, int flag)
@@ -750,6 +757,7 @@ int caamFindUnusedPartition()
 }
 
 
+#ifndef WOLFSSL_CAAM_NO_SM
 /* return the address of the given partition number "part" */
 CAAM_ADDRESS caamGetPartition(int part, int sz)
 {
@@ -788,6 +796,7 @@ int caamFreePart(int partNum)
 
     return 0;
 }
+#endif /* !WOLFSSL_CAAM_NO_SM */
 
 
 /* Internal function to help write to a secure partition

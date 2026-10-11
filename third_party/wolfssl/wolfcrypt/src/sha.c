@@ -1,12 +1,12 @@
 /* sha.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -19,35 +19,47 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1335, USA
  */
 
+/*
+ * SHA-1 Build Options:
+ *
+ * Core:
+ * NO_SHA:                   Disable SHA-1 support entirely        default: off
+ * USE_SLOW_SHA:             Disable SHA-1 loop unrolling          default: off
+ * WC_HASH_DATA_ALIGNMENT:   Required data alignment for hashing   default: off
+ *
+ * Hardware Acceleration (SHA-1-specific):
+ * WC_ASYNC_ENABLE_SHA:      Enable async SHA-1 operations         default: off
+ * WOLFSSL_PIC32MZ_HASH:     PIC32MZ hardware SHA                  default: off
+ * WOLFSSL_PSA_NO_HASH:      Disable PSA hash                      default: off
+ * WOLFSSL_TI_HASH:          TI hardware hash                      default: off
+ * WOLFSSL_RENESAS_RX64_HASH: Renesas RX64 hardware hash           default: off
+ * FREESCALE_LTC_SHA:        Freescale LTC SHA acceleration        default: off
+ * FREESCALE_MMCAU_SHA:      Freescale MMCAU SHA acceleration      default: off
+ * STM32_HASH:               STM32 hardware hash                   default: off
+ * PSOC6_HASH_SHA1:          PSoC6 hardware SHA-1                  default: off
+ */
 
-#ifdef HAVE_CONFIG_H
-    #include <config.h>
-#endif
+#define WC_FIPS_LL_CRYPTO
+#define _WC_BUILDING_SHA_C
 
-#include <wolfssl/wolfcrypt/settings.h>
+#include <wolfssl/wolfcrypt/libwolfssl_sources.h>
 
 #ifdef DEBUG_WOLFSSL_VERBOSE
     #if defined(WOLFSSL_ESPIDF)
         #include <esp_log.h>
-    #else
-        #include <wolfssl/wolfcrypt/logging.h>
     #endif
 #endif
 
 #if !defined(NO_SHA)
 
-#if defined(HAVE_FIPS) && defined(HAVE_FIPS_VERSION) && (HAVE_FIPS_VERSION >= 2)
-    /* set NO_WRAPPERS before headers, use direct internal f()s not wrappers */
-    #define FIPS_NO_WRAPPERS
-
+#if FIPS_VERSION3_GE(2,0,0)
     #ifdef USE_WINDOWS_API
-        #pragma code_seg(".fipsA$j")
-        #pragma const_seg(".fipsB$j")
+        #pragma code_seg(".fipsA$k")
+        #pragma const_seg(".fipsB$k")
     #endif
 #endif
 
 #include <wolfssl/wolfcrypt/sha.h>
-#include <wolfssl/wolfcrypt/error-crypt.h>
 #include <wolfssl/wolfcrypt/hash.h>
 
 #ifdef WOLF_CRYPTO_CB
@@ -56,6 +68,10 @@
 
 #ifdef WOLFSSL_IMXRT1170_CAAM
 #include <wolfssl/wolfcrypt/port/caam/wolfcaam_fsl_nxp.h>
+#endif
+
+#if defined(WOLFSSL_PSOC6_CRYPTO)
+    #include <wolfssl/wolfcrypt/port/cypress/psoc6_crypto.h>
 #endif
 
 /* Assume no hash HW available until supporting HW found. */
@@ -110,7 +126,6 @@
 
 #else
 
-#include <wolfssl/wolfcrypt/logging.h>
 #ifdef NO_INLINE
     #include <wolfssl/wolfcrypt/misc.h>
 #else
@@ -118,6 +133,14 @@
     #include <wolfcrypt/src/misc.c>
 #endif
 
+#if FIPS_VERSION3_GE(6,0,0)
+    const unsigned int wolfCrypt_FIPS_sha_ro_sanity[2] =
+                                                     { 0x1a2b3c4d, 0x00000013 };
+    int wolfCrypt_FIPS_SHA_sanity(void)
+    {
+        return 0;
+    }
+#endif
 
 /* Hardware Acceleration */
 #if defined(WOLFSSL_PIC32MZ_HASH)
@@ -132,6 +155,7 @@
             return BAD_FUNC_ARG;
         }
 
+        WC_SILABS_CLEAR_HASH_CTX(sha);
         (void)devId;
         (void)heap;
 
@@ -187,6 +211,7 @@
             return BAD_FUNC_ARG;
         }
 
+        WC_SILABS_CLEAR_HASH_CTX(sha);
         (void)devId;
         (void)heap;
 
@@ -300,6 +325,10 @@
     !defined(WOLFSSL_QNX_CAAM)
     /* wolfcrypt/src/port/caam/caam_sha.c */
 
+#elif defined(MAX3266X_SHA)
+    /* Already brought in by sha.h */
+    /* #include <wolfssl/wolfcrypt/port/maxim/max3266x.h> */
+
 #elif defined(WOLFSSL_USE_ESP32_CRYPT_HASH_HW) || \
       defined(WOLFSSL_USE_ESP32C3_CRYPT_HASH_HW)
 
@@ -341,6 +370,9 @@
     #include <wolfssl/wolfcrypt/port/nxp/dcp_port.h>
     /* implemented in wolfcrypt/src/port/nxp/dcp_port.c */
 
+#elif defined(WOLFSSL_NXP_HASHCRYPT_SHA)
+    /* implemented in wolfcrypt/src/port/nxp/hashcrypt_port.c */
+
 #elif defined(WOLFSSL_SILABS_SE_ACCEL)
 
     /* implemented in wolfcrypt/src/port/silabs/silabs_hash.c */
@@ -357,6 +389,7 @@
         if (sha == NULL) {
             return BAD_FUNC_ARG;
         }
+        WC_SILABS_CLEAR_HASH_CTX(sha);
         (void)devId;
 
         return se050_hash_init(&sha->se050Ctx, heap);
@@ -385,6 +418,8 @@
 
 #elif defined(WOLFSSL_HAVE_PSA) && !defined(WOLFSSL_PSA_NO_HASH)
 /* implemented in wolfcrypt/src/port/psa/psa_hash.c */
+#elif defined(PSOC6_HASH_SHA1)
+    /* Implemented in wolfcrypt/src/port/cypress/psoc6_crypto.c */
 #else
     /* Software implementation */
     #define USE_SHA_SOFTWARE_IMPL
@@ -400,6 +435,7 @@
         sha->digest[4] = 0xC3D2E1F0L;
 
         sha->buffLen = 0;
+        XMEMSET(sha->buffer, 0, sizeof(sha->buffer));
         sha->loLen   = 0;
         sha->hiLen   = 0;
     #ifdef WOLFSSL_HASH_FLAGS
@@ -424,7 +460,7 @@ static WC_INLINE void AddLength(wc_Sha* sha, word32 len)
 #ifndef XTRANSFORM
     #define XTRANSFORM(S,B)   Transform((S),(B))
 
-    #define blk0(i) (W[i] = *((word32*)&data[(i)*sizeof(word32)]))
+    #define blk0(i) (W[i] = *((const word32*)&data[(i)*sizeof(word32)]))
     #define blk1(i) (W[(i)&15] = \
         rotlFixed(W[((i)+13)&15]^W[((i)+8)&15]^W[((i)+2)&15]^W[(i)&15],1))
 
@@ -433,7 +469,7 @@ static WC_INLINE void AddLength(wc_Sha* sha, word32 len)
     #define f3(x,y,z) (((x)&(y))|((z)&((x)|(y))))
     #define f4(x,y,z) ((x)^(y)^(z))
 
-    #ifdef WOLFSSL_NUCLEUS_1_2
+    #if defined(WOLFSSL_NUCLEUS_1_2) || defined(NUCLEUS_PLUS_2_3)
         /* nucleus.h also defines R1-R4 */
         #undef R1
         #undef R2
@@ -546,10 +582,16 @@ int wc_InitSha_ex(wc_Sha* sha, void* heap, int devId)
         return BAD_FUNC_ARG;
     }
 
+    WC_SILABS_CLEAR_HASH_CTX(sha);
     sha->heap = heap;
 #ifdef WOLF_CRYPTO_CB
     sha->devId = devId;
     sha->devCtx = NULL;
+#endif
+#ifdef WOLFSSL_HASH_KEEP
+    sha->msg  = NULL;
+    sha->len  = 0;
+    sha->used = 0;
 #endif
 
 #ifdef WOLFSSL_USE_ESP32_CRYPT_HASH_HW
@@ -586,7 +628,7 @@ int wc_ShaUpdate(wc_Sha* sha, const byte* data, word32 len)
     word32 blocksLen;
     byte* local;
 
-    if (sha == NULL || (data == NULL && len > 0)) {
+    if (sha == NULL) {
         return BAD_FUNC_ARG;
     }
 
@@ -595,10 +637,14 @@ int wc_ShaUpdate(wc_Sha* sha, const byte* data, word32 len)
         return 0;
     }
 
+    if (data == NULL) {
+        return BAD_FUNC_ARG;
+    }
+
 #ifdef WOLF_CRYPTO_CB
     if (sha->devId != INVALID_DEVID) {
         ret = wc_CryptoCb_ShaHash(sha, data, len, NULL);
-        if (ret != CRYPTOCB_UNAVAILABLE)
+        if (ret != WC_NO_ERR_TRACE(CRYPTOCB_UNAVAILABLE))
             return ret;
         ret = 0; /* reset ret */
         /* fall-through when unavailable */
@@ -644,13 +690,26 @@ int wc_ShaUpdate(wc_Sha* sha, const byte* data, word32 len)
         #endif
 
         #if defined(LITTLE_ENDIAN_ORDER) && !defined(FREESCALE_MMCAU_SHA)
-            #if (defined(CONFIG_IDF_TARGET_ESP32C3) || defined(CONFIG_IDF_TARGET_ESP32C6)) \
-              && defined(WOLFSSL_ESP32_CRYPT) && \
+            #if ( defined(CONFIG_IDF_TARGET_ESP32C2) || \
+                  defined(CONFIG_IDF_TARGET_ESP8684) || \
+                  defined(CONFIG_IDF_TARGET_ESP32C3) || \
+                  defined(CONFIG_IDF_TARGET_ESP32C6)    \
+                ) && \
+                 defined(WOLFSSL_ESP32_CRYPT) && \
                 !defined(NO_WOLFSSL_ESP32_CRYPT_HASH)
+                /* For Espressif RISC-V Targets, we *may* need to reverse bytes
+                 * depending on if HW is active or not. */
                 if (esp_sha_need_byte_reversal(&sha->ctx))
             #endif
             {
+            #ifdef WOLFSSL_WIDE_BYTE
+                /* CHAR_BIT != 8: pack the 16 big-endian schedule words
+                 * octet-wise rather than reversing whole cells. */
+                WordsFromBytesBE32(sha->buffer, (const byte*)sha->buffer,
+                    WC_SHA_BLOCK_SIZE / 4);
+            #else
                 ByteReverseWords(sha->buffer, sha->buffer, WC_SHA_BLOCK_SIZE);
+            #endif
             }
         #endif
 
@@ -722,13 +781,24 @@ int wc_ShaUpdate(wc_Sha* sha, const byte* data, word32 len)
     #endif
 
     #if defined(LITTLE_ENDIAN_ORDER) && !defined(FREESCALE_MMCAU_SHA)
-        #if (defined(CONFIG_IDF_TARGET_ESP32C3) || defined(CONFIG_IDF_TARGET_ESP32C6)) && \
+        #if ( defined(CONFIG_IDF_TARGET_ESP32C2) || \
+              defined(CONFIG_IDF_TARGET_ESP8684) || \
+              defined(CONFIG_IDF_TARGET_ESP32C3) || \
+              defined(CONFIG_IDF_TARGET_ESP32C6)    \
+            ) && \
              defined(WOLFSSL_ESP32_CRYPT) && \
             !defined(NO_WOLFSSL_ESP32_CRYPT_HASH)
+            /* For Espressif RISC-V Targets, we *may* need to reverse bytes
+             * depending on if HW is active or not. */
             if (esp_sha_need_byte_reversal(&sha->ctx))
         #endif
         {
+        #ifdef WOLFSSL_WIDE_BYTE
+            WordsFromBytesBE32(local32, (const byte*)local32,
+                WC_SHA_BLOCK_SIZE / 4);
+        #else
             ByteReverseWords(local32, local32, WC_SHA_BLOCK_SIZE);
+        #endif
         }
     #endif
 
@@ -756,18 +826,28 @@ int wc_ShaUpdate(wc_Sha* sha, const byte* data, word32 len)
 
 int wc_ShaFinalRaw(wc_Sha* sha, byte* hash)
 {
-#ifdef LITTLE_ENDIAN_ORDER
+#if defined(LITTLE_ENDIAN_ORDER) && !defined(WOLFSSL_WIDE_BYTE)
     word32 digest[WC_SHA_DIGEST_SIZE / sizeof(word32)];
+    XMEMSET(digest, 0, sizeof(digest));
 #endif
 
     if (sha == NULL || hash == NULL) {
         return BAD_FUNC_ARG;
     }
 
-#ifdef LITTLE_ENDIAN_ORDER
-    #if (defined(CONFIG_IDF_TARGET_ESP32C3) || defined(CONFIG_IDF_TARGET_ESP32C6)) && \
+#if defined(WOLFSSL_WIDE_BYTE)
+    /* CHAR_BIT != 8: write the digest words as big-endian octets. */
+    BytesFromWordsBE32(hash, sha->digest, WC_SHA_DIGEST_SIZE);
+#elif defined(LITTLE_ENDIAN_ORDER)
+    #if ( defined(CONFIG_IDF_TARGET_ESP32C2) || \
+          defined(CONFIG_IDF_TARGET_ESP8684) || \
+          defined(CONFIG_IDF_TARGET_ESP32C3) || \
+          defined(CONFIG_IDF_TARGET_ESP32C6)    \
+        ) && \
          defined(WOLFSSL_ESP32_CRYPT) && \
         !defined(NO_WOLFSSL_ESP32_CRYPT_HASH)
+        /* For Espressif RISC-V Targets, we *may* need to reverse bytes
+         * depending on if HW is active or not. */
         if (esp_sha_need_byte_reversal(&sha->ctx))
     #endif
     {
@@ -799,7 +879,7 @@ int wc_ShaFinal(wc_Sha* sha, byte* hash)
 #ifdef WOLF_CRYPTO_CB
     if (sha->devId != INVALID_DEVID) {
         ret = wc_CryptoCb_ShaHash(sha, NULL, 0, hash);
-        if (ret != CRYPTOCB_UNAVAILABLE)
+        if (ret != WC_NO_ERR_TRACE(CRYPTOCB_UNAVAILABLE))
             return ret;
         /* fall-through when unavailable */
     }
@@ -823,7 +903,10 @@ int wc_ShaFinal(wc_Sha* sha, byte* hash)
 
     /* pad with zeros */
     if (sha->buffLen > WC_SHA_PAD_SIZE) {
-        XMEMSET(&local[sha->buffLen], 0, WC_SHA_BLOCK_SIZE - sha->buffLen);
+        if (sha->buffLen < WC_SHA_BLOCK_SIZE) {
+            XMEMSET(&local[sha->buffLen], 0, WC_SHA_BLOCK_SIZE - sha->buffLen);
+        }
+
         sha->buffLen += WC_SHA_BLOCK_SIZE - sha->buffLen;
 
     #if defined(WOLFSSL_USE_ESP32_CRYPT_HASH_HW)
@@ -834,13 +917,24 @@ int wc_ShaFinal(wc_Sha* sha, byte* hash)
     #endif
 
     #if defined(LITTLE_ENDIAN_ORDER) && !defined(FREESCALE_MMCAU_SHA)
-        #if (defined(CONFIG_IDF_TARGET_ESP32C3) || defined(CONFIG_IDF_TARGET_ESP32C6)) && \
+        #if ( defined(CONFIG_IDF_TARGET_ESP32C2) || \
+              defined(CONFIG_IDF_TARGET_ESP8684) || \
+              defined(CONFIG_IDF_TARGET_ESP32C3) || \
+              defined(CONFIG_IDF_TARGET_ESP32C6)    \
+            ) && \
              defined(WOLFSSL_ESP32_CRYPT) && \
             !defined(NO_WOLFSSL_ESP32_CRYPT_HASH)
+            /* For Espressif RISC-V Targets, we *may* need to reverse bytes
+             * depending on if HW is active or not. */
             if (esp_sha_need_byte_reversal(&sha->ctx))
         #endif
         {
+        #ifdef WOLFSSL_WIDE_BYTE
+            WordsFromBytesBE32(sha->buffer, (const byte*)sha->buffer,
+                WC_SHA_BLOCK_SIZE / 4);
+        #else
             ByteReverseWords(sha->buffer, sha->buffer, WC_SHA_BLOCK_SIZE);
+        #endif
         }
     #endif
 
@@ -874,10 +968,19 @@ int wc_ShaFinal(wc_Sha* sha, byte* hash)
     }
 #endif
 
-#if defined(LITTLE_ENDIAN_ORDER) && !defined(FREESCALE_MMCAU_SHA)
-    #if (defined(CONFIG_IDF_TARGET_ESP32C3) || defined(CONFIG_IDF_TARGET_ESP32C6)) && \
+    /* WOLFSSL_WIDE_BYTE packs the whole final block (including the length
+     * words) octet-wise below, so skip the in-place word reversal here. */
+#if defined(LITTLE_ENDIAN_ORDER) && !defined(FREESCALE_MMCAU_SHA) && \
+    !defined(WOLFSSL_WIDE_BYTE)
+    #if ( defined(CONFIG_IDF_TARGET_ESP32C2) || \
+          defined(CONFIG_IDF_TARGET_ESP8684) || \
+          defined(CONFIG_IDF_TARGET_ESP32C3) || \
+          defined(CONFIG_IDF_TARGET_ESP32C6)    \
+        ) && \
          defined(WOLFSSL_ESP32_CRYPT) && \
         !defined(NO_WOLFSSL_ESP32_CRYPT_HASH)
+        /* For Espressif RISC-V Targets, we *may* need to reverse bytes
+         * depending on if HW is active or not. */
         if (esp_sha_need_byte_reversal(&sha->ctx))
     #endif
     { /* reminder local also points to sha->buffer  */
@@ -887,12 +990,28 @@ int wc_ShaFinal(wc_Sha* sha, byte* hash)
 
     /* store lengths */
     /* put lengths in bits */
-    sha->hiLen = (sha->loLen >> (8*sizeof(sha->loLen) - 3)) + (sha->hiLen << 3);
+    sha->hiLen = (sha->loLen >> (CHAR_BIT*sizeof(sha->loLen) - 3)) +
+                                                            (sha->hiLen << 3);
     sha->loLen = sha->loLen << 3;
 
     /* ! length ordering dependent on digest endian type ! */
+#ifdef WOLFSSL_WIDE_BYTE
+    /* CHAR_BIT != 8: place the 64-bit length as 8 big-endian octets, then pack
+     * all 16 big-endian schedule words octet-wise (covers the length words). */
+    local[WC_SHA_PAD_SIZE + 0] = (byte)((sha->hiLen >> 24) & 0xFF);
+    local[WC_SHA_PAD_SIZE + 1] = (byte)((sha->hiLen >> 16) & 0xFF);
+    local[WC_SHA_PAD_SIZE + 2] = (byte)((sha->hiLen >>  8) & 0xFF);
+    local[WC_SHA_PAD_SIZE + 3] = (byte)((sha->hiLen      ) & 0xFF);
+    local[WC_SHA_PAD_SIZE + 4] = (byte)((sha->loLen >> 24) & 0xFF);
+    local[WC_SHA_PAD_SIZE + 5] = (byte)((sha->loLen >> 16) & 0xFF);
+    local[WC_SHA_PAD_SIZE + 6] = (byte)((sha->loLen >>  8) & 0xFF);
+    local[WC_SHA_PAD_SIZE + 7] = (byte)((sha->loLen      ) & 0xFF);
+    WordsFromBytesBE32(sha->buffer, (const byte*)sha->buffer,
+        WC_SHA_BLOCK_SIZE / 4);
+#else
     XMEMCPY(&local[WC_SHA_PAD_SIZE], &sha->hiLen, sizeof(word32));
     XMEMCPY(&local[WC_SHA_PAD_SIZE + sizeof(word32)], &sha->loLen, sizeof(word32));
+#endif
 
 #if defined(FREESCALE_MMCAU_SHA)
     /* Kinetis requires only these bytes reversed */
@@ -902,8 +1021,12 @@ int wc_ShaFinal(wc_Sha* sha, byte* hash)
 #endif
 
 
-#if (defined(CONFIG_IDF_TARGET_ESP32C3) || defined(CONFIG_IDF_TARGET_ESP32C6)) && \
-     defined(WOLFSSL_ESP32_CRYPT) && !defined(NO_WOLFSSL_ESP32_CRYPT_HASH)
+#if ( defined(CONFIG_IDF_TARGET_ESP32C2) || \
+      defined(CONFIG_IDF_TARGET_ESP8684) || \
+      defined(CONFIG_IDF_TARGET_ESP32C3) || \
+      defined(CONFIG_IDF_TARGET_ESP32C6)    \
+    ) && \
+    defined(WOLFSSL_ESP32_CRYPT) && !defined(NO_WOLFSSL_ESP32_CRYPT_HASH)
 if (sha->ctx.mode == ESP32_SHA_HW) {
     #if defined(WOLFSSL_SUPER_VERBOSE_DEBUG)
     {
@@ -937,10 +1060,19 @@ if (sha->ctx.mode == ESP32_SHA_HW) {
     ret = XTRANSFORM(sha, (const byte*)local);
 #endif
 
+#if defined(WOLFSSL_WIDE_BYTE)
+    /* CHAR_BIT != 8: write the digest words as big-endian octets. */
+    BytesFromWordsBE32(hash, sha->digest, WC_SHA_DIGEST_SIZE);
+#else
 #ifdef LITTLE_ENDIAN_ORDER
-    #if (defined(CONFIG_IDF_TARGET_ESP32C3) || defined(CONFIG_IDF_TARGET_ESP32C6)) && \
-         defined(WOLFSSL_ESP32_CRYPT) && \
-        !defined(NO_WOLFSSL_ESP32_CRYPT_HASH)
+    #if ( defined(CONFIG_IDF_TARGET_ESP32C2) || \
+          defined(CONFIG_IDF_TARGET_ESP8684) || \
+          defined(CONFIG_IDF_TARGET_ESP32C3) || \
+          defined(CONFIG_IDF_TARGET_ESP32C6)    \
+        ) && \
+        defined(WOLFSSL_ESP32_CRYPT) && !defined(NO_WOLFSSL_ESP32_CRYPT_HASH)
+        /* For Espressif RISC-V Targets, we *may* need to reverse bytes
+         * depending on if HW is active or not. */
         if (esp_sha_need_byte_reversal(&sha->ctx))
     #endif
     {
@@ -949,6 +1081,7 @@ if (sha->ctx.mode == ESP32_SHA_HW) {
 #endif
 
     XMEMCPY(hash, (byte *)&sha->digest[0], WC_SHA_DIGEST_SIZE);
+#endif
 
     /* we'll always reset state upon exit and return the error code from above,
      * which may cause fall back to SW if HW is busy. we do not return result
@@ -985,10 +1118,36 @@ int wc_InitSha(wc_Sha* sha)
 
 #if !defined(WOLFSSL_HAVE_PSA) || defined(WOLFSSL_PSA_NO_HASH)
 
+#ifndef MAX3266X_SHA
+
 void wc_ShaFree(wc_Sha* sha)
 {
+#if defined(WOLF_CRYPTO_CB) && defined(WOLF_CRYPTO_CB_FREE)
+    int ret = 0;
+#endif
+
     if (sha == NULL)
         return;
+
+#if defined(WOLF_CRYPTO_CB) && defined(WOLF_CRYPTO_CB_FREE)
+    #ifndef WOLF_CRYPTO_CB_FIND
+    if (sha->devId != INVALID_DEVID)
+    #endif
+    {
+        ret = wc_CryptoCb_Free(sha->devId, WC_ALGO_TYPE_HASH,
+                         WC_HASH_TYPE_SHA, 0, (void*)sha);
+        /* If they want the standard free, they can call it themselves */
+        /* via their callback setting devId to INVALID_DEVID */
+        /* otherwise assume the callback handled it */
+        if (ret != WC_NO_ERR_TRACE(CRYPTOCB_UNAVAILABLE))
+            return;
+        /* fall-through when unavailable */
+    }
+
+    /* silence compiler warning */
+    (void)ret;
+
+#endif /* WOLF_CRYPTO_CB && WOLF_CRYPTO_CB_FREE */
 
 #if defined(WOLFSSL_ESP32) &&  !defined(NO_WOLFSSL_ESP32_CRYPT_HASH)
     esp_sha_release_unfinished_lock(&sha->ctx);
@@ -1007,17 +1166,29 @@ void wc_ShaFree(wc_Sha* sha)
 #if (defined(WOLFSSL_RENESAS_TSIP_TLS) || \
      defined(WOLFSSL_RENESAS_TSIP_CRYPTONLY)) && \
     !defined(NO_WOLFSSL_RENESAS_TSIP_CRYPT_HASH) || \
+    (defined(WOLFSSL_RENESAS_RSIP) && (WOLFSSL_RENESAS_RZFSP_VER >= 220)) ||\
     defined(WOLFSSL_RENESAS_RX64_HASH)
-    if (sha->msg != NULL) {
-        XFREE(sha->msg, sha->heap, DYNAMIC_TYPE_TMP_BUFFER);
-        sha->msg = NULL;
-    }
+    XFREE(sha->msg, sha->heap, DYNAMIC_TYPE_TMP_BUFFER);
+    sha->msg = NULL;
 #endif
 #ifdef WOLFSSL_IMXRT_DCP
     DCPShaFree(sha);
 #endif
+
+#ifdef WOLFSSL_HASH_KEEP
+    if (sha->msg != NULL) {
+        ForceZero(sha->msg, sha->len);
+        XFREE(sha->msg, sha->heap, DYNAMIC_TYPE_TMP_BUFFER);
+        sha->msg = NULL;
+    }
+#endif
+
+#if defined(PSOC6_HASH_SHA1)
+    wc_Psoc6_Sha_Free();
+#endif
 }
 
+#endif /* !MAX3266X_SHA */
 #endif /* !defined(WOLFSSL_HAVE_PSA) || defined(WOLFSSL_PSA_NO_HASH) */
 #endif /* !WOLFSSL_TI_HASH */
 
@@ -1032,36 +1203,27 @@ void wc_ShaFree(wc_Sha* sha)
 
 #if !defined(WOLFSSL_HAVE_PSA) || defined(WOLFSSL_PSA_NO_HASH)
 
+#ifndef MAX3266X_SHA
+
 /* wc_ShaGetHash get hash value */
 int wc_ShaGetHash(wc_Sha* sha, byte* hash)
 {
     int ret;
-#ifdef WOLFSSL_SMALL_STACK
-    wc_Sha* tmpSha;
-#else
-    wc_Sha  tmpSha[1];
-#endif
+    WC_DECLARE_VAR(tmpSha, wc_Sha, 1, 0);
 
     if (sha == NULL || hash == NULL) {
         return BAD_FUNC_ARG;
     }
 
-#ifdef WOLFSSL_SMALL_STACK
-    tmpSha = (wc_Sha*)XMALLOC(sizeof(wc_Sha), NULL,
-        DYNAMIC_TYPE_TMP_BUFFER);
-    if (tmpSha == NULL) {
-        return MEMORY_E;
-    }
-#endif
+    WC_CALLOC_VAR_EX(tmpSha, wc_Sha, 1, NULL, DYNAMIC_TYPE_TMP_BUFFER,
+        return MEMORY_E);
 
     ret = wc_ShaCopy(sha, tmpSha);
     if (ret == 0) {
         ret = wc_ShaFinal(tmpSha, hash);
     }
 
-#ifdef WOLFSSL_SMALL_STACK
-    XFREE(tmpSha, NULL, DYNAMIC_TYPE_TMP_BUFFER);
-#endif
+    WC_FREE_VAR_EX(tmpSha, NULL, DYNAMIC_TYPE_TMP_BUFFER);
 
     return ret;
 }
@@ -1073,9 +1235,27 @@ int wc_ShaCopy(wc_Sha* src, wc_Sha* dst)
     if (src == NULL || dst == NULL)
         return BAD_FUNC_ARG;
 
+#if defined(WOLF_CRYPTO_CB) && defined(WOLF_CRYPTO_CB_COPY)
+    #ifndef WOLF_CRYPTO_CB_FIND
+    if (src->devId != INVALID_DEVID)
+    #endif
+    {
+        /* Cast the source and destination to be void to keep the abstraction */
+        ret = wc_CryptoCb_Copy(src->devId, WC_ALGO_TYPE_HASH,
+                               WC_HASH_TYPE_SHA, (void*)src, (void*)dst);
+        if (ret != WC_NO_ERR_TRACE(CRYPTOCB_UNAVAILABLE))
+            return ret;
+        /* fall-through when unavailable */
+    }
+    ret = 0; /* Reset ret to 0 to avoid returning the callback error code */
+#endif /* WOLF_CRYPTO_CB && WOLF_CRYPTO_CB_COPY */
+
+    /* Free dst resources before copy to prevent memory leaks (e.g., msg
+     * buffer, W cache, hardware contexts). XMEMCPY overwrites dst. */
+    wc_ShaFree(dst);
     XMEMCPY(dst, src, sizeof(wc_Sha));
 
-#if defined(WOLFSSL_SILABS_SE_ACCEL) && defined(WOLFSSL_SILABS_SE_ACCEL_3)
+#if defined(WOLFSSL_SILABS_SE_TYPES) && defined(WOLFSSL_SILABS_SE_ACCEL_3)
     dst->silabsCtx.hash_ctx.cmd_ctx = &dst->silabsCtx.cmd_ctx;
     dst->silabsCtx.hash_ctx.hash_type_ctx = &dst->silabsCtx.hash_type_ctx;
 #endif
@@ -1085,7 +1265,8 @@ int wc_ShaCopy(wc_Sha* src, wc_Sha* dst)
 #endif
 
 #ifdef WOLFSSL_PIC32MZ_HASH
-    ret = wc_Pic32HashCopy(&src->cache, &dst->cache);
+    ret = wc_Pic32HashCopy(&src->cache, &dst->cache, (byte*)src->buffer,
+        (byte*)dst->buffer, dst->heap);
 #endif
 
 #if defined(WOLFSSL_SE050) && defined(WOLFSSL_SE050_HASH)
@@ -1096,12 +1277,30 @@ int wc_ShaCopy(wc_Sha* src, wc_Sha* dst)
     esp_sha_ctx_copy(src, dst);
 #endif
 
+
+#if defined(PSOC6_HASH_SHA1)
+    wc_Psoc6_Sha1_Sha2_Init(dst, WC_PSOC6_SHA1, 0);
+#endif
+
 #ifdef WOLFSSL_HASH_FLAGS
     dst->flags |= WC_HASH_FLAG_ISCOPY;
 #endif
+
+#if defined(WOLFSSL_HASH_KEEP)
+    if (src->msg != NULL) {
+        dst->msg = (byte*)XMALLOC(src->len, dst->heap,
+                                  DYNAMIC_TYPE_TMP_BUFFER);
+        if (dst->msg == NULL) {
+            return MEMORY_E;
+        }
+        XMEMCPY(dst->msg, src->msg, src->used);
+    }
+#endif
+
     return ret;
 }
 #endif /* WOLFSSL_RENESAS_RX64_HASH */
+#endif /* !MAX3266X_SHA */
 #endif /* !defined(WOLFSSL_HAVE_PSA) || defined(WOLFSSL_PSA_NO_HASH) */
 #endif /* !defined(WOLFSSL_RENESAS_TSIP_TLS) && \
           !defined(WOLFSSL_RENESAS_TSIP_CRYPTONLY) ||

@@ -18,7 +18,9 @@ if BUILD_RSA
 if BUILD_CRL
 # make revoked test rely on completion of resume test
 dist_noinst_SCRIPTS+= scripts/crl-revoked.test
+dist_noinst_SCRIPTS+= scripts/crl-gen-openssl.test
 scripts/crl-revoked.log: scripts/resume.log
+scripts/crl-gen-openssl.log: scripts/crl-revoked.log
 endif
 
 # arrange to serialize ocsp.test, ocsp-stapling.test, ocsp-stapling-with-ca-as-responder.test, ocsp-stapling2.test, and testsuite,
@@ -27,6 +29,9 @@ endif
 
 if BUILD_OCSP_STAPLING
 dist_noinst_SCRIPTS+= scripts/ocsp-stapling.test
+if BUILD_OCSP_STAPLING_MULTI
+dist_noinst_SCRIPTS+= scripts/ocsp-stapling_tls13multi.test
+endif
 if !BUILD_OCSP_STAPLING_V2
 testsuite/testsuite.log: scripts/ocsp-stapling.log scripts/ocsp-stapling-with-ca-as-responder.log
 endif
@@ -34,6 +39,9 @@ scripts/ocsp-stapling.log: scripts/ocsp.log
 dist_noinst_SCRIPTS+= scripts/ocsp-stapling-with-ca-as-responder.test
 scripts/ocsp-stapling-with-ca-as-responder.log: scripts/ocsp.log
 scripts/ocsp-stapling-with-ca-as-responder.log: scripts/ocsp-stapling.log
+if BUILD_OCSP_STAPLING_MULTI
+scripts/ocsp-stapling_tls13multi.log: scripts/ocsp-stapling-with-ca-as-responder.log
+endif
 endif
 
 if BUILD_OCSP_STAPLING_V2
@@ -48,6 +56,20 @@ else
 scripts/ocsp-stapling2.log: scripts/ocsp.log
 endif
 
+endif
+
+if BUILD_OCSP_RESPONDER
+if BUILD_OCSP_STAPLING
+dist_noinst_SCRIPTS+= scripts/ocsp-stapling-with-wolfssl-responder.test
+scripts/ocsp-stapling-with-wolfssl-responder.log: scripts/ocsp-stapling-with-ca-as-responder.log
+dist_noinst_SCRIPTS+= scripts/ocsp-responder-openssl-interop.test
+scripts/ocsp-responder-openssl-interop.log: scripts/ocsp-stapling-with-wolfssl-responder.log
+testsuite/testsuite.log: scripts/ocsp-responder-openssl-interop.log
+else
+dist_noinst_SCRIPTS+= scripts/ocsp-responder-openssl-interop.test
+scripts/ocsp-responder-openssl-interop.log: scripts/ocsp.log
+testsuite/testsuite.log: scripts/ocsp-responder-openssl-interop.log
+endif
 endif
 
 endif
@@ -84,13 +106,39 @@ endif
 dist_noinst_SCRIPTS+= scripts/unit.test
 noinst_SCRIPTS+= scripts/unit.test.in
 
+# multi-msg-record.test drives the wolfSSL example client against a
+# Python (tlslite-ng) peer to verify parsing of TLS records that carry
+# multiple handshake messages.  The script probes the client binary
+# at runtime for TLS 1.2, TLS 1.3 and secure-renegotiation support
+# and skips phases that are not compiled in.  The whole test exits 77
+# (SKIP) if python3 or tlslite-ng is missing or if nothing is
+# runnable.
+dist_noinst_SCRIPTS+= scripts/multi-msg-record.test
+
 endif
 endif
+
+# The Python half of multi-msg-record.test always ships in tarballs so
+# the wrapper can find it on the installed side.
+EXTRA_DIST+= scripts/multi-msg-record.py
 
 dist_noinst_SCRIPTS+= scripts/pem.test
 
+dist_noinst_SCRIPTS+= scripts/tsp.test
+
 EXTRA_DIST +=  scripts/sniffer-static-rsa.pcap \
                scripts/sniffer-ipv6.pcap \
+               scripts/sniffer-tls12-etm.pcap \
+               scripts/sniffer-tls12-etm.out \
+               scripts/sniffer-tls12-etm-keylog.pcap \
+               scripts/sniffer-tls12-etm-keylog.sslkeylog \
+               scripts/sniffer-tls12-etm-keylog.out \
+               scripts/sniffer-tls12-keylog.pcap \
+               scripts/sniffer-tls12-keylog.sslkeylog \
+               scripts/sniffer-tls12-keylog.out \
+               scripts/sniffer-tls13-keylog.pcap \
+               scripts/sniffer-tls13-keylog.sslkeylog \
+               scripts/sniffer-tls13-keylog.out \
                scripts/sniffer-tls13-dh.pcap \
                scripts/sniffer-tls13-dh-resume.pcap \
                scripts/sniffer-tls13-ecc.pcap \
@@ -104,11 +152,13 @@ EXTRA_DIST +=  scripts/sniffer-static-rsa.pcap \
                scripts/memtest.sh \
                scripts/makedistsmall.sh \
                scripts/openssl_srtp.test \
-               scripts/aria-cmake-build-test.sh
+               scripts/aria-cmake-build-test.sh \
+               scripts/asn1_oid_sum.pl
 
 
 # leave openssl.test as extra until non bash works
 EXTRA_DIST +=  scripts/openssl.test
+EXTRA_DIST +=  scripts/rsapss.test
 
 EXTRA_DIST +=  scripts/dertoc.pl
 
@@ -128,5 +178,48 @@ dist_noinst_SCRIPTS+= scripts/dtlscid.test
 endif
 
 EXTRA_DIST += scripts/bench/bench_functions.sh
+EXTRA_DIST += scripts/benchmark_compare.sh
 
 EXTRA_DIST += scripts/user_settings_asm.sh
+
+# SBOM generator (invoked from `make sbom` in the top-level Makefile.am).
+# Must be in the dist tarball, otherwise `make dist && cd <tarball> &&
+# ./configure && make sbom` fails for downstream consumers.
+EXTRA_DIST += scripts/gen-sbom
+
+# Canonical shared Automake SBOM recipe.  wolfSSL's own top-level Makefile.am
+# does not `include` this fragment (it drives gen-sbom directly against its
+# generated wolfssl/options.h), but the canonical copy lives here and is
+# shipped so downstream wolfSSL-stack products (wolfSSH, wolfEngine, wolfCLU,
+# ...) can vendor an identical copy and stay in sync.
+EXTRA_DIST += scripts/sbom.am
+
+# SBOM generator unit tests.  Shipped so downstream consumers building
+# from a release tarball can re-run the regression suite.
+EXTRA_DIST += scripts/test_gen_sbom.py
+
+# Bomsh / OmniBOR provenance verifier (invoked from `.github/workflows/
+# sbom.yml` and runnable by hand against any local `make bomsh` output;
+# see doc/SBOM.md sec. 3.5).  Must ship with the dist tarball so a
+# downstream consumer / CRA reviewer who clones a release tarball can
+# re-verify the OmniBOR graph against its enriched SPDX without going
+# back to the git repo.
+EXTRA_DIST += scripts/bomsh_verify.py
+
+# Security advisory generator (invoked from `make advisory`), its canonical
+# CWE-name catalogue, and the VEX overlay schema + example.  Shipped so a
+# downstream consumer building from a release tarball can run `make advisory`.
+EXTRA_DIST += scripts/gen-advisory \
+              scripts/cwe-names.json \
+              scripts/advisory-vex-overlay.schema.json \
+              scripts/advisory-vex-overlay.example.json
+
+# Advisory regression suite + CSAF 2.0 conformance gate, with the frozen CVE
+# fixtures they run against.  Shipped so a downstream consumer / CRA reviewer
+# can re-run the advisory tests from a release tarball.
+EXTRA_DIST += scripts/csaf_validate.mjs \
+              scripts/test_gen_advisory.py \
+              scripts/testdata/README.md \
+              scripts/testdata/CVE-2026-5501.json \
+              scripts/testdata/CVE-2026-5778.json \
+              scripts/testdata/CVE-2026-5999.json

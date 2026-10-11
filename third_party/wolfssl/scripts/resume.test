@@ -1,4 +1,16 @@
-#!/bin/bash
+#!/usr/bin/env bash
+
+# timeout(1) is GNU coreutils and absent on macOS; where it's missing, run the
+# command unbounded (the flaky hang this guards against is Linux-only CI).
+# A prefix variable rather than a shell function: backgrounding a function
+# makes $! the forked subshell, so a later "kill $server_pid" would stop the
+# wrapper and orphan the server it was meant to kill.
+if command -v timeout >/dev/null 2>&1; then
+    TIMEOUT_KILL_2M="timeout -s KILL 2m"
+else
+    TIMEOUT_KILL_2M=""
+fi
+
 
 #resume.test
 
@@ -44,10 +56,12 @@ remove_ready_file() {
 do_cleanup() {
     echo "in cleanup"
 
-    if  [ $server_pid != $no_pid ]
+    if [ $server_pid != $no_pid ] && kill -0 $server_pid 2>&-
     then
+        # sleep to give sanitizers time to dump backtraces.
+        sleep 1
         echo "killing server"
-        kill -9 $server_pid
+        kill $server_pid
     fi
     remove_ready_file
 }
@@ -75,10 +89,11 @@ do_test() {
 
     remove_ready_file
     echo "./examples/server/server -r -R \"$ready_file\" -p $resume_port"
-    ./examples/server/server -r -R "$ready_file" -p $resume_port &
+    $TIMEOUT_KILL_2M ./examples/server/server -r -R "$ready_file" -p $resume_port &
     server_pid=$!
 
-    while [ ! -s "$ready_file" -a "$counter" -lt 20 ]; do
+    counter=0
+    while [ ! -s "$ready_file" -a "$counter" -lt 100 ]; do
         echo -e "waiting for ready file..."
         sleep 0.1
         counter=$((counter+ 1))

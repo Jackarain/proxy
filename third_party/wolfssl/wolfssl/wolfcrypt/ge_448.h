@@ -1,12 +1,12 @@
 /* ge_448.h
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -64,7 +64,8 @@ WOLFSSL_LOCAL int  ge448_from_bytes_negate_vartime(ge448_p2 *r, const byte *b);
 
 WOLFSSL_LOCAL int  ge448_double_scalarmult_vartime(ge448_p2 *r, const byte *a,
                                     const ge448_p2 *A, const byte *b);
-WOLFSSL_LOCAL void ge448_scalarmult_base(ge448_p2* h, const byte* a);
+WOLFSSL_LOCAL int  ge448_scalarmult_base(ge448_p2* h, const byte* a);
+/* Only performs a weak reduce. */
 WOLFSSL_LOCAL void sc448_reduce(byte* b);
 WOLFSSL_LOCAL void sc448_muladd(byte* r, const byte* a, const byte* b, const byte* d);
 WOLFSSL_LOCAL void ge448_to_bytes(byte *s, const ge448_p2 *h);

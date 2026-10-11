@@ -1,0 +1,123 @@
+# wolfssl-wolfcrypt Change Log
+
+## v3.0.0
+
+Breaking changes:
+
+- Curve25519Key::generate() now takes ownership of the RNG instead of borrowing
+  it; the key holds the RNG for its lifetime
+- The rand_core::TryRng implementation for RNG is now truly fallible: its
+  associated Error type is the new random::RngError, which carries the wolfSSL
+  library error code, instead of core::convert::Infallible.  Entropy, reseed
+  and hardware failures are returned to the caller instead of panicking inside
+  the library.  As a consequence RNG no longer implements the infallible
+  rand_core::Rng and rand_core::CryptoRng traits; wrap it in
+  rand_core::UnwrapErr to keep the previous panic-on-failure behavior
+- Ed25519 and Ed448 no longer implement the signature crate's Keypair trait;
+  use the new SigningKey types instead
+- MlDsa::LEVEL_44, MlDsa::LEVEL_65 and MlDsa::LEVEL_87 are now gated on the
+  mldsa_level2, mldsa_level3 and mldsa_level5 cfgs, so selecting a parameter
+  set the library was not built with is a compile error instead of a runtime
+  NOT_COMPILED_IN
+- Replace Lms::export_pub_from() with Lms::export_pub(), which returns a new
+  verify only key instead of re-initializing an existing one; this fixes a leak
+  of the destination's private key data
+
+New features:
+
+- Add Curve25519Key::generate_shared_rng() to generate a key from an RNG shared
+  between keys via Rc (requires the alloc feature)
+- Add HMAC::copy(), a fallible equivalent of HMAC::clone()
+- Add ed25519::SigningKey and ed448::SigningKey, which always carry a public
+  key and so implement Keypair::verifying_key() without it being able to fail
+- Add Lms::export_pub_ex() to set the heap hint and device ID of the exported
+  verify only key
+
+Fixes and improvements:
+
+- Fix undefined behavior in HMAC::clone(): wc_HmacCopy() takes its source by
+  non-const pointer and may write through it, but the pointer was cast from a
+  shared reference. The wolfSSL context is now held in an UnsafeCell
+- Fix a panic in Keypair::verifying_key() for Ed25519 and Ed448 keys with no
+  public key, such as after new() or import_private_only()
+- Validate PBKDF2 and scrypt password hash output length against the PHC
+  minimum before running the KDF
+- Fix detection of the built-in ML-DSA parameter sets: the mldsa_level2,
+  mldsa_level3 and mldsa_level5 cfgs probed the WC_MLDSA_NN_KEY_SIZE macros,
+  which wc_mldsa.h defines unconditionally, so all three were always enabled
+
+## v2.2.0
+
+New features:
+
+- Add DH::prime_size() to query the DH prime size, which is the minimum output
+  buffer size DH::shared_secret() requires
+- Add ChaCha20Poly1305::finalize_verify()
+
+Fixes and improvements:
+
+- Fix DH::shared_secret() writing past the end of an output buffer smaller than
+  the DH prime; it now returns BUFFER_E instead
+
+## v2.1.0
+
+Fixes:
+
+- Fix Ed25519/Ed448 signature verify failed return values
+- Validate WOLFSSL_PREFIX in build.rs
+- Rename dilithium to mldsa
+
+## v2.0.0
+
+New features:
+
+- Add RustCrypto trait support: digest, signature, mac, cipher, aead, rand_core,
+  kem, and password-hash traits
+- Add RSA-OAEP API
+- Add scrypt KDF support and scrypt password-hash trait implementation
+- Add BLAKE2 digest module (blake2_digest)
+- Add BLAKE2 MAC module (blake2_mac)
+- Add Aes192Ccm and Aes192Gcm
+- Implement Clone for HMAC types
+- Improve cross-compilation and bare-metal target support in build.rs
+
+Fixes and improvements:
+
+- LMS fixes and improvements
+- Replace Lms::sigs_left() with Lms::has_sigs_left()
+- Fix CFB::encrypt1 and CFB::decrypt1 to take size in bits
+- Dilithium: fix context-length API to take length in bytes
+- Handle MAC_CMP_FAILED_E from CMAC::verify{,_ex}()
+- Numerous memory-safety, zeroization, and buffer-length validation hardening
+  fixes (zeroize structs on drop, check slice/buffer length conversions, avoid
+  uninitialized and overlapping buffers, fix possible ECC resource leaks)
+- Document minimum wolfSSL version requirement
+
+## v1.2.0
+
+- Add LMS wrapper (wolfssl_wolfcrypt::lms module)
+- Add ML-DSA wrapper (wolfssl_wolfcrypt::dilithium module)
+- Add ML-KEM wrapper (wolfssl_wolfcrypt::mlkem module)
+- Fix no_std support
+- Add compatibility with older FIPS v5 package
+
+## v1.1.0
+
+- Add FIPS support
+- ECC: allow `import_private_*()` calls with empty pub_buf slices
+- Add HMAC-BLAKE2[bs] wrappers
+- Add support for ChaCha20_Poly1305
+- Add support for Curve25519
+- Add support for BLAKE2b and BLAKE2s
+
+## v1.0.0
+
+- Bump version to 1.0 after testing
+
+## v0.1.1
+
+- Only set link-search and link-arg for local repo build
+
+## v0.1.0
+
+- Initial test version

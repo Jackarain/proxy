@@ -1,25 +1,167 @@
 function(override_cache VAR VAL)
     get_property(VAR_STRINGS CACHE ${VAR} PROPERTY STRINGS)
     LIST(FIND VAR_STRINGS ${VAL} CK)
-    if(-1 EQUAL ${CK})
+    if(-1 EQUAL ${CK} AND DEFINED VAR_STRINGS)
         message(SEND_ERROR
             "\"${VAL}\" is not valid override value for \"${VAR}\"."
             " Please select value from \"${VAR_STRINGS}\"\n")
     endif()
     set_property(CACHE ${VAR} PROPERTY VALUE ${VAL})
+    # A value the build chose stays a build choice: keep the record of it
+    # current so the next configure does not mistake it for the user's.
+    if(DEFINED CACHE{WOLFSSL_AUTO_${VAR}})
+        set_property(CACHE WOLFSSL_AUTO_${VAR} PROPERTY VALUE "${VAL}")
+    endif()
+endfunction()
+
+# Whether the user chose an option's current value, as opposed to it being
+# a default or forced value that an earlier configure left in the cache.
+#
+# add_option() records the value the build itself put in the cache as
+# WOLFSSL_AUTO_<NAME>. A cached value still equal to that record was not
+# changed by the user (-D or cmake-gui), so it is recomputed on every
+# configure - which lets a bundle switched on in a re-run still supply its
+# defaults. Only the cache entry is looked at: the user can only set that,
+# while a normal variable of the same name is set by the build itself (an
+# application bundle turning on what it needs). The one case this cannot
+# see is the user passing -D with exactly the value the build had chosen;
+# that is treated as unset.
+function(wolfssl_option_user_set NAME RESULT)
+    set(_user FALSE)
+    if(DEFINED CACHE{${NAME}})
+        set(_user TRUE)
+        if(DEFINED CACHE{WOLFSSL_AUTO_${NAME}})
+            if("$CACHE{${NAME}}" STREQUAL "$CACHE{WOLFSSL_AUTO_${NAME}}")
+                set(_user FALSE)
+            endif()
+        endif()
+    endif()
+    set(${RESULT} ${_user} PARENT_SCOPE)
+endfunction()
+
+# Whether the user explicitly turned an option off. Bundles use this to
+# leave alone a feature whose prerequisite the user disabled.
+function(wolfssl_option_user_off NAME RESULT)
+    wolfssl_option_user_set(${NAME} _user)
+    set(_off FALSE)
+    # Through a variable, so a value such as "small" counts as on.
+    set(_val "$CACHE{${NAME}}")
+    if(_user AND NOT _val)
+        set(_off TRUE)
+    endif()
+    set(${RESULT} ${_off} PARENT_SCOPE)
+endfunction()
+
+# Record that an option must be forced to a given value by a dependency (e.g. an
+# application bundle enabling the algorithms it needs). The force is applied by
+# add_option() when the option is later defined, so it must be recorded before
+# that add_option() call runs. This keeps the option's declared type and help
+# text intact (unlike creating the cache entry early), and makes the dependency
+# explicit rather than relying on cross-file cache-precedence side effects.
+function(force_option NAME VALUE)
+    set_property(GLOBAL PROPERTY "WOLFSSL_FORCE_${NAME}" "${VALUE}")
+    # Track pending forces so wolfssl_warn_unconsumed_forces() can report one
+    # with no matching add_option(), which would otherwise be ignored.
+    set_property(GLOBAL APPEND PROPERTY WOLFSSL_FORCE_PENDING "${NAME}")
+endfunction()
+
+# Forget, at the start of a configure, every option value that the build
+# chose on an earlier one (see wolfssl_option_user_set()), so the option is
+# undefined until its add_option() runs - exactly as on a first configure.
+# Without this, code that reads an option before its add_option() would see
+# what the last configure left, e.g. a bundle that has since been turned
+# off. Options the user set are kept and no longer tracked.
+function(wolfssl_forget_auto_options)
+    get_cmake_property(_vars CACHE_VARIABLES)
+    foreach(_v ${_vars})
+        if(_v MATCHES "^WOLFSSL_AUTO_(.+)$")
+            set(_n "${CMAKE_MATCH_1}")
+            if(DEFINED CACHE{${_n}} AND
+                    ("$CACHE{${_n}}" STREQUAL "$CACHE{${_v}}"))
+                unset(${_n} CACHE)
+            else()
+                unset(${_v} CACHE)
+            endif()
+        endif()
+    endforeach()
+endfunction()
+
+# Record a bundle's preferred value for an option, unless that option has
+# already been settled -- either by the user (see wolfssl_option_user_set();
+# a value cached by an earlier configure does not count) or by an outer
+# bundle that recorded a force first. This is the CMake counterpart of the
+# `test "$enable_x" = "" &&` guard configure.ac uses in --enable-all and
+# friends: a bundle supplies a default, it does not overrule a choice
+# already made.
+function(default_option NAME VALUE)
+    get_property(_already GLOBAL PROPERTY "WOLFSSL_FORCE_${NAME}" SET)
+    wolfssl_option_user_set(${NAME} _user)
+    if(NOT _user AND NOT _already)
+        force_option(${NAME} "${VALUE}")
+    endif()
+endfunction()
+
+# Warn about any force_option() whose target option was never declared with
+# add_option() (so the force never took effect). Call after all options are
+# defined and before generate_build_flags().
+function(wolfssl_warn_unconsumed_forces)
+    get_property(_pending GLOBAL PROPERTY WOLFSSL_FORCE_PENDING)
+    if(_pending)
+        list(REMOVE_DUPLICATES _pending)
+        foreach(_n ${_pending})
+            message(WARNING
+                "force_option(${_n}) had no effect: no add_option(\"${_n}\") "
+                "was declared to consume it.")
+        endforeach()
+    endif()
 endfunction()
 
 function(add_option NAME HELP_STRING DEFAULT VALUES)
-    # Set the default value for the option.
-    set(${NAME} ${DEFAULT} CACHE STRING ${HELP_STRING})
-    # Set the list of allowed values for the option.
-    set_property(CACHE ${NAME} PROPERTY STRINGS ${VALUES})
+    # Record the name for the options.h.in guard in CMakeLists.txt.
+    set_property(GLOBAL APPEND PROPERTY WOLFSSL_DECLARED_OPTIONS "${NAME}")
+
+    # Decided before the cache entry is touched: whether the current value,
+    # if any, is the user's.
+    wolfssl_option_user_set(${NAME} _wolfssl_user)
+
+    if(VALUES STREQUAL "yes;no")
+        # Set the default value for the option.
+        set(${NAME} ${DEFAULT} CACHE BOOL ${HELP_STRING})
+    else()
+        # Set the default value for the option.
+        set(${NAME} ${DEFAULT} CACHE STRING ${HELP_STRING})
+        # Set the list of allowed values for the option.
+        set_property(CACHE ${NAME} PROPERTY STRINGS ${VALUES})
+    endif()
+
+    if(_wolfssl_user)
+        # The user's value: stop tracking it as the build's.
+        unset(WOLFSSL_AUTO_${NAME} CACHE)
+    else()
+        # Not the user's: start again from the default, as on a first
+        # configure, instead of keeping whatever an earlier one cached.
+        set_property(CACHE ${NAME} PROPERTY VALUE "${DEFAULT}")
+        set(WOLFSSL_AUTO_${NAME} "${DEFAULT}" CACHE INTERNAL
+            "Value of ${NAME} chosen by the build, not the user")
+    endif()
+
+    # Apply any force_option(), after the cache entry exists so its type and
+    # help survive, and before the reduction below.
+    get_property(_wolfssl_forced GLOBAL PROPERTY "WOLFSSL_FORCE_${NAME}" SET)
+    if(_wolfssl_forced)
+        get_property(_wolfssl_force_val GLOBAL PROPERTY "WOLFSSL_FORCE_${NAME}")
+        override_cache(${NAME} "${_wolfssl_force_val}")
+        # Mark this force as consumed so it is not reported as unconsumed.
+        get_property(_pending GLOBAL PROPERTY WOLFSSL_FORCE_PENDING)
+        list(REMOVE_ITEM _pending "${NAME}")
+        set_property(GLOBAL PROPERTY WOLFSSL_FORCE_PENDING "${_pending}")
+    endif()
 
     if(DEFINED ${NAME})
         list(FIND VALUES ${${NAME}} IDX)
         #
-        # If the given value isn't in the list of allowed values for the option,
-        # reduce it to yes/no according to CMake's "if" logic:
+        # If the given value isn't in the list of allowed values for the
+        # option, reduce it to yes/no according to CMake's "if" logic:
         # https://cmake.org/cmake/help/latest/command/if.html#basic-expressions
         #
         # This has no functional impact; it just makes the settings in
@@ -73,10 +215,10 @@ function(generate_build_flags)
     if(WOLFSSL_AESCCM OR WOLFSSL_USER_SETTINGS)
         set(BUILD_AESCCM "yes" PARENT_SCOPE)
     endif()
-    set(BUILD_ARM_ASM ${WOLFSSL_ARM_ASM} PARENT_SCOPE)
+    set(BUILD_ARMASM ${WOLFSSL_ARM_ASM} PARENT_SCOPE)
     set(BUILD_XILINX ${WOLFSSL_XILINX} PARENT_SCOPE)
     set(BUILD_AESNI ${WOLFSSL_AESNI} PARENT_SCOPE)
-    set(BUILD_INTEL_ASM ${WOLFSSL_INTEL_ASM} PARENT_SCOPE)
+    set(BUILD_INTELASM ${WOLFSSL_INTEL_ASM} PARENT_SCOPE)
     set(BUILD_AFALG ${WOLFSSL_AFALG} PARENT_SCOPE)
     set(BUILD_DEVCRYPTO ${WOLFSSL_DEVCRYPTO} PARENT_SCOPE)
     if(WOLFSSL_CAMELLIA OR WOLFSSL_USER_SETTINGS)
@@ -88,8 +230,8 @@ function(generate_build_flags)
     if(WOLFSSL_RIPEMD OR WOLFSSL_USER_SETTINGS)
         set(BUILD_RIPEMD "yes" PARENT_SCOPE)
     endif()
-    if(WOLFSSL_BLAKE2 OR WOLFSSL_USER_SETTINGS)
-        set(BUILD_BLAKE2 "yes" PARENT_SCOPE)
+    if(WOLFSSL_BLAKE2B OR WOLFSSL_USER_SETTINGS)
+        set(BUILD_BLAKE2B "yes" PARENT_SCOPE)
     endif()
     if(WOLFSSL_BLAKE2S OR WOLFSSL_USER_SETTINGS)
         set(BUILD_BLAKE2S "yes" PARENT_SCOPE)
@@ -102,6 +244,15 @@ function(generate_build_flags)
     endif()
     if(WOLFSSL_ECC OR WOLFSSL_USER_SETTINGS)
         set(BUILD_ECC "yes" PARENT_SCOPE)
+    endif()
+    if(WOLFSSL_ECCSI OR WOLFSSL_USER_SETTINGS)
+        set(BUILD_ECCSI "yes" PARENT_SCOPE)
+    endif()
+    if(WOLFSSL_SAKKE OR WOLFSSL_USER_SETTINGS)
+        set(BUILD_SAKKE "yes" PARENT_SCOPE)
+    endif()
+    if(WOLFSSL_SIPHASH OR WOLFSSL_USER_SETTINGS)
+        set(BUILD_SIPHASH "yes" PARENT_SCOPE)
     endif()
     if(WOLFSSL_ED25519 OR WOLFSSL_USER_SETTINGS)
         set(BUILD_ED25519 "yes" PARENT_SCOPE)
@@ -148,9 +299,6 @@ function(generate_build_flags)
     if(WOLFSSL_AES OR WOLFSSL_USER_SETTINGS)
         set(BUILD_AES "yes" PARENT_SCOPE)
     endif()
-    if(WOLFSSL_CODING OR WOLFSSL_USER_SETTINGS)
-        set(BUILD_CODING "yes" PARENT_SCOPE)
-    endif()
     if(WOLFSSL_ARC4 OR WOLFSSL_USER_SETTINGS)
         set(BUILD_RC4 "yes" PARENT_SCOPE)
     endif()
@@ -193,11 +341,26 @@ function(generate_build_flags)
     if(WOLFSSL_XCHACHA OR WOLFSSL_USER_SETTINGS)
         set(BUILD_XCHACHA "yes" PARENT_SCOPE)
     endif()
-    if(WOLFSSL_OQS OR WOLFSSL_USER_SETTINGS)
+    if(WOLFSSL_MLKEM OR WOLFSSL_USER_SETTINGS)
+        set(BUILD_WC_MLKEM "yes" PARENT_SCOPE)
+    endif()
+    if(WOLFSSL_FRODOKEM OR WOLFSSL_USER_SETTINGS)
+        set(BUILD_WC_FRODOKEM "yes" PARENT_SCOPE)
+    endif()
+    if(WOLFSSL_MLDSA OR WOLFSSL_DILITHIUM OR WOLFSSL_USER_SETTINGS)
+        set(BUILD_MLDSA "yes" PARENT_SCOPE)
+    endif()
+    if(WOLFSSL_FALCON OR WOLFSSL_USER_SETTINGS)
         set(BUILD_FALCON "yes" PARENT_SCOPE)
-        set(BUILD_SPHINCS "yes" PARENT_SCOPE)
-        set(BUILD_DILITHIUM "yes" PARENT_SCOPE)
-        set(BUILD_EXT_KYBER "yes" PARENT_SCOPE)
+    endif()
+    if(WOLFSSL_LMS OR WOLFSSL_USER_SETTINGS)
+        set(BUILD_WC_LMS "yes" PARENT_SCOPE)
+    endif()
+    if(WOLFSSL_XMSS OR WOLFSSL_USER_SETTINGS)
+        set(BUILD_WC_XMSS "yes" PARENT_SCOPE)
+    endif()
+    if(WOLFSSL_SLHDSA OR WOLFSSL_USER_SETTINGS)
+        set(BUILD_WC_SLHDSA "yes" PARENT_SCOPE)
     endif()
     if(WOLFSSL_ARIA OR WOLFSSL_USER_SETTINGS)
         message(STATUS "ARIA functions.cmake found WOLFSSL_ARIA")
@@ -205,6 +368,8 @@ function(generate_build_flags)
         set(BUILD_ARIA "yes" PARENT_SCOPE)
     endif()
     set(BUILD_INLINE ${WOLFSSL_INLINE} PARENT_SCOPE)
+    set(BUILD_ARMASM_INLINE ${WOLFSSL_ARMASM_INLINE} PARENT_SCOPE)
+    set(BUILD_ARM_THUMB ${WOLFSSL_ARMASM_THUMB2} PARENT_SCOPE)
     if(WOLFSSL_OCSP OR WOLFSSL_USER_SETTINGS)
         set(BUILD_OCSP "yes" PARENT_SCOPE)
     endif()
@@ -216,11 +381,13 @@ function(generate_build_flags)
     if(WOLFSSL_CRL_MONITOR)
         set(BUILD_CRL_MONITOR "yes" PARENT_SCOPE)
     endif()
-    set(BUILD_USER_RSA ${WOLFSSL_USER_RSA} PARENT_SCOPE)
-    set(BUILD_USER_CRYPTO ${WOLFSSL_USER_CRYPTO} PARENT_SCOPE)
+    set(BUILD_QUIC ${WOLFSSL_QUIC} PARENT_SCOPE)
     set(BUILD_WNR ${WOLFSSL_WNR} PARENT_SCOPE)
     if(WOLFSSL_SRP OR WOLFSSL_USER_SETTINGS)
         set(BUILD_SRP "yes" PARENT_SCOPE)
+    endif()
+    if(WOLFSSL_RNG_BANK OR WOLFSSL_USER_SETTINGS)
+        set(BUILD_RNG_BANK "yes" PARENT_SCOPE)
     endif()
     set(USE_VALGRIND ${WOLFSSL_VALGRIND})
     if(WOLFSSL_MD4 OR WOLFSSL_USER_SETTINGS)
@@ -246,7 +413,7 @@ function(generate_build_flags)
     endif()
     set(BUILD_EXAMPLE_CLIENTS ${WOLFSSL_EXAMPLES} PARENT_SCOPE)
     set(BUILD_TESTS ${WOLFSSL_EXAMPLES} PARENT_SCOPE)
-    if(NOT WOLFSSL_SINGLETHREADED AND WOLFSSL_EXAMPLES AND NOT WOLFSSL_LEAN_TLS)
+    if(NOT WOLFSSL_SINGLE_THREADED AND WOLFSSL_EXAMPLES AND NOT WOLFSSL_LEAN_TLS)
         set(BUILD_THREADED_EXAMPLES "yes" PARENT_SCOPE)
     endif()
     set(BUILD_WOLFCRYPT_TESTS ${WOLFSSL_CRYPT_TESTS} PARENT_SCOPE)
@@ -280,18 +447,23 @@ function(generate_build_flags)
     if(WOLFSSL_SP_ARM_CORTEX_ASM OR WOLFSSL_USER_SETTINGS)
         set(BUILD_SP_ARM_CORTEX "yes" PARENT_SCOPE)
     endif()
-    if(WOLFSSL_SP_X86_64_ASM OR WOLFSSL_USER_SETTINGS)
+    if(WOLFSSL_X86_64_BUILD AND (WOLFSSL_SP_X86_64_ASM OR WOLFSSL_USER_SETTINGS))
         set(BUILD_SP_X86_64 "yes" PARENT_SCOPE)
     endif()
     if(WOLFSSL_SP_MATH OR WOLFSSL_SP_MATH_ALL OR WOLFSSL_USER_SETTINGS)
         set(BUILD_SP_INT "yes" PARENT_SCOPE)
     endif()
-    set(BUILD_FAST_RSA ${WOLFSSL_FAST_RSA} PARENT_SCOPE)
     set(BUILD_MCAPI ${WOLFSSL_MCAPI} PARENT_SCOPE)
     set(BUILD_ASYNCCRYPT ${WOLFSSL_ASYNCCRYPT} PARENT_SCOPE)
     set(BUILD_WOLFEVENT ${WOLFSSL_ASYNCCRYPT} PARENT_SCOPE)
-    if(WOLFSSL_CRYPTOCB OR WOLFSSL_USER_SETTINGS)
+    if(WOLFSSL_CRYPTOCB OR WOLFSSL_USER_SETTINGS OR
+       (WOLFSSL_SEC_QORIQ AND NOT WOLFSSL_SEC_QORIQ STREQUAL "no"))
+        # settings.h forces WOLF_CRYPTO_CB on for the QorIQ SEC port, so the
+        # dispatcher source has to come along too.
         set(BUILD_CRYPTOCB "yes" PARENT_SCOPE)
+    endif()
+    if(WOLFSSL_VAULTIC)
+        set(BUILD_VAULTIC "yes" PARENT_SCOPE)
     endif()
     set(BUILD_PSK ${WOLFSSL_PSK} PARENT_SCOPE)
     set(BUILD_TRUST_PEER_CERT ${WOLFSSL_TRUSTED_PEER_CERT} PARENT_SCOPE)
@@ -302,6 +474,9 @@ function(generate_build_flags)
     if(WOLFSSL_PKCS7 OR WOLFSSL_USER_SETTINGS)
         set(BUILD_PKCS7 "yes" PARENT_SCOPE)
     endif()
+    if(WOLFSSL_TSP OR WOLFSSL_USER_SETTINGS)
+        set(BUILD_TSP "yes" PARENT_SCOPE)
+    endif()
     set(BUILD_HASHFLAGS ${WOLFSSL_HASHFLAGS} PARENT_SCOPE)
     set(BUILD_LINUX_KM ${WOLFSSL_LINUX_KM} PARENT_SCOPE)
     set(BUILD_NO_LIBRARY ${WOLFSSL_NO_LIBRARY} PARENT_SCOPE)
@@ -309,11 +484,36 @@ function(generate_build_flags)
         set(BUILD_DEBUG "yes" PARENT_SCOPE)
     endif()
     set(BUILD_RC2 ${WOLFSSL_RC2} PARENT_SCOPE)
+    if(WOLFSSL_ASCON OR WOLFSSL_USER_SETTINGS)
+        set(BUILD_ASCON "yes" PARENT_SCOPE)
+    endif()
+    if(WOLFSSL_ARGON2 OR WOLFSSL_USER_SETTINGS)
+        set(BUILD_ARGON2 "yes" PARENT_SCOPE)
+    endif()
+    if(WOLFSSL_SM2 OR WOLFSSL_USER_SETTINGS)
+        set(BUILD_SM2 "yes" PARENT_SCOPE)
+    endif()
+    if(WOLFSSL_SM3 OR WOLFSSL_USER_SETTINGS)
+        set(BUILD_SM3 "yes" PARENT_SCOPE)
+    endif()
+    if(WOLFSSL_SM4_CBC OR WOLFSSL_SM4_CTR OR WOLFSSL_SM4_ECB OR WOLFSSL_SM4_GCM OR
+       WOLFSSL_SM4_CCM OR WOLFSSL_USER_SETTINGS)
+        set(BUILD_SM4 "yes" PARENT_SCOPE)
+    endif()
     if(WOLFSSL_CAAM)
         set(BUILD_CAAM "yes" PARENT_SCOPE)
     endif()
+    if(WOLFSSL_SEC_QORIQ AND NOT WOLFSSL_SEC_QORIQ STREQUAL "no")
+        set(BUILD_SEC_QORIQ "yes" PARENT_SCOPE)
+    endif()
     if(WOLFSSL_HPKE OR WOLFSSL_USER_SETTINGS)
         set(BUILD_HPKE "yes" PARENT_SCOPE)
+    endif()
+    if(WOLFSSL_SHE AND NOT WOLFSSL_SHE STREQUAL "no")
+        set(BUILD_SHE "yes" PARENT_SCOPE)
+    endif()
+    if(WOLFSSL_PUF OR WOLFSSL_USER_SETTINGS)
+        set(BUILD_PUF "yes" PARENT_SCOPE)
     endif()
 
     set(BUILD_FLAGS_GENERATED "yes" PARENT_SCOPE)
@@ -321,270 +521,422 @@ endfunction()
 
 function(generate_lib_src_list LIB_SOURCES)
     if(NOT BUILD_FLAGS_GENERATED)
-        message(FATAL_ERROR "Cannot call generate_lib_src_list without calling generate_build_flags first.")
+        message(FATAL_ERROR
+            "Cannot call generate_lib_src_list without calling "
+            "generate_build_flags first.")
     endif()
 
     # Corresponds to src/include.am
     if(BUILD_FIPS)
-         if(BUILD_FIPS_V2)
-              # FIPSv2 first file
-              list(APPEND LIB_SOURCES wolfcrypt/src/wolfcrypt_first.c)
+        if(BUILD_FIPS_V2)
+            # FIPSv2 first file
+            list(APPEND LIB_SOURCES wolfcrypt/src/wolfcrypt_first.c)
 
-              list(APPEND LIB_SOURCES
+            list(APPEND LIB_SOURCES
                 wolfcrypt/src/hmac.c
                 wolfcrypt/src/random.c
                 wolfcrypt/src/sha256.c)
 
-              if(BUILD_RSA)
-                   list(APPEND LIB_SOURCES wolfcrypt/src/rsa.c)
-              endif()
+            if(BUILD_RSA)
+                list(APPEND LIB_SOURCES wolfcrypt/src/rsa.c)
+            endif()
 
-              if(BUILD_ECC)
-                   list(APPEND LIB_SOURCES wolfcrypt/src/ecc.c)
-              endif()
+            if(BUILD_ECC)
+                list(APPEND LIB_SOURCES wolfcrypt/src/ecc.c)
+            endif()
 
-              if(BUILD_AES)
-                   list(APPEND LIB_SOURCES wolfcrypt/src/aes.c)
+            if(BUILD_AES)
+                list(APPEND LIB_SOURCES wolfcrypt/src/aes.c)
 
-                   if(BUILD_ARMASM AND BUILD_FIPS_READY)
-                        list(APPEND LIB_SOURCES wolfcrypt/src/port/arm/armv8-aes.c)
-                   endif()
-              endif()
-
-              if(BUILD_AESNI)
-                   list(APPEND LIB_SOURCES wolfcrypt/src/aes_asm.S)
-
-                   if(BUILD_INTELASM)
-                        list(APPEND LIB_SOURCES wolfcrypt/src/aes_gcm_asm.S)
-                   endif()
-              endif()
-
-              if(BUILD_DES3)
-                   list(APPEND LIB_SOURCES wolfcrypt/src/des3.c)
-              endif()
-
-              if(BUILD_SHA)
-                   list(APPEND LIB_SOURCES wolfcrypt/src/sha.c)
-              endif()
-
-              if(BUILD_ARMASM AND BUILD_FIPS_READY)
-                   list(APPEND LIB_SOURCES wolfcrypt/src/port/arm/armv8-sha256.c)
-              endif()
-
-              if(BUILD_INTELASM)
-                   list(APPEND LIB_SOURCES wolfcrypt/src/sha256_asm.S)
-              endif()
-
-              if(BUILD_SHA512)
-                   list(APPEND LIB_SOURCES wolfcrypt/src/sha512.c)
-
-                   if(BUILD_ARMASM AND BUILD_FIPS_READY)
+                if(BUILD_ARMASM AND BUILD_FIPS_READY)
+                    if(BUILD_ARMASM_INLINE)
                         list(APPEND LIB_SOURCES
-                             wolfcrypt/src/port/arm/armv8-sha512.c
-                             wolfcrypt/src/port/arm/armv8-sha512-asm.S
-                             wolfcrypt/src/port/arm/armv8-32-sha512-asm.S)
-                   endif()
+                            wolfcrypt/src/port/arm/armv8-32-aes-asm_c.c
+                            wolfcrypt/src/port/arm/armv8-aes-asm_c.c)
+                    else()
+                        list(APPEND LIB_SOURCES
+                            wolfcrypt/src/port/arm/armv8-32-aes-asm.S
+                            wolfcrypt/src/port/arm/armv8-aes-asm.S)
+                    endif()
 
-                   if(BUILD_INTELASM)
-                        list(APPEND LIB_SOURCES wolfcrypt/src/sha512_asm.S)
-                   endif()
-              endif()
+                    if(BUILD_ARMASM_INLINE AND BUILD_ARM_THUMB)
+                        list(APPEND LIB_SOURCES
+                            wolfcrypt/src/port/arm/thumb2-aes-asm_c.c)
+                    elseif(BUILD_ARM_THUMB)
+                        list(APPEND LIB_SOURCES
+                            wolfcrypt/src/port/arm/thumb2-aes-asm.S)
+                    endif()
+                endif()
+            endif()
 
-              if(BUILD_SHA3)
-                   list(APPEND LIB_SOURCES wolfcrypt/src/sha3.c)
-              endif()
+            if(BUILD_AESNI)
+                list(APPEND LIB_SOURCES wolfcrypt/src/aes_asm.S)
+                # 32-bit x86 AES-XTS. The file guards its own contents on
+                # WOLFSSL_AES_XTS and WOLFSSL_X86_BUILD, so it compiles to
+                # nothing on any other target or without XTS.
+                list(APPEND LIB_SOURCES wolfcrypt/src/aes_xts_x86_asm.S)
 
-              if(BUILD_DH)
-                   list(APPEND LIB_SOURCES wolfcrypt/src/dh.c)
-              endif()
+                if(BUILD_INTELASM)
+                    list(APPEND LIB_SOURCES wolfcrypt/src/aes_gcm_asm.S)
+                    list(APPEND LIB_SOURCES wolfcrypt/src/sha3_asm.S)
+                elseif(BUILD_ARMASM)
+                    list(APPEND LIB_SOURCES wolfcrypt/src/port/arm/armv8-sha3-asm_c.c)
+                    list(APPEND LIB_SOURCES wolfcrypt/src/port/arm/armv8-sha3-asm.S)
+                endif()
+            endif()
 
-              if(BUILD_CMAC)
-                   list(APPEND LIB_SOURCES wolfcrypt/src/cmac.c)
-              endif()
+            if(BUILD_DES3)
+                list(APPEND LIB_SOURCES wolfcrypt/src/des3.c)
+            endif()
 
-              list(APPEND LIB_SOURCES
-                   wolfcrypt/src/fips.c
-                   wolfcrypt/src/fips_test.c)
+            if(BUILD_SHA)
+                list(APPEND LIB_SOURCES wolfcrypt/src/sha.c)
+            endif()
 
-              # fips last file
-              list(APPEND LIB_SOURCES wolfcrypt/src/wolfcrypt_last.c)
-         endif()
+            if(BUILD_ARMASM AND BUILD_FIPS_READY)
+                if(BUILD_ARMASM_INLINE)
+                    list(APPEND LIB_SOURCES
+                        wolfcrypt/src/port/arm/armv8-32-sha256-asm_c.c
+                        wolfcrypt/src/port/arm/armv8-sha256-asm_c.c)
+                else()
+                    list(APPEND LIB_SOURCES
+                        wolfcrypt/src/port/arm/armv8-32-sha256-asm.S
+                        wolfcrypt/src/port/arm/armv8-sha256-asm.S)
+                endif()
 
-         if(BUILD_FIPS_V5)
-              list(APPEND LIB_SOURCES wolfcrypt/src/wolfcrypt_first.c)
+                if(BUILD_ARMASM_INLINE AND BUILD_ARM_THUMB)
+                    list(APPEND LIB_SOURCES
+                        wolfcrypt/src/port/arm/thumb2-sha256-asm_c.c)
+                elseif(BUILD_ARM_THUMB)
+                    list(APPEND LIB_SOURCES
+                        wolfcrypt/src/port/arm/thumb2-sha256-asm.S)
+                endif()
+            endif()
 
-              list(APPEND LIB_SOURCES
+            if(BUILD_INTELASM)
+                list(APPEND LIB_SOURCES wolfcrypt/src/sha256_asm.S)
+            endif()
+
+            if(BUILD_SHA512)
+                list(APPEND LIB_SOURCES wolfcrypt/src/sha512.c)
+
+                if(BUILD_ARMASM AND BUILD_FIPS_READY)
+                    if(BUILD_ARMASM_INLINE)
+                        list(APPEND LIB_SOURCES
+                            wolfcrypt/src/port/arm/armv8-sha512-asm_c.c
+                            wolfcrypt/src/port/arm/armv8-32-sha512-asm_c.c)
+                    else()
+                        list(APPEND LIB_SOURCES
+                            wolfcrypt/src/port/arm/armv8-sha512-asm.S
+                            wolfcrypt/src/port/arm/armv8-32-sha512-asm.S)
+                    endif()
+
+                    if(BUILD_ARMASM_INLINE AND BUILD_ARM_THUMB)
+                        list(APPEND LIB_SOURCES
+                            wolfcrypt/src/port/arm/thumb2-sha512-asm_c.c)
+                    elseif(BUILD_ARM_THUMB)
+                        list(APPEND LIB_SOURCES
+                            wolfcrypt/src/port/arm/thumb2-sha512-asm.S)
+                    endif()
+                endif()
+
+                if(BUILD_INTELASM)
+                    list(APPEND LIB_SOURCES wolfcrypt/src/sha512_asm.S)
+                endif()
+            endif()
+
+            if(BUILD_SHA3)
+                list(APPEND LIB_SOURCES wolfcrypt/src/sha3.c)
+
+                if(BUILD_ARMASM)
+                    if(BUILD_ARMASM_INLINE)
+                        list(APPEND LIB_SOURCES
+                            wolfcrypt/src/port/arm/armv8-sha3-asm_c.c
+                            wolfcrypt/src/port/arm/armv8-32-sha3-asm_c.c)
+                    else()
+                        list(APPEND LIB_SOURCES
+                            wolfcrypt/src/port/arm/armv8-sha3-asm.S
+                            wolfcrypt/src/port/arm/armv8-32-sha3-asm.S)
+                    endif()
+
+                    if(BUILD_ARMASM_INLINE AND BUILD_ARM_THUMB)
+                        list(APPEND LIB_SOURCES
+                            wolfcrypt/src/port/arm/thumb2-sha3-asm_c.c)
+                    elseif(BUILD_ARM_THUMB)
+                        list(APPEND LIB_SOURCES
+                            wolfcrypt/src/port/arm/thumb2-sha3-asm.S)
+                    endif()
+                endif()
+
+                if(BUILD_INTELASM)
+                    list(APPEND LIB_SOURCES wolfcrypt/src/sha3_asm.S)
+                endif()
+            endif()
+
+            if(BUILD_DH)
+                list(APPEND LIB_SOURCES wolfcrypt/src/dh.c)
+            endif()
+
+            if(BUILD_CMAC)
+                list(APPEND LIB_SOURCES wolfcrypt/src/cmac.c)
+            endif()
+
+            list(APPEND LIB_SOURCES
+                wolfcrypt/src/fips.c
+                wolfcrypt/src/fips_test.c)
+
+            # fips last file
+            list(APPEND LIB_SOURCES wolfcrypt/src/wolfcrypt_last.c)
+        endif()
+
+        if(BUILD_FIPS_V5)
+            list(APPEND LIB_SOURCES wolfcrypt/src/wolfcrypt_first.c)
+
+            list(APPEND LIB_SOURCES
                 wolfcrypt/src/hmac.c
                 wolfcrypt/src/random.c
                 wolfcrypt/src/sha256.c)
 
-              list(APPEND LIB_SOURCES
+            list(APPEND LIB_SOURCES
                 wolfcrypt/src/kdf.c)
 
-              if(BUILD_RSA)
-                   list(APPEND LIB_SOURCES wolfcrypt/src/rsa.c)
-              endif()
-         endif()
+            if(BUILD_RSA)
+                list(APPEND LIB_SOURCES wolfcrypt/src/rsa.c)
+            endif()
+        endif()
 
-         if(BUILD_FIPS_RAND)
-              list(APPEND LIB_SOURCES
-                   wolfcrypt/src/wolfcrypt_first.c
-                   wolfcrypt/src/hmac.c
-                   wolfcrypt/src/random.c
-                   wolfcrypt/src/sha256.c
-                   wolfcrypt/src/sha256_asm.S
-                   wolfcrypt/src/fips.c
-                   wolfcrypt/src/fips_test.c
-                   wolfcrypt/src/wolfcrypt_last.c)
-         endif()
+        if(BUILD_FIPS_RAND)
+            list(APPEND LIB_SOURCES
+                wolfcrypt/src/wolfcrypt_first.c
+                wolfcrypt/src/hmac.c
+                wolfcrypt/src/random.c
+                wolfcrypt/src/sha256.c
+                wolfcrypt/src/sha256_asm.S
+                wolfcrypt/src/fips.c
+                wolfcrypt/src/fips_test.c
+                wolfcrypt/src/wolfcrypt_last.c)
+        endif()
     endif()
 
     # For wolfRand, exclude everything else.
     if(NOT BUILD_FIPS_RAND)
-         # For FIPSV2, exclude the wolfCrypt files included above.
-         # For wolfRand, exclude just a couple files.
-         # For old FIPS, keep the wolfCrypt versions of the
-         # CtaoCrypt files included above.
-         if(NOT BUILD_FIPS_V2)
-              list(APPEND LIB_SOURCES wolfcrypt/src/hmac.c)
-         endif()
+        # For FIPSV2, exclude the wolfCrypt files included above.
+        # For wolfRand, exclude just a couple files.
+        # For old FIPS, keep the wolfCrypt versions of the
+        # CtaoCrypt files included above.
+        if(NOT BUILD_FIPS_V2)
+            list(APPEND LIB_SOURCES wolfcrypt/src/hmac.c)
+        endif()
 
-         # CAVP self test
-         if(BUILD_SELFTEST)
-              list(APPEND LIB_SOURCES wolfcrypt/src/selftest.c)
-         endif()
+        # CAVP self test
+        if(BUILD_SELFTEST)
+            list(APPEND LIB_SOURCES wolfcrypt/src/selftest.c)
+        endif()
     endif()
 
     list(APPEND LIB_SOURCES
-         wolfcrypt/src/hash.c
-         wolfcrypt/src/cpuid.c)
+        wolfcrypt/src/hash.c
+        wolfcrypt/src/cpuid.c)
 
     if(NOT BUILD_FIPS_RAND)
-         if(NOT BUILD_FIPS_V5)
-              list(APPEND LIB_SOURCES wolfcrypt/src/kdf.c)
-         endif()
+        if(NOT BUILD_FIPS_V5)
+            list(APPEND LIB_SOURCES wolfcrypt/src/kdf.c)
+        endif()
 
-         if(NOT BUILD_FIPS_V2 AND BUILD_RNG)
-              list(APPEND LIB_SOURCES wolfcrypt/src/random.c)
-         endif()
+        if(NOT BUILD_FIPS_V2 AND BUILD_RNG)
+            list(APPEND LIB_SOURCES wolfcrypt/src/random.c)
+        endif()
 
-         if(NOT BUILD_FIPS_V2)
-              if(BUILD_ARMASM)
-                   list(APPEND LIB_SOURCES wolfcrypt/src/port/arm/armv8-sha256.c)
-              else()
-                   list(APPEND LIB_SOURCES wolfcrypt/src/sha256.c)
+        if(NOT BUILD_FIPS_V2)
 
-                   if(BUILD_INTELASM)
-                        list(APPEND LIB_SOURCES wolfcrypt/src/sha256_asm.S)
-                   endif()
-              endif()
-         endif()
+            list(APPEND LIB_SOURCES wolfcrypt/src/sha256.c)
 
-         if(BUILD_AFALG)
-              list(APPEND LIB_SOURCES wolfcrypt/src/port/af_alg/afalg_hash.c)
-         endif()
+            if(BUILD_ARMASM)
 
-         if(BUILD_WOLFEVENT)
-              list(APPEND LIB_SOURCES wolfcrypt/src/wolfevent.c)
-         endif()
+                if(BUILD_ARMASM_INLINE)
+                    list(APPEND LIB_SOURCES
+                        wolfcrypt/src/port/arm/armv8-sha256.c
+                        wolfcrypt/src/port/arm/armv8-32-sha256-asm_c.c
+                        wolfcrypt/src/port/arm/armv8-sha256-asm_c.c)
+                else()
+                    list(APPEND LIB_SOURCES
+                        wolfcrypt/src/port/arm/armv8-sha256.c
+                        wolfcrypt/src/port/arm/armv8-32-sha256-asm.S
+                        wolfcrypt/src/port/arm/armv8-sha256-asm.S)
+                endif()
+                if(BUILD_ARMASM_INLINE AND BUILD_ARM_THUMB)
+                    list(APPEND LIB_SOURCES
+                        wolfcrypt/src/port/arm/thumb2-sha256-asm_c.c)
+                elseif(BUILD_ARM_THUMB)
+                    list(APPEND LIB_SOURCES
+                        wolfcrypt/src/port/arm/thumb2-sha256-asm.S)
+                endif()
+            else()
 
-         if(BUILD_ASYNCCRYPT)
-              list(APPEND LIB_SOURCES wolfcrypt/src/async.c)
-         endif()
+                if(BUILD_INTELASM)
+                    list(APPEND LIB_SOURCES wolfcrypt/src/sha256_asm.S)
+                endif()
+            endif()
+        endif()
 
-         if(NOT BUILD_USER_RSA AND BUILD_RSA)
-              if(BUILD_FAST_RSA)
-                   list(APPEND LIB_SOURCES wolfcrypt/user-crypto/src/rsa.c)
-              else()
-                   if(NOT BUILD_FIPS_V2)
-                        list(APPEND LIB_SOURCES wolfcrypt/src/rsa.c)
-                   endif()
-              endif()
-         endif()
+        if(BUILD_AFALG)
+            list(APPEND LIB_SOURCES wolfcrypt/src/port/af_alg/afalg_hash.c)
+        endif()
 
-         if(BUILD_SP)
-              if(BUILD_SP_C)
-                   list(APPEND LIB_SOURCES
-                        wolfcrypt/src/sp_c32.c
-                        wolfcrypt/src/sp_c64.c)
-              endif()
+        if(BUILD_WOLFEVENT)
+            list(APPEND LIB_SOURCES wolfcrypt/src/wolfevent.c)
+        endif()
 
-              if(BUILD_SP_X86_64)
-                   list(APPEND LIB_SOURCES
-                        wolfcrypt/src/sp_x86_64.c
-                        wolfcrypt/src/sp_x86_64_asm.S)
-              endif()
+        if(BUILD_ASYNCCRYPT)
+            list(APPEND LIB_SOURCES wolfcrypt/src/async.c)
+        endif()
 
-              if(NOT BUILD_FIPS_V2 AND BUILD_SP_ARM32)
-                   list(APPEND LIB_SOURCES wolfcrypt/src/sp_arm32.c)
-              endif()
+        if(BUILD_RSA)
+            if(NOT BUILD_FIPS_V2)
+                list(APPEND LIB_SOURCES wolfcrypt/src/rsa.c)
+            endif()
+        endif()
 
-              if(BUILD_SP_ARM_THUMB)
-                   list(APPEND LIB_SOURCES wolfcrypt/src/sp_armthumb.c)
-              endif()
+        if(BUILD_SP)
+            if(BUILD_SP_C)
+                list(APPEND LIB_SOURCES
+                    wolfcrypt/src/sp_c32.c
+                    wolfcrypt/src/sp_c64.c)
+            endif()
 
-              if(BUILD_SP_ARM64)
-                   list(APPEND LIB_SOURCES wolfcrypt/src/sp_arm64.c)
-              endif()
+            if(BUILD_SP_X86_64)
+                list(APPEND LIB_SOURCES wolfcrypt/src/sp_x86_64.c)
+                if(WOLFSSL_X86_64_BUILD_ASM)
+                    list(APPEND LIB_SOURCES wolfcrypt/src/sp_x86_64_asm.S)
+                endif()
+            endif()
 
-              if(BUILD_SP_ARM_CORTEX)
-                   list(APPEND LIB_SOURCES wolfcrypt/src/sp_cortexm.c)
-              endif()
-         endif()
-         if(BUILD_SP_INT)
-              list(APPEND LIB_SOURCES wolfcrypt/src/sp_int.c)
-         endif()
+            if(NOT BUILD_FIPS_V2 AND BUILD_SP_ARM32)
+                list(APPEND LIB_SOURCES wolfcrypt/src/sp_arm32.c)
+            endif()
 
-         if(NOT BUILD_FIPS_V2)
-              if(BUILD_AES)
-                   list(APPEND LIB_SOURCES wolfcrypt/src/aes.c)
+            if(BUILD_SP_ARM_THUMB)
+                list(APPEND LIB_SOURCES wolfcrypt/src/sp_armthumb.c)
+            endif()
 
-                   if(BUILD_ARMASM)
-                        list(APPEND LIB_SOURCES wolfcrypt/src/port/arm/armv8-aes.c)
-                   endif()
+            if(BUILD_SP_ARM64)
+                list(APPEND LIB_SOURCES wolfcrypt/src/sp_arm64.c)
+            endif()
 
-                   if(BUILD_AFALG)
-                        list(APPEND LIB_SOURCES wolfcrypt/src/port/af_alg/afalg_aes.c)
-                   endif()
-              endif()
-         endif()
+            if(BUILD_SP_ARM_CORTEX)
+                list(APPEND LIB_SOURCES wolfcrypt/src/sp_cortexm.c)
+            endif()
+        endif()
+        if(BUILD_SP_INT)
+            list(APPEND LIB_SOURCES wolfcrypt/src/sp_int.c)
+        endif()
 
-         if(NOT BUILD_FIPS_V2 AND BUILD_CMAC)
-              list(APPEND LIB_SOURCES wolfcrypt/src/cmac.c)
-         endif()
+        if(NOT BUILD_FIPS_V2)
+            if(BUILD_AES)
+                list(APPEND LIB_SOURCES wolfcrypt/src/aes.c)
 
-         if(NOT BUILD_FIPS_V2 AND BUILD_DES3)
-              list(APPEND LIB_SOURCES wolfcrypt/src/des3.c)
-         endif()
+                if(BUILD_ARMASM)
+                    if(BUILD_ARMASM_INLINE)
+                        list(APPEND LIB_SOURCES
+                            wolfcrypt/src/port/arm/armv8-32-aes-asm_c.c
+                            wolfcrypt/src/port/arm/armv8-aes-asm_c.c)
+                    else()
+                        list(APPEND LIB_SOURCES
+                            wolfcrypt/src/port/arm/armv8-32-aes-asm.S
+                            wolfcrypt/src/port/arm/armv8-aes-asm.S)
+                    endif()
 
-         if(NOT BUILD_FIPS_V2 AND BUILD_SHA)
-              list(APPEND LIB_SOURCES wolfcrypt/src/sha.c)
-         endif()
+                    if(BUILD_ARMASM_INLINE AND BUILD_ARM_THUMB)
+                        list(APPEND LIB_SOURCES
+                            wolfcrypt/src/port/arm/thumb2-aes-asm_c.c)
+                    elseif(BUILD_ARM_THUMB)
+                        list(APPEND LIB_SOURCES
+                            wolfcrypt/src/port/arm/thumb2-aes-asm.S)
+                    endif()
 
-         if(NOT BUILD_FIPS_V2 AND BUILD_SHA512)
-              if(BUILD_ARMASM)
-                   list(APPEND LIB_SOURCES
-                        wolfcrypt/src/port/arm/armv8-sha512.c
+                endif()
+
+                if(BUILD_AFALG)
+                    list(APPEND LIB_SOURCES
+                        wolfcrypt/src/port/af_alg/afalg_aes.c)
+                endif()
+            endif()
+        endif()
+
+        if(NOT BUILD_FIPS_V2 AND BUILD_CMAC)
+            list(APPEND LIB_SOURCES wolfcrypt/src/cmac.c)
+        endif()
+
+        if(NOT BUILD_FIPS_V2 AND BUILD_DES3)
+            list(APPEND LIB_SOURCES wolfcrypt/src/des3.c)
+        endif()
+
+        if(NOT BUILD_FIPS_V2 AND BUILD_SHA)
+            list(APPEND LIB_SOURCES wolfcrypt/src/sha.c)
+        endif()
+
+        if(NOT BUILD_FIPS_V2 AND BUILD_SHA512)
+            list(APPEND LIB_SOURCES wolfcrypt/src/sha512.c)
+
+            if(BUILD_ARMASM)
+                if(BUILD_ARMASM_INLINE)
+                    list(APPEND LIB_SOURCES
+                        wolfcrypt/src/port/arm/armv8-sha512-asm_c.c
+                        wolfcrypt/src/port/arm/armv8-32-sha512-asm_c.c)
+                else()
+                    list(APPEND LIB_SOURCES
                         wolfcrypt/src/port/arm/armv8-sha512-asm.S
                         wolfcrypt/src/port/arm/armv8-32-sha512-asm.S)
-              else()
-                   list(APPEND LIB_SOURCES wolfcrypt/src/sha512.c)
+                endif()
 
-                   if(BUILD_INTELASM)
-                        list(APPEND LIB_SOURCES wolfcrypt/src/sha512_asm.S)
-                   endif()
-              endif()
-         endif()
+                if(BUILD_ARMASM_INLINE AND BUILD_ARM_THUMB)
+                    list(APPEND LIB_SOURCES
+                        wolfcrypt/src/port/arm/thumb2-sha512-asm_c.c)
+                elseif(BUILD_ARM_THUMB)
+                    list(APPEND LIB_SOURCES
+                        wolfcrypt/src/port/arm/thumb2-sha512-asm.S)
+                endif()
+            else()
 
-         if(NOT BUILD_FIPS_V2 AND BUILD_SHA3)
-              list(APPEND LIB_SOURCES wolfcrypt/src/sha3.c)
-         endif()
+                if(BUILD_INTELASM)
+                    list(APPEND LIB_SOURCES wolfcrypt/src/sha512_asm.S)
+                endif()
+            endif()
+        endif()
+
+        if(NOT BUILD_FIPS_V2 AND BUILD_SHA3)
+            list(APPEND LIB_SOURCES wolfcrypt/src/sha3.c)
+
+            if(BUILD_ARMASM)
+                if(BUILD_ARMASM_INLINE)
+                    list(APPEND LIB_SOURCES
+                        wolfcrypt/src/port/arm/armv8-sha3-asm_c.c
+                        wolfcrypt/src/port/arm/armv8-32-sha3-asm_c.c)
+                else()
+                    list(APPEND LIB_SOURCES
+                        wolfcrypt/src/port/arm/armv8-sha3-asm.S
+                        wolfcrypt/src/port/arm/armv8-32-sha3-asm.S)
+                endif()
+
+                if(BUILD_ARMASM_INLINE AND BUILD_ARM_THUMB)
+                    list(APPEND LIB_SOURCES
+                        wolfcrypt/src/port/arm/thumb2-sha3-asm_c.c)
+                elseif(BUILD_ARM_THUMB)
+                    list(APPEND LIB_SOURCES
+                        wolfcrypt/src/port/arm/thumb2-sha3-asm.S)
+                endif()
+            endif()
+
+            if(BUILD_INTELASM)
+                list(APPEND LIB_SOURCES wolfcrypt/src/sha3_asm.S)
+            endif()
+        endif()
     endif()
 
     list(APPEND LIB_SOURCES
-         wolfcrypt/src/logging.c
-         wolfcrypt/src/wc_port.c
-         wolfcrypt/src/error.c)
+        wolfcrypt/src/logging.c
+        wolfcrypt/src/wc_port.c
+        wolfcrypt/src/error.c)
 
     if(BUILD_ARIA)
         list(APPEND LIB_SOURCES
@@ -600,261 +952,472 @@ function(generate_lib_src_list LIB_SOURCES)
     endif()
 
     if(BUILD_MEMORY)
-         list(APPEND LIB_SOURCES wolfcrypt/src/memory.c)
+        list(APPEND LIB_SOURCES wolfcrypt/src/memory.c)
     endif()
 
     if(NOT BUILD_FIPS_RAND)
-         if(NOT BUILD_FIPS_V2 AND BUILD_DH)
-              list(APPEND LIB_SOURCES wolfcrypt/src/dh.c)
-         endif()
+        if(NOT BUILD_FIPS_V2 AND BUILD_DH)
+            list(APPEND LIB_SOURCES wolfcrypt/src/dh.c)
+        endif()
 
-         if(BUILD_ASN)
-              list(APPEND LIB_SOURCES wolfcrypt/src/asn.c)
-         endif()
+        if(BUILD_ASN)
+            list(APPEND LIB_SOURCES wolfcrypt/src/asn.c)
+        endif()
     endif()
 
-    if(BUILD_CODING)
-         list(APPEND LIB_SOURCES wolfcrypt/src/coding.c)
-    endif()
+    list(APPEND LIB_SOURCES wolfcrypt/src/coding.c)
 
     if(NOT BUILD_FIPS_RAND)
-         if(BUILD_POLY1305)
-              if(BUILD_ARMASM)
-                   list(APPEND LIB_SOURCES wolfcrypt/src/port/arm/armv8-poly1305.c)
-              endif()
+        if(BUILD_POLY1305)
+            if(BUILD_ARMASM)
+                if(BUILD_ARMASM_INLINE)
+                    list(APPEND LIB_SOURCES
+                        wolfcrypt/src/port/arm/armv8-32-poly1305-asm_c.c
+                        wolfcrypt/src/port/arm/armv8-poly1305-asm_c.c)
+                else()
+                    list(APPEND LIB_SOURCES
+                        wolfcrypt/src/port/arm/armv8-32-poly1305-asm.S
+                        wolfcrypt/src/port/arm/armv8-poly1305-asm.S)
+                endif()
 
-              list(APPEND LIB_SOURCES wolfcrypt/src/poly1305.c)
+                if(BUILD_ARMASM_INLINE AND BUILD_ARM_THUMB)
+                    list(APPEND LIB_SOURCES
+                        wolfcrypt/src/port/arm/thumb2-poly1305-asm_c.c)
+                elseif(BUILD_ARM_THUMB)
+                    list(APPEND LIB_SOURCES
+                        wolfcrypt/src/port/arm/thumb2-poly1305-asm.S)
+                endif()
+            endif()
 
-              if(BUILD_INTELASM)
-                   list(APPEND LIB_SOURCES wolfcrypt/src/poly1305_asm.S)
-              endif()
-         endif()
+            list(APPEND LIB_SOURCES wolfcrypt/src/poly1305.c)
 
-         if(BUILD_RC4)
-              list(APPEND LIB_SOURCES wolfcrypt/src/arc4.c)
-         endif()
+            if(BUILD_INTELASM)
+                list(APPEND LIB_SOURCES wolfcrypt/src/poly1305_asm.S)
+            endif()
+        endif()
 
-         if(BUILD_MD4)
-              list(APPEND LIB_SOURCES wolfcrypt/src/md4.c)
-         endif()
+        if(BUILD_RC4)
+            list(APPEND LIB_SOURCES wolfcrypt/src/arc4.c)
+        endif()
 
-         if(BUILD_MD5)
-              list(APPEND LIB_SOURCES wolfcrypt/src/md5.c)
-         endif()
+        if(BUILD_MD4)
+            list(APPEND LIB_SOURCES wolfcrypt/src/md4.c)
+        endif()
 
-         if(BUILD_PWDBASED)
-              list(APPEND LIB_SOURCES
-                   wolfcrypt/src/pwdbased.c
-                   wolfcrypt/src/pkcs12.c)
-         endif()
+        if(BUILD_MD5)
+            list(APPEND LIB_SOURCES wolfcrypt/src/md5.c)
+        endif()
 
-         if(BUILD_DSA)
-              list(APPEND LIB_SOURCES wolfcrypt/src/dsa.c)
-         endif()
+        if(BUILD_PWDBASED)
+            list(APPEND LIB_SOURCES
+                wolfcrypt/src/pwdbased.c
+                wolfcrypt/src/pkcs12.c)
+        endif()
 
-         if(NOT BUILD_FIPS_V2 AND BUILD_AESNI)
-              list(APPEND LIB_SOURCES
-                   wolfcrypt/src/aes_asm.S
-                   wolfcrypt/src/aes_gcm_asm.S)
-         endif()
+        if(BUILD_DSA)
+            list(APPEND LIB_SOURCES wolfcrypt/src/dsa.c)
+        endif()
 
-         if(BUILD_CAMELLIA)
-              list(APPEND LIB_SOURCES wolfcrypt/src/camellia.c)
-         endif()
+        if(NOT BUILD_FIPS_V2 AND BUILD_AESNI)
+            # aes_xts_x86_asm.S guards its own contents on WOLFSSL_AES_XTS and
+            # WOLFSSL_X86_BUILD, so it compiles to nothing on any other target
+            # or without XTS.
+            list(APPEND LIB_SOURCES
+                wolfcrypt/src/aes_asm.S
+                wolfcrypt/src/aes_gcm_asm.S
+                wolfcrypt/src/aes_xts_x86_asm.S)
+        endif()
 
-         if(BUILD_MD2)
-              list(APPEND LIB_SOURCES wolfcrypt/src/md2.c)
-         endif()
+        if(BUILD_CAMELLIA)
+            list(APPEND LIB_SOURCES wolfcrypt/src/camellia.c)
+        endif()
 
-         if(BUILD_RIPEMD)
-              list(APPEND LIB_SOURCES wolfcrypt/src/ripemd.c)
-         endif()
+        if(BUILD_MD2)
+            list(APPEND LIB_SOURCES wolfcrypt/src/md2.c)
+        endif()
 
-         if(BUILD_BLAKE2)
-              list(APPEND LIB_SOURCES wolfcrypt/src/blake2b.c)
-         endif()
+        if(BUILD_RIPEMD)
+            list(APPEND LIB_SOURCES wolfcrypt/src/ripemd.c)
+        endif()
 
-         if(BUILD_BLAKE2S)
-              list(APPEND LIB_SOURCES wolfcrypt/src/blake2s.c)
-         endif()
+        if(BUILD_BLAKE2B)
+            list(APPEND LIB_SOURCES wolfcrypt/src/blake2b.c)
+        endif()
 
-         if(BUILD_CHACHA)
-              if(BUILD_ARMASM)
-                   list(APPEND LIB_SOURCES wolfcrypt/src/port/arm/armv8-chacha.c)
-              else()
-                   list(APPEND LIB_SOURCES wolfcrypt/src/chacha.c)
+        if(BUILD_BLAKE2S)
+            list(APPEND LIB_SOURCES wolfcrypt/src/blake2s.c)
+        endif()
 
-                   if(BUILD_INTELASM)
-                        list(APPEND LIB_SOURCES wolfcrypt/src/chacha_asm.S)
-                   endif()
-              endif()
+        if(BUILD_RC2)
+            list(APPEND LIB_SOURCES wolfcrypt/src/rc2.c)
+        endif()
 
-              if(BUILD_POLY1305)
-                   list(APPEND LIB_SOURCES wolfcrypt/src/chacha20_poly1305.c)
-              endif()
-         endif()
+        if(BUILD_ASCON)
+            list(APPEND LIB_SOURCES wolfcrypt/src/ascon.c)
+        endif()
 
-         if(NOT BUILD_INLINE)
-              list(APPEND LIB_SOURCES wolfcrypt/src/misc.c)
-         endif()
+        if(BUILD_ARGON2)
+            list(APPEND LIB_SOURCES wolfcrypt/src/argon2.c)
+        endif()
 
-         if(BUILD_FAST_MATH)
-              list(APPEND LIB_SOURCES wolfcrypt/src/tfm.c)
-         endif()
+        # ShangMi SM2/SM3/SM4. The implementation files are provided by the
+        # external wolfsm add-on (the in-tree files are stubs that #error
+        # without it), matching automake's --enable-sm* behaviour. src/include.am
+        # guards all three with !BUILD_FIPS_V2_PLUS (excludes FIPS v2 AND v5), so
+        # reproduce that here (the enclosing scope is only NOT BUILD_FIPS_RAND).
+        if(NOT BUILD_FIPS_V2 AND NOT BUILD_FIPS_V5)
+            if(BUILD_SM2)
+                list(APPEND LIB_SOURCES wolfcrypt/src/sm2.c)
+                if(BUILD_SP)
+                    if(BUILD_SP_C)
+                        list(APPEND LIB_SOURCES
+                            wolfcrypt/src/sp_sm2_c32.c
+                            wolfcrypt/src/sp_sm2_c64.c)
+                    endif()
+                    if(BUILD_SP_X86_64)
+                        list(APPEND LIB_SOURCES wolfcrypt/src/sp_sm2_x86_64.c)
+                        if(WOLFSSL_X86_64_BUILD_ASM)
+                            list(APPEND LIB_SOURCES wolfcrypt/src/sp_sm2_x86_64_asm.S)
+                        endif()
+                    endif()
+                    if(BUILD_SP_ARM32)
+                        list(APPEND LIB_SOURCES wolfcrypt/src/sp_sm2_arm32.c)
+                    endif()
+                    if(BUILD_SP_ARM_THUMB)
+                        list(APPEND LIB_SOURCES wolfcrypt/src/sp_sm2_armthumb.c)
+                    endif()
+                    if(BUILD_SP_ARM64)
+                        list(APPEND LIB_SOURCES wolfcrypt/src/sp_sm2_arm64.c)
+                    endif()
+                    if(BUILD_SP_ARM_CORTEX)
+                        list(APPEND LIB_SOURCES wolfcrypt/src/sp_sm2_cortexm.c)
+                    endif()
+                endif()
+            endif()
+            if(BUILD_SM3)
+                list(APPEND LIB_SOURCES wolfcrypt/src/sm3.c)
+            endif()
+            if(BUILD_SM4)
+                list(APPEND LIB_SOURCES wolfcrypt/src/sm4.c)
+            endif()
+        endif()
 
-         if(BUILD_SLOW_MATH)
-              list(APPEND LIB_SOURCES wolfcrypt/src/integer.c)
-         endif()
+        if(BUILD_CHACHA)
+            list(APPEND LIB_SOURCES wolfcrypt/src/chacha.c)
 
-         if(NOT BUILD_FIPS_V2 AND BUILD_ECC)
-              list(APPEND LIB_SOURCES wolfcrypt/src/ecc.c)
-         endif()
+            if(BUILD_ARMASM)
+                if(BUILD_ARMASM_INLINE)
+                    list(APPEND LIB_SOURCES
+                        wolfcrypt/src/port/arm/armv8-32-chacha-asm_c.c
+                        wolfcrypt/src/port/arm/armv8-chacha-asm_c.c)
+                else()
+                    list(APPEND LIB_SOURCES
+                        wolfcrypt/src/port/arm/armv8-32-chacha-asm.S
+                        wolfcrypt/src/port/arm/armv8-chacha-asm.S)
+                endif()
 
-         if(BUILD_CURVE25519)
-              list(APPEND LIB_SOURCES wolfcrypt/src/curve25519.c)
-         endif()
+                if(BUILD_ARMASM_INLINE AND BUILD_ARM_THUMB)
+                    list(APPEND LIB_SOURCES
+                        wolfcrypt/src/port/arm/thumb2-chacha-asm_c.c)
+                elseif(BUILD_ARM_THUMB)
+                    list(APPEND LIB_SOURCES
+                        wolfcrypt/src/port/arm/thumb2-chacha-asm.S)
+                endif()
+            else()
 
-         if(BUILD_ED25519)
-              list(APPEND LIB_SOURCES wolfcrypt/src/ed25519.c)
-         endif()
+                if(BUILD_INTELASM)
+                    list(APPEND LIB_SOURCES wolfcrypt/src/chacha_asm.S)
+                endif()
+            endif()
 
-         if(BUILD_FEMATH)
-              if(BUILD_CURVE25519_SMALL)
-                   list(APPEND LIB_SOURCES wolfcrypt/src/fe_low_mem.c)
-              else()
-                   if(BUILD_INTELASM)
+            if(BUILD_POLY1305)
+                list(APPEND LIB_SOURCES wolfcrypt/src/chacha20_poly1305.c)
+            endif()
+        endif()
+
+        if(NOT BUILD_INLINE)
+            list(APPEND LIB_SOURCES wolfcrypt/src/misc.c)
+        endif()
+
+        if(BUILD_FAST_MATH)
+            list(APPEND LIB_SOURCES wolfcrypt/src/tfm.c)
+        endif()
+
+        if(BUILD_SLOW_MATH)
+            list(APPEND LIB_SOURCES wolfcrypt/src/integer.c)
+        endif()
+
+        if(NOT BUILD_FIPS_V2 AND BUILD_ECC)
+            list(APPEND LIB_SOURCES wolfcrypt/src/ecc.c)
+        endif()
+
+        if(BUILD_ECCSI)
+            list(APPEND LIB_SOURCES wolfcrypt/src/eccsi.c)
+        endif()
+
+        if(BUILD_SAKKE)
+            list(APPEND LIB_SOURCES wolfcrypt/src/sakke.c)
+        endif()
+
+        if(BUILD_SIPHASH)
+            list(APPEND LIB_SOURCES wolfcrypt/src/siphash.c)
+        endif()
+
+        if(BUILD_CURVE25519)
+            list(APPEND LIB_SOURCES wolfcrypt/src/curve25519.c)
+            if(BUILD_ARMASM)
+                if (BUILD_ARMASM_INLINE)
+                    list(APPEND LIB_SOURCES
+                        wolfcrypt/src/port/arm/armv8-32-curve25519_c.c
+                        wolfcrypt/src/port/arm/armv8-curve25519_c.c)
+                else()
+                    list(APPEND LIB_SOURCES
+                        wolfcrypt/src/port/arm/armv8-32-curve25519.S
+                        wolfcrypt/src/port/arm/armv8-curve25519.S)
+                endif()
+
+                if(BUILD_ARMASM_INLINE AND BUILD_ARM_THUMB)
+                    list(APPEND LIB_SOURCES
+                        wolfcrypt/src/port/arm/thumb2-curve25519_c.c)
+                elseif(BUILD_ARM_THUMB)
+                    list(APPEND LIB_SOURCES
+                        wolfcrypt/src/port/arm/thumb2-curve25519.S)
+                endif()
+            endif()
+        endif()
+
+        if(BUILD_ED25519)
+            list(APPEND LIB_SOURCES wolfcrypt/src/ed25519.c)
+        endif()
+
+        if(BUILD_FEMATH)
+            if(BUILD_CURVE25519_SMALL)
+                list(APPEND LIB_SOURCES wolfcrypt/src/fe_low_mem.c)
+            else()
+                if(BUILD_INTELASM)
+                    list(APPEND LIB_SOURCES wolfcrypt/src/fe_x25519_asm.S)
+                else()
+                    list(APPEND LIB_SOURCES wolfcrypt/src/fe_operations.c)
+                endif()
+                if(WOLFSSL_USER_SETTINGS)
+                    # In a user_settings.h build, we need this file, too.
+                    list(APPEND LIB_SOURCES wolfcrypt/src/fe_low_mem.c)
+                endif()
+            endif()
+        endif()
+
+        if(BUILD_GEMATH)
+            if(BUILD_ED25519_SMALL)
+                list(APPEND LIB_SOURCES wolfcrypt/src/ge_low_mem.c)
+            else()
+                list(APPEND LIB_SOURCES wolfcrypt/src/ge_operations.c)
+
+                if(NOT BUILD_FEMATH)
+                    if(BUILD_INTELASM)
                         list(APPEND LIB_SOURCES wolfcrypt/src/fe_x25519_asm.S)
-                   else()
-                        if(BUILD_ARMASM)
-                             list(APPEND LIB_SOURCES
-                                  wolfcrypt/src/port/arm/armv8-32-curve25519.S
-                                  wolfcrypt/src/port/arm/armv8-curve25519.S)
-                        else()
-                             list(APPEND LIB_SOURCES wolfcrypt/src/fe_operations.c)
-                        endif()
-                   endif()
-              endif()
-         endif()
+                    else()
+                        list(APPEND LIB_SOURCES wolfcrypt/src/fe_operations.c)
+                    endif()
+                endif()
 
-         if(BUILD_GEMATH)
-              if(BUILD_ED25519_SMALL)
-                   list(APPEND LIB_SOURCES wolfcrypt/src/ge_low_mem.c)
-              else()
-                   list(APPEND LIB_SOURCES wolfcrypt/src/ge_operations.c)
+                if(WOLFSSL_USER_SETTINGS)
+                    # In a user_settings.h build, we need this file, too.
+                    list(APPEND LIB_SOURCES wolfcrypt/src/ge_low_mem.c)
+                endif()
+            endif()
+        endif()
 
-                   if(NOT BUILD_FEMATH)
-                        if(BUILD_INTELASM)
-                             list(APPEND LIB_SOURCES wolfcrypt/src/fe_x25519_asm.S)
-                        else()
-                             if(BUILD_ARMASM)
-                                  list(APPEND LIB_SOURCES wolfcrypt/src/port/arm/armv8-curve25519.S)
-                             else()
-                                  list(APPEND LIB_SOURCES wolfcrypt/src/fe_operations.c)
-                             endif()
-                        endif()
-                   endif()
-              endif()
-         endif()
+        if(BUILD_CURVE448)
+            list(APPEND LIB_SOURCES wolfcrypt/src/curve448.c)
+        endif()
 
-         if(BUILD_CURVE448)
-              list(APPEND LIB_SOURCES wolfcrypt/src/curve448.c)
-         endif()
+        if(BUILD_ED448)
+            list(APPEND LIB_SOURCES wolfcrypt/src/ed448.c)
+        endif()
 
-         if(BUILD_ED448)
-              list(APPEND LIB_SOURCES wolfcrypt/src/ed448.c)
-         endif()
+        if(BUILD_FE448)
+            list(APPEND LIB_SOURCES wolfcrypt/src/fe_448.c)
+        endif()
 
-         if(BUILD_FE448)
-              list(APPEND LIB_SOURCES wolfcrypt/src/fe_448.c)
-         endif()
+        if(BUILD_GE448)
+            list(APPEND LIB_SOURCES wolfcrypt/src/ge_448.c)
 
-         if(BUILD_GE448)
-              list(APPEND LIB_SOURCES wolfcrypt/src/ge_448.c)
+            if(NOT BUILD_FE448)
+                list(APPEND LIB_SOURCES wolfcrypt/src/fe_448.c)
+            endif()
+        endif()
 
-              if(NOT BUILD_FE448)
-                   list(APPEND LIB_SOURCES wolfcrypt/src/fe_448.c)
-              endif()
-         endif()
+        if(BUILD_FALCON)
+            list(APPEND LIB_SOURCES wolfcrypt/src/falcon.c)
+        endif()
 
-         if(BUILD_FALCON)
-              list(APPEND LIB_SOURCES wolfcrypt/src/falcon.c)
-         endif()
+        if(BUILD_MLDSA)
+            list(APPEND LIB_SOURCES wolfcrypt/src/wc_mldsa.c)
 
-         if(BUILD_SPHINCS)
-              list(APPEND LIB_SOURCES wolfcrypt/src/sphincs.c)
-         endif()
+            if(BUILD_INTELASM)
+                list(APPEND LIB_SOURCES wolfcrypt/src/wc_mldsa_asm.S)
+            endif()
+        endif()
 
-         if(BUILD_DILITHIUM)
-              list(APPEND LIB_SOURCES wolfcrypt/src/dilithium.c)
-         endif()
 
-         if(BUILD_EXT_KYBER)
-              list(APPEND LIB_SOURCES wolfcrypt/src/ext_kyber.c)
-         endif()
+        if(BUILD_WC_MLKEM)
+            list(APPEND LIB_SOURCES wolfcrypt/src/wc_mlkem.c)
+            list(APPEND LIB_SOURCES wolfcrypt/src/wc_mlkem_poly.c)
 
-         if(BUILD_LIBZ)
-              list(APPEND LIB_SOURCES wolfcrypt/src/compress.c)
-         endif()
+            if(BUILD_ARMASM)
+                if(BUILD_ARMASM_INLINE)
+                    list(APPEND LIB_SOURCES
+                        wolfcrypt/src/port/arm/armv8-mlkem-asm_c.c
+                        wolfcrypt/src/port/arm/armv8-32-mlkem-asm_c.c)
+                else()
+                    list(APPEND LIB_SOURCES
+                        wolfcrypt/src/port/arm/armv8-mlkem-asm.S
+                        wolfcrypt/src/port/arm/armv8-32-mlkem-asm.S)
+                endif()
 
-         if(BUILD_PKCS7)
-              list(APPEND LIB_SOURCES wolfcrypt/src/pkcs7.c)
-         endif()
+                if(BUILD_ARMASM_INLINE AND BUILD_ARM_THUMB)
+                    list(APPEND LIB_SOURCES
+                        wolfcrypt/src/port/arm/thumb2-mlkem-asm_c.c)
+                elseif(BUILD_ARM_THUMB)
+                    list(APPEND LIB_SOURCES
+                        wolfcrypt/src/port/arm/thumb2-mlkem-asm.S)
+                endif()
+            endif()
 
-         if(BUILD_SRP)
-              list(APPEND LIB_SOURCES wolfcrypt/src/srp.c)
-         endif()
+            if(BUILD_INTELASM)
+                list(APPEND LIB_SOURCES wolfcrypt/src/wc_mlkem_asm.S)
+            endif()
+        endif()
 
-         if(BUILD_AFALG)
-              list(APPEND LIB_SOURCES wolfcrypt/src/port/af_alg/wc_afalg.c)
-         endif()
+        if(BUILD_WC_FRODOKEM)
+            list(APPEND LIB_SOURCES wolfcrypt/src/wc_frodokem.c)
+            list(APPEND LIB_SOURCES wolfcrypt/src/wc_frodokem_mat.c)
 
-         if(NOT BUILD_CRYPTONLY)
-              # ssl files
-              list(APPEND LIB_SOURCES
-                   src/internal.c
-                   src/wolfio.c
-                   src/keys.c
-                   src/ssl.c
-                   src/ocsp.c
-                   src/tls.c)
+            if(BUILD_ARMASM)
+                if(BUILD_ARMASM_INLINE)
+                    list(APPEND LIB_SOURCES
+                        wolfcrypt/src/port/arm/armv8-frodokem-asm_c.c
+                        wolfcrypt/src/port/arm/armv8-32-frodokem-asm_c.c)
+                else()
+                    list(APPEND LIB_SOURCES
+                        wolfcrypt/src/port/arm/armv8-frodokem-asm.S
+                        wolfcrypt/src/port/arm/armv8-32-frodokem-asm.S)
+                endif()
 
-              if(BUILD_TLS13)
-                   list(APPEND LIB_SOURCES src/tls13.c)
-              endif()
+                if(BUILD_ARMASM_INLINE AND BUILD_ARM_THUMB)
+                    list(APPEND LIB_SOURCES
+                        wolfcrypt/src/port/arm/thumb2-frodokem-asm_c.c)
+                elseif(BUILD_ARM_THUMB)
+                    list(APPEND LIB_SOURCES
+                        wolfcrypt/src/port/arm/thumb2-frodokem-asm.S)
+                endif()
+            endif()
 
-              if(BUILD_DTLS13)
-                   list(APPEND LIB_SOURCES src/dtls13.c)
-              endif()
+            if(BUILD_INTELASM)
+                list(APPEND LIB_SOURCES wolfcrypt/src/wc_frodokem_asm.S)
+            endif()
+        endif()
 
-              if(BUILD_QUIC)
-                   list(APPEND LIB_SOURCES src/quic.c)
-              endif()
+        if(BUILD_WC_LMS)
+            list(APPEND LIB_SOURCES wolfcrypt/src/wc_lms.c)
+            list(APPEND LIB_SOURCES wolfcrypt/src/wc_lms_impl.c)
+        endif()
 
-              if(BUILD_OCSP)
-                   list(APPEND LIB_SOURCES src/ocsp.c)
-              endif()
+        if(BUILD_WC_XMSS)
+            list(APPEND LIB_SOURCES wolfcrypt/src/wc_xmss.c)
+            list(APPEND LIB_SOURCES wolfcrypt/src/wc_xmss_impl.c)
+        endif()
 
-              if(BUILD_CRL)
-                   list(APPEND LIB_SOURCES src/crl.c)
-              endif()
+        if(BUILD_WC_SLHDSA)
+            list(APPEND LIB_SOURCES wolfcrypt/src/wc_slhdsa.c)
+        endif()
 
-              if(BUILD_SNIFFER)
-                   list(APPEND LIB_SOURCES src/sniffer.c)
-              endif()
+        if(BUILD_LIBZ)
+            list(APPEND LIB_SOURCES wolfcrypt/src/compress.c)
+        endif()
 
-              if(BUILD_DTLS_COMMON)
-                   list(APPEND LIB_SOURCES src/dtls.c)
-              endif()
-         endif()
+        if(BUILD_PKCS7)
+            list(APPEND LIB_SOURCES wolfcrypt/src/pkcs7.c)
+        endif()
+
+        if(BUILD_TSP)
+            list(APPEND LIB_SOURCES wolfcrypt/src/tsp.c)
+        endif()
+
+        if(BUILD_SRP)
+            list(APPEND LIB_SOURCES wolfcrypt/src/srp.c)
+        endif()
+
+        # WOLFSSL_RNG_BANK defined WC_RNG_BANK_SUPPORT without ever adding
+        # the file that implements it, so the option only linked once
+        # something else pulled rng_bank.c in. Matches BUILD_RNG_BANK in
+        # wolfcrypt/src/include.am.
+        if(BUILD_RNG_BANK)
+            list(APPEND LIB_SOURCES wolfcrypt/src/rng_bank.c)
+        endif()
+
+        if(BUILD_AFALG)
+            list(APPEND LIB_SOURCES wolfcrypt/src/port/af_alg/wc_afalg.c)
+        endif()
+
+        if(NOT BUILD_CRYPTONLY)
+            # ssl files
+            list(APPEND LIB_SOURCES
+                src/internal.c
+                src/wolfio.c
+                src/keys.c
+                src/ssl.c
+                src/ocsp.c
+                src/tls.c)
+
+            if(BUILD_TLS13)
+                list(APPEND LIB_SOURCES src/tls13.c)
+            endif()
+
+            if(BUILD_DTLS13)
+                list(APPEND LIB_SOURCES src/dtls13.c)
+            endif()
+
+            if(BUILD_QUIC)
+                list(APPEND LIB_SOURCES src/quic.c)
+            endif()
+
+            if(BUILD_OCSP)
+                list(APPEND LIB_SOURCES src/ocsp.c)
+            endif()
+
+            if(BUILD_CRL)
+                list(APPEND LIB_SOURCES src/crl.c)
+            endif()
+
+            if(BUILD_SNIFFER)
+                list(APPEND LIB_SOURCES src/sniffer.c)
+            endif()
+
+            if(BUILD_DTLS_COMMON)
+                list(APPEND LIB_SOURCES src/dtls.c)
+            endif()
+
+            if(BUILD_QUIC)
+                list(APPEND LIB_SOURCES src/quic.c)
+            endif()
+        endif()
     endif()
 
     # Corresponds to wolfcrypt/src/include.am
     if(BUILD_CRYPTOCB)
-           list(APPEND LIB_SOURCES wolfcrypt/src/cryptocb.c)
+        list(APPEND LIB_SOURCES wolfcrypt/src/cryptocb.c)
+        # entirely #ifdef WOLF_CRYPTO_CB_KEYSTORE, so it costs nothing when the
+        # key store facility is not enabled
+        list(APPEND LIB_SOURCES wolfcrypt/src/wc_keystore.c)
+    endif()
+
+    if(BUILD_SHE)
+        list(APPEND LIB_SOURCES wolfcrypt/src/wc_she.c)
     endif()
 
     if(BUILD_PKCS11)
-           list(APPEND LIB_SOURCES wolfcrypt/src/wc_pkcs11.c)
+        list(APPEND LIB_SOURCES wolfcrypt/src/wc_pkcs11.c)
     endif()
 
     if(BUILD_DEVCRYPTO)
@@ -886,6 +1449,23 @@ function(generate_lib_src_list LIB_SOURCES)
         list(APPEND LIB_SOURCES wolfcrypt/src/port/atmel/atmel.c)
     endif()
 
+    if(BUILD_VAULTIC)
+        list(APPEND LIB_SOURCES wolfcrypt/src/port/sealsq/vaultic.c)
+    endif()
+
+    if(BUILD_SEC_QORIQ)
+        list(APPEND LIB_SOURCES
+            wolfcrypt/src/port/nxp/sec_qoriq.c
+            wolfcrypt/src/port/nxp/sec_qoriq_cb.c
+            wolfcrypt/src/port/nxp/sec_qoriq_hash.c
+            wolfcrypt/src/port/nxp/sec_qoriq_aes.c
+            wolfcrypt/src/port/nxp/sec_qoriq_rng.c
+            wolfcrypt/src/port/nxp/sec_qoriq_pkha.c
+            wolfcrypt/src/port/nxp/sec_qoriq_baremetal.c
+            wolfcrypt/src/port/nxp/sec_qoriq_linux.c
+            wolfcrypt/src/port/nxp/sec_qoriq_sim.c)
+    endif()
+
     if(BUILD_CAAM)
         list(APPEND LIB_SOURCES
             wolfcrypt/src/port/caam/wolfcaam_init.c
@@ -902,37 +1482,92 @@ function(generate_lib_src_list LIB_SOURCES)
     endif()
 
     if(BUILD_HPKE)
-         list(APPEND LIB_SOURCES wolfcrypt/src/hpke.c)
+        list(APPEND LIB_SOURCES wolfcrypt/src/hpke.c)
+    endif()
+
+    if(BUILD_PUF)
+        list(APPEND LIB_SOURCES wolfcrypt/src/puf.c)
     endif()
 
     set(LIB_SOURCES ${LIB_SOURCES} PARENT_SCOPE)
 endfunction()
 
-function(add_to_options_file DEFINITIONS OPTION_FILE)
-    list(REMOVE_DUPLICATES DEFINITIONS)
-    foreach(DEF IN LISTS DEFINITIONS)
-        if(DEF MATCHES "^-D")
-            if(DEF MATCHES "^-D(N)?DEBUG(=.+)?")
-                message("not outputting (N)DEBUG to ${OPTION_FILE}")
-            endif()
+# Function: set_wolfssl_definitions
+#   Parameter: SEARCH_VALUE  The string to search for. (e.g. "WOLFSSL_SHA3")
+#   Returns:   RESULT
+#
+# Searches WOLFSSL_DEFINITIONS for SEARCH_VALUE
+#   Returns RESULT = 1 (true) if the search value is found
+#
+# Ensures setting is only added once and prints status messages.
+#
+# Also sets a parent (global in cmake file) variable by the same name to 1.
+#
+# See also get_wolfssl_definitions() for query-only.
+#
+function(set_wolfssl_definitions SEARCH_VALUE RESULT)
+    if (${SEARCH_VALUE} STREQUAL "")
+        message(FATAL_ERROR
+            "Function set_wolfssl_definitions cannot have blank SEARCH_VALUE")
+    endif()
 
-            # allow user to ignore system options
-            if(DEF MATCHES "^-D_.*")
-                file(APPEND ${OPTION_FILE} "#ifndef WOLFSSL_OPTIONS_IGNORE_SYS\n")
-            endif()
+    list(FIND WOLFSSL_DEFINITIONS "${SEARCH_VALUE}" pos)
+    string(SUBSTRING "${SEARCH_VALUE}" 0 2 PREFIX_VALUE)
 
-            string(REGEX REPLACE "^-D" "" DEF_NO_PREFIX ${DEF})
-            string(REGEX REPLACE "=.*$" "" DEF_NO_EQUAL_NO_VAL ${DEF_NO_PREFIX})
-            string(REPLACE "=" " " DEF_NO_EQUAL ${DEF_NO_PREFIX})
+    if ("${PREFIX_VALUE}" STREQUAL "-D")
+        message(FATAL_ERROR
+            "Do not specify the -D prefix in set_wolfssl_definitions")
+    endif()
 
-            file(APPEND ${OPTION_FILE} "#undef  ${DEF_NO_EQUAL_NO_VAL}\n")
-            file(APPEND ${OPTION_FILE} "#define ${DEF_NO_EQUAL}\n")
+    if(${pos} EQUAL -1)
+        message(STATUS "${SEARCH_VALUE} not found in WOLFSSL_DEFINITIONS.")
 
-            if(DEF MATCHES "^-D_.*")
-                file(APPEND ${OPTION_FILE} "#endif\n")
-            endif()
+        message(STATUS "Enabling ${SEARCH_VALUE}")
+        list(APPEND WOLFSSL_DEFINITIONS "-D${SEARCH_VALUE}")
+        # Propagate the appended flag to the caller so it actually reaches the
+        # compile line (without PARENT_SCOPE the append is confined to this
+        # function). Duplicates are collapsed later by list(REMOVE_DUPLICATES).
+        set(WOLFSSL_DEFINITIONS "${WOLFSSL_DEFINITIONS}" PARENT_SCOPE)
+        set(${SEARCH_VALUE} 1 PARENT_SCOPE)
+        # override_cache("${SEARCH_VALUE}" "yes")
+        # Need to check that value is settable
+        set(${RESULT} 1 PARENT_SCOPE)
+        message(STATUS "Enabling ${SEARCH_VALUE} - success")
 
-            file(APPEND ${OPTION_FILE} "\n")
-        endif()
-    endforeach()
+    else()
+        message(STATUS "${SEARCH_VALUE} found in WOLFSSL_DEFINITIONS.")
+        set(${RESULT} 0 PARENT_SCOPE)
+    endif()
+endfunction()
+
+# Function: get_wolfssl_definitions
+#   Parameter: SEARCH_VALUE  The string to search for. (e.g. "WOLFSSL_SHA3")
+#   Returns:   RESULT
+#
+# Searches WOLFSSL_DEFINITIONS for SEARCH_VALUE
+#   Returns RESULT = 1 (true) if the search value is found
+#
+# Unlike set_wolfssl_definitions(), this function only queries the
+# WOLFSSL_DEFINITIONS.
+#
+function(get_wolfssl_definitions SEARCH_VALUE RESULT)
+    if (${SEARCH_VALUE} STREQUAL "")
+        message(FATAL_ERROR
+            "Function get_wolfssl_definitions cannot have blank SEARCH_VALUE")
+    endif()
+
+    list(FIND WOLFSSL_DEFINITIONS "${SEARCH_VALUE}" pos)
+    string(SUBSTRING "${SEARCH_VALUE}" 0 2 PREFIX_VALUE)
+
+    if ("${PREFIX_VALUE}" STREQUAL "-D")
+        message(FATAL_ERROR
+            "Do not specify the -D prefix in get_wolfssl_definitions")
+    endif()
+
+
+    if(${pos} EQUAL -1)
+        message(STATUS "${SEARCH_VALUE} not found in WOLFSSL_DEFINITIONS.")
+    else()
+        message(STATUS "${SEARCH_VALUE} found in WOLFSSL_DEFINITIONS.")
+    endif()
 endfunction()

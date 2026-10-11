@@ -1,12 +1,12 @@
 /* devices.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -62,10 +62,10 @@ static void usart1_init(void)
     GPIO_MODE(GPIOB_BASE) = reg | (0x02 << (USART1_PIN_TX * 2));
 
     reg = GPIO_PUPD(GPIOG_BASE) & (0x03 << (USART1_PIN_RX * 2));
-    
+
     reg = GPIO_PUPD(GPIOB_BASE) & (0x03 << (USART1_PIN_TX * 2));
     GPIO_PUPD(GPIOB_BASE) = reg | (0x01 << (USART1_PIN_TX * 2));
-    
+
 #if RTSCTS
     reg = GPIO_MODE(GPIOG_BASE) & ~(0x03 << (USART1_PIN_RTS * 2));
     GPIO_MODE(GPIOG_BASE) = reg | (0x02 << (USART1_PIN_RTS * 2));
@@ -240,17 +240,6 @@ void * _sbrk(unsigned int incr)
     heap += incr;
     return old_heap;
 }
-void * _sbrk_r(unsigned int incr)
-{
-    static unsigned char *heap = NULL;
-    void *old_heap = heap;
-    if (((incr >> 2) << 2) != incr)
-        incr = ((incr >> 2) + 1) << 2;
-    if (old_heap == NULL)
-        old_heap = heap = (unsigned char *)&_start_heap;
-    heap += incr;
-    return old_heap;
-}
 
 int _close(int fd)
 {
@@ -376,7 +365,7 @@ static void stmod_pin_init(void)
     /* RST pin */
     reg = GPIO_MODE(STMOD_MODEM_RST_PORT) & ~(0x03 << (STMOD_MODEM_RST_PIN * 2));
     GPIO_MODE(STMOD_MODEM_RST_PORT) = reg | (0x01 << (STMOD_MODEM_RST_PIN * 2));
-    
+
     /* DTR pin */
     reg = GPIO_MODE(STMOD_MODEM_DTR_PORT) & ~(0x03 << (STMOD_MODEM_DTR_PIN * 2));
     GPIO_MODE(STMOD_MODEM_DTR_PORT) = reg | (0x01 << (STMOD_MODEM_DTR_PIN * 2));

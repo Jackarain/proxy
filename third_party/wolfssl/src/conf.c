@@ -1,12 +1,12 @@
 /* conf.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -19,12 +19,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1335, USA
  */
 
-
-#ifdef HAVE_CONFIG_H
-    #include <config.h>
-#endif
-
-#include <wolfssl/wolfcrypt/settings.h>
+#include <wolfssl/wolfcrypt/libwolfssl_sources.h>
 
 #if !defined(WOLFSSL_CONF_INCLUDED)
     #ifndef WOLFSSL_IGNORE_FILE_WARN
@@ -35,6 +30,8 @@
 /*******************************************************************************
  * START OF TXT_DB API
  ******************************************************************************/
+
+#define LINE_BUFFER_SIZE 512 /* enough for a single row */
 
 #if defined(OPENSSL_ALL) && !defined(NO_BIO)
 /**
@@ -95,7 +92,7 @@ WOLFSSL_TXT_DB *wolfSSL_TXT_DB_read(WOLFSSL_BIO *in, int num)
         char** fieldPtr = NULL;
         int fieldPtrIdx = 0;
         char* fieldCheckIdx = NULL;
-        lineEnd = XSTRNSTR(idx, "\n", (unsigned int)(bufEnd - idx));
+        lineEnd = XSTRNSTR(idx, "\n", (size_t)(bufEnd - idx));
         if (!lineEnd)
             lineEnd = bufEnd;
         if (idx == lineEnd) /* empty line */
@@ -103,7 +100,7 @@ WOLFSSL_TXT_DB *wolfSSL_TXT_DB_read(WOLFSSL_BIO *in, int num)
         if (*idx == '#')
             continue;
         *lineEnd = '\0';
-        strBuf = (char*)XMALLOC(fieldsSz + lineEnd - idx + 1, NULL,
+        strBuf = (char*)XMALLOC(fieldsSz + (lineEnd - idx) + 1, NULL,
                                 DYNAMIC_TYPE_OPENSSL);
         if (!strBuf) {
             WOLFSSL_MSG("malloc error");
@@ -133,7 +130,7 @@ WOLFSSL_TXT_DB *wolfSSL_TXT_DB_read(WOLFSSL_BIO *in, int num)
             XFREE(strBuf, NULL, DYNAMIC_TYPE_OPENSSL);
             goto error;
         }
-        if (wolfSSL_sk_push(ret->data, strBuf) != WOLFSSL_SUCCESS) {
+        if (wolfSSL_sk_push(ret->data, strBuf) <= 0) {
             WOLFSSL_MSG("wolfSSL_sk_push error");
             XFREE(strBuf, NULL, DYNAMIC_TYPE_OPENSSL);
             goto error;
@@ -146,9 +143,7 @@ error:
         wolfSSL_TXT_DB_free(ret);
         ret = NULL;
     }
-    if (buf) {
-        XFREE(buf, NULL, DYNAMIC_TYPE_TMP_BUFFER);
-    }
+    XFREE(buf, NULL, DYNAMIC_TYPE_TMP_BUFFER);
     return ret;
 }
 
@@ -156,8 +151,8 @@ long wolfSSL_TXT_DB_write(WOLFSSL_BIO *out, WOLFSSL_TXT_DB *db)
 {
     const WOLF_STACK_OF(WOLFSSL_STRING)* data;
     long totalLen = 0;
-    char buf[512]; /* Should be more than enough for a single row */
-    char* bufEnd = buf + sizeof(buf);
+    WC_DECLARE_VAR(buf, char, LINE_BUFFER_SIZE, NULL); /* enough for a single row */
+    char* bufEnd;
     int i;
 
     WOLFSSL_ENTER("wolfSSL_TXT_DB_write");
@@ -167,6 +162,10 @@ long wolfSSL_TXT_DB_write(WOLFSSL_BIO *out, WOLFSSL_TXT_DB *db)
         return WOLFSSL_FAILURE;
     }
 
+    WC_ALLOC_VAR_EX(buf, char, LINE_BUFFER_SIZE, NULL, DYNAMIC_TYPE_TMP_BUFFER,
+                    return WOLFSSL_FAILURE);
+    bufEnd = buf + LINE_BUFFER_SIZE;
+
     data = db->data;
     while (data) {
         char** fields = (char**)data->data.string;
@@ -175,6 +174,7 @@ long wolfSSL_TXT_DB_write(WOLFSSL_BIO *out, WOLFSSL_TXT_DB *db)
 
         if (!fields) {
             WOLFSSL_MSG("Missing row");
+            WC_FREE_VAR_EX(buf, NULL, DYNAMIC_TYPE_TMP_BUFFER);
             return WOLFSSL_FAILURE;
         }
 
@@ -193,6 +193,7 @@ long wolfSSL_TXT_DB_write(WOLFSSL_BIO *out, WOLFSSL_TXT_DB *db)
                 }
                 else {
                     WOLFSSL_MSG("Data row is too big");
+                    WC_FREE_VAR_EX(buf, NULL, DYNAMIC_TYPE_TMP_BUFFER);
                     return WOLFSSL_FAILURE;
                 }
             }
@@ -201,14 +202,21 @@ long wolfSSL_TXT_DB_write(WOLFSSL_BIO *out, WOLFSSL_TXT_DB *db)
             }
             else {
                 WOLFSSL_MSG("Data row is too big");
+                WC_FREE_VAR_EX(buf, NULL, DYNAMIC_TYPE_TMP_BUFFER);
                 return WOLFSSL_FAILURE;
             }
         }
-        idx[-1] = '\n';
+        if (idx > buf)
+            idx[-1] = '\n';
+        else {
+            WC_FREE_VAR_EX(buf, NULL, DYNAMIC_TYPE_TMP_BUFFER);
+            return WOLFSSL_FAILURE;
+        }
         sz = (int)(idx - buf);
 
         if (wolfSSL_BIO_write(out, buf, sz) != sz) {
             WOLFSSL_MSG("wolfSSL_BIO_write error");
+            WC_FREE_VAR_EX(buf, NULL, DYNAMIC_TYPE_TMP_BUFFER);
             return WOLFSSL_FAILURE;
         }
         totalLen += sz;
@@ -216,6 +224,7 @@ long wolfSSL_TXT_DB_write(WOLFSSL_BIO *out, WOLFSSL_TXT_DB *db)
         data = data->next;
     }
 
+    WC_FREE_VAR_EX(buf, NULL, DYNAMIC_TYPE_TMP_BUFFER);
     return totalLen;
 }
 
@@ -228,7 +237,7 @@ int wolfSSL_TXT_DB_insert(WOLFSSL_TXT_DB *db, WOLFSSL_STRING *row)
         return WOLFSSL_FAILURE;
     }
 
-    if (wolfSSL_sk_push(db->data, row) != WOLFSSL_SUCCESS) {
+    if (wolfSSL_sk_push(db->data, row) <= 0) {
         WOLFSSL_MSG("wolfSSL_sk_push error");
         return WOLFSSL_FAILURE;
     }
@@ -452,11 +461,11 @@ int wolfSSL_CONF_add_string(WOLFSSL_CONF *conf,
     sk = (WOLF_STACK_OF(WOLFSSL_CONF_VALUE) *)section->value;
     value->section = section->section;
 
-    if (wolfSSL_sk_CONF_VALUE_push(sk, value) != WOLFSSL_SUCCESS) {
+    if (wolfSSL_sk_CONF_VALUE_push(sk, value) <= 0) {
         WOLFSSL_MSG("wolfSSL_sk_CONF_VALUE_push error");
         return WOLFSSL_FAILURE;
     }
-    if (wolfSSL_sk_CONF_VALUE_push(conf->data, value) != WOLFSSL_SUCCESS) {
+    if (wolfSSL_sk_CONF_VALUE_push(conf->data, value) <= 0) {
         WOLFSSL_MSG("wolfSSL_sk_CONF_VALUE_push error");
         wolfssl_sk_pop_type(sk, STACK_TYPE_CONF_VALUE);
         return WOLFSSL_FAILURE;
@@ -499,7 +508,7 @@ WOLFSSL_CONF_VALUE *wolfSSL_CONF_new_section(WOLFSSL_CONF *conf,
 
     ret->value = (char*)sk;
 
-    if (wolfSSL_sk_CONF_VALUE_push(conf->data, ret) != WOLFSSL_SUCCESS) {
+    if (wolfSSL_sk_CONF_VALUE_push(conf->data, ret) <= 0) {
         WOLFSSL_MSG("wolfSSL_sk_CONF_VALUE_push error");
         goto error;
     }
@@ -605,7 +614,7 @@ char *wolfSSL_NCONF_get_string(const WOLFSSL_CONF *conf,
         return NULL;
 }
 
-int wolfSSL_NCONF_get_number(const CONF *conf, const char *group,
+int wolfSSL_NCONF_get_number(const WOLFSSL_CONF *conf, const char *group,
         const char *name, long *result)
 {
     char *str;
@@ -772,8 +781,18 @@ static char* expandValue(WOLFSSL_CONF *conf, const char* section,
                     /* This will allocate slightly more memory than necessary
                      * but better be safe */
                     strLen += valueLen;
+                #ifdef WOLFSSL_NO_REALLOC
+                    newRet = (char*)XMALLOC(strLen + 1, NULL,
+                            DYNAMIC_TYPE_OPENSSL);
+                    if (newRet != NULL && ret != NULL) {
+                       XMEMCPY(newRet, ret, (strLen - valueLen) + 1);
+                       XFREE(ret, NULL, DYNAMIC_TYPE_OPENSSL);
+                       ret = NULL;
+                    }
+                #else
                     newRet = (char*)XREALLOC(ret, strLen + 1, NULL,
                             DYNAMIC_TYPE_OPENSSL);
+                #endif
                     if (!newRet) {
                         WOLFSSL_MSG("realloc error");
                         goto expand_cleanup;
@@ -793,8 +812,7 @@ static char* expandValue(WOLFSSL_CONF *conf, const char* section,
     return ret ? ret : str;
 
 expand_cleanup:
-    if (ret)
-        XFREE(ret, NULL, DYNAMIC_TYPE_OPENSSL);
+    XFREE(ret, NULL, DYNAMIC_TYPE_OPENSSL);
     return NULL;
 }
 
@@ -803,7 +821,7 @@ expand_cleanup:
         {(idx)++;}
 int wolfSSL_NCONF_load(WOLFSSL_CONF *conf, const char *file, long *eline)
 {
-    int ret = WOLFSSL_FAILURE;
+    int ret = WC_NO_ERR_TRACE(WOLFSSL_FAILURE);
     WOLFSSL_BIO *in = NULL;
     char* buf = NULL;
     char* idx = NULL;
@@ -847,11 +865,11 @@ int wolfSSL_NCONF_load(WOLFSSL_CONF *conf, const char *file, long *eline)
     idx = buf;
     bufEnd = buf + bufLen;
     while (idx < bufEnd) {
-        char* lineEnd = XSTRNSTR(idx, "\n", (unsigned int)(bufEnd - idx));
+        char* lineEnd = XSTRNSTR(idx, "\n", (size_t)(bufEnd - idx));
         char* maxIdx;
         if (!lineEnd)
             lineEnd = bufEnd; /* Last line in file */
-        maxIdx = XSTRNSTR(idx, "#", (unsigned int)(lineEnd - idx));
+        maxIdx = XSTRNSTR(idx, "#", (size_t)(lineEnd - idx));
         if (!maxIdx)
             maxIdx = lineEnd;
         line++;
@@ -961,8 +979,7 @@ int wolfSSL_NCONF_load(WOLFSSL_CONF *conf, const char *file, long *eline)
 cleanup:
     if (in)
         wolfSSL_BIO_free(in);
-    if (buf)
-        XFREE(buf, NULL, DYNAMIC_TYPE_TMP_BUFFER);
+    XFREE(buf, NULL, DYNAMIC_TYPE_TMP_BUFFER);
     if (eline)
         *eline = line;
     return ret;
@@ -980,27 +997,18 @@ void wolfSSL_NCONF_free(WOLFSSL_CONF *conf)
 
 void wolfSSL_X509V3_conf_free(WOLFSSL_CONF_VALUE *val)
 {
-    WOLF_STACK_OF(WOLFSSL_CONF_VALUE) *sk = NULL;
-
     if (val) {
         if (val->name) {
             /* Not a section. Don't free section as it is a shared pointer. */
             XFREE(val->name, NULL, DYNAMIC_TYPE_OPENSSL);
-            if (val->value)
-                XFREE(val->value, NULL, DYNAMIC_TYPE_OPENSSL);
+            XFREE(val->value, NULL, DYNAMIC_TYPE_OPENSSL);
         }
         else {
             /* Section so val->value is a stack */
-            if (val->section)
-                XFREE(val->section, NULL, DYNAMIC_TYPE_OPENSSL);
+            XFREE(val->section, NULL, DYNAMIC_TYPE_OPENSSL);
             /* Only free the stack structures. The contained conf values
              * will be freed in wolfSSL_NCONF_free */
-            sk = (WOLF_STACK_OF(WOLFSSL_CONF_VALUE)*)val->value;
-            while (sk) {
-                WOLF_STACK_OF(WOLFSSL_CONF_VALUE) *tmp = sk->next;
-                XFREE(sk, NULL, DYNAMIC_TYPE_OPENSSL);
-                sk = tmp;
-            }
+            wolfSSL_sk_free((WOLF_STACK_OF(WOLFSSL_CONF_VALUE)*)val->value);
         }
         XFREE(val, NULL, DYNAMIC_TYPE_OPENSSL);
     }
@@ -1026,19 +1034,9 @@ WOLFSSL_STACK *wolfSSL_sk_CONF_VALUE_new(
  */
 void wolfSSL_sk_CONF_VALUE_free(WOLF_STACK_OF(WOLFSSL_CONF_VALUE)* sk)
 {
-    WOLFSSL_STACK* tmp;
     WOLFSSL_ENTER("wolfSSL_sk_CONF_VALUE_free");
 
-    if (sk == NULL)
-        return;
-
-    /* parse through stack freeing each node */
-    while (sk) {
-        tmp = sk->next;
-        wolfSSL_X509V3_conf_free(sk->data.conf);
-        XFREE(sk, NULL, DYNAMIC_TYPE_OPENSSL);
-        sk = tmp;
-    }
+    wolfSSL_sk_pop_free(sk, NULL);
 }
 
 int wolfSSL_sk_CONF_VALUE_num(const WOLFSSL_STACK *sk)
@@ -1545,7 +1543,7 @@ static const conf_cmd_tbl* wolfssl_conf_find_cmd(WOLFSSL_CONF_CTX* cctx,
  */
 int wolfSSL_CONF_cmd(WOLFSSL_CONF_CTX* cctx, const char* cmd, const char* value)
 {
-    int ret = WOLFSSL_FAILURE;
+    int ret = WC_NO_ERR_TRACE(WOLFSSL_FAILURE);
     const conf_cmd_tbl* confcmd = NULL;
     WOLFSSL_ENTER("wolfSSL_CONF_cmd");
 
@@ -1588,7 +1586,7 @@ int wolfSSL_CONF_cmd_value_type(WOLFSSL_CONF_CTX *cctx, const char *cmd)
 
     confcmd = wolfssl_conf_find_cmd(cctx, cmd);
     if (confcmd == NULL)
-        return SSL_CONF_TYPE_UNKNOWN;
+        return WOLFSSL_CONF_TYPE_UNKNOWN;
     return (int)confcmd->data_type;
 }
 
@@ -1598,5 +1596,34 @@ int wolfSSL_CONF_cmd_value_type(WOLFSSL_CONF_CTX *cctx, const char *cmd)
 /*******************************************************************************
  * END OF CONF API
  ******************************************************************************/
+
+#if defined(OPENSSL_EXTRA)
+WOLFSSL_INIT_SETTINGS* wolfSSL_OPENSSL_INIT_new(void)
+{
+    WOLFSSL_INIT_SETTINGS* init = (WOLFSSL_INIT_SETTINGS*)XMALLOC(
+            sizeof(WOLFSSL_INIT_SETTINGS), NULL, DYNAMIC_TYPE_OPENSSL);
+
+    return init;
+}
+
+void wolfSSL_OPENSSL_INIT_free(WOLFSSL_INIT_SETTINGS* init)
+{
+    XFREE(init, NULL, DYNAMIC_TYPE_OPENSSL);
+}
+
+#ifndef NO_WOLFSSL_STUB
+int wolfSSL_OPENSSL_INIT_set_config_appname(WOLFSSL_INIT_SETTINGS* init,
+        char* appname)
+{
+    (void)init;
+    (void)appname;
+    WOLFSSL_STUB("OPENSSL_INIT_set_config_appname");
+    return WOLFSSL_SUCCESS;
+}
+#endif
+
+#endif /* OPENSSL_EXTRA */
+
+
 
 #endif /* WOLFSSL_CONF_INCLUDED */

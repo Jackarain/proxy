@@ -1,12 +1,12 @@
 /* user_settings.h
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -25,11 +25,11 @@
 #define NO_DEV_RANDOM
 #define USE_CERT_BUFFERS_2048
 #define SIZEOF_LONG_LONG 8
-#define NO_WOLFSSL_DIR 
+#define NO_WOLFSSL_DIR
 #define WOLFSSL_NO_CURRDIR
 #define WOLFSSL_LOG_PRINTF
 #define NO_WOLFSSL_STUB
-#define NO_DYNAMIC_ARRAY       /* for compilers not allowed dynamic size array */ 
+#define NO_DYNAMIC_ARRAY      /* for compilers not allowed dynamic size array */
 #define WOLFSSL_SMALL_STACK
 #define WOLFSSL_DH_CONST
 
@@ -76,4 +76,5 @@
 
 #define NO_FILESYSTEM
 
+#define XSTRCASECMP(s1,s2) strcmp((s1),(s2))
 

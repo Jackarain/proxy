@@ -5,19 +5,32 @@
 
 if BUILD_TESTS
 noinst_PROGRAMS += tests/unit.test
+dist_noinst_SCRIPTS += tests/caam_qnx_blob.test
 tests_unit_test_SOURCES = \
                   tests/unit.c \
                   tests/api.c \
+                  tests/utils.c \
+                  testsuite/utils.c \
                   tests/suites.c \
-                  tests/hash.c \
                   tests/w64wrapper.c \
                   tests/srp.c \
                   tests/quic.c \
                   examples/client/client.c \
                   examples/server/server.c
+
+if BUILD_WOLFCRYPT_TESTS
+tests_unit_test_SOURCES += wolfcrypt/test/test.c
+endif
+
 tests_unit_test_CFLAGS       = -DNO_MAIN_DRIVER $(AM_CFLAGS) $(WOLFSENTRY_INCLUDE)
 tests_unit_test_LDADD        = src/libwolfssl@LIBSUFFIX@.la $(LIB_STATIC_ADD) $(WOLFSENTRY_LIB)
 tests_unit_test_DEPENDENCIES = src/libwolfssl@LIBSUFFIX@.la
+if BUILD_SWDEV
+tests_unit_test_SOURCES     += tests/swdev/swdev_loader.c
+tests_unit_test_LDADD       += $(top_builddir)/tests/swdev/build/swdev.o $(LIBM)
+tests_unit_test_DEPENDENCIES += $(top_builddir)/tests/swdev/build/swdev.o
+endif
+include tests/api/include.am
 endif
 EXTRA_DIST += tests/unit.h \
               tests/test.conf \
@@ -25,13 +38,25 @@ EXTRA_DIST += tests/unit.h \
               tests/test-tls13.conf \
               tests/test-tls13-down.conf \
               tests/test-tls13-ecc.conf \
+              tests/test-tls13-null.conf \
               tests/test-tls13-psk.conf \
-              tests/test-tls13-pq.conf \
-              tests/test-tls13-pq-2.conf \
-              tests/test-dtls13-pq.conf \
-              tests/test-dtls13-pq-frag.conf \
-              tests/test-dtls13-pq-2.conf \
-              tests/test-dtls13-pq-2-frag.conf \
+              tests/test-tls13-pq-standalone.conf \
+              tests/test-tls13-pq-hybrid.conf \
+              tests/test-tls13-pq-hybrid-extra.conf \
+              tests/test-tls13-slhdsa-shake.conf \
+              tests/test-tls13-slhdsa-sha2.conf \
+              tests/test-tls13-slhdsa-fail.conf \
+              tests/test-tls13-slhdsa-entity.conf \
+              tests/test-tls13-slhdsa-entity-128s.conf \
+              tests/test-tls13-slhdsa-entity-sha2.conf \
+              tests/test-tls13-slhdsa-entity-sha2-128s.conf \
+              tests/test-dtls13-slhdsa-entity.conf \
+              tests/test-dtls13-slhdsa-entity-128s.conf \
+              tests/test-dtls13-pq-standalone.conf \
+              tests/test-dtls13-pq-standalone-frag.conf \
+              tests/test-dtls13-pq-hybrid-frag.conf \
+              tests/test-dtls13-pq-hybrid-extra.conf \
+              tests/test-dtls13-pq-hybrid-extra-frag.conf \
               tests/test-psk.conf \
               tests/test-psk-no-id.conf \
               tests/test-psk-no-id-sha2.conf \
@@ -48,6 +73,7 @@ EXTRA_DIST += tests/unit.h \
               tests/test-dtls-srtp.conf \
               tests/test-dtls-srtp-fails.conf \
               tests/test-dtls13.conf \
+              tests/test-dtls13-null.conf \
               tests/test-dtls13-downgrade.conf \
               tests/test-dtls13-downgrade-fails.conf \
               tests/test-dtls13-psk.conf \
@@ -72,5 +98,171 @@ EXTRA_DIST += tests/unit.h \
               tests/NCONF_test.cnf \
               tests/test-tls-downgrade.conf \
               tests/TXT_DB.txt \
-              tests/utils.h
+              tests/utils.h \
+              tests/emnet/IP/IP.h \
+              tests/emnet/emnet_shim.c \
+              tests/emnet/emnet_nonblock_test.c \
+              tests/emnet/Makefile \
+              tests/freertos-mem-track-repro/user_settings.h \
+              tests/freertos-mem-track-repro/repro.c \
+              tests/freertos-mem-track-repro/FreeRTOS.h \
+              tests/freertos-mem-track-repro/semphr.h \
+              tests/freertos-mem-track-repro/task.h \
+              tests/freertos-mem-track-repro/run.sh
 DISTCLEANFILES+= tests/.libs/unit.test
+
+# MC/DC white-box coverage supplements (tests/unit-mcdc/).
+#
+# These are NOT part of the wolfSSL build: each file #includes a wolfCrypt .c
+# directly and defines its own main(), so it cannot be a unit.test source (that
+# would duplicate main() and the included .c's symbols).  They are compiled
+# standalone, one at a time, by the out-of-tree per-module MC/DC coverage
+# suite, which reads them from this directory.  They are listed in EXTRA_DIST
+# only so the source-completeness check accounts for them and so they ship in
+# the dist tarball -- the same treatment tests/api/include.am gives its
+# non-compiled files.  Do not move them to tests_unit_test_SOURCES.
+EXTRA_DIST += \
+              tests/unit-mcdc/README.md \
+              tests/unit-mcdc/run-whitebox-smoke.sh \
+              tests/unit-mcdc/smoke-expected.txt \
+              tests/unit-mcdc/mcdc_der_edit.h \
+              tests/unit-mcdc/mcdc_fault_alloc.h \
+              tests/unit-mcdc/mcdc_fault_cryptocb.h \
+              tests/unit-mcdc/mcdc_fault_hash.h \
+              tests/unit-mcdc/mcdc_fault_mp.h \
+              tests/unit-mcdc/mcdc_fault_mpint.h \
+              tests/unit-mcdc/mcdc_fault_mutex.h \
+              tests/unit-mcdc/mcdc_seed_rng.h \
+              tests/unit-mcdc/test_aes_whitebox.c \
+              tests/unit-mcdc/test_asn_cert_whitebox.c \
+              tests/unit-mcdc/test_asn_certgen_whitebox.c \
+              tests/unit-mcdc/test_asn_ext_whitebox.c \
+              tests/unit-mcdc/test_asn_fault_whitebox.c \
+              tests/unit-mcdc/test_asn_keys_whitebox.c \
+              tests/unit-mcdc/test_asn_revocation_whitebox.c \
+              tests/unit-mcdc/test_asn_whitebox.c \
+              tests/unit-mcdc/test_blake2b_whitebox.c \
+              tests/unit-mcdc/test_blake2s_whitebox.c \
+              tests/unit-mcdc/test_chacha20_poly1305_whitebox.c \
+              tests/unit-mcdc/test_chacha_whitebox.c \
+              tests/unit-mcdc/test_cmac_whitebox.c \
+              tests/unit-mcdc/test_crl_whitebox.c \
+              tests/unit-mcdc/test_cryptocb_whitebox.c \
+              tests/unit-mcdc/test_curve25519_whitebox.c \
+              tests/unit-mcdc/test_dh_fault_whitebox.c \
+              tests/unit-mcdc/test_dsa_fault_whitebox.c \
+              tests/unit-mcdc/test_dtls13_role_whitebox.c \
+              tests/unit-mcdc/test_dtls_whitebox.c \
+              tests/unit-mcdc/test_ecc_fault_whitebox.c \
+              tests/unit-mcdc/test_ecc_whitebox.c \
+              tests/unit-mcdc/test_eccsi_fault_whitebox.c \
+              tests/unit-mcdc/test_eccsi_whitebox.c \
+              tests/unit-mcdc/test_ed25519_hash_fault_whitebox.c \
+              tests/unit-mcdc/test_ed25519_whitebox.c \
+              tests/unit-mcdc/test_ed448_hash_fault_whitebox.c \
+              tests/unit-mcdc/test_ed448_whitebox.c \
+              tests/unit-mcdc/test_falcon_whitebox.c \
+              tests/unit-mcdc/test_frodokem_cryptocb_whitebox.c \
+              tests/unit-mcdc/test_frodokem_fault_common.h \
+              tests/unit-mcdc/test_frodokem_fault_whitebox.c \
+              tests/unit-mcdc/test_frodokem_mat_fault_whitebox.c \
+              tests/unit-mcdc/test_frodokem_mat_hash_fault_whitebox.c \
+              tests/unit-mcdc/test_hpke_fault_whitebox.c \
+              tests/unit-mcdc/test_hpke_whitebox.c \
+              tests/unit-mcdc/test_integer_fault_whitebox.c \
+              tests/unit-mcdc/test_integer_whitebox.c \
+              tests/unit-mcdc/test_kdf_hash_fault_whitebox.c \
+              tests/unit-mcdc/test_internal_domain_whitebox.c \
+              tests/unit-mcdc/test_internal_certerror_whitebox.c \
+              tests/unit-mcdc/test_internal_clienthello_whitebox.c \
+              tests/unit-mcdc/test_internal_cryptocb_whitebox.c \
+              tests/unit-mcdc/test_ssl_certman_whitebox.c \
+              tests/unit-mcdc/test_ssl_sess_whitebox.c \
+              tests/unit-mcdc/test_internal_dhskehash_whitebox.c \
+              tests/unit-mcdc/test_internal_eddsa_whitebox.c \
+              tests/unit-mcdc/test_internal_nullguard_whitebox.c \
+              tests/unit-mcdc/test_internal_peerkey_whitebox.c \
+              tests/unit-mcdc/test_keys_whitebox.c \
+              tests/unit-mcdc/test_internal_revocation_whitebox.c \
+              tests/unit-mcdc/test_internal_record_whitebox.c \
+              tests/unit-mcdc/test_internal_status_whitebox.c \
+              tests/unit-mcdc/test_internal_sanity_whitebox.c \
+              tests/unit-mcdc/test_internal_suites_whitebox.c \
+              tests/unit-mcdc/test_kdf_whitebox.c \
+              tests/unit-mcdc/test_lms_bds_whitebox.c \
+              tests/unit-mcdc/test_lms_fault_whitebox.c \
+              tests/unit-mcdc/test_lms_hash_fault_whitebox.c \
+              tests/unit-mcdc/test_logging_globalq_whitebox.c \
+              tests/unit-mcdc/test_logging_whitebox.c \
+              tests/unit-mcdc/test_memory_whitebox.c \
+              tests/unit-mcdc/test_mldsa_fault_whitebox.c \
+              tests/unit-mcdc/test_mldsa_hash_fault_whitebox.c \
+              tests/unit-mcdc/test_mlkem_fault_whitebox.c \
+              tests/unit-mcdc/test_mlkem_poly_hash_fault_whitebox.c \
+              tests/unit-mcdc/test_pkcs12_fault_whitebox.c \
+              tests/unit-mcdc/test_ocsp_whitebox.c \
+              tests/unit-mcdc/test_pkcs12_parse_whitebox.c \
+              tests/unit-mcdc/test_pkcs12_whitebox.c \
+              tests/unit-mcdc/test_pkcs7_arg_whitebox.c \
+              tests/unit-mcdc/test_pkcs7_craft_whitebox.c \
+              tests/unit-mcdc/test_pkcs7_decode_whitebox.c \
+              tests/unit-mcdc/test_pkcs7_fault_whitebox.c \
+              tests/unit-mcdc/test_pkcs7_lever_whitebox.c \
+              tests/unit-mcdc/test_pkcs7_mutate_whitebox.c \
+              tests/unit-mcdc/test_pkcs7_whitebox.c \
+              tests/unit-mcdc/test_poly1305_whitebox.c \
+              tests/unit-mcdc/test_puf_gf_whitebox.c \
+              tests/unit-mcdc/test_puf_whitebox.c \
+              tests/unit-mcdc/test_pwdbased_whitebox.c \
+              tests/unit-mcdc/test_random_fault_whitebox.c \
+              tests/unit-mcdc/test_random_whitebox.c \
+              tests/unit-mcdc/test_rsa_fault_whitebox.c \
+              tests/unit-mcdc/test_rsa_whitebox.c \
+              tests/unit-mcdc/test_sakke_fault_whitebox.c \
+              tests/unit-mcdc/test_sakke_whitebox.c \
+              tests/unit-mcdc/test_sha256_whitebox.c \
+              tests/unit-mcdc/test_sha3_whitebox.c \
+              tests/unit-mcdc/test_sha512_whitebox.c \
+              tests/unit-mcdc/test_she_whitebox.c \
+              tests/unit-mcdc/test_signature_whitebox.c \
+              tests/unit-mcdc/test_slhdsa_hash_fault_whitebox.c \
+              tests/unit-mcdc/test_slhdsa_whitebox.c \
+              tests/unit-mcdc/test_sp_arm32_fault_whitebox.c \
+              tests/unit-mcdc/test_sp_arm32_whitebox.c \
+              tests/unit-mcdc/test_sp_arm64_fault_whitebox.c \
+              tests/unit-mcdc/test_sp_arm64_whitebox.c \
+              tests/unit-mcdc/test_sp_arm_fault_common.h \
+              tests/unit-mcdc/test_sp_armthumb_fault_whitebox.c \
+              tests/unit-mcdc/test_sp_armthumb_whitebox.c \
+              tests/unit-mcdc/test_sp_c32_fault_whitebox.c \
+              tests/unit-mcdc/test_sp_c32_whitebox.c \
+              tests/unit-mcdc/test_sp_c64_fault_whitebox.c \
+              tests/unit-mcdc/test_sp_c64_whitebox.c \
+              tests/unit-mcdc/test_sp_cortexm_crafted_whitebox.c \
+              tests/unit-mcdc/test_sp_cortexm_fault_whitebox.c \
+              tests/unit-mcdc/test_sp_cortexm_whitebox.c \
+              tests/unit-mcdc/test_sp_crafted_common.h \
+              tests/unit-mcdc/test_sp_fault_common.h \
+              tests/unit-mcdc/test_sp_int_fault_whitebox.c \
+              tests/unit-mcdc/test_sp_int_whitebox.c \
+              tests/unit-mcdc/test_sp_x86_64_fault_whitebox.c \
+              tests/unit-mcdc/test_sp_x86_64_whitebox.c \
+              tests/unit-mcdc/test_srp_whitebox.c \
+              tests/unit-mcdc/test_tfm_fault_whitebox.c \
+              tests/unit-mcdc/test_tfm_whitebox.c \
+              tests/unit-mcdc/test_tls13_null_whitebox.c \
+              tests/unit-mcdc/test_tls13_whitebox.c \
+              tests/unit-mcdc/test_tsp_fault_whitebox.c \
+              tests/unit-mcdc/test_tsp_whitebox.c \
+              tests/unit-mcdc/test_wc_encrypt_whitebox.c \
+              tests/unit-mcdc/test_wc_lms_impl_whitebox.c \
+              tests/unit-mcdc/test_wc_lms_impl_whitebox_gap.c \
+              tests/unit-mcdc/test_wc_mldsa_whitebox.c \
+              tests/unit-mcdc/test_wc_mlkem_poly_whitebox.c \
+              tests/unit-mcdc/test_wc_port_whitebox.c \
+              tests/unit-mcdc/test_wc_xmss_impl_whitebox.c \
+              tests/unit-mcdc/test_wolfentropy_whitebox.c \
+              tests/unit-mcdc/test_wolfio_whitebox.c \
+              tests/unit-mcdc/test_wolfmath_whitebox.c \
+              tests/unit-mcdc/test_xmss_fault_whitebox.c \
+              tests/unit-mcdc/test_xmss_hash_fault_whitebox.c

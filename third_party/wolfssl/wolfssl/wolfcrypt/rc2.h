@@ -1,12 +1,12 @@
 /* rc2.h
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -59,6 +59,8 @@ WOLFSSL_API int wc_Rc2CbcEncrypt(Rc2* rc2, byte* out,
                                  const byte* in, word32 sz);
 WOLFSSL_API int wc_Rc2CbcDecrypt(Rc2* rc2, byte* out,
                                  const byte* in, word32 sz);
+
+WOLFSSL_API void wc_Rc2Free(Rc2* rc2);
 
 #ifdef __cplusplus
     } /* extern "C" */

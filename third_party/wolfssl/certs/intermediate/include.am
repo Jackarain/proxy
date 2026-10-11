@@ -4,6 +4,8 @@
 
 EXTRA_DIST += \
 	     certs/intermediate/genintcerts.sh \
+	     certs/intermediate/ca-ecc-bad-aki.der \
+	     certs/intermediate/ca-ecc-bad-aki.pem \
 	     certs/intermediate/ca-int-cert.der \
 	     certs/intermediate/ca-int-cert.pem \
 	     certs/intermediate/ca-int-ecc-cert.der \
@@ -40,4 +42,32 @@ EXTRA_DIST += \
 	     certs/intermediate/server-int-cert.der \
 	     certs/intermediate/server-int-cert.pem \
 	     certs/intermediate/server-int-ecc-cert.der \
-	     certs/intermediate/server-int-ecc-cert.pem
+	     certs/intermediate/ca_false_intermediate/gentestcert.sh \
+         certs/intermediate/ca_false_intermediate/int_ca.key \
+	     certs/intermediate/ca_false_intermediate/server.key \
+	     certs/intermediate/ca_false_intermediate/test_ca.key \
+	     certs/intermediate/ca_false_intermediate/test_ca.pem \
+         certs/intermediate/ca_false_intermediate/test_int_not_cacert.pem \
+         certs/intermediate/ca_false_intermediate/test_sign_bynoca_srv.pem \
+         certs/intermediate/ca_false_intermediate/wolfssl_base.conf \
+         certs/intermediate/ca_false_intermediate/wolfssl_srv.conf \
+         certs/intermediate/untrusted_anchor/gen_certs.sh \
+         certs/intermediate/untrusted_anchor/root-ca-cert.pem \
+         certs/intermediate/untrusted_anchor/root-ca-key.pem \
+         certs/intermediate/untrusted_anchor/alt-ca-cert.pem \
+         certs/intermediate/untrusted_anchor/alt-ca-key.pem \
+         certs/intermediate/untrusted_anchor/int-ca-cert.pem \
+         certs/intermediate/untrusted_anchor/int-ca-key.pem \
+         certs/intermediate/untrusted_anchor/int-ca-tampered-cert.pem \
+         certs/intermediate/untrusted_anchor/int-ca2-cert.pem \
+         certs/intermediate/untrusted_anchor/int-ca2-key.pem \
+         certs/intermediate/untrusted_anchor/leaf-cert.pem \
+         certs/intermediate/untrusted_anchor/leaf-key.pem \
+         certs/intermediate/untrusted_anchor/leaf-deep-cert.pem \
+         certs/intermediate/untrusted_anchor/leaf-deep-key.pem \
+         certs/intermediate/untrusted_anchor/loop-a-cert.pem \
+         certs/intermediate/untrusted_anchor/loop-a-key.pem \
+         certs/intermediate/untrusted_anchor/loop-b-cert.pem \
+         certs/intermediate/untrusted_anchor/loop-b-key.pem \
+         certs/intermediate/untrusted_anchor/loop-leaf-cert.pem \
+         certs/intermediate/untrusted_anchor/loop-leaf-key.pem

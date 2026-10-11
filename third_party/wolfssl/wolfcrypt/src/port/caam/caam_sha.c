@@ -1,12 +1,12 @@
 /* caam_sha.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -376,7 +376,13 @@ int wc_Sha384Final(wc_Sha384* sha, byte* out)
 #ifdef WOLFSSL_SHA512
 int wc_InitSha512_ex(wc_Sha512* sha, void* heap, int devId)
 {
-    return _InitSha(sha, heap, devId, SHA512_DIGEST_SIZE, CAAM_SHA512);
+    int ret = _InitSha(sha, heap, devId, SHA512_DIGEST_SIZE, CAAM_SHA512);
+#if defined(WOLFSSL_SHA512_HASHTYPE)
+    if (ret == 0) {
+        sha->hashType = WC_HASH_TYPE_SHA512;
+    }
+#endif
+    return ret;
 }
 
 

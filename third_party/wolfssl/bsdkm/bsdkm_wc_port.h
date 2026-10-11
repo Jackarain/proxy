@@ -1,0 +1,247 @@
+/* bsdkm_wc_port.h
+ *
+ * Copyright (C) 2006-2026 wolfSSL Inc.
+ *
+ * This file is part of wolfSSL.
+ *
+ * wolfSSL is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * wolfSSL is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1335, USA
+ */
+
+/* included by wolfssl/wolfcrypt/wc_port.h */
+
+#ifndef BSDKM_WC_PORT_H
+#define BSDKM_WC_PORT_H
+
+#ifdef WOLFSSL_BSDKM
+
+#include <sys/ctype.h>
+#include <sys/types.h>
+#include <sys/malloc.h>
+#include <sys/systm.h>
+#if !defined(SINGLE_THREADED)
+    #include <sys/mutex.h>
+#endif /* !SINGLE_THREADED */
+#ifndef CHAR_BIT
+    #include <sys/limits.h>
+#endif /* !CHAR_BIT*/
+#include <sys/proc.h>
+
+#define NO_THREAD_LS
+#define NO_ATTRIBUTE_CONSTRUCTOR
+
+/* <time.h> and TIME(3) are userspace only in FreeBSD.
+ * Use a small wrapper around <sys/time.h> time_second instead. */
+#include <sys/time.h>
+static inline time_t wolfkmod_time(time_t * tloc) {
+    time_t _now = time_second;
+    if (tloc) {
+        *tloc = _now;
+    }
+    return _now;
+}
+#define XTIME wolfkmod_time
+
+/* needed to prevent wolfcrypt/src/asn.c version shadowing
+ * extern global version from /usr/src/sys/sys/systm.h */
+#define version wc_version
+
+/* printf and logging defines */
+#define wc_km_printf            printf
+#define WOLFSSL_DEBUG_PRINTF_FN printf
+
+/* str and char utility functions */
+#define XATOI(s) ({                                                          \
+      const char * _str = (s);                                               \
+      char *       _endptr = NULL;                                           \
+      long         _xatoi_ret = strtol(_str, &_endptr, 10);                  \
+      if ((_str) == _endptr || *_endptr != '\0') {                           \
+          _xatoi_ret = 0;                                                    \
+      }                                                                      \
+      (int)_xatoi_ret;                                                       \
+})
+
+#if !defined(XMALLOC_OVERRIDE)
+    #error bsdkm requires XMALLOC_OVERRIDE
+#endif /* !XMALLOC_OVERRIDE */
+
+/* use malloc and free from /usr/include/sys/malloc.h */
+extern struct malloc_type M_WOLFSSL[1];
+
+#if defined(WOLFSSL_BSDKM_MEMORY_DEBUG)
+    #if defined(BSDKM_CRYPTO_REGISTER)
+        /* cryptodev work functions must not sleep.see man CRYPTO_DRIVER(9) */
+        #define XMALLOC(s, h, t) ({                                          \
+            (void)(h); (void)(t);                                            \
+            size_t _sz; void * _ptr;                                         \
+            _sz = (size_t)(s);                                               \
+            _ptr = malloc(_sz, M_WOLFSSL, M_NOWAIT | M_ZERO);                \
+            printf("info: malloc: %p, M_WOLFSSL, %zu, 0x%02x\n", _ptr, _sz,  \
+                   M_NOWAIT | M_ZERO);                                       \
+            (void *)_ptr;                                                    \
+        })
+    #else
+        #define XMALLOC(s, h, t) ({                                          \
+            (void)(h); (void)(t);                                            \
+            size_t _sz; int _wait_flag; void * _ptr;                         \
+            _sz = (size_t)(s);                                               \
+            _wait_flag = curthread->td_critnest == 0 ? M_WAITOK : M_NOWAIT;  \
+            _ptr = malloc(_sz, M_WOLFSSL, _wait_flag | M_ZERO);              \
+            printf("info: malloc: %p, M_WOLFSSL, %zu, 0x%02x\n", _ptr, _sz,  \
+                   _wait_flag);                                              \
+            (void *)_ptr;                                                    \
+        })
+    #endif /* BSDKM_CRYPTO_REGISTER */
+
+    #define XFREE(p, h, t) ({                                            \
+        void* _xp; (void)(h); (void)(t); _xp = (p);                      \
+        printf("info: free: %p, M_WOLFSSL\n", _xp);                      \
+        if(_xp) free(_xp, M_WOLFSSL);                                    \
+    })
+#else
+    #if defined(BSDKM_CRYPTO_REGISTER)
+        /* cryptodev work functions must not sleep.see man CRYPTO_DRIVER(9) */
+        #define XMALLOC(s, h, t) ({                                          \
+            (void)(h); (void)(t);                                            \
+            void * _ptr;                                                     \
+            _ptr = malloc((s), M_WOLFSSL, M_NOWAIT | M_ZERO);                \
+            (void *)_ptr;                                                    \
+        })
+    #else
+        #define XMALLOC(s, h, t) ({                                          \
+            (void)(h); (void)(t);                                            \
+            int _wait_flag; void * _ptr;                                     \
+            _wait_flag = curthread->td_critnest == 0 ? M_WAITOK : M_NOWAIT;  \
+            _ptr = malloc((s), M_WOLFSSL, _wait_flag | M_ZERO);              \
+            (void *)_ptr;                                                    \
+        })
+    #endif /* BSDKM_CRYPTO_REGISTER */
+
+    #define XFREE(p, h, t) ({                                                \
+        void* _xp; (void)(h); (void)(t); _xp = (p);                          \
+        if(_xp) free(_xp, M_WOLFSSL);                                        \
+    })
+#endif /* WOLFSSL_BSDKM_DEBUG_MEMORY */
+
+
+#if defined(WOLFSSL_AESNI) || defined(WOLFSSL_KERNEL_BENCHMARKS)
+    int  wolfkmod_vecreg_init(void);
+    void wolfkmod_vecreg_exit(void);
+    int  wolfkmod_vecreg_save(int flags_unused);
+    void wolfkmod_vecreg_restore(void);
+    /* wrapper defines for FPU_KERN(9).
+     * /usr/src/sys/amd64/amd64/fpu.c
+     * /usr/src/sys/amd64/include/pcb.h
+     * */
+    #ifndef WOLFSSL_USE_SAVE_VECTOR_REGISTERS
+        #define WOLFSSL_USE_SAVE_VECTOR_REGISTERS
+    #endif
+
+    #define SAVE_VECTOR_REGISTERS(fail_clause) {                             \
+        int _svr_ret = wolfkmod_vecreg_save(0);                              \
+        if (_svr_ret != 0) {                                                 \
+            fail_clause                                                      \
+        }                                                                    \
+    }
+
+    #define SAVE_VECTOR_REGISTERS2() wolfkmod_vecreg_save(0)
+
+    #define RESTORE_VECTOR_REGISTERS() wolfkmod_vecreg_restore()
+
+#endif /* WOLFSSL_AESNI || WOLFSSL_KERNEL_BENCHMARKS */
+
+#if !defined(SINGLE_THREADED)
+    #define WC_MUTEX_OPS_INLINE
+
+    /* Copied from wc_port.h */
+    #if defined(HAVE_FIPS) && !defined(WOLFSSL_API_PREFIX_MAP)
+        /* For FIPS keep the function names the same */
+        #define wc_InitMutex   InitMutex
+        #define wc_FreeMutex   FreeMutex
+        #define wc_LockMutex   LockMutex
+        #define wc_UnLockMutex UnLockMutex
+    #endif /* HAVE_FIPS */
+
+    typedef struct wolfSSL_Mutex {
+        struct mtx lock;
+    } wolfSSL_Mutex;
+
+    static __always_inline int wc_InitMutex(wolfSSL_Mutex * m)
+    {
+        mtx_init(&m->lock, "wolfssl spinlock", NULL, MTX_SPIN);
+        return 0;
+    }
+
+    static __always_inline int wc_FreeMutex(wolfSSL_Mutex * m)
+    {
+        mtx_destroy(&m->lock);
+        return 0;
+    }
+
+    static __always_inline int wc_LockMutex(wolfSSL_Mutex *m)
+    {
+        mtx_lock_spin(&m->lock);
+        return 0;
+    }
+
+    static __always_inline int wc_UnLockMutex(wolfSSL_Mutex* m)
+    {
+        mtx_unlock_spin(&m->lock);
+        return 0;
+    }
+#endif /* !SINGLE_THREADED */
+
+#if defined(WOLFSSL_HAVE_ATOMIC_H) && !defined(WOLFSSL_NO_ATOMICS)
+    #include <machine/atomic.h>
+    typedef volatile int          wolfSSL_Atomic_Int;
+    typedef volatile unsigned int wolfSSL_Atomic_Uint;
+    #define WOLFSSL_ATOMIC_INITIALIZER(x) (x)
+
+    /* _Generic selectors dispatch on (x) + 0 so that qualifier handling is
+     * identical across pre- and post-DR 481 compilers (C17 settled that
+     * lvalue conversion strips qualifiers from the controlling expression;
+     * earlier GCC/clang did not) -- the typedefs are volatile-qualified, so
+     * bare (x) would match no arm on one compiler generation or the other.
+     * LOAD's result cast uses the same expression to yield the unqualified
+     * promoted type.  The LOAD and STORE tables must stay member-congruent:
+     * extend both, in pairs, with each new width's own _acq/_rel primitive;
+     * no default arm -- an unlisted type is a deliberate compile error.
+     */
+    #define WOLFSSL_ATOMIC_LOAD(x) ((__typeof__((x) + 0))                \
+            _Generic((__typeof__((x) + 0))0,                             \
+            int:           atomic_load_acq_int((volatile u_int *)&(x)),  \
+            unsigned int:  atomic_load_acq_int((volatile u_int *)&(x)),  \
+            long:          atomic_load_acq_long((volatile u_long *)&(x)),\
+            unsigned long: atomic_load_acq_long((volatile u_long *)&(x))))
+    #define WOLFSSL_ATOMIC_STORE(x, v) _Generic((__typeof__((x) + 0))0,  \
+            int:           atomic_store_rel_int((volatile u_int *)&(x),  \
+                                                (u_int)(v)),             \
+            unsigned int:  atomic_store_rel_int((volatile u_int *)&(x),  \
+                                                (u_int)(v)),             \
+            long:          atomic_store_rel_long((volatile u_long *)&(x),\
+                                                 (u_long)(v)),           \
+            unsigned long: atomic_store_rel_long((volatile u_long *)&(x),\
+                                                 (u_long)(v))            \
+            )
+    #define WOLFSSL_ATOMIC_OPS
+
+    #if defined(HAVE_FIPS)
+        /* There is no corresponding ATOMIC_INIT macro in FreeBSD.
+         * The FreeBSD equivalent is just an integer initialization. */
+        #define ATOMIC_INIT(x) (x)
+    #endif
+#endif /* WOLFSSL_HAVE_ATOMIC_H && !WOLFSSL_NO_ATOMICS */
+
+#endif /* WOLFSSL_BSDKM */
+#endif /* BSDKM_WC_PORT_H */

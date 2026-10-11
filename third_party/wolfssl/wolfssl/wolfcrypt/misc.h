@@ -1,12 +1,12 @@
 /* misc.h
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -46,17 +46,24 @@ word32 rotlFixed(word32 x, word32 y);
 WOLFSSL_LOCAL
 word32 rotrFixed(word32 x, word32 y);
 
-#ifdef WC_RC2
 WOLFSSL_LOCAL
 word16 rotlFixed16(word16 x, word16 y);
 WOLFSSL_LOCAL
 word16 rotrFixed16(word16 x, word16 y);
-#endif
 
 WOLFSSL_LOCAL
 word32 ByteReverseWord32(word32 value);
 WOLFSSL_LOCAL
 void   ByteReverseWords(word32* out, const word32* in, word32 byteCount);
+
+#ifdef WOLFSSL_WIDE_BYTE
+WOLFSSL_LOCAL
+void WordsFromBytesBE32(word32* w, const byte* b, word32 wordCnt);
+WOLFSSL_LOCAL
+void BytesFromWordsBE32(byte* b, const word32* w, word32 byteCnt);
+WOLFSSL_LOCAL
+void BytesFromWordsLE32(byte* b, const word32* w, word32 byteCnt);
+#endif
 
 WOLFSSL_LOCAL
 void XorWordsOut(wolfssl_word** r, const wolfssl_word** a,
@@ -69,12 +76,33 @@ WOLFSSL_LOCAL
 void xorbuf(void* buf, const void* mask, word32 count);
 
 WOLFSSL_LOCAL
-void ForceZero(void* mem, word32 len);
+void ForceZero(void* mem, size_t len);
 
 WOLFSSL_LOCAL
 int ConstantCompare(const byte* a, const byte* b, int length);
 
+WOLFSSL_LOCAL
+word16 readUnalignedWord16(const byte *in);
+WOLFSSL_LOCAL
+word16 writeUnalignedWord16(void *out, word16 in);
+WOLFSSL_LOCAL
+word32 readUnalignedWord32(const byte *in);
+WOLFSSL_LOCAL
+word32 writeUnalignedWord32(void *out, word32 in);
+WOLFSSL_LOCAL
+void readUnalignedWords32(word32 *out, const byte *in, size_t count);
+WOLFSSL_LOCAL
+void writeUnalignedWords32(byte *out, const word32 *in, size_t count);
+
 #ifdef WORD64_AVAILABLE
+WOLFSSL_LOCAL
+word64 readUnalignedWord64(const byte *in);
+WOLFSSL_LOCAL
+word64 writeUnalignedWord64(void *out, word64 in);
+WOLFSSL_LOCAL
+void readUnalignedWords64(word64 *out, const byte *in, size_t count);
+WOLFSSL_LOCAL
+void writeUnalignedWords64(byte *out, const word64 *in, size_t count);
 WOLFSSL_LOCAL
 word64 rotlFixed64(word64 x, word64 y);
 WOLFSSL_LOCAL
@@ -84,6 +112,12 @@ WOLFSSL_LOCAL
 word64 ByteReverseWord64(word64 value);
 WOLFSSL_LOCAL
 void   ByteReverseWords64(word64* out, const word64* in, word32 byteCount);
+#ifdef WOLFSSL_WIDE_BYTE
+WOLFSSL_LOCAL
+void WordsFromBytesBE64(word64* w, const byte* b, word32 wordCnt);
+WOLFSSL_LOCAL
+void BytesFromWordsBE64(byte* b, const word64* w, word32 byteCnt);
+#endif
 #endif /* WORD64_AVAILABLE */
 
 #ifndef WOLFSSL_HAVE_MIN
@@ -114,10 +148,14 @@ word32 btoi(byte b);
 WOLFSSL_LOCAL signed char HexCharToByte(char ch);
 WOLFSSL_LOCAL char ByteToHex(byte in);
 WOLFSSL_LOCAL int  ByteToHexStr(byte in, char* out);
+WOLFSSL_LOCAL int CharIsWhiteSpace(char ch);
 
 WOLFSSL_LOCAL byte ctMaskGT(int a, int b);
 WOLFSSL_LOCAL byte ctMaskGTE(int a, int b);
 WOLFSSL_LOCAL int  ctMaskIntGTE(int a, int b);
+#ifdef WORD64_AVAILABLE
+WOLFSSL_LOCAL word32 ctMaskWord32GTE(word32 a, word32 b);
+#endif
 WOLFSSL_LOCAL byte ctMaskLT(int a, int b);
 WOLFSSL_LOCAL byte ctMaskLTE(int a, int b);
 WOLFSSL_LOCAL byte ctMaskEq(int a, int b);
@@ -132,8 +170,13 @@ WOLFSSL_LOCAL int  ctMaskSelInt(byte m, int a, int b);
 WOLFSSL_LOCAL word32 ctMaskSelWord32(byte m, word32 a, word32 b);
 WOLFSSL_LOCAL byte ctSetLTE(int a, int b);
 WOLFSSL_LOCAL void ctMaskCopy(byte mask, byte* dst, byte* src, word16 size);
+#ifdef WC_NO_PTR_INT_CAST
+WOLFSSL_LOCAL void* ctMaskSelPtr(byte mask, void* a, void* b);
+#endif
 WOLFSSL_LOCAL word32 MakeWordFromHash(const byte* hashID);
 WOLFSSL_LOCAL word32 HashObject(const byte* o, word32 len, int* error);
+WOLFSSL_LOCAL char* CopyString(const char* src, int srcLen, void* heap,
+        int type);
 
 WOLFSSL_LOCAL void w64Increment(w64wrapper *n);
 WOLFSSL_LOCAL void w64Decrement(w64wrapper *n);
@@ -142,6 +185,7 @@ WOLFSSL_LOCAL word32 w64GetLow32(w64wrapper n);
 WOLFSSL_LOCAL word32 w64GetHigh32(w64wrapper n);
 WOLFSSL_LOCAL void w64SetLow32(w64wrapper *n, word32 low);
 WOLFSSL_LOCAL w64wrapper w64Add32(w64wrapper a, word32 b, byte *wrap);
+WOLFSSL_LOCAL w64wrapper w64Add(w64wrapper a, w64wrapper b, byte *wrap);
 WOLFSSL_LOCAL w64wrapper w64Sub32(w64wrapper a, word32 b, byte *wrap);
 WOLFSSL_LOCAL byte w64GT(w64wrapper a, w64wrapper b);
 WOLFSSL_LOCAL byte w64IsZero(w64wrapper a);
@@ -152,6 +196,9 @@ WOLFSSL_LOCAL byte w64GTE(w64wrapper a, w64wrapper b);
 WOLFSSL_LOCAL byte w64LT(w64wrapper a, w64wrapper b);
 WOLFSSL_LOCAL w64wrapper w64Sub(w64wrapper a, w64wrapper b);
 WOLFSSL_LOCAL void w64Zero(w64wrapper *a);
+WOLFSSL_LOCAL w64wrapper w64ShiftRight(w64wrapper a, int shift);
+WOLFSSL_LOCAL w64wrapper w64ShiftLeft(w64wrapper a, int shift);
+WOLFSSL_LOCAL w64wrapper w64Mul(word32 a, word32 b);
 
 #else /* !NO_INLINE */
 
@@ -159,7 +206,7 @@ WOLFSSL_LOCAL void w64Zero(w64wrapper *a);
 
 /* Declarations for user defined functions */
 #ifdef WOLFSSL_NO_FORCE_ZERO
-void ForceZero(void* mem, word32 len);
+void ForceZero(void* mem, size_t len);
 #endif
 #ifdef WOLFSSL_NO_CONST_CMP
 int ConstantCompare(const byte* a, const byte* b, int length);

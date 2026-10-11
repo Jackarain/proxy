@@ -1,0 +1,94 @@
+name: Build Watcom C
+
+# START OF COMMON SECTION
+on:
+  push:
+    branches: [ 'release/**' ]
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches: [ '*' ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+# END OF COMMON SECTION
+
+jobs:
+  wolfssl_watcomc_windows:
+    if: ${{ (github.repository_owner == 'wolfssl') && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
+    strategy:
+      fail-fast: false
+      matrix:
+        common:
+          - cmake:    '-G "Watcom WMake" -DCMAKE_VERBOSE_MAKEFILE=TRUE -DWOLFSSL_ASM=no -DWOLFSSL_EXAMPLES=no -DWOLFSSL_CRYPT_TESTS=no'
+        platform:
+          - title:   'Windows OW 2.0'
+            system:   'Windows'
+            image:    'windows-latest'
+            owimage:  '2.0'
+            id:       'win32ow20'
+            cmake:    '-DCMAKE_SYSTEM_NAME=Windows -DCMAKE_SYSTEM_PROCESSOR=x86'
+          - title:   'Linux OW 2.0'
+            system:   'Linux'
+            image:    'ubuntu-latest'
+            owimage:  '2.0'
+            id:       'linuxow20'
+            cmake:    '-DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR=x86'
+          - title:   'OS/2 OW 2.0'
+            system:   'OS2'
+            image:    'windows-latest'
+            owimage:  '2.0'
+            id:       'os2ow20'
+            cmake:    '-DCMAKE_SYSTEM_NAME=OS2 -DCMAKE_SYSTEM_PROCESSOR=x86'
+        thread:
+          - id:       'multi'
+            cmake:    ''
+            owcmake:  '-DCMAKE_POLICY_DEFAULT_CMP0136=NEW -DCMAKE_WATCOM_RUNTIME_LIBRARY=MultiThreaded'
+          - id:       'single'
+            cmake:    '-DWOLFSSL_SINGLE_THREADED=yes'
+            owcmake:  '-DCMAKE_POLICY_DEFAULT_CMP0136=NEW -DCMAKE_WATCOM_RUNTIME_LIBRARY=SingleThreaded'
+        library:
+          - id:       'dll'
+            cmake:    ''
+            owcmake:  'DLL'
+          - id:       'static'
+            cmake:    '-DBUILD_SHARED_LIBS=no'
+            owcmake:  ''
+        exclude:
+          - { platform: { system: 'Linux' }, library: { id: 'dll' } }
+    runs-on: ${{ matrix.platform.image }}
+    timeout-minutes: 10
+    name: ${{ matrix.platform.title }} (${{ matrix.thread.id }} ${{ matrix.library.id }})
+    steps:
+      - name: Setup Open Watcom ${{ matrix.platform.owimage }}
+        uses: open-watcom/setup-watcom@v1
+        with:
+          version: ${{ matrix.platform.owimage }}
+          # Currently fixed to a monthly build because of historical instability with daily releases.
+          # See https://github.com/wolfSSL/wolfssl/pull/9167
+          # Pin to monthly release as needed:
+          tag: 2025-11-03-Build
+
+      - name: Checkout wolfSSL
+        uses: actions/checkout@v5
+        with:
+          path: wolfssl
+
+      - name: Build wolfSSL
+        working-directory: wolfssl
+        shell: bash
+        run: |
+          cmake -B build ${{matrix.common.cmake}} ${{ matrix.platform.cmake }} ${{ matrix.thread.cmake }} ${{ matrix.library.cmake }} ${{ matrix.thread.owcmake }}${{ matrix.library.owcmake }}
+          cmake --build build
+
+      - name: Upload build errors
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          retention-days: 7
+          name: ${{ matrix.platform.id }}-${{ matrix.thread.id }}-${{ matrix.library.id }}
+          path: |
+            build/**

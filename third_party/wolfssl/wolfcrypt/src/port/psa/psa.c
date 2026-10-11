@@ -1,12 +1,12 @@
 /* psa.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -58,7 +58,11 @@ int wc_psa_init()
     psa_status_t s;
 
 #if defined(WOLFSSL_PSA_GLOBAL_LOCK)
-    wc_InitMutex(&psa_global_mutex);
+    int ret;
+
+    ret = wc_InitMutex(&psa_global_mutex);
+    if (ret != 0)
+        return ret;
 #endif
 
     PSA_LOCK();

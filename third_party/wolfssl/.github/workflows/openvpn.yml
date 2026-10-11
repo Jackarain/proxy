@@ -1,13 +1,27 @@
 name: OpenVPN Tests
 
+# START OF COMMON SECTION
 on:
-  workflow_call:
+  push:
+    branches: [ 'release/**' ]
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches: [ '*' ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+# END OF COMMON SECTION
 
 jobs:
   build_wolfssl:
     name: Build wolfSSL
+    if: ${{ (github.repository_owner == 'wolfssl') && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
     # Just to keep it the same as the testing target
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # This should be a safe limit for the tests to run.
     timeout-minutes: 4
     steps:
@@ -18,42 +32,56 @@ jobs:
           configure: --enable-openvpn
           install: true
 
+      - name: tar build-dir
+        run: tar -zcf build-dir.tgz build-dir
+
       - name: Upload built lib
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v6
         with:
           name: wolf-install-openvpn
-          path: build-dir
-          retention-days: 1
+          path: build-dir.tgz
+          retention-days: 5
 
   openvpn_check:
     strategy:
       fail-fast: false
       matrix:
-        # List of refs to test
-        ref: [ master, release/2.6, v2.6.0 ]
+        ref: [ master, release/2.6, v2.6.19 ]
     name: ${{ matrix.ref }}
-    runs-on: ubuntu-latest
+    if: ${{ (github.repository_owner == 'wolfssl') && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
+    runs-on: ubuntu-24.04
     # This should be a safe limit for the tests to run.
-    timeout-minutes: 6
+    timeout-minutes: 10
     needs: build_wolfssl
     steps:
+      - name: Checkout wolfSSL CI actions
+        uses: actions/checkout@v5
+        with:
+          sparse-checkout: .github/actions
+          fetch-depth: 1
+
       - name: Download lib
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v7
         with:
           name: wolf-install-openvpn
-          path: build-dir
+
+      - name: untar build-dir
+        run: tar -xf build-dir.tgz
 
       - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install liblzo2-dev libpam0g-dev liblz4-dev libcap-ng-dev \
-                     linux-libc-dev man2html libcmocka-dev python3-docutils \
-                     libtool automake autoconf libnl-genl-3-dev libnl-genl-3-200
+        uses: ./.github/actions/install-apt-deps
+        with:
+          packages: liblzo2-dev libpam0g-dev liblz4-dev libcap-ng-dev linux-libc-dev man2html libcmocka-dev python3-docutils libtool automake autoconf libnl-genl-3-dev libnl-genl-3-200
+          ghcr-debs-tag: ubuntu-24.04-full
+
+      - name: workaround high-entropy ASLR
+        # not needed after either an update to llvm or runner is done
+        run: sudo sysctl vm.mmap_rnd_bits=28
 
       - if: ${{ matrix.ref != 'master' }}
         name: Build and test openvpn with fsanitize
         run: |
-          echo 'extra_c_flags=CFLAGS="-fsanitize=address -fno-omit-frame-pointer -O2"' >> $GITHUB_ENV
+          echo 'extra_c_flags=CC="gcc -fsanitize=address" CFLAGS="-fno-omit-frame-pointer -O2"' >> $GITHUB_ENV
 
       - name: Build and test openvpn
         uses: wolfSSL/actions-build-autotools-project@v1

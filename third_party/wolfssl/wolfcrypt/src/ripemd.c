@@ -1,12 +1,12 @@
 /* ripemd.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -19,13 +19,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1335, USA
  */
 
-
-
-#ifdef HAVE_CONFIG_H
-    #include <config.h>
-#endif
-
-#include <wolfssl/wolfcrypt/settings.h>
+#include <wolfssl/wolfcrypt/libwolfssl_sources.h>
 
 #ifdef WOLFSSL_RIPEMD
 
@@ -36,8 +30,6 @@
     #define WOLFSSL_MISC_INCLUDED
     #include <wolfcrypt/src/misc.c>
 #endif
-
-#include <wolfssl/wolfcrypt/error-crypt.h>
 
 int wc_InitRipeMd(RipeMd* ripemd)
 {
@@ -325,7 +317,7 @@ int wc_RipeMdFinal(RipeMd* ripemd, byte* hash)
     AddLength(ripemd, ripemd->buffLen);               /* before adding pads */
 
     /* ensure we have a valid buffer length; */
-    if (ripemd->buffLen > RIPEMD_BLOCK_SIZE) {
+    if (ripemd->buffLen >= RIPEMD_BLOCK_SIZE) {
         /* exit with error code if there's a bad buffer size in buffLen */
         return BAD_STATE_E;
     } /* buffLen check */

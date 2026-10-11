@@ -1,12 +1,12 @@
 /* kcapi_hmac.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -19,19 +19,12 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1335, USA
  */
 
-
-#ifdef HAVE_CONFIG_H
-    #include <config.h>
-#endif
-
-#include <wolfssl/wolfcrypt/settings.h>
+#include <wolfssl/wolfcrypt/libwolfssl_sources.h>
 
 #if defined(WOLFSSL_KCAPI_HMAC) && !defined(NO_HMAC)
 
 #define FIPS_NO_WRAPPERS
 
-#include <wolfssl/wolfcrypt/error-crypt.h>
-#include <wolfssl/wolfcrypt/logging.h>
 #include <wolfssl/wolfcrypt/port/kcapi/wc_kcapi.h>
 #include <wolfssl/wolfcrypt/port/kcapi/kcapi_hmac.h>
 #include <wolfssl/wolfcrypt/hmac.h>
@@ -165,18 +158,24 @@ int wc_HmacSetKey(Hmac* hmac, int type, const byte* key, word32 length)
                 ret = BAD_FUNC_ARG;
                 break;
         }
-        hmac->macType = type;
     }
 
-    if (hmac->handle != NULL) {
-        kcapi_md_destroy(hmac->handle);
-        hmac->handle = NULL;
-    }
     if (ret == 0) {
+        if (hmac->handle != NULL) {
+            kcapi_md_destroy(hmac->handle);
+            hmac->handle = NULL;
+        }
         ret = kcapi_md_init(&hmac->handle, ciphername, 0);
     }
     if (ret == 0) {
         ret = kcapi_md_setkey(hmac->handle, key, length);
+        if (ret != 0) {
+            kcapi_md_destroy(hmac->handle);
+            hmac->handle = NULL;
+        }
+    }
+    if (ret == 0) {
+        hmac->macType = type;
     }
 
     return ret;

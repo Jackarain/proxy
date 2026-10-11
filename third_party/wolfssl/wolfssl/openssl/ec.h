@@ -1,12 +1,12 @@
 /* ec.h
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -25,7 +25,9 @@
 #define WOLFSSL_EC_H_
 
 #include <wolfssl/wolfcrypt/types.h>
+#include <wolfssl/openssl/compat_types.h>
 #include <wolfssl/openssl/bn.h>
+#include <wolfssl/openssl/compat_types.h>
 #include <wolfssl/wolfcrypt/asn.h>
 #include <wolfssl/wolfcrypt/ecc.h>
 
@@ -34,53 +36,114 @@ extern "C" {
 #endif
 
 #if defined(OPENSSL_EXTRA) || defined(OPENSSL_EXTRA_X509_SMALL)
+
 /* Map OpenSSL NID value */
 enum {
-    POINT_CONVERSION_COMPRESSED = 2,
-    POINT_CONVERSION_UNCOMPRESSED = 4,
+    WC_POINT_CONVERSION_COMPRESSED = 2,
+    WC_POINT_CONVERSION_UNCOMPRESSED = 4,
 
 #ifdef HAVE_ECC
     /* Use OpenSSL NIDs. NIDs can be mapped to ecc_curve_id enum values by
         calling NIDToEccEnum() in ssl.c */
-    NID_X9_62_prime192v1 = 409,
-    NID_X9_62_prime192v2 = 410,
-    NID_X9_62_prime192v3 = 411,
-    NID_X9_62_prime239v1 = 412,
-    NID_X9_62_prime239v2 = 413,
-    NID_X9_62_prime239v3 = 418, /* Previous value conflicted with AES128CBCb */
-    NID_X9_62_prime256v1 = 415,
-    NID_secp112r1 = 704,
-    NID_secp112r2 = 705,
-    NID_secp128r1 = 706,
-    NID_secp128r2 = 707,
-    NID_secp160r1 = 709,
-    NID_secp160r2 = 710,
-    NID_secp224r1 = 713,
-    NID_secp384r1 = 715,
-    NID_secp521r1 = 716,
-    NID_secp160k1 = 708,
-    NID_secp192k1 = 711,
-    NID_secp224k1 = 712,
-    NID_secp256k1 = 714,
-    NID_brainpoolP160r1 = 921,
-    NID_brainpoolP192r1 = 923,
-    NID_brainpoolP224r1 = 925,
-    NID_brainpoolP256r1 = 927,
-    NID_brainpoolP320r1 = 929,
-    NID_brainpoolP384r1 = 931,
-    NID_brainpoolP512r1 = 933,
+    WC_NID_X9_62_prime192v1 = 409,
+    WC_NID_X9_62_prime192v2 = 410,
+    WC_NID_X9_62_prime192v3 = 411,
+    WC_NID_X9_62_prime239v1 = 412,
+    WC_NID_X9_62_prime239v2 = 413,
+    WC_NID_X9_62_prime239v3 = 418, /* Previous value conflicted with AES128CBCb */
+    WC_NID_X9_62_prime256v1 = 415,
+    WC_NID_secp112r1 = 704,
+    WC_NID_secp112r2 = 705,
+    WC_NID_secp128r1 = 706,
+    WC_NID_secp128r2 = 707,
+    WC_NID_secp160r1 = 709,
+    WC_NID_secp160r2 = 710,
+    WC_NID_secp224r1 = 713,
+    WC_NID_secp384r1 = 715,
+    WC_NID_secp521r1 = 716,
+    WC_NID_secp160k1 = 708,
+    WC_NID_secp192k1 = 711,
+    WC_NID_secp224k1 = 712,
+    WC_NID_secp256k1 = 714,
+    WC_NID_brainpoolP160r1 = 921,
+    WC_NID_brainpoolP192r1 = 923,
+    WC_NID_brainpoolP224r1 = 925,
+    WC_NID_brainpoolP256r1 = 927,
+    WC_NID_brainpoolP320r1 = 929,
+    WC_NID_brainpoolP384r1 = 931,
+    WC_NID_brainpoolP512r1 = 933,
 #endif
 
 #ifdef HAVE_ED448
-    NID_ED448 = ED448k,
+    WC_NID_ED448 = ED448k,
+#endif
+#ifdef HAVE_CURVE448
+    WC_NID_X448 = X448k,
 #endif
 #ifdef HAVE_ED25519
-    NID_ED25519 = ED25519k,
+    WC_NID_ED25519 = ED25519k,
+#endif
+#ifdef HAVE_CURVE25519
+    WC_NID_X25519 = X25519k,
 #endif
 
-    OPENSSL_EC_EXPLICIT_CURVE  = 0x000,
-    OPENSSL_EC_NAMED_CURVE  = 0x001,
+    WOLFSSL_EC_EXPLICIT_CURVE  = 0x000,
+    WOLFSSL_EC_NAMED_CURVE  = 0x001
 };
+
+#ifndef OPENSSL_COEXIST
+
+#define POINT_CONVERSION_COMPRESSED WC_POINT_CONVERSION_COMPRESSED
+#define POINT_CONVERSION_UNCOMPRESSED WC_POINT_CONVERSION_UNCOMPRESSED
+
+#ifdef HAVE_ECC
+#define NID_X9_62_prime192v1 WC_NID_X9_62_prime192v1
+#define NID_X9_62_prime192v2 WC_NID_X9_62_prime192v2
+#define NID_X9_62_prime192v3 WC_NID_X9_62_prime192v3
+#define NID_X9_62_prime239v1 WC_NID_X9_62_prime239v1
+#define NID_X9_62_prime239v2 WC_NID_X9_62_prime239v2
+#define NID_X9_62_prime239v3 WC_NID_X9_62_prime239v3
+#define NID_X9_62_prime256v1 WC_NID_X9_62_prime256v1
+#define NID_secp112r1 WC_NID_secp112r1
+#define NID_secp112r2 WC_NID_secp112r2
+#define NID_secp128r1 WC_NID_secp128r1
+#define NID_secp128r2 WC_NID_secp128r2
+#define NID_secp160r1 WC_NID_secp160r1
+#define NID_secp160r2 WC_NID_secp160r2
+#define NID_secp224r1 WC_NID_secp224r1
+#define NID_secp384r1 WC_NID_secp384r1
+#define NID_secp521r1 WC_NID_secp521r1
+#define NID_secp160k1 WC_NID_secp160k1
+#define NID_secp192k1 WC_NID_secp192k1
+#define NID_secp224k1 WC_NID_secp224k1
+#define NID_secp256k1 WC_NID_secp256k1
+#define NID_brainpoolP160r1 WC_NID_brainpoolP160r1
+#define NID_brainpoolP192r1 WC_NID_brainpoolP192r1
+#define NID_brainpoolP224r1 WC_NID_brainpoolP224r1
+#define NID_brainpoolP256r1 WC_NID_brainpoolP256r1
+#define NID_brainpoolP320r1 WC_NID_brainpoolP320r1
+#define NID_brainpoolP384r1 WC_NID_brainpoolP384r1
+#define NID_brainpoolP512r1 WC_NID_brainpoolP512r1
+#endif
+
+#ifdef HAVE_ED448
+#define NID_ED448 WC_NID_ED448
+#endif
+#ifdef HAVE_CURVE448
+#define NID_X448 WC_NID_X448
+#endif
+#ifdef HAVE_ED25519
+#define NID_ED25519 WC_NID_ED25519
+#endif
+#ifdef HAVE_CURVE25519
+#define NID_X25519 WC_NID_X25519
+#endif
+
+#define OPENSSL_EC_EXPLICIT_CURVE WOLFSSL_EC_EXPLICIT_CURVE
+#define OPENSSL_EC_NAMED_CURVE WOLFSSL_EC_NAMED_CURVE
+
+#endif /* !OPENSSL_COEXIST */
+
 #endif /* OPENSSL_EXTRA || OPENSSL_EXTRA_X509_SMALL */
 
 #ifndef WOLFSSL_EC_TYPE_DEFINED /* guard on redeclaration */
@@ -122,8 +185,8 @@ struct WOLFSSL_EC_KEY {
     word16 pkcs8HeaderSz;
 
     /* option bits */
-    byte inSet:1;                /* internal set from external ? */
-    byte exSet:1;                /* external set from internal ? */
+    WC_BITFIELD inSet:1;                /* internal set from external ? */
+    WC_BITFIELD exSet:1;                /* external set from internal ? */
 
     wolfSSL_Ref ref;             /* Reference count information. */
 };
@@ -136,7 +199,16 @@ struct WOLFSSL_EC_BUILTIN_CURVE {
 #define WOLFSSL_EC_KEY_LOAD_PRIVATE 1
 #define WOLFSSL_EC_KEY_LOAD_PUBLIC  2
 
-typedef int point_conversion_form_t;
+typedef int wc_point_conversion_form_t;
+#ifndef OPENSSL_COEXIST
+#define point_conversion_form_t wc_point_conversion_form_t
+#endif
+
+typedef struct WOLFSSL_EC_KEY_METHOD {
+    /* Not implemented */
+    /* Just here so that some C compilers don't complain. To be removed. */
+    void* dummy_member;
+} WOLFSSL_EC_KEY_METHOD;
 
 WOLFSSL_API
 size_t wolfSSL_EC_get_builtin_curves(WOLFSSL_EC_BUILTIN_CURVE *r,size_t nitems);
@@ -175,7 +247,7 @@ int wolfSSL_i2d_ECPrivateKey(const WOLFSSL_EC_KEY *in, unsigned char **out);
 WOLFSSL_API
 void wolfSSL_EC_KEY_set_conv_form(WOLFSSL_EC_KEY *eckey, int form);
 WOLFSSL_API
-point_conversion_form_t wolfSSL_EC_KEY_get_conv_form(const WOLFSSL_EC_KEY* key);
+wc_point_conversion_form_t wolfSSL_EC_KEY_get_conv_form(const WOLFSSL_EC_KEY* key);
 WOLFSSL_API
 WOLFSSL_BIGNUM *wolfSSL_EC_POINT_point2bn(const WOLFSSL_EC_GROUP *group,
                                           const WOLFSSL_EC_POINT *p,
@@ -192,6 +264,9 @@ int wolfSSL_EC_KEY_LoadDer(WOLFSSL_EC_KEY* key,
 WOLFSSL_API
 int wolfSSL_EC_KEY_LoadDer_ex(WOLFSSL_EC_KEY* key,
                               const unsigned char* der, int derSz, int opt);
+WOLFSSL_API
+WOLFSSL_EC_KEY *wolfSSL_d2i_EC_PUBKEY_bio(WOLFSSL_BIO *bio,
+        WOLFSSL_EC_KEY **out);
 WOLFSSL_API
 void wolfSSL_EC_KEY_free(WOLFSSL_EC_KEY *key);
 WOLFSSL_API
@@ -220,6 +295,9 @@ void wolfSSL_EC_KEY_set_asn1_flag(WOLFSSL_EC_KEY *key, int asn1_flag);
 WOLFSSL_API
 int wolfSSL_EC_KEY_set_public_key(WOLFSSL_EC_KEY *key,
                                   const WOLFSSL_EC_POINT *pub);
+WOLFSSL_API
+int wolfSSL_EC_KEY_oct2key(WOLFSSL_EC_KEY *key, const unsigned char *buf,
+                           size_t len, WOLFSSL_BN_CTX *ctx);
 WOLFSSL_API int wolfSSL_EC_KEY_check_key(const WOLFSSL_EC_KEY *key);
 #if !defined(NO_FILESYSTEM) && !defined(NO_STDIO_FILESYSTEM)
 WOLFSSL_API int wolfSSL_EC_KEY_print_fp(XFILE fp, WOLFSSL_EC_KEY* key,
@@ -235,6 +313,9 @@ WOLFSSL_API int wolfSSL_ECDSA_verify(int type, const unsigned char *digest,
 
 
 #if defined HAVE_ECC && (defined(OPENSSL_EXTRA) || defined(OPENSSL_EXTRA_X509_SMALL))
+#ifdef WOLFSSL_API_PREFIX_MAP
+    #define EccEnumToNID wolfSSL_EccEnumToNID
+#endif
 WOLFSSL_API int EccEnumToNID(int n);
 #endif
 
@@ -301,25 +382,46 @@ int wolfSSL_EC_POINT_cmp(const WOLFSSL_EC_GROUP *group,
 WOLFSSL_API int wolfSSL_EC_POINT_copy(WOLFSSL_EC_POINT *dest,
                                       const WOLFSSL_EC_POINT *src);
 WOLFSSL_API
+WOLFSSL_EC_POINT *wolfSSL_EC_POINT_dup(const WOLFSSL_EC_POINT *src,
+                                       const WOLFSSL_EC_GROUP *group);
+WOLFSSL_API
 void wolfSSL_EC_POINT_free(WOLFSSL_EC_POINT *point);
 WOLFSSL_API
 int wolfSSL_EC_POINT_is_at_infinity(const WOLFSSL_EC_GROUP *group,
                                     const WOLFSSL_EC_POINT *a);
 
-#ifndef HAVE_SELFTEST
 WOLFSSL_API
 char* wolfSSL_EC_POINT_point2hex(const WOLFSSL_EC_GROUP* group,
                                  const WOLFSSL_EC_POINT* point, int form,
                                  WOLFSSL_BN_CTX* ctx);
-#endif
+WOLFSSL_API
+WOLFSSL_EC_POINT *wolfSSL_EC_POINT_hex2point
+                                (const WOLFSSL_EC_GROUP *group, const char *hex,
+                                    WOLFSSL_EC_POINT *p, WOLFSSL_BN_CTX *ctx);
 
-#if defined(OPENSSL_EXTRA) || defined(OPENSSL_EXTRA_X509_SMALL)
+WOLFSSL_API const WOLFSSL_EC_KEY_METHOD *wolfSSL_EC_KEY_OpenSSL(void);
+WOLFSSL_API WOLFSSL_EC_KEY_METHOD *wolfSSL_EC_KEY_METHOD_new(
+        const WOLFSSL_EC_KEY_METHOD *meth);
+WOLFSSL_API void wolfSSL_EC_KEY_METHOD_free(WOLFSSL_EC_KEY_METHOD *meth);
+/* TODO when implementing change the types to the real callback signatures
+ * and use real parameter names */
+WOLFSSL_API void wolfSSL_EC_KEY_METHOD_set_init(WOLFSSL_EC_KEY_METHOD *meth,
+        void* a1, void* a2, void* a3, void* a4, void* a5, void* a6);
+WOLFSSL_API void wolfSSL_EC_KEY_METHOD_set_sign(WOLFSSL_EC_KEY_METHOD *meth,
+        void* a1, void* a2, void* a3);
+WOLFSSL_API const WOLFSSL_EC_KEY_METHOD *wolfSSL_EC_KEY_get_method(
+        const WOLFSSL_EC_KEY *key);
+WOLFSSL_API int wolfSSL_EC_KEY_set_method(WOLFSSL_EC_KEY *key,
+        const WOLFSSL_EC_KEY_METHOD *meth);
+
+#if !defined(OPENSSL_COEXIST) && (defined(OPENSSL_EXTRA) || defined(OPENSSL_EXTRA_X509_SMALL))
 
 typedef WOLFSSL_EC_KEY                EC_KEY;
 typedef WOLFSSL_EC_GROUP              EC_GROUP;
 typedef WOLFSSL_EC_GROUP              EC_METHOD;
 typedef WOLFSSL_EC_POINT              EC_POINT;
 typedef WOLFSSL_EC_BUILTIN_CURVE      EC_builtin_curve;
+typedef WOLFSSL_EC_KEY_METHOD         EC_KEY_METHOD;
 
 #ifndef HAVE_ECC
 #define OPENSSL_NO_EC
@@ -341,6 +443,8 @@ typedef WOLFSSL_EC_BUILTIN_CURVE      EC_builtin_curve;
 #define EC_KEY_check_key                wolfSSL_EC_KEY_check_key
 #define EC_KEY_print_fp                 wolfSSL_EC_KEY_print_fp
 
+#define d2i_EC_PUBKEY_bio               wolfSSL_d2i_EC_PUBKEY_bio
+
 #define ECDSA_size                      wolfSSL_ECDSA_size
 #define ECDSA_sign                      wolfSSL_ECDSA_sign
 #define ECDSA_verify                    wolfSSL_ECDSA_verify
@@ -356,7 +460,11 @@ typedef WOLFSSL_EC_BUILTIN_CURVE      EC_builtin_curve;
 #define EC_GROUP_order_bits             wolfSSL_EC_GROUP_order_bits
 #define EC_GROUP_method_of              wolfSSL_EC_GROUP_method_of
 #ifndef NO_WOLFSSL_STUB
-#define EC_GROUP_set_point_conversion_form(...) WC_DO_NOTHING
+#ifdef WOLF_NO_VARIADIC_MACROS
+    #define EC_GROUP_set_point_conversion_form() WC_DO_NOTHING
+#else
+    #define EC_GROUP_set_point_conversion_form(...) WC_DO_NOTHING
+#endif
 #endif
 
 #define EC_METHOD_get_field_type        wolfSSL_EC_METHOD_get_field_type
@@ -377,6 +485,7 @@ typedef WOLFSSL_EC_BUILTIN_CURVE      EC_builtin_curve;
 #define EC_POINT_clear_free             wolfSSL_EC_POINT_clear_free
 #define EC_POINT_cmp                    wolfSSL_EC_POINT_cmp
 #define EC_POINT_copy                   wolfSSL_EC_POINT_copy
+#define EC_POINT_dup                    wolfSSL_EC_POINT_dup
 #define EC_POINT_is_at_infinity         wolfSSL_EC_POINT_is_at_infinity
 
 #define EC_get_builtin_curves           wolfSSL_EC_get_builtin_curves
@@ -385,6 +494,7 @@ typedef WOLFSSL_EC_BUILTIN_CURVE      EC_builtin_curve;
 #define ECPoint_d2i                     wolfSSL_ECPoint_d2i
 #define EC_POINT_point2oct              wolfSSL_EC_POINT_point2oct
 #define EC_POINT_oct2point              wolfSSL_EC_POINT_oct2point
+#define EC_KEY_oct2key                  wolfSSL_EC_KEY_oct2key
 #define EC_POINT_point2bn               wolfSSL_EC_POINT_point2bn
 #define EC_POINT_is_on_curve            wolfSSL_EC_POINT_is_on_curve
 #define o2i_ECPublicKey                 wolfSSL_o2i_ECPublicKey
@@ -394,10 +504,11 @@ typedef WOLFSSL_EC_BUILTIN_CURVE      EC_builtin_curve;
 #define i2d_ECPrivateKey                wolfSSL_i2d_ECPrivateKey
 #define EC_KEY_set_conv_form            wolfSSL_EC_KEY_set_conv_form
 #define EC_KEY_get_conv_form            wolfSSL_EC_KEY_get_conv_form
+#define d2i_ECPKParameters              wolfSSL_d2i_ECPKParameters
+#define i2d_ECPKParameters              wolfSSL_i2d_ECPKParameters
 
-#ifndef HAVE_SELFTEST
-    #define EC_POINT_point2hex          wolfSSL_EC_POINT_point2hex
-#endif
+#define EC_POINT_point2hex              wolfSSL_EC_POINT_point2hex
+#define EC_POINT_hex2point              wolfSSL_EC_POINT_hex2point
 
 #define EC_POINT_dump                   wolfSSL_EC_POINT_dump
 #define EC_get_builtin_curves           wolfSSL_EC_get_builtin_curves
@@ -405,7 +516,15 @@ typedef WOLFSSL_EC_BUILTIN_CURVE      EC_builtin_curve;
 #define EC_curve_nid2nist               wolfSSL_EC_curve_nid2nist
 #define EC_curve_nist2nid               wolfSSL_EC_curve_nist2nid
 
-#endif /* OPENSSL_EXTRA || OPENSSL_EXTRA_X509_SMALL */
+#define EC_KEY_OpenSSL                  wolfSSL_EC_KEY_OpenSSL
+#define EC_KEY_METHOD_new               wolfSSL_EC_KEY_METHOD_new
+#define EC_KEY_METHOD_free              wolfSSL_EC_KEY_METHOD_free
+#define EC_KEY_METHOD_set_init          wolfSSL_EC_KEY_METHOD_set_init
+#define EC_KEY_METHOD_set_sign          wolfSSL_EC_KEY_METHOD_set_sign
+#define EC_KEY_get_method               wolfSSL_EC_KEY_get_method
+#define EC_KEY_set_method               wolfSSL_EC_KEY_set_method
+
+#endif /* !OPENSSL_COEXIST && (OPENSSL_EXTRA || OPENSSL_EXTRA_X509_SMALL) */
 
 #ifdef __cplusplus
 }  /* extern "C" */

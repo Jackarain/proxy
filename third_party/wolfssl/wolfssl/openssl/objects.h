@@ -1,12 +1,12 @@
 /* objects.h
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -29,11 +29,18 @@
 #include <wolfssl/ssl.h>
 #endif /* OPENSSL_EXTRA_SSL_GUARD */
 
+#include <wolfssl/openssl/obj_mac.h>
+
 #ifdef __cplusplus
     extern "C" {
 #endif
 
 #if defined(OPENSSL_EXTRA) || defined(OPENSSL_EXTRA_X509_SMALL)
+
+#define WC_NID_ad_OCSP                     178
+#define WC_NID_ad_ca_issuers               179
+
+#ifndef OPENSSL_COEXIST
 
 #define OBJ_NAME_TYPE_UNDEF     WOLFSSL_OBJ_NAME_TYPE_UNDEF
 #define OBJ_NAME_TYPE_MD_METH   WOLFSSL_OBJ_NAME_TYPE_MD_METH
@@ -57,6 +64,7 @@
 #define OBJ_cleanup      wolfSSL_OBJ_cleanup
 #define OBJ_cmp          wolfSSL_OBJ_cmp
 #define OBJ_create       wolfSSL_OBJ_create
+#define OBJ_find_sigid_algs wolfSSL_OBJ_find_sigid_algs
 #define ASN1_OBJECT_free wolfSSL_ASN1_OBJECT_free
 #define OBJ_NAME_do_all  wolfSSL_OBJ_NAME_do_all
 #define i2t_ASN1_OBJECT  wolfSSL_i2t_ASN1_OBJECT
@@ -64,9 +72,10 @@
 /* not required for wolfSSL */
 #define OPENSSL_load_builtin_modules() WC_DO_NOTHING
 
+#define NID_ad_OCSP WC_NID_ad_OCSP
+#define NID_ad_ca_issuers WC_NID_ad_ca_issuers
 
-#define NID_ad_OCSP                     178
-#define NID_ad_ca_issuers               179
+#endif /* !OPENSSL_COEXIST */
 
 #endif /* OPENSSL_EXTRA || OPENSSL_EXTRA_X509_SMALL */
 

@@ -1,12 +1,12 @@
 /* chacha20_poly1305.h
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -72,7 +72,7 @@ typedef struct ChaChaPoly_Aead {
     word32   dataLen;
 
     byte     state;
-    byte     isEncrypt:1;
+    WC_BITFIELD isEncrypt:1;
 } ChaChaPoly_Aead;
 
 
@@ -95,7 +95,7 @@ int wc_ChaCha20Poly1305_Encrypt(
                 byte* outCiphertext,
                 byte outAuthTag[CHACHA20_POLY1305_AEAD_AUTHTAG_SIZE]);
 
-WOLFSSL_ABI WOLFSSL_API
+WOLFSSL_ABI WOLFSSL_API WARN_UNUSED_RESULT
 int wc_ChaCha20Poly1305_Decrypt(
                 const byte inKey[CHACHA20_POLY1305_AEAD_KEYSIZE],
                 const byte inIV[CHACHA20_POLY1305_AEAD_IV_SIZE],
@@ -104,7 +104,21 @@ int wc_ChaCha20Poly1305_Decrypt(
                 const byte inAuthTag[CHACHA20_POLY1305_AEAD_AUTHTAG_SIZE],
                 byte* outPlaintext);
 
-WOLFSSL_API
+/* Encrypt+authenticate one message with pre-keyed ChaCha20 and Poly1305
+ * contexts (analogue of wc_AesGcmEncrypt on a keyed Aes) - keeps the ChaCha key
+ * across records and only varies the nonce, and uses the single-pass stitch.
+ * Intended for the TLS record layer. */
+WOLFSSL_API int wc_ChaCha20Poly1305_Encrypt_ex(ChaCha* chacha, Poly1305* poly,
+    byte* out, const byte* in, word32 sz, const byte* nonce, byte* tag,
+    const byte* aad, word32 aadSz);
+/* Decrypt+verify counterpart of wc_ChaCha20Poly1305_Encrypt_ex.  On tag
+ * mismatch returns MAC_CMP_FAILED_E and zeroizes out (no plaintext released);
+ * out may alias in (in-place). */
+WOLFSSL_API WARN_UNUSED_RESULT int wc_ChaCha20Poly1305_Decrypt_ex(
+    ChaCha* chacha, Poly1305* poly, byte* out, const byte* in, word32 sz,
+    const byte* nonce, const byte* tag, const byte* aad, word32 aadSz);
+
+WOLFSSL_API WARN_UNUSED_RESULT
 int wc_ChaCha20Poly1305_CheckTag(
     const byte authTag[CHACHA20_POLY1305_AEAD_AUTHTAG_SIZE],
     const byte authTagChk[CHACHA20_POLY1305_AEAD_AUTHTAG_SIZE]);
@@ -113,6 +127,18 @@ int wc_ChaCha20Poly1305_CheckTag(
 
 /* Implementation of AEAD, which includes support for adding
     data, then final calculation of authentication tag */
+/* As wc_ChaCha20Poly1305_Init(), binding the embedded ChaCha to a crypto
+ * callback device. Pass INVALID_DEVID for software; heap is unused.
+ *
+ * Note the streaming calls below (UpdateAad/Update/Final) always run in
+ * software: they build the tag incrementally, which the one-shot AEAD callback
+ * cannot express. The devId reaches the embedded ChaCha, so offload happens
+ * only through wc_ChaCha20Poly1305_Encrypt_ex()/_Decrypt_ex(). */
+WOLFSSL_API int wc_ChaCha20Poly1305_Init_ex(ChaChaPoly_Aead* aead,
+    const byte inKey[CHACHA20_POLY1305_AEAD_KEYSIZE],
+    const byte inIV[CHACHA20_POLY1305_AEAD_IV_SIZE],
+    int isEncrypt, void* heap, int devId);
+
 WOLFSSL_API int wc_ChaCha20Poly1305_Init(ChaChaPoly_Aead* aead,
     const byte inKey[CHACHA20_POLY1305_AEAD_KEYSIZE],
     const byte inIV[CHACHA20_POLY1305_AEAD_IV_SIZE],
@@ -121,7 +147,7 @@ WOLFSSL_API int wc_ChaCha20Poly1305_UpdateAad(ChaChaPoly_Aead* aead,
     const byte* inAAD, word32 inAADLen);
 WOLFSSL_API int wc_ChaCha20Poly1305_UpdateData(ChaChaPoly_Aead* aead,
     const byte* inData, byte* outData, word32 dataLen);
-WOLFSSL_API int wc_ChaCha20Poly1305_Final(ChaChaPoly_Aead* aead,
+WOLFSSL_API WARN_UNUSED_RESULT int wc_ChaCha20Poly1305_Final(ChaChaPoly_Aead* aead,
     byte outAuthTag[CHACHA20_POLY1305_AEAD_AUTHTAG_SIZE]);
 
 #ifdef HAVE_XCHACHA
@@ -129,8 +155,8 @@ WOLFSSL_API int wc_ChaCha20Poly1305_Final(ChaChaPoly_Aead* aead,
 WOLFSSL_API int wc_XChaCha20Poly1305_Init(
     ChaChaPoly_Aead* aead,
     const byte *ad, word32 ad_len,
-    const byte *inKey, word32 inKeySz,
-    const byte *inIV, word32 inIVSz,
+    const byte *nonce, word32 nonce_len,
+    const byte *key, word32 key_len,
     int isEncrypt);
 
 WOLFSSL_API int wc_XChaCha20Poly1305_Encrypt(
@@ -140,7 +166,7 @@ WOLFSSL_API int wc_XChaCha20Poly1305_Encrypt(
     const byte *nonce, size_t nonce_len,
     const byte *key, size_t key_len);
 
-WOLFSSL_API int wc_XChaCha20Poly1305_Decrypt(
+WOLFSSL_API WARN_UNUSED_RESULT int wc_XChaCha20Poly1305_Decrypt(
     byte *dst, size_t dst_space,
     const byte *src, size_t src_len,
     const byte *ad, size_t ad_len,

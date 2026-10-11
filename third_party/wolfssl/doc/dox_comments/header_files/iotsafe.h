@@ -6,6 +6,15 @@
     \return 0 on success
     \return WC_HW_E on hardware error
 
+    This function loads the IoT-Safe applet on first use. In multi-threaded
+    builds both the applet load and every individual APDU transaction are
+    serialized internally on a port-level lock, so concurrent TLS sessions
+    can safely share the same IoT-Safe context, and this function may be
+    called concurrently for several contexts.
+    The CSIM read and write callbacks must still be installed beforehand,
+    from a single thread; see wolfIoTSafe_SetCSIM_read_cb() and
+    wolfIoTSafe_SetCSIM_write_cb().
+
     _Example_
     \code
     WOLFSSL_CTX *ctx;
@@ -124,6 +133,8 @@ int wolfSSL_iotsafe_on_ex(WOLFSSL *ssl, byte *privkey_id,
     usually associated to a read event of a UART channel communicating with the modem.
     The read callback associated is global and changes for all the contexts that use
     IoT-safe support at the same time.
+    This function must be called from a single thread, during initialization,
+    before any IoT-Safe operation is performed.
     \param rf Read callback associated to a UART read event. The callback function takes
     two arguments (buf, len) and return the number of characters read, up to len. When a
     newline is encountered, the callback should return the number of characters received
@@ -149,7 +160,9 @@ void wolfIoTSafe_SetCSIM_read_cb(wolfSSL_IOTSafe_CSIM_read_cb rf);
     usually associated to a write event on a UART channel communicating with the modem.
     The write callback associated is global and changes for all the contexts that use
     IoT-safe support at the same time.
-    \param rf Write callback associated to a UART write event. The callback function takes
+    This function must be called from a single thread, during initialization,
+    before any IoT-Safe operation is performed.
+    \param wf Write callback associated to a UART write event. The callback function takes
     two arguments (buf, len) and return the number of characters written, up to len.
 
     _Example_
@@ -288,6 +301,43 @@ int wc_iotsafe_ecc_import_public(ecc_key *key, byte key_id);
 */
 int wc_iotsafe_ecc_export_public(ecc_key *key, byte key_id);
 
+/*!
+    \ingroup IoTSafe
+    \brief Export an ECC 256-bit public key, from ecc_key object to a
+    writable public-key slot into the IoT-Safe applet. Equivalent to
+    wc_iotsafe_ecc_export_public, except that it can be invoked with a
+    key ID of two or more bytes.
+
+    \return 0 upon success
+    \return < 0 in case of failure
+
+    \param key the ecc_key object containing the key to be exported
+    \param key_id pointer to the key id in the IoT-Safe applet where
+    the public key will be stored
+    \param id_size the key id size in bytes
+
+    _Example_
+    \code
+    ecc_key key;
+    word16 keyId = 0x0302;
+
+    wc_ecc_init(&key);
+    wc_ecc_make_key(&rng, 32, &key);
+
+    int ret = wc_iotsafe_ecc_export_public_ex(&key, (byte*)&keyId,
+                                              sizeof(keyId));
+    if (ret != 0) {
+        // error exporting public key
+    }
+    \endcode
+
+    \sa wc_iotsafe_ecc_export_public
+    \sa wc_iotsafe_ecc_import_public_ex
+    \sa wc_iotsafe_ecc_export_private_ex
+*/
+int wc_iotsafe_ecc_export_public_ex(ecc_key *key, byte *key_id,
+                                    word16 id_size);
+
 
 /*!
     \ingroup IoTSafe
@@ -346,7 +396,7 @@ int wc_iotsafe_ecc_export_private_ex(ecc_key *key, byte *key_id, word16 id_size)
 
 /*!
     \ingroup IoTSafe
-    \brief Sign a pre-computed 256-bit HASH, using a private key previously stored, or pre-provisioned,
+    \brief Sign a pre-computed HASH, using a private key previously stored, or pre-provisioned,
     in the IoT-Safe applet.
 
     \param in pointer to the buffer containing the message hash to sign
@@ -367,7 +417,7 @@ int wc_iotsafe_ecc_sign_hash(byte *in, word32 inlen, byte *out, word32 *outlen, 
 
 /*!
     \ingroup IoTSafe
-    \brief Sign a pre-computed 256-bit HASH, using a private key previously stored, or pre-provisioned,
+    \brief Sign a pre-computed HASH, using a private key previously stored, or pre-provisioned,
            in the IoT-Safe applet. Equivalent to \ref wc_iotsafe_ecc_sign_hash "wc_iotsafe_ecc_sign_hash",
            except that it can be invoked with a key ID of two or more bytes.
 
@@ -390,7 +440,7 @@ int wc_iotsafe_ecc_sign_hash_ex(byte *in, word32 inlen, byte *out, word32 *outle
 
 /*!
     \ingroup IoTSafe
-    \brief Verify an ECC signature against a pre-computed 256-bit HASH, using a public key previously stored, or pre-provisioned,
+    \brief Verify an ECC signature against a pre-computed HASH, using a public key previously stored, or pre-provisioned,
     in the IoT-Safe applet. Result is written to res. 1 is valid, 0 is invalid.
     Note: Do not use the return value to test for valid. Only use res.
 
@@ -412,7 +462,7 @@ int wc_iotsafe_ecc_verify_hash(byte *sig, word32 siglen, byte *hash, word32 hash
 
 /*!
     \ingroup IoTSafe
-    \brief Verify an ECC signature against a pre-computed 256-bit HASH, using a public key previously stored, or pre-provisioned,
+    \brief Verify an ECC signature against a pre-computed HASH, using a public key previously stored, or pre-provisioned,
     in the IoT-Safe applet. Result is written to res. 1 is valid, 0 is invalid.
     Note: Do not use the return value to test for valid. Only use res.
     Equivalent to \ref wc_iotsafe_ecc_verify_hash "wc_iotsafe_ecc_verify_hash",
@@ -462,4 +512,4 @@ int wc_iotsafe_ecc_gen_k(byte key_id);
     \sa wc_iotsafe_ecc_sign_hash_ex
     \sa wc_iotsafe_ecc_verify_hash_ex
 */
-int wc_iotsafe_ecc_gen_k(byte key_id);
+int wc_iotsafe_ecc_gen_k_ex(byte *key_id, word16 id_size);

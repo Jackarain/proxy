@@ -1,12 +1,12 @@
 /* kcapi_ecc.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -19,17 +19,10 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1335, USA
  */
 
-
-#ifdef HAVE_CONFIG_H
-    #include <config.h>
-#endif
-
-#include <wolfssl/wolfcrypt/settings.h>
+#include <wolfssl/wolfcrypt/libwolfssl_sources.h>
 
 #if defined(WOLFSSL_KCAPI_ECC) && defined(HAVE_ECC)
 
-#include <wolfssl/wolfcrypt/error-crypt.h>
-#include <wolfssl/wolfcrypt/logging.h>
 #include <wolfssl/wolfcrypt/port/kcapi/wc_kcapi.h>
 #include <wolfssl/wolfcrypt/port/kcapi/kcapi_ecc.h>
 #include <wolfssl/wolfcrypt/ecc.h>
@@ -127,6 +120,7 @@ int KcapiEcc_LoadKey(ecc_key* key, byte* pubkey_raw, word32* pubkey_sz,
             if (ret == 0) {
                 ret = kcapi_kpp_setkey(key->handle, priv, keySz);
             }
+            ForceZero(priv, sizeof(priv));
         }
         else {
             /* generate new ephemeral key */
@@ -173,7 +167,7 @@ int KcapiEcc_MakeKey(ecc_key* key, int keysize, int curve_id)
 
     /* check arguments */
     if (key == NULL || key->dp == NULL) {
-        ret = BAD_FUNC_ARG;
+        return BAD_FUNC_ARG;
     }
 
     ret = KcapiEcc_LoadKey(key, key->pubkey_raw, &pubkey_sz, 0);
@@ -248,6 +242,7 @@ int KcapiEcc_SharedSecret(ecc_key* private_key, ecc_key* public_key, byte* out,
                 ret = 0;
             }
         }
+        ForceZero(priv, sizeof(priv));
     }
     if (ret == 0) {
     #ifdef KCAPI_USE_XMALLOC
@@ -277,6 +272,7 @@ int KcapiEcc_SharedSecret(ecc_key* private_key, ecc_key* public_key, byte* out,
     }
 
     if (buf_aligned != NULL) {
+        ForceZero(buf_aligned, keySz * 2);
     #ifdef KCAPI_USE_XMALLOC
         XFREE(buf_aligned, private_key->heap, DYNAMIC_TYPE_TMP_BUFFER);
     #else
@@ -324,6 +320,7 @@ static int KcapiEcc_SetPrivKey(ecc_key* key)
         }
     }
 
+    ForceZero(priv, sizeof(priv));
     return ret;
 }
 
@@ -396,7 +393,7 @@ int KcapiEcc_Sign(ecc_key* key, const byte* hash, word32 hashLen, byte* sig,
     }
 
     if (handleInit) {
-        kcapi_kpp_destroy(key->handle);
+        kcapi_akcipher_destroy(key->handle);
         key->handle = NULL;
     }
 
@@ -496,7 +493,7 @@ int KcapiEcc_Verify(ecc_key* key, const byte* hash, word32 hashLen, byte* sig,
     }
 
     if (handleInit) {
-        kcapi_kpp_destroy(key->handle);
+        kcapi_akcipher_destroy(key->handle);
         key->handle = NULL;
     }
     return ret;

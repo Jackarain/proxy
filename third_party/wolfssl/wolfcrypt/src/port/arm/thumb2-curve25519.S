@@ -1,12 +1,12 @@
 /* thumb2-curve25519
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -21,16 +21,17 @@
 
 /* Generated using (from wolfssl):
  *   cd ../scripts
- *   ruby ./x25519/x25519.rb thumb2 ../wolfssl/wolfcrypt/src/port/arm/thumb2-curve25519.S
+ *   ruby ./x25519/x25519.rb \
+ *       thumb2 ../wolfssl/wolfcrypt/src/port/arm/thumb2-curve25519.S
  */
 
-#ifdef HAVE_CONFIG_H
-    #include <config.h>
-#endif /* HAVE_CONFIG_H */
-#include <wolfssl/wolfcrypt/settings.h>
+#define WC_FIPS_LL_CRYPTO
+#define _WC_BUILDING_THUMB2_CURVE25519_S
+
+#include <wolfssl/wolfcrypt/libwolfssl_sources_asm.h>
 
 #ifdef WOLFSSL_ARMASM
-#if !defined(__aarch64__) && defined(__thumb__)
+#ifdef WOLFSSL_ARMASM_THUMB2
 #ifndef WOLFSSL_ARMASM_INLINE
 	.thumb
 	.syntax unified
@@ -40,6 +41,7 @@
 	.text
 	.align	4
 	.globl	fe_init
+	WC_ASM_ATT_HIDDEN(fe_init)
 	.type	fe_init, %function
 fe_init:
 	BX	lr
@@ -48,6 +50,7 @@ fe_init:
 	.text
 	.align	4
 	.globl	fe_add_sub_op
+	WC_ASM_ATT_HIDDEN(fe_add_sub_op)
 	.type	fe_add_sub_op, %function
 fe_add_sub_op:
 	PUSH	{lr}
@@ -56,9 +59,9 @@ fe_add_sub_op:
 	LDRD	r6, r7, [r3]
 	/*  Add */
 	ADDS	r8, r4, r6
-	MOV	r12, #0x0
+	MOV	r12, #0
 	ADCS	r9, r5, r7
-	ADC	r12, r12, #0x0
+	ADC	r12, r12, #0
 	STRD	r8, r9, [r0]
 	/*  Sub */
 	SUBS	r10, r4, r6
@@ -68,12 +71,12 @@ fe_add_sub_op:
 	LDRD	r6, r7, [r3, #8]
 	/*  Sub */
 	SBCS	r10, r4, r6
-	MOV	lr, #0x0
+	MOV	lr, #0
 	SBCS	r11, r5, r7
-	ADC	lr, lr, #0x0
+	ADC	lr, lr, #0
 	STRD	r10, r11, [r1, #8]
 	/*  Add */
-	SUBS	r12, r12, #0x1
+	SUBS	r12, r12, #1
 	ADCS	r8, r4, r6
 	ADCS	r9, r5, r7
 	STRD	r8, r9, [r0, #8]
@@ -81,12 +84,12 @@ fe_add_sub_op:
 	LDRD	r6, r7, [r3, #16]
 	/*  Add */
 	ADCS	r8, r4, r6
-	MOV	r12, #0x0
+	MOV	r12, #0
 	ADCS	r9, r5, r7
-	ADC	r12, r12, #0x0
+	ADC	r12, r12, #0
 	STRD	r8, r9, [r0, #16]
 	/*  Sub */
-	SUBS	lr, lr, #0x1
+	SUBS	lr, lr, #1
 	SBCS	r10, r4, r6
 	SBCS	r11, r5, r7
 	STRD	r10, r11, [r1, #16]
@@ -96,46 +99,46 @@ fe_add_sub_op:
 	SBCS	r10, r4, r6
 	SBC	r11, r5, r7
 	/*  Add */
-	SUBS	r12, r12, #0x1
+	SUBS	r12, r12, #1
 	ADCS	r8, r4, r6
-	MOV	r12, #0x0
+	MOV	r12, #0
 	ADCS	r9, r5, r7
-	ADC	r12, r12, #0x0
+	ADC	r12, r12, #0
 	/*   Multiply -modulus by overflow */
 	LSL	r3, r12, #1
-	MOV	r12, #0x13
+	MOV	r12, #19
 	ORR	r3, r3, r9, LSR #31
 	MUL	r12, r3, r12
 	/*   Add -x*modulus (if overflow) */
 	LDRD	r4, r5, [r0]
 	LDRD	r6, r7, [r0, #8]
 	ADDS	r4, r4, r12
-	ADCS	r5, r5, #0x0
-	ADCS	r6, r6, #0x0
-	ADCS	r7, r7, #0x0
+	ADCS	r5, r5, #0
+	ADCS	r6, r6, #0
+	ADCS	r7, r7, #0
 	STRD	r4, r5, [r0]
 	STRD	r6, r7, [r0, #8]
 	LDRD	r4, r5, [r0, #16]
-	ADCS	r4, r4, #0x0
-	ADCS	r5, r5, #0x0
+	ADCS	r4, r4, #0
+	ADCS	r5, r5, #0
 	STRD	r4, r5, [r0, #16]
 	BFC	r9, #31, #1
-	ADCS	r8, r8, #0x0
-	ADC	r9, r9, #0x0
+	ADCS	r8, r8, #0
+	ADC	r9, r9, #0
 	STRD	r8, r9, [r0, #24]
 	/*   Add -modulus on underflow */
-	MOV	lr, #0x13
+	MOV	lr, #19
 	AND	lr, lr, r11, ASR #31
 	LDM	r1, {r4, r5, r6, r7, r8, r9}
 	SUBS	r4, r4, lr
-	SBCS	r5, r5, #0x0
-	SBCS	r6, r6, #0x0
-	SBCS	r7, r7, #0x0
-	SBCS	r8, r8, #0x0
-	SBCS	r9, r9, #0x0
+	SBCS	r5, r5, #0
+	SBCS	r6, r6, #0
+	SBCS	r7, r7, #0
+	SBCS	r8, r8, #0
+	SBCS	r9, r9, #0
 	BFC	r11, #31, #1
-	SBCS	r10, r10, #0x0
-	SBC	r11, r11, #0x0
+	SBCS	r10, r10, #0
+	SBC	r11, r11, #0
 	STM	r1, {r4, r5, r6, r7, r8, r9, r10, r11}
 	/* Done Add-Sub */
 	POP	{pc}
@@ -144,6 +147,7 @@ fe_add_sub_op:
 	.text
 	.align	4
 	.globl	fe_sub_op
+	WC_ASM_ATT_HIDDEN(fe_sub_op)
 	.type	fe_sub_op, %function
 fe_sub_op:
 	PUSH	{lr}
@@ -159,17 +163,17 @@ fe_sub_op:
 	SBCS	r11, r3, r11
 	SBCS	r12, r4, r12
 	SBC	lr, r5, lr
-	MOV	r2, #0x13
+	MOV	r2, #19
 	AND	r2, r2, lr, ASR #31
 	SUBS	r6, r6, r2
-	SBCS	r7, r7, #0x0
-	SBCS	r8, r8, #0x0
-	SBCS	r9, r9, #0x0
-	SBCS	r10, r10, #0x0
-	SBCS	r11, r11, #0x0
+	SBCS	r7, r7, #0
+	SBCS	r8, r8, #0
+	SBCS	r9, r9, #0
+	SBCS	r10, r10, #0
+	SBCS	r11, r11, #0
 	BFC	lr, #31, #1
-	SBCS	r12, r12, #0x0
-	SBC	lr, lr, #0x0
+	SBCS	r12, r12, #0
+	SBC	lr, lr, #0
 	STM	r0, {r6, r7, r8, r9, r10, r11, r12, lr}
 	/* Done Sub */
 	POP	{pc}
@@ -178,6 +182,7 @@ fe_sub_op:
 	.text
 	.align	4
 	.globl	fe_sub
+	WC_ASM_ATT_HIDDEN(fe_sub)
 	.type	fe_sub, %function
 fe_sub:
 	PUSH	{r4, r5, r6, r7, r8, r9, r10, r11, lr}
@@ -188,6 +193,7 @@ fe_sub:
 	.text
 	.align	4
 	.globl	fe_add_op
+	WC_ASM_ATT_HIDDEN(fe_add_op)
 	.type	fe_add_op, %function
 fe_add_op:
 	PUSH	{lr}
@@ -203,17 +209,17 @@ fe_add_op:
 	ADCS	r11, r3, r11
 	ADCS	r12, r4, r12
 	ADC	lr, r5, lr
-	MOV	r2, #0x13
+	MOV	r2, #19
 	AND	r2, r2, lr, ASR #31
 	ADDS	r6, r6, r2
-	ADCS	r7, r7, #0x0
-	ADCS	r8, r8, #0x0
-	ADCS	r9, r9, #0x0
-	ADCS	r10, r10, #0x0
-	ADCS	r11, r11, #0x0
+	ADCS	r7, r7, #0
+	ADCS	r8, r8, #0
+	ADCS	r9, r9, #0
+	ADCS	r10, r10, #0
+	ADCS	r11, r11, #0
 	BFC	lr, #31, #1
-	ADCS	r12, r12, #0x0
-	ADC	lr, lr, #0x0
+	ADCS	r12, r12, #0
+	ADC	lr, lr, #0
 	STM	r0, {r6, r7, r8, r9, r10, r11, r12, lr}
 	/* Done Add */
 	POP	{pc}
@@ -222,6 +228,7 @@ fe_add_op:
 	.text
 	.align	4
 	.globl	fe_add
+	WC_ASM_ATT_HIDDEN(fe_add)
 	.type	fe_add, %function
 fe_add:
 	PUSH	{r4, r5, r6, r7, r8, r9, r10, r11, lr}
@@ -229,10 +236,11 @@ fe_add:
 	POP	{r4, r5, r6, r7, r8, r9, r10, r11, pc}
 	/* Cycle Count = 24 */
 	.size	fe_add,.-fe_add
-#ifdef HAVE_ED25519
+#if defined(HAVE_ED25519) || defined(WOLFSSL_CURVE25519_USE_ED25519)
 	.text
 	.align	4
 	.globl	fe_frombytes
+	WC_ASM_ATT_HIDDEN(fe_frombytes)
 	.type	fe_frombytes, %function
 fe_frombytes:
 	PUSH	{r4, r5, r6, r7, r8, r9, lr}
@@ -259,28 +267,29 @@ fe_frombytes:
 	.text
 	.align	4
 	.globl	fe_tobytes
+	WC_ASM_ATT_HIDDEN(fe_tobytes)
 	.type	fe_tobytes, %function
 fe_tobytes:
-	PUSH	{r4, r5, r6, r7, r8, r9, r10, lr}
+	PUSH	{r4, r5, r6, r7, r8, r9, lr}
 	LDM	r1, {r2, r3, r4, r5, r6, r7, r8, r9}
-	ADDS	r10, r2, #0x13
-	ADCS	r10, r3, #0x0
-	ADCS	r10, r4, #0x0
-	ADCS	r10, r5, #0x0
-	ADCS	r10, r6, #0x0
-	ADCS	r10, r7, #0x0
-	ADCS	r10, r8, #0x0
-	ADC	r10, r9, #0x0
-	ASR	r10, r10, #31
-	AND	r10, r10, #0x13
-	ADDS	r2, r2, r10
-	ADCS	r3, r3, #0x0
-	ADCS	r4, r4, #0x0
-	ADCS	r5, r5, #0x0
-	ADCS	r6, r6, #0x0
-	ADCS	r7, r7, #0x0
-	ADCS	r8, r8, #0x0
-	ADC	r9, r9, #0x0
+	ADDS	r12, r2, #19
+	ADCS	r12, r3, #0
+	ADCS	r12, r4, #0
+	ADCS	r12, r5, #0
+	ADCS	r12, r6, #0
+	ADCS	r12, r7, #0
+	ADCS	r12, r8, #0
+	ADC	r12, r9, #0
+	ASR	r12, r12, #31
+	AND	r12, r12, #19
+	ADDS	r2, r2, r12
+	ADCS	r3, r3, #0
+	ADCS	r4, r4, #0
+	ADCS	r5, r5, #0
+	ADCS	r6, r6, #0
+	ADCS	r7, r7, #0
+	ADCS	r8, r8, #0
+	ADC	r9, r9, #0
 	BFC	r9, #31, #1
 	STR	r2, [r0]
 	STR	r3, [r0, #4]
@@ -290,24 +299,25 @@ fe_tobytes:
 	STR	r7, [r0, #20]
 	STR	r8, [r0, #24]
 	STR	r9, [r0, #28]
-	POP	{r4, r5, r6, r7, r8, r9, r10, pc}
-	/* Cycle Count = 62 */
+	POP	{r4, r5, r6, r7, r8, r9, pc}
+	/* Cycle Count = 60 */
 	.size	fe_tobytes,.-fe_tobytes
 	.text
 	.align	4
 	.globl	fe_1
+	WC_ASM_ATT_HIDDEN(fe_1)
 	.type	fe_1, %function
 fe_1:
 	PUSH	{r4, r5, r6, r7, r8, r9, lr}
 	/* Set one */
-	MOV	r2, #0x1
-	MOV	r3, #0x0
-	MOV	r4, #0x0
-	MOV	r5, #0x0
-	MOV	r6, #0x0
-	MOV	r7, #0x0
-	MOV	r8, #0x0
-	MOV	r9, #0x0
+	MOV	r2, #1
+	MOV	r3, #0
+	MOV	r4, #0
+	MOV	r5, #0
+	MOV	r6, #0
+	MOV	r7, #0
+	MOV	r8, #0
+	MOV	r9, #0
 	STM	r0, {r2, r3, r4, r5, r6, r7, r8, r9}
 	POP	{r4, r5, r6, r7, r8, r9, pc}
 	/* Cycle Count = 33 */
@@ -315,18 +325,19 @@ fe_1:
 	.text
 	.align	4
 	.globl	fe_0
+	WC_ASM_ATT_HIDDEN(fe_0)
 	.type	fe_0, %function
 fe_0:
 	PUSH	{r4, r5, r6, r7, r8, r9, lr}
 	/* Set zero */
-	MOV	r2, #0x0
-	MOV	r3, #0x0
-	MOV	r4, #0x0
-	MOV	r5, #0x0
-	MOV	r6, #0x0
-	MOV	r7, #0x0
-	MOV	r8, #0x0
-	MOV	r9, #0x0
+	MOV	r2, #0
+	MOV	r3, #0
+	MOV	r4, #0
+	MOV	r5, #0
+	MOV	r6, #0
+	MOV	r7, #0
+	MOV	r8, #0
+	MOV	r9, #0
 	STM	r0, {r2, r3, r4, r5, r6, r7, r8, r9}
 	POP	{r4, r5, r6, r7, r8, r9, pc}
 	/* Cycle Count = 33 */
@@ -334,6 +345,7 @@ fe_0:
 	.text
 	.align	4
 	.globl	fe_copy
+	WC_ASM_ATT_HIDDEN(fe_copy)
 	.type	fe_copy, %function
 fe_copy:
 	PUSH	{r4, r5, lr}
@@ -352,52 +364,54 @@ fe_copy:
 	.text
 	.align	4
 	.globl	fe_neg
+	WC_ASM_ATT_HIDDEN(fe_neg)
 	.type	fe_neg, %function
 fe_neg:
-	PUSH	{r4, r5, r6, r7, lr}
-	MVN	r7, #0x0
-	MVN	r6, #0x12
+	PUSH	{r4, r5, lr}
+	MVN	lr, #0
+	MVN	r12, #18
 	LDM	r1!, {r2, r3, r4, r5}
-	SUBS	r2, r6, r2
-	SBCS	r3, r7, r3
-	SBCS	r4, r7, r4
-	SBCS	r5, r7, r5
+	SUBS	r2, r12, r2
+	SBCS	r3, lr, r3
+	SBCS	r4, lr, r4
+	SBCS	r5, lr, r5
 	STM	r0!, {r2, r3, r4, r5}
-	MVN	r6, #0x80000000
+	MVN	r12, #0x80000000
 	LDM	r1!, {r2, r3, r4, r5}
-	SBCS	r2, r7, r2
-	SBCS	r3, r7, r3
-	SBCS	r4, r7, r4
-	SBC	r5, r6, r5
+	SBCS	r2, lr, r2
+	SBCS	r3, lr, r3
+	SBCS	r4, lr, r4
+	SBC	r5, r12, r5
 	STM	r0!, {r2, r3, r4, r5}
-	POP	{r4, r5, r6, r7, pc}
-	/* Cycle Count = 43 */
+	POP	{r4, r5, pc}
+	/* Cycle Count = 39 */
 	.size	fe_neg,.-fe_neg
 	.text
 	.align	4
 	.globl	fe_isnonzero
+	WC_ASM_ATT_HIDDEN(fe_isnonzero)
 	.type	fe_isnonzero, %function
 fe_isnonzero:
-	PUSH	{r4, r5, r6, r7, r8, r9, r10, lr}
+	PUSH	{r4, r5, r6, r7, r8, r9, lr}
 	LDM	r0, {r2, r3, r4, r5, r6, r7, r8, r9}
-	ADDS	r1, r2, #0x13
-	ADCS	r1, r3, #0x0
-	ADCS	r1, r4, #0x0
-	ADCS	r1, r5, #0x0
-	ADCS	r1, r6, #0x0
-	ADCS	r1, r7, #0x0
-	ADCS	r1, r8, #0x0
-	ADC	r1, r9, #0x0
+	ADDS	r1, r2, #19
+	ADCS	r1, r3, #0
+	ADCS	r1, r4, #0
+	ADCS	r1, r5, #0
+	ADCS	r1, r6, #0
+	ADCS	r1, r7, #0
+	ADCS	r1, r8, #0
+	ADC	r1, r9, #0
 	ASR	r1, r1, #31
-	AND	r1, r1, #0x13
+	AND	r1, r1, #19
 	ADDS	r2, r2, r1
-	ADCS	r3, r3, #0x0
-	ADCS	r4, r4, #0x0
-	ADCS	r5, r5, #0x0
-	ADCS	r6, r6, #0x0
-	ADCS	r7, r7, #0x0
-	ADCS	r8, r8, #0x0
-	ADC	r9, r9, #0x0
+	ADCS	r3, r3, #0
+	ADCS	r4, r4, #0
+	ADCS	r5, r5, #0
+	ADCS	r6, r6, #0
+	ADCS	r7, r7, #0
+	ADCS	r8, r8, #0
+	ADC	r9, r9, #0
 	BFC	r9, #31, #1
 	ORR	r2, r2, r3
 	ORR	r4, r4, r5
@@ -406,37 +420,38 @@ fe_isnonzero:
 	ORR	r4, r4, r6
 	ORR	r2, r2, r8
 	ORR	r0, r2, r4
-	POP	{r4, r5, r6, r7, r8, r9, r10, pc}
-	/* Cycle Count = 53 */
+	POP	{r4, r5, r6, r7, r8, r9, pc}
+	/* Cycle Count = 51 */
 	.size	fe_isnonzero,.-fe_isnonzero
 	.text
 	.align	4
 	.globl	fe_isnegative
+	WC_ASM_ATT_HIDDEN(fe_isnegative)
 	.type	fe_isnegative, %function
 fe_isnegative:
 	PUSH	{r4, r5, lr}
 	LDM	r0!, {r2, r3, r4, r5}
-	ADDS	r1, r2, #0x13
-	ADCS	r1, r3, #0x0
-	ADCS	r1, r4, #0x0
-	ADCS	r1, r5, #0x0
+	AND	r12, r2, #1
+	ADDS	r1, r2, #19
+	ADCS	r1, r3, #0
+	ADCS	r1, r4, #0
+	ADCS	r1, r5, #0
 	LDM	r0, {r2, r3, r4, r5}
-	ADCS	r1, r2, #0x0
-	ADCS	r1, r3, #0x0
-	ADCS	r1, r4, #0x0
-	LDR	r2, [r0, #-16]
-	ADC	r1, r5, #0x0
-	AND	r0, r2, #0x1
+	ADCS	r1, r2, #0
+	ADCS	r1, r3, #0
+	ADCS	r1, r4, #0
+	ADC	r1, r5, #0
 	LSR	r1, r1, #31
-	EOR	r0, r0, r1
+	EOR	r0, r12, r1
 	POP	{r4, r5, pc}
-	/* Cycle Count = 31 */
+	/* Cycle Count = 29 */
 	.size	fe_isnegative,.-fe_isnegative
-#if defined(HAVE_ED25519_MAKE_KEY) || defined(HAVE_ED25519_SIGN)
+#if defined(HAVE_ED25519_MAKE_KEY) || defined(HAVE_ED25519_SIGN) || defined(WOLFSSL_CURVE25519_USE_ED25519)
 #ifndef WC_NO_CACHE_RESISTANT
 	.text
 	.align	4
 	.globl	fe_cmov_table
+	WC_ASM_ATT_HIDDEN(fe_cmov_table)
 	.type	fe_cmov_table, %function
 fe_cmov_table:
 	PUSH	{r4, r5, r6, r7, r8, r9, r10, r11, lr}
@@ -444,12 +459,12 @@ fe_cmov_table:
 	SBFX	r3, r2, #7, #1
 	EOR	r12, r2, r3
 	SUB	r12, r12, r3
-	MOV	r4, #0x1
-	MOV	r5, #0x0
-	MOV	r6, #0x1
-	MOV	r7, #0x0
-	MOV	r8, #0x0
-	MOV	r9, #0x0
+	MOV	r4, #1
+	MOV	r5, #0
+	MOV	r6, #1
+	MOV	r7, #0
+	MOV	r8, #0
+	MOV	r9, #0
 	MOV	r3, #0x80000000
 	ROR	r3, r3, #31
 	ROR	r3, r3, r12
@@ -658,8 +673,8 @@ fe_cmov_table:
 	EOR	r8, r8, r10
 	EOR	r9, r9, r11
 	SUB	r1, r1, #0x2a0
-	MVN	r10, #0x12
-	MVN	r11, #0x0
+	MVN	r10, #18
+	MVN	r11, #0
 	SUBS	r10, r10, r8
 	SBCS	r11, r11, r9
 	SBC	lr, lr, lr
@@ -684,12 +699,12 @@ fe_cmov_table:
 	SBFX	r3, r2, #7, #1
 	EOR	r12, r2, r3
 	SUB	r12, r12, r3
-	MOV	r4, #0x0
-	MOV	r5, #0x0
-	MOV	r6, #0x0
-	MOV	r7, #0x0
-	MOV	r8, #0x0
-	MOV	r9, #0x0
+	MOV	r4, #0
+	MOV	r5, #0
+	MOV	r6, #0
+	MOV	r7, #0
+	MOV	r8, #0
+	MOV	r9, #0
 	MOV	r3, #0x80000000
 	ROR	r3, r3, #31
 	ROR	r3, r3, r12
@@ -898,9 +913,9 @@ fe_cmov_table:
 	EOR	r8, r8, r10
 	EOR	r9, r9, r11
 	SUB	r1, r1, #0x2a0
-	MVN	r10, #0x0
-	MVN	r11, #0x0
-	RSBS	lr, lr, #0x0
+	MVN	r10, #0
+	MVN	r11, #0
+	RSBS	lr, lr, #0
 	SBCS	r10, r10, r8
 	SBCS	r11, r11, r9
 	SBC	lr, lr, lr
@@ -925,12 +940,12 @@ fe_cmov_table:
 	SBFX	r3, r2, #7, #1
 	EOR	r12, r2, r3
 	SUB	r12, r12, r3
-	MOV	r4, #0x0
-	MOV	r5, #0x0
-	MOV	r6, #0x0
-	MOV	r7, #0x0
-	MOV	r8, #0x0
-	MOV	r9, #0x0
+	MOV	r4, #0
+	MOV	r5, #0
+	MOV	r6, #0
+	MOV	r7, #0
+	MOV	r8, #0
+	MOV	r9, #0
 	MOV	r3, #0x80000000
 	ROR	r3, r3, #31
 	ROR	r3, r3, r12
@@ -1139,9 +1154,9 @@ fe_cmov_table:
 	EOR	r8, r8, r10
 	EOR	r9, r9, r11
 	SUB	r1, r1, #0x2a0
-	MVN	r10, #0x0
-	MVN	r11, #0x0
-	RSBS	lr, lr, #0x0
+	MVN	r10, #0
+	MVN	r11, #0
+	RSBS	lr, lr, #0
 	SBCS	r10, r10, r8
 	SBCS	r11, r11, r9
 	SBC	lr, lr, lr
@@ -1166,12 +1181,12 @@ fe_cmov_table:
 	SBFX	r3, r2, #7, #1
 	EOR	r12, r2, r3
 	SUB	r12, r12, r3
-	MOV	r4, #0x0
-	MOV	r5, #0x0
-	MOV	r6, #0x0
-	MOV	r7, #0x0
-	MOV	r8, #0x0
-	MOV	r9, #0x0
+	MOV	r4, #0
+	MOV	r5, #0
+	MOV	r6, #0
+	MOV	r7, #0
+	MOV	r8, #0
+	MOV	r9, #0
 	MOV	r3, #0x80000000
 	ROR	r3, r3, #31
 	ROR	r3, r3, r12
@@ -1380,9 +1395,9 @@ fe_cmov_table:
 	EOR	r8, r8, r10
 	EOR	r9, r9, r11
 	SUB	r1, r1, #0x2a0
-	MVN	r10, #0x0
+	MVN	r10, #0
 	MVN	r11, #0x80000000
-	RSBS	lr, lr, #0x0
+	RSBS	lr, lr, #0
 	SBCS	r10, r10, r8
 	SBC	r11, r11, r9
 	ASR	r12, r2, #31
@@ -1410,6 +1425,7 @@ fe_cmov_table:
 	.text
 	.align	4
 	.globl	fe_cmov_table
+	WC_ASM_ATT_HIDDEN(fe_cmov_table)
 	.type	fe_cmov_table, %function
 fe_cmov_table:
 	PUSH	{r4, r5, r6, r7, r8, r9, r10, r11, lr}
@@ -1436,7 +1452,7 @@ fe_cmov_table:
 	AND	r11, r11, lr
 	MVN	r12, lr
 	SUB	r4, r4, r12
-	MOV	r12, #0x20
+	MOV	r12, #32
 	AND	r12, r12, r3
 	ADD	r0, r0, r12
 	STM	r0, {r4, r5, r6, r7, r8, r9, r10, r11}
@@ -1452,14 +1468,14 @@ fe_cmov_table:
 	AND	r11, r11, lr
 	MVN	r12, lr
 	SUB	r4, r4, r12
-	MOV	r12, #0x20
+	MOV	r12, #32
 	BIC	r12, r12, r3
 	ADD	r0, r0, r12
 	STM	r0, {r4, r5, r6, r7, r8, r9, r10, r11}
 	SUB	r0, r0, r12
 	ADD	r0, r0, #0x40
 	LDM	r1!, {r4, r5, r6, r7}
-	MVN	r12, #0x12
+	MVN	r12, #18
 	SUBS	r8, r12, r4
 	SBCS	r9, r3, r5
 	SBCS	r10, r3, r6
@@ -1509,18 +1525,19 @@ fe_cmov_table:
 	/* Cycle Count = 160 */
 	.size	fe_cmov_table,.-fe_cmov_table
 #endif /* WC_NO_CACHE_RESISTANT */
-#endif /* HAVE_ED25519_MAKE_KEY || HAVE_ED25519_SIGN */
-#endif /* HAVE_ED25519 */
-#ifdef WOLFSSL_SP_NO_UMAAL
+#endif /* HAVE_ED25519_MAKE_KEY || HAVE_ED25519_SIGN || WOLFSSL_CURVE25519_USE_ED25519 */
+#endif /* HAVE_ED25519 || WOLFSSL_CURVE25519_USE_ED25519 */
+#ifdef WOLFSSL_ARM_ARCH_7M
 	.text
 	.align	4
 	.globl	fe_mul_op
+	WC_ASM_ATT_HIDDEN(fe_mul_op)
 	.type	fe_mul_op, %function
 fe_mul_op:
 	PUSH	{lr}
-	SUB	sp, sp, #0x28
+	SUB	sp, sp, #40
 	STR	r0, [sp, #36]
-	MOV	r0, #0x0
+	MOV	r0, #0
 	LDR	r12, [r1]
 	/* A[0] * B[0] */
 	LDR	lr, [r2]
@@ -1542,362 +1559,761 @@ fe_mul_op:
 	ADDS	r5, r5, r11
 	/* A[0] * B[3] */
 	LDR	lr, [r2, #12]
-	ADCS	r6, r6, #0x0
-	ADC	r11, r0, #0x0
+	ADCS	r6, r6, #0
+	ADC	r11, r0, #0
 	UMLAL	r6, r11, r12, lr
 	ADDS	r7, r7, r11
 	/* A[0] * B[5] */
 	LDR	lr, [r2, #20]
-	ADCS	r8, r8, #0x0
-	ADC	r11, r0, #0x0
+	ADCS	r8, r8, #0
+	ADC	r11, r0, #0
 	UMLAL	r8, r11, r12, lr
 	ADDS	r9, r9, r11
 	/* A[0] * B[7] */
 	LDR	lr, [r2, #28]
-	ADCS	r10, r10, #0x0
-	ADC	r3, r0, #0x0
+	ADCS	r10, r10, #0
+	ADC	r3, r0, #0
 	UMLAL	r10, r3, r12, lr
 	/* A[1] * B[0] */
 	LDR	r12, [r1, #4]
 	LDR	lr, [r2]
-	MOV	r11, #0x0
+	MOV	r11, #0
 	UMLAL	r4, r11, r12, lr
 	STR	r4, [sp, #4]
 	ADDS	r5, r5, r11
 	/* A[1] * B[1] */
 	LDR	lr, [r2, #4]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r5, r11, r12, lr
 	ADDS	r6, r6, r11
 	/* A[1] * B[2] */
 	LDR	lr, [r2, #8]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r6, r11, r12, lr
 	ADDS	r7, r7, r11
 	/* A[1] * B[3] */
 	LDR	lr, [r2, #12]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r7, r11, r12, lr
 	ADDS	r8, r8, r11
 	/* A[1] * B[4] */
 	LDR	lr, [r2, #16]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r8, r11, r12, lr
 	ADDS	r9, r9, r11
 	/* A[1] * B[5] */
 	LDR	lr, [r2, #20]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r9, r11, r12, lr
 	ADDS	r10, r10, r11
 	/* A[1] * B[6] */
 	LDR	lr, [r2, #24]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r10, r11, r12, lr
 	ADDS	r3, r3, r11
 	/* A[1] * B[7] */
 	LDR	lr, [r2, #28]
-	ADC	r4, r0, #0x0
+	ADC	r4, r0, #0
 	UMLAL	r3, r4, r12, lr
 	/* A[2] * B[0] */
 	LDR	r12, [r1, #8]
 	LDR	lr, [r2]
-	MOV	r11, #0x0
+	MOV	r11, #0
 	UMLAL	r5, r11, r12, lr
 	STR	r5, [sp, #8]
 	ADDS	r6, r6, r11
 	/* A[2] * B[1] */
 	LDR	lr, [r2, #4]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r6, r11, r12, lr
 	ADDS	r7, r7, r11
 	/* A[2] * B[2] */
 	LDR	lr, [r2, #8]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r7, r11, r12, lr
 	ADDS	r8, r8, r11
 	/* A[2] * B[3] */
 	LDR	lr, [r2, #12]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r8, r11, r12, lr
 	ADDS	r9, r9, r11
 	/* A[2] * B[4] */
 	LDR	lr, [r2, #16]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r9, r11, r12, lr
 	ADDS	r10, r10, r11
 	/* A[2] * B[5] */
 	LDR	lr, [r2, #20]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r10, r11, r12, lr
 	ADDS	r3, r3, r11
 	/* A[2] * B[6] */
 	LDR	lr, [r2, #24]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r3, r11, r12, lr
 	ADDS	r4, r4, r11
 	/* A[2] * B[7] */
 	LDR	lr, [r2, #28]
-	ADC	r5, r0, #0x0
+	ADC	r5, r0, #0
 	UMLAL	r4, r5, r12, lr
 	/* A[3] * B[0] */
 	LDR	r12, [r1, #12]
 	LDR	lr, [r2]
-	MOV	r11, #0x0
+	MOV	r11, #0
 	UMLAL	r6, r11, r12, lr
 	STR	r6, [sp, #12]
 	ADDS	r7, r7, r11
 	/* A[3] * B[1] */
 	LDR	lr, [r2, #4]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r7, r11, r12, lr
 	ADDS	r8, r8, r11
 	/* A[3] * B[2] */
 	LDR	lr, [r2, #8]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r8, r11, r12, lr
 	ADDS	r9, r9, r11
 	/* A[3] * B[3] */
 	LDR	lr, [r2, #12]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r9, r11, r12, lr
 	ADDS	r10, r10, r11
 	/* A[3] * B[4] */
 	LDR	lr, [r2, #16]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r10, r11, r12, lr
 	ADDS	r3, r3, r11
 	/* A[3] * B[5] */
 	LDR	lr, [r2, #20]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r3, r11, r12, lr
 	ADDS	r4, r4, r11
 	/* A[3] * B[6] */
 	LDR	lr, [r2, #24]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r4, r11, r12, lr
 	ADDS	r5, r5, r11
 	/* A[3] * B[7] */
 	LDR	lr, [r2, #28]
-	ADC	r6, r0, #0x0
+	ADC	r6, r0, #0
 	UMLAL	r5, r6, r12, lr
 	/* A[4] * B[0] */
 	LDR	r12, [r1, #16]
 	LDR	lr, [r2]
-	MOV	r11, #0x0
+	MOV	r11, #0
 	UMLAL	r7, r11, r12, lr
 	STR	r7, [sp, #16]
 	ADDS	r8, r8, r11
 	/* A[4] * B[1] */
 	LDR	lr, [r2, #4]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r8, r11, r12, lr
 	ADDS	r9, r9, r11
 	/* A[4] * B[2] */
 	LDR	lr, [r2, #8]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r9, r11, r12, lr
 	ADDS	r10, r10, r11
 	/* A[4] * B[3] */
 	LDR	lr, [r2, #12]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r10, r11, r12, lr
 	ADDS	r3, r3, r11
 	/* A[4] * B[4] */
 	LDR	lr, [r2, #16]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r3, r11, r12, lr
 	ADDS	r4, r4, r11
 	/* A[4] * B[5] */
 	LDR	lr, [r2, #20]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r4, r11, r12, lr
 	ADDS	r5, r5, r11
 	/* A[4] * B[6] */
 	LDR	lr, [r2, #24]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r5, r11, r12, lr
 	ADDS	r6, r6, r11
 	/* A[4] * B[7] */
 	LDR	lr, [r2, #28]
-	ADC	r7, r0, #0x0
+	ADC	r7, r0, #0
 	UMLAL	r6, r7, r12, lr
 	/* A[5] * B[0] */
 	LDR	r12, [r1, #20]
 	LDR	lr, [r2]
-	MOV	r11, #0x0
+	MOV	r11, #0
 	UMLAL	r8, r11, r12, lr
 	STR	r8, [sp, #20]
 	ADDS	r9, r9, r11
 	/* A[5] * B[1] */
 	LDR	lr, [r2, #4]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r9, r11, r12, lr
 	ADDS	r10, r10, r11
 	/* A[5] * B[2] */
 	LDR	lr, [r2, #8]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r10, r11, r12, lr
 	ADDS	r3, r3, r11
 	/* A[5] * B[3] */
 	LDR	lr, [r2, #12]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r3, r11, r12, lr
 	ADDS	r4, r4, r11
 	/* A[5] * B[4] */
 	LDR	lr, [r2, #16]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r4, r11, r12, lr
 	ADDS	r5, r5, r11
 	/* A[5] * B[5] */
 	LDR	lr, [r2, #20]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r5, r11, r12, lr
 	ADDS	r6, r6, r11
 	/* A[5] * B[6] */
 	LDR	lr, [r2, #24]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r6, r11, r12, lr
 	ADDS	r7, r7, r11
 	/* A[5] * B[7] */
 	LDR	lr, [r2, #28]
-	ADC	r8, r0, #0x0
+	ADC	r8, r0, #0
 	UMLAL	r7, r8, r12, lr
 	/* A[6] * B[0] */
 	LDR	r12, [r1, #24]
 	LDR	lr, [r2]
-	MOV	r11, #0x0
+	MOV	r11, #0
 	UMLAL	r9, r11, r12, lr
 	STR	r9, [sp, #24]
 	ADDS	r10, r10, r11
 	/* A[6] * B[1] */
 	LDR	lr, [r2, #4]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r10, r11, r12, lr
 	ADDS	r3, r3, r11
 	/* A[6] * B[2] */
 	LDR	lr, [r2, #8]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r3, r11, r12, lr
 	ADDS	r4, r4, r11
 	/* A[6] * B[3] */
 	LDR	lr, [r2, #12]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r4, r11, r12, lr
 	ADDS	r5, r5, r11
 	/* A[6] * B[4] */
 	LDR	lr, [r2, #16]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r5, r11, r12, lr
 	ADDS	r6, r6, r11
 	/* A[6] * B[5] */
 	LDR	lr, [r2, #20]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r6, r11, r12, lr
 	ADDS	r7, r7, r11
 	/* A[6] * B[6] */
 	LDR	lr, [r2, #24]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r7, r11, r12, lr
 	ADDS	r8, r8, r11
 	/* A[6] * B[7] */
 	LDR	lr, [r2, #28]
-	ADC	r9, r0, #0x0
+	ADC	r9, r0, #0
 	UMLAL	r8, r9, r12, lr
 	/* A[7] * B[0] */
 	LDR	r12, [r1, #28]
 	LDR	lr, [r2]
-	MOV	r11, #0x0
+	MOV	r11, #0
 	UMLAL	r10, r11, r12, lr
 	STR	r10, [sp, #28]
 	ADDS	r3, r3, r11
 	/* A[7] * B[1] */
 	LDR	lr, [r2, #4]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r3, r11, r12, lr
 	ADDS	r4, r4, r11
 	/* A[7] * B[2] */
 	LDR	lr, [r2, #8]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r4, r11, r12, lr
 	ADDS	r5, r5, r11
 	/* A[7] * B[3] */
 	LDR	lr, [r2, #12]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r5, r11, r12, lr
 	ADDS	r6, r6, r11
 	/* A[7] * B[4] */
 	LDR	lr, [r2, #16]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r6, r11, r12, lr
 	ADDS	r7, r7, r11
 	/* A[7] * B[5] */
 	LDR	lr, [r2, #20]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r7, r11, r12, lr
 	ADDS	r8, r8, r11
 	/* A[7] * B[6] */
 	LDR	lr, [r2, #24]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r8, r11, r12, lr
 	ADDS	r9, r9, r11
 	/* A[7] * B[7] */
 	LDR	lr, [r2, #28]
-	ADC	r10, r0, #0x0
+	ADC	r10, r0, #0
 	UMLAL	r9, r10, r12, lr
 	/* Reduce */
 	LDR	r2, [sp, #28]
 	MOV	lr, sp
-	MOV	r12, #0x26
+	MOV	r12, #38
 	UMULL	r10, r11, r10, r12
 	ADDS	r10, r10, r2
-	ADC	r11, r11, #0x0
-	MOV	r12, #0x13
+	ADC	r11, r11, #0
+	MOV	r12, #19
 	LSL	r11, r11, #1
 	ORR	r11, r11, r10, LSR #31
 	MUL	r11, r11, r12
 	LDM	lr!, {r1, r2}
-	MOV	r12, #0x26
+	MOV	r12, #38
 	ADDS	r1, r1, r11
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r1, r11, r3, r12
 	ADDS	r2, r2, r11
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r2, r11, r4, r12
 	LDM	lr!, {r3, r4}
 	ADDS	r3, r3, r11
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r3, r11, r5, r12
 	ADDS	r4, r4, r11
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r4, r11, r6, r12
 	LDM	lr!, {r5, r6}
 	ADDS	r5, r5, r11
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r5, r11, r7, r12
 	ADDS	r6, r6, r11
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r6, r11, r8, r12
 	LDM	lr!, {r7, r8}
 	ADDS	r7, r7, r11
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r7, r11, r9, r12
 	BFC	r10, #31, #1
 	ADDS	r8, r10, r11
 	/* Store */
 	LDR	r0, [sp, #36]
 	STM	r0, {r1, r2, r3, r4, r5, r6, r7, r8}
-	ADD	sp, sp, #0x28
+	ADD	sp, sp, #40
 	POP	{pc}
 	/* Cycle Count = 406 */
 	.size	fe_mul_op,.-fe_mul_op
+	.text
+	.align	4
+	.globl	fe_mul_op_full_red
+	WC_ASM_ATT_HIDDEN(fe_mul_op_full_red)
+	.type	fe_mul_op_full_red, %function
+fe_mul_op_full_red:
+	PUSH	{lr}
+	SUB	sp, sp, #40
+	STR	r0, [sp, #36]
+	MOV	r0, #0
+	LDR	r12, [r1]
+	/* A[0] * B[0] */
+	LDR	lr, [r2]
+	UMULL	r3, r4, r12, lr
+	/* A[0] * B[2] */
+	LDR	lr, [r2, #8]
+	UMULL	r5, r6, r12, lr
+	/* A[0] * B[4] */
+	LDR	lr, [r2, #16]
+	UMULL	r7, r8, r12, lr
+	/* A[0] * B[6] */
+	LDR	lr, [r2, #24]
+	UMULL	r9, r10, r12, lr
+	STR	r3, [sp]
+	/* A[0] * B[1] */
+	LDR	lr, [r2, #4]
+	MOV	r11, r0
+	UMLAL	r4, r11, r12, lr
+	ADDS	r5, r5, r11
+	/* A[0] * B[3] */
+	LDR	lr, [r2, #12]
+	ADCS	r6, r6, #0
+	ADC	r11, r0, #0
+	UMLAL	r6, r11, r12, lr
+	ADDS	r7, r7, r11
+	/* A[0] * B[5] */
+	LDR	lr, [r2, #20]
+	ADCS	r8, r8, #0
+	ADC	r11, r0, #0
+	UMLAL	r8, r11, r12, lr
+	ADDS	r9, r9, r11
+	/* A[0] * B[7] */
+	LDR	lr, [r2, #28]
+	ADCS	r10, r10, #0
+	ADC	r3, r0, #0
+	UMLAL	r10, r3, r12, lr
+	/* A[1] * B[0] */
+	LDR	r12, [r1, #4]
+	LDR	lr, [r2]
+	MOV	r11, #0
+	UMLAL	r4, r11, r12, lr
+	STR	r4, [sp, #4]
+	ADDS	r5, r5, r11
+	/* A[1] * B[1] */
+	LDR	lr, [r2, #4]
+	ADC	r11, r0, #0
+	UMLAL	r5, r11, r12, lr
+	ADDS	r6, r6, r11
+	/* A[1] * B[2] */
+	LDR	lr, [r2, #8]
+	ADC	r11, r0, #0
+	UMLAL	r6, r11, r12, lr
+	ADDS	r7, r7, r11
+	/* A[1] * B[3] */
+	LDR	lr, [r2, #12]
+	ADC	r11, r0, #0
+	UMLAL	r7, r11, r12, lr
+	ADDS	r8, r8, r11
+	/* A[1] * B[4] */
+	LDR	lr, [r2, #16]
+	ADC	r11, r0, #0
+	UMLAL	r8, r11, r12, lr
+	ADDS	r9, r9, r11
+	/* A[1] * B[5] */
+	LDR	lr, [r2, #20]
+	ADC	r11, r0, #0
+	UMLAL	r9, r11, r12, lr
+	ADDS	r10, r10, r11
+	/* A[1] * B[6] */
+	LDR	lr, [r2, #24]
+	ADC	r11, r0, #0
+	UMLAL	r10, r11, r12, lr
+	ADDS	r3, r3, r11
+	/* A[1] * B[7] */
+	LDR	lr, [r2, #28]
+	ADC	r4, r0, #0
+	UMLAL	r3, r4, r12, lr
+	/* A[2] * B[0] */
+	LDR	r12, [r1, #8]
+	LDR	lr, [r2]
+	MOV	r11, #0
+	UMLAL	r5, r11, r12, lr
+	STR	r5, [sp, #8]
+	ADDS	r6, r6, r11
+	/* A[2] * B[1] */
+	LDR	lr, [r2, #4]
+	ADC	r11, r0, #0
+	UMLAL	r6, r11, r12, lr
+	ADDS	r7, r7, r11
+	/* A[2] * B[2] */
+	LDR	lr, [r2, #8]
+	ADC	r11, r0, #0
+	UMLAL	r7, r11, r12, lr
+	ADDS	r8, r8, r11
+	/* A[2] * B[3] */
+	LDR	lr, [r2, #12]
+	ADC	r11, r0, #0
+	UMLAL	r8, r11, r12, lr
+	ADDS	r9, r9, r11
+	/* A[2] * B[4] */
+	LDR	lr, [r2, #16]
+	ADC	r11, r0, #0
+	UMLAL	r9, r11, r12, lr
+	ADDS	r10, r10, r11
+	/* A[2] * B[5] */
+	LDR	lr, [r2, #20]
+	ADC	r11, r0, #0
+	UMLAL	r10, r11, r12, lr
+	ADDS	r3, r3, r11
+	/* A[2] * B[6] */
+	LDR	lr, [r2, #24]
+	ADC	r11, r0, #0
+	UMLAL	r3, r11, r12, lr
+	ADDS	r4, r4, r11
+	/* A[2] * B[7] */
+	LDR	lr, [r2, #28]
+	ADC	r5, r0, #0
+	UMLAL	r4, r5, r12, lr
+	/* A[3] * B[0] */
+	LDR	r12, [r1, #12]
+	LDR	lr, [r2]
+	MOV	r11, #0
+	UMLAL	r6, r11, r12, lr
+	STR	r6, [sp, #12]
+	ADDS	r7, r7, r11
+	/* A[3] * B[1] */
+	LDR	lr, [r2, #4]
+	ADC	r11, r0, #0
+	UMLAL	r7, r11, r12, lr
+	ADDS	r8, r8, r11
+	/* A[3] * B[2] */
+	LDR	lr, [r2, #8]
+	ADC	r11, r0, #0
+	UMLAL	r8, r11, r12, lr
+	ADDS	r9, r9, r11
+	/* A[3] * B[3] */
+	LDR	lr, [r2, #12]
+	ADC	r11, r0, #0
+	UMLAL	r9, r11, r12, lr
+	ADDS	r10, r10, r11
+	/* A[3] * B[4] */
+	LDR	lr, [r2, #16]
+	ADC	r11, r0, #0
+	UMLAL	r10, r11, r12, lr
+	ADDS	r3, r3, r11
+	/* A[3] * B[5] */
+	LDR	lr, [r2, #20]
+	ADC	r11, r0, #0
+	UMLAL	r3, r11, r12, lr
+	ADDS	r4, r4, r11
+	/* A[3] * B[6] */
+	LDR	lr, [r2, #24]
+	ADC	r11, r0, #0
+	UMLAL	r4, r11, r12, lr
+	ADDS	r5, r5, r11
+	/* A[3] * B[7] */
+	LDR	lr, [r2, #28]
+	ADC	r6, r0, #0
+	UMLAL	r5, r6, r12, lr
+	/* A[4] * B[0] */
+	LDR	r12, [r1, #16]
+	LDR	lr, [r2]
+	MOV	r11, #0
+	UMLAL	r7, r11, r12, lr
+	STR	r7, [sp, #16]
+	ADDS	r8, r8, r11
+	/* A[4] * B[1] */
+	LDR	lr, [r2, #4]
+	ADC	r11, r0, #0
+	UMLAL	r8, r11, r12, lr
+	ADDS	r9, r9, r11
+	/* A[4] * B[2] */
+	LDR	lr, [r2, #8]
+	ADC	r11, r0, #0
+	UMLAL	r9, r11, r12, lr
+	ADDS	r10, r10, r11
+	/* A[4] * B[3] */
+	LDR	lr, [r2, #12]
+	ADC	r11, r0, #0
+	UMLAL	r10, r11, r12, lr
+	ADDS	r3, r3, r11
+	/* A[4] * B[4] */
+	LDR	lr, [r2, #16]
+	ADC	r11, r0, #0
+	UMLAL	r3, r11, r12, lr
+	ADDS	r4, r4, r11
+	/* A[4] * B[5] */
+	LDR	lr, [r2, #20]
+	ADC	r11, r0, #0
+	UMLAL	r4, r11, r12, lr
+	ADDS	r5, r5, r11
+	/* A[4] * B[6] */
+	LDR	lr, [r2, #24]
+	ADC	r11, r0, #0
+	UMLAL	r5, r11, r12, lr
+	ADDS	r6, r6, r11
+	/* A[4] * B[7] */
+	LDR	lr, [r2, #28]
+	ADC	r7, r0, #0
+	UMLAL	r6, r7, r12, lr
+	/* A[5] * B[0] */
+	LDR	r12, [r1, #20]
+	LDR	lr, [r2]
+	MOV	r11, #0
+	UMLAL	r8, r11, r12, lr
+	STR	r8, [sp, #20]
+	ADDS	r9, r9, r11
+	/* A[5] * B[1] */
+	LDR	lr, [r2, #4]
+	ADC	r11, r0, #0
+	UMLAL	r9, r11, r12, lr
+	ADDS	r10, r10, r11
+	/* A[5] * B[2] */
+	LDR	lr, [r2, #8]
+	ADC	r11, r0, #0
+	UMLAL	r10, r11, r12, lr
+	ADDS	r3, r3, r11
+	/* A[5] * B[3] */
+	LDR	lr, [r2, #12]
+	ADC	r11, r0, #0
+	UMLAL	r3, r11, r12, lr
+	ADDS	r4, r4, r11
+	/* A[5] * B[4] */
+	LDR	lr, [r2, #16]
+	ADC	r11, r0, #0
+	UMLAL	r4, r11, r12, lr
+	ADDS	r5, r5, r11
+	/* A[5] * B[5] */
+	LDR	lr, [r2, #20]
+	ADC	r11, r0, #0
+	UMLAL	r5, r11, r12, lr
+	ADDS	r6, r6, r11
+	/* A[5] * B[6] */
+	LDR	lr, [r2, #24]
+	ADC	r11, r0, #0
+	UMLAL	r6, r11, r12, lr
+	ADDS	r7, r7, r11
+	/* A[5] * B[7] */
+	LDR	lr, [r2, #28]
+	ADC	r8, r0, #0
+	UMLAL	r7, r8, r12, lr
+	/* A[6] * B[0] */
+	LDR	r12, [r1, #24]
+	LDR	lr, [r2]
+	MOV	r11, #0
+	UMLAL	r9, r11, r12, lr
+	STR	r9, [sp, #24]
+	ADDS	r10, r10, r11
+	/* A[6] * B[1] */
+	LDR	lr, [r2, #4]
+	ADC	r11, r0, #0
+	UMLAL	r10, r11, r12, lr
+	ADDS	r3, r3, r11
+	/* A[6] * B[2] */
+	LDR	lr, [r2, #8]
+	ADC	r11, r0, #0
+	UMLAL	r3, r11, r12, lr
+	ADDS	r4, r4, r11
+	/* A[6] * B[3] */
+	LDR	lr, [r2, #12]
+	ADC	r11, r0, #0
+	UMLAL	r4, r11, r12, lr
+	ADDS	r5, r5, r11
+	/* A[6] * B[4] */
+	LDR	lr, [r2, #16]
+	ADC	r11, r0, #0
+	UMLAL	r5, r11, r12, lr
+	ADDS	r6, r6, r11
+	/* A[6] * B[5] */
+	LDR	lr, [r2, #20]
+	ADC	r11, r0, #0
+	UMLAL	r6, r11, r12, lr
+	ADDS	r7, r7, r11
+	/* A[6] * B[6] */
+	LDR	lr, [r2, #24]
+	ADC	r11, r0, #0
+	UMLAL	r7, r11, r12, lr
+	ADDS	r8, r8, r11
+	/* A[6] * B[7] */
+	LDR	lr, [r2, #28]
+	ADC	r9, r0, #0
+	UMLAL	r8, r9, r12, lr
+	/* A[7] * B[0] */
+	LDR	r12, [r1, #28]
+	LDR	lr, [r2]
+	MOV	r11, #0
+	UMLAL	r10, r11, r12, lr
+	STR	r10, [sp, #28]
+	ADDS	r3, r3, r11
+	/* A[7] * B[1] */
+	LDR	lr, [r2, #4]
+	ADC	r11, r0, #0
+	UMLAL	r3, r11, r12, lr
+	ADDS	r4, r4, r11
+	/* A[7] * B[2] */
+	LDR	lr, [r2, #8]
+	ADC	r11, r0, #0
+	UMLAL	r4, r11, r12, lr
+	ADDS	r5, r5, r11
+	/* A[7] * B[3] */
+	LDR	lr, [r2, #12]
+	ADC	r11, r0, #0
+	UMLAL	r5, r11, r12, lr
+	ADDS	r6, r6, r11
+	/* A[7] * B[4] */
+	LDR	lr, [r2, #16]
+	ADC	r11, r0, #0
+	UMLAL	r6, r11, r12, lr
+	ADDS	r7, r7, r11
+	/* A[7] * B[5] */
+	LDR	lr, [r2, #20]
+	ADC	r11, r0, #0
+	UMLAL	r7, r11, r12, lr
+	ADDS	r8, r8, r11
+	/* A[7] * B[6] */
+	LDR	lr, [r2, #24]
+	ADC	r11, r0, #0
+	UMLAL	r8, r11, r12, lr
+	ADDS	r9, r9, r11
+	/* A[7] * B[7] */
+	LDR	lr, [r2, #28]
+	ADC	r10, r0, #0
+	UMLAL	r9, r10, r12, lr
+	/* Reduce */
+	LDR	r2, [sp, #28]
+	MOV	lr, sp
+	MOV	r12, #38
+	UMULL	r10, r11, r10, r12
+	ADDS	r10, r10, r2
+	ADC	r11, r11, #0
+	MOV	r12, #19
+	LSL	r11, r11, #1
+	ORR	r11, r11, r10, LSR #31
+	MUL	r11, r11, r12
+	LDM	lr!, {r1, r2}
+	MOV	r12, #38
+	ADDS	r1, r1, r11
+	ADC	r11, r0, #0
+	UMLAL	r1, r11, r3, r12
+	ADDS	r2, r2, r11
+	ADC	r11, r0, #0
+	UMLAL	r2, r11, r4, r12
+	LDM	lr!, {r3, r4}
+	ADDS	r3, r3, r11
+	ADC	r11, r0, #0
+	UMLAL	r3, r11, r5, r12
+	ADDS	r4, r4, r11
+	ADC	r11, r0, #0
+	UMLAL	r4, r11, r6, r12
+	LDM	lr!, {r5, r6}
+	ADDS	r5, r5, r11
+	ADC	r11, r0, #0
+	UMLAL	r5, r11, r7, r12
+	ADDS	r6, r6, r11
+	ADC	r11, r0, #0
+	UMLAL	r6, r11, r8, r12
+	LDM	lr!, {r7, r8}
+	ADDS	r7, r7, r11
+	ADC	r11, r0, #0
+	UMLAL	r7, r11, r9, r12
+	BFC	r10, #31, #1
+	ADDS	r8, r10, r11
+	ADDS	r11, r1, #19
+	ADCS	r11, r2, #0
+	ADCS	r11, r3, #0
+	ADCS	r11, r4, #0
+	ADCS	r11, r5, #0
+	ADCS	r11, r6, #0
+	ADCS	r11, r7, #0
+	ADC	r11, r8, #0
+	ASR	r11, r11, #31
+	AND	r11, r11, #19
+	ADDS	r1, r1, r11
+	ADCS	r2, r2, #0
+	ADCS	r3, r3, #0
+	ADCS	r4, r4, #0
+	ADCS	r5, r5, #0
+	ADCS	r6, r6, #0
+	ADCS	r7, r7, #0
+	ADC	r8, r8, #0
+	BFC	r8, #31, #1
+	/* Store */
+	LDR	r0, [sp, #36]
+	STM	r0, {r1, r2, r3, r4, r5, r6, r7, r8}
+	ADD	sp, sp, #40
+	POP	{pc}
+	/* Cycle Count = 425 */
+	.size	fe_mul_op_full_red,.-fe_mul_op_full_red
 #else
 	.text
 	.align	4
 	.globl	fe_mul_op
+	WC_ASM_ATT_HIDDEN(fe_mul_op)
 	.type	fe_mul_op, %function
 fe_mul_op:
 	PUSH	{lr}
-	SUB	sp, sp, #0x2c
+	SUB	sp, sp, #44
 	STRD	r0, r1, [sp, #36]
 	MOV	lr, r2
 	LDM	r1, {r0, r1, r2, r3}
@@ -1922,54 +2338,54 @@ fe_mul_op:
 	UMAAL	r9, r10, r2, r4
 	UMAAL	r10, r11, r3, r4
 	LDM	lr, {r4, r5, r6, r7}
-	MOV	r12, #0x0
+	MOV	r12, #0
 	UMLAL	r8, r12, r0, r4
 	UMAAL	r9, r12, r1, r4
 	UMAAL	r10, r12, r2, r4
 	UMAAL	r11, r12, r3, r4
-	MOV	r4, #0x0
+	MOV	r4, #0
 	UMLAL	r9, r4, r0, r5
 	UMAAL	r10, r4, r1, r5
 	UMAAL	r11, r4, r2, r5
 	UMAAL	r12, r4, r3, r5
-	MOV	r5, #0x0
+	MOV	r5, #0
 	UMLAL	r10, r5, r0, r6
 	UMAAL	r11, r5, r1, r6
 	UMAAL	r12, r5, r2, r6
 	UMAAL	r4, r5, r3, r6
-	MOV	r6, #0x0
+	MOV	r6, #0
 	UMLAL	r11, r6, r0, r7
 	LDR	r0, [sp, #40]
 	UMAAL	r12, r6, r1, r7
-	ADD	r0, r0, #0x10
+	ADD	r0, r0, #16
 	UMAAL	r4, r6, r2, r7
-	SUB	lr, lr, #0x10
+	SUB	lr, lr, #16
 	UMAAL	r5, r6, r3, r7
 	LDM	r0, {r0, r1, r2, r3}
 	STR	r6, [sp, #32]
 	LDM	lr!, {r6}
-	MOV	r7, #0x0
+	MOV	r7, #0
 	UMLAL	r8, r7, r0, r6
 	UMAAL	r9, r7, r1, r6
 	STR	r8, [sp, #16]
 	UMAAL	r10, r7, r2, r6
 	UMAAL	r11, r7, r3, r6
 	LDM	lr!, {r6}
-	MOV	r8, #0x0
+	MOV	r8, #0
 	UMLAL	r9, r8, r0, r6
 	UMAAL	r10, r8, r1, r6
 	STR	r9, [sp, #20]
 	UMAAL	r11, r8, r2, r6
 	UMAAL	r12, r8, r3, r6
 	LDM	lr!, {r6}
-	MOV	r9, #0x0
+	MOV	r9, #0
 	UMLAL	r10, r9, r0, r6
 	UMAAL	r11, r9, r1, r6
 	STR	r10, [sp, #24]
 	UMAAL	r12, r9, r2, r6
 	UMAAL	r4, r9, r3, r6
 	LDM	lr!, {r6}
-	MOV	r10, #0x0
+	MOV	r10, #0
 	UMLAL	r11, r10, r0, r6
 	UMAAL	r12, r10, r1, r6
 	STR	r11, [sp, #28]
@@ -1997,14 +2413,14 @@ fe_mul_op:
 	UMAAL	r9, r10, r3, lr
 	/* Reduce */
 	LDR	r0, [sp, #28]
-	MOV	lr, #0x25
+	MOV	lr, #37
 	UMAAL	r10, r0, r10, lr
-	MOV	lr, #0x13
+	MOV	lr, #19
 	LSL	r0, r0, #1
 	ORR	r0, r0, r10, LSR #31
 	MUL	r11, r0, lr
 	POP	{r0, r1, r2}
-	MOV	lr, #0x26
+	MOV	lr, #38
 	UMAAL	r0, r11, r12, lr
 	UMAAL	r1, r11, r4, lr
 	UMAAL	r2, r11, r5, lr
@@ -2019,14 +2435,167 @@ fe_mul_op:
 	LDR	lr, [sp, #8]
 	/* Store */
 	STM	lr, {r0, r1, r2, r3, r4, r5, r6, r7}
-	ADD	sp, sp, #0x10
+	ADD	sp, sp, #16
 	POP	{pc}
 	/* Cycle Count = 239 */
 	.size	fe_mul_op,.-fe_mul_op
-#endif /* WOLFSSL_SP_NO_UMAAL */
+	.text
+	.align	4
+	.globl	fe_mul_op_full_red
+	WC_ASM_ATT_HIDDEN(fe_mul_op_full_red)
+	.type	fe_mul_op_full_red, %function
+fe_mul_op_full_red:
+	PUSH	{lr}
+	SUB	sp, sp, #44
+	STRD	r0, r1, [sp, #36]
+	MOV	lr, r2
+	LDM	r1, {r0, r1, r2, r3}
+	LDM	lr!, {r4, r5, r6}
+	UMULL	r10, r11, r0, r4
+	UMULL	r12, r7, r1, r4
+	UMAAL	r11, r12, r0, r5
+	UMULL	r8, r9, r2, r4
+	UMAAL	r12, r8, r1, r5
+	UMAAL	r12, r7, r0, r6
+	UMAAL	r8, r9, r3, r4
+	STM	sp, {r10, r11, r12}
+	UMAAL	r7, r8, r2, r5
+	LDM	lr!, {r4}
+	UMULL	r10, r11, r1, r6
+	UMAAL	r8, r9, r2, r6
+	UMAAL	r7, r10, r0, r4
+	UMAAL	r8, r11, r3, r5
+	STR	r7, [sp, #12]
+	UMAAL	r8, r10, r1, r4
+	UMAAL	r9, r11, r3, r6
+	UMAAL	r9, r10, r2, r4
+	UMAAL	r10, r11, r3, r4
+	LDM	lr, {r4, r5, r6, r7}
+	MOV	r12, #0
+	UMLAL	r8, r12, r0, r4
+	UMAAL	r9, r12, r1, r4
+	UMAAL	r10, r12, r2, r4
+	UMAAL	r11, r12, r3, r4
+	MOV	r4, #0
+	UMLAL	r9, r4, r0, r5
+	UMAAL	r10, r4, r1, r5
+	UMAAL	r11, r4, r2, r5
+	UMAAL	r12, r4, r3, r5
+	MOV	r5, #0
+	UMLAL	r10, r5, r0, r6
+	UMAAL	r11, r5, r1, r6
+	UMAAL	r12, r5, r2, r6
+	UMAAL	r4, r5, r3, r6
+	MOV	r6, #0
+	UMLAL	r11, r6, r0, r7
+	LDR	r0, [sp, #40]
+	UMAAL	r12, r6, r1, r7
+	ADD	r0, r0, #16
+	UMAAL	r4, r6, r2, r7
+	SUB	lr, lr, #16
+	UMAAL	r5, r6, r3, r7
+	LDM	r0, {r0, r1, r2, r3}
+	STR	r6, [sp, #32]
+	LDM	lr!, {r6}
+	MOV	r7, #0
+	UMLAL	r8, r7, r0, r6
+	UMAAL	r9, r7, r1, r6
+	STR	r8, [sp, #16]
+	UMAAL	r10, r7, r2, r6
+	UMAAL	r11, r7, r3, r6
+	LDM	lr!, {r6}
+	MOV	r8, #0
+	UMLAL	r9, r8, r0, r6
+	UMAAL	r10, r8, r1, r6
+	STR	r9, [sp, #20]
+	UMAAL	r11, r8, r2, r6
+	UMAAL	r12, r8, r3, r6
+	LDM	lr!, {r6}
+	MOV	r9, #0
+	UMLAL	r10, r9, r0, r6
+	UMAAL	r11, r9, r1, r6
+	STR	r10, [sp, #24]
+	UMAAL	r12, r9, r2, r6
+	UMAAL	r4, r9, r3, r6
+	LDM	lr!, {r6}
+	MOV	r10, #0
+	UMLAL	r11, r10, r0, r6
+	UMAAL	r12, r10, r1, r6
+	STR	r11, [sp, #28]
+	UMAAL	r4, r10, r2, r6
+	UMAAL	r5, r10, r3, r6
+	LDM	lr!, {r11}
+	UMAAL	r12, r7, r0, r11
+	UMAAL	r4, r7, r1, r11
+	LDR	r6, [sp, #32]
+	UMAAL	r5, r7, r2, r11
+	UMAAL	r6, r7, r3, r11
+	LDM	lr!, {r11}
+	UMAAL	r4, r8, r0, r11
+	UMAAL	r5, r8, r1, r11
+	UMAAL	r6, r8, r2, r11
+	UMAAL	r7, r8, r3, r11
+	LDM	lr, {r11, lr}
+	UMAAL	r5, r9, r0, r11
+	UMAAL	r6, r10, r0, lr
+	UMAAL	r6, r9, r1, r11
+	UMAAL	r7, r10, r1, lr
+	UMAAL	r7, r9, r2, r11
+	UMAAL	r8, r10, r2, lr
+	UMAAL	r8, r9, r3, r11
+	UMAAL	r9, r10, r3, lr
+	/* Reduce */
+	LDR	r0, [sp, #28]
+	MOV	lr, #37
+	UMAAL	r10, r0, r10, lr
+	MOV	lr, #19
+	LSL	r0, r0, #1
+	ORR	r0, r0, r10, LSR #31
+	MUL	r11, r0, lr
+	POP	{r0, r1, r2}
+	MOV	lr, #38
+	UMAAL	r0, r11, r12, lr
+	UMAAL	r1, r11, r4, lr
+	UMAAL	r2, r11, r5, lr
+	POP	{r3, r4, r5}
+	UMAAL	r3, r11, r6, lr
+	UMAAL	r4, r11, r7, lr
+	UMAAL	r5, r11, r8, lr
+	POP	{r6}
+	BFC	r10, #31, #1
+	UMAAL	r6, r11, r9, lr
+	ADD	r7, r10, r11
+	ADDS	r11, r0, #19
+	ADCS	r11, r1, #0
+	ADCS	r11, r2, #0
+	ADCS	r11, r3, #0
+	ADCS	r11, r4, #0
+	ADCS	r11, r5, #0
+	ADCS	r11, r6, #0
+	ADC	r11, r7, #0
+	ASR	r11, r11, #31
+	AND	r11, r11, #19
+	ADDS	r0, r0, r11
+	ADCS	r1, r1, #0
+	ADCS	r2, r2, #0
+	ADCS	r3, r3, #0
+	ADCS	r4, r4, #0
+	ADCS	r5, r5, #0
+	ADCS	r6, r6, #0
+	ADC	r7, r7, #0
+	BFC	r7, #31, #1
+	LDR	lr, [sp, #8]
+	/* Store */
+	STM	lr, {r0, r1, r2, r3, r4, r5, r6, r7}
+	ADD	sp, sp, #16
+	POP	{pc}
+	/* Cycle Count = 258 */
+	.size	fe_mul_op_full_red,.-fe_mul_op_full_red
+#endif /* WOLFSSL_ARM_ARCH_7M */
 	.text
 	.align	4
 	.globl	fe_mul
+	WC_ASM_ATT_HIDDEN(fe_mul)
 	.type	fe_mul, %function
 fe_mul:
 	PUSH	{r4, r5, r6, r7, r8, r9, r10, r11, lr}
@@ -2034,17 +2603,18 @@ fe_mul:
 	POP	{r4, r5, r6, r7, r8, r9, r10, r11, pc}
 	/* Cycle Count = 24 */
 	.size	fe_mul,.-fe_mul
-#ifdef WOLFSSL_SP_NO_UMAAL
+#ifdef WOLFSSL_ARM_ARCH_7M
 	.text
 	.align	4
 	.globl	fe_sq_op
+	WC_ASM_ATT_HIDDEN(fe_sq_op)
 	.type	fe_sq_op, %function
 fe_sq_op:
 	PUSH	{lr}
 	SUB	sp, sp, #0x44
 	STR	r0, [sp, #64]
 	/* Square */
-	MOV	r0, #0x0
+	MOV	r0, #0
 	LDR	r12, [r1]
 	/* A[0] * A[1] */
 	LDR	lr, [r1, #4]
@@ -2060,137 +2630,137 @@ fe_sq_op:
 	UMULL	r10, r3, r12, lr
 	/* A[0] * A[2] */
 	LDR	lr, [r1, #8]
-	MOV	r11, #0x0
+	MOV	r11, #0
 	UMLAL	r5, r11, r12, lr
 	ADDS	r6, r6, r11
 	/* A[0] * A[4] */
 	LDR	lr, [r1, #16]
-	ADCS	r7, r7, #0x0
-	ADC	r11, r0, #0x0
+	ADCS	r7, r7, #0
+	ADC	r11, r0, #0
 	UMLAL	r7, r11, r12, lr
 	ADDS	r8, r8, r11
 	/* A[0] * A[6] */
 	LDR	lr, [r1, #24]
-	ADCS	r9, r9, #0x0
-	ADC	r11, r0, #0x0
+	ADCS	r9, r9, #0
+	ADC	r11, r0, #0
 	UMLAL	r9, r11, r12, lr
 	ADDS	r10, r10, r11
-	ADCS	r3, r3, #0x0
+	ADCS	r3, r3, #0
 	STR	r4, [sp, #4]
 	STR	r5, [sp, #8]
 	/* A[1] * A[2] */
 	LDR	r12, [r1, #4]
 	LDR	lr, [r1, #8]
-	MOV	r11, #0x0
+	MOV	r11, #0
 	UMLAL	r6, r11, r12, lr
 	STR	r6, [sp, #12]
 	ADDS	r7, r7, r11
 	/* A[1] * A[3] */
 	LDR	lr, [r1, #12]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r7, r11, r12, lr
 	STR	r7, [sp, #16]
 	ADDS	r8, r8, r11
 	/* A[1] * A[4] */
 	LDR	lr, [r1, #16]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r8, r11, r12, lr
 	ADDS	r9, r9, r11
 	/* A[1] * A[5] */
 	LDR	lr, [r1, #20]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r9, r11, r12, lr
 	ADDS	r10, r10, r11
 	/* A[1] * A[6] */
 	LDR	lr, [r1, #24]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r10, r11, r12, lr
 	ADDS	r3, r3, r11
 	/* A[1] * A[7] */
 	LDR	lr, [r1, #28]
-	ADC	r4, r0, #0x0
+	ADC	r4, r0, #0
 	UMLAL	r3, r4, r12, lr
 	/* A[2] * A[3] */
 	LDR	r12, [r1, #8]
 	LDR	lr, [r1, #12]
-	MOV	r11, #0x0
+	MOV	r11, #0
 	UMLAL	r8, r11, r12, lr
 	STR	r8, [sp, #20]
 	ADDS	r9, r9, r11
 	/* A[2] * A[4] */
 	LDR	lr, [r1, #16]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r9, r11, r12, lr
 	STR	r9, [sp, #24]
 	ADDS	r10, r10, r11
 	/* A[2] * A[5] */
 	LDR	lr, [r1, #20]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r10, r11, r12, lr
 	ADDS	r3, r3, r11
 	/* A[2] * A[6] */
 	LDR	lr, [r1, #24]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r3, r11, r12, lr
 	ADDS	r4, r4, r11
 	/* A[2] * A[7] */
 	LDR	lr, [r1, #28]
-	ADC	r5, r0, #0x0
+	ADC	r5, r0, #0
 	UMLAL	r4, r5, r12, lr
 	/* A[3] * A[4] */
 	LDR	r12, [r1, #12]
 	LDR	lr, [r1, #16]
-	MOV	r11, #0x0
+	MOV	r11, #0
 	UMLAL	r10, r11, r12, lr
 	STR	r10, [sp, #28]
 	ADDS	r3, r3, r11
 	/* A[3] * A[5] */
 	LDR	lr, [r1, #20]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r3, r11, r12, lr
 	ADDS	r4, r4, r11
 	/* A[3] * A[6] */
 	LDR	lr, [r1, #24]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r4, r11, r12, lr
 	ADDS	r5, r5, r11
 	/* A[3] * A[7] */
 	LDR	lr, [r1, #28]
-	ADC	r6, r0, #0x0
+	ADC	r6, r0, #0
 	UMLAL	r5, r6, r12, lr
 	/* A[4] * A[5] */
 	LDR	r12, [r1, #16]
 	LDR	lr, [r1, #20]
-	MOV	r11, #0x0
+	MOV	r11, #0
 	UMLAL	r4, r11, r12, lr
 	ADDS	r5, r5, r11
 	/* A[4] * A[6] */
 	LDR	lr, [r1, #24]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r5, r11, r12, lr
 	ADDS	r6, r6, r11
 	/* A[4] * A[7] */
 	LDR	lr, [r1, #28]
-	ADC	r7, r0, #0x0
+	ADC	r7, r0, #0
 	UMLAL	r6, r7, r12, lr
 	/* A[5] * A[6] */
 	LDR	r12, [r1, #20]
 	LDR	lr, [r1, #24]
-	MOV	r11, #0x0
+	MOV	r11, #0
 	UMLAL	r6, r11, r12, lr
 	ADDS	r7, r7, r11
 	/* A[5] * A[7] */
 	LDR	lr, [r1, #28]
-	ADC	r8, r0, #0x0
+	ADC	r8, r0, #0
 	UMLAL	r7, r8, r12, lr
 	/* A[6] * A[7] */
 	LDR	r12, [r1, #24]
 	LDR	lr, [r1, #28]
-	MOV	r9, #0x0
+	MOV	r9, #0
 	UMLAL	r8, r9, r12, lr
-	ADD	lr, sp, #0x20
+	ADD	lr, sp, #32
 	STM	lr, {r3, r4, r5, r6, r7, r8, r9}
-	ADD	lr, sp, #0x4
+	ADD	lr, sp, #4
 	LDM	lr, {r4, r5, r6, r7, r8, r9, r10}
 	ADDS	r4, r4, r4
 	ADCS	r5, r5, r5
@@ -2208,9 +2778,9 @@ fe_sq_op:
 	ADCS	r7, r7, r7
 	ADCS	r8, r8, r8
 	ADCS	r9, r9, r9
-	ADC	r10, r0, #0x0
+	ADC	r10, r0, #0
 	STM	lr, {r3, r4, r5, r6, r7, r8, r9, r10}
-	ADD	lr, sp, #0x4
+	ADD	lr, sp, #4
 	LDM	lr, {r4, r5, r6, r7, r8, r9, r10}
 	MOV	lr, sp
 	/* A[0] * A[0] */
@@ -2219,83 +2789,83 @@ fe_sq_op:
 	ADDS	r4, r4, r11
 	/* A[1] * A[1] */
 	LDR	r12, [r1, #4]
-	ADCS	r5, r5, #0x0
-	ADC	r11, r0, #0x0
+	ADCS	r5, r5, #0
+	ADC	r11, r0, #0
 	UMLAL	r5, r11, r12, r12
 	ADDS	r6, r6, r11
 	/* A[2] * A[2] */
 	LDR	r12, [r1, #8]
-	ADCS	r7, r7, #0x0
-	ADC	r11, r0, #0x0
+	ADCS	r7, r7, #0
+	ADC	r11, r0, #0
 	UMLAL	r7, r11, r12, r12
 	ADDS	r8, r8, r11
 	/* A[3] * A[3] */
 	LDR	r12, [r1, #12]
-	ADCS	r9, r9, #0x0
-	ADC	r11, r0, #0x0
+	ADCS	r9, r9, #0
+	ADC	r11, r0, #0
 	UMLAL	r9, r11, r12, r12
 	ADDS	r10, r10, r11
 	STM	lr!, {r3, r4, r5, r6, r7, r8, r9, r10}
 	LDM	lr, {r3, r4, r5, r6, r7, r8, r9, r10}
 	/* A[4] * A[4] */
 	LDR	r12, [r1, #16]
-	ADCS	r3, r3, #0x0
-	ADC	r11, r0, #0x0
+	ADCS	r3, r3, #0
+	ADC	r11, r0, #0
 	UMLAL	r3, r11, r12, r12
 	ADDS	r4, r4, r11
 	/* A[5] * A[5] */
 	LDR	r12, [r1, #20]
-	ADCS	r5, r5, #0x0
-	ADC	r11, r0, #0x0
+	ADCS	r5, r5, #0
+	ADC	r11, r0, #0
 	UMLAL	r5, r11, r12, r12
 	ADDS	r6, r6, r11
 	/* A[6] * A[6] */
 	LDR	r12, [r1, #24]
-	ADCS	r7, r7, #0x0
-	ADC	r11, r0, #0x0
+	ADCS	r7, r7, #0
+	ADC	r11, r0, #0
 	UMLAL	r7, r11, r12, r12
 	ADDS	r8, r8, r11
 	/* A[7] * A[7] */
 	LDR	r12, [r1, #28]
-	ADCS	r9, r9, #0x0
-	ADC	r10, r10, #0x0
+	ADCS	r9, r9, #0
+	ADC	r10, r10, #0
 	UMLAL	r9, r10, r12, r12
 	/* Reduce */
 	LDR	r2, [sp, #28]
 	MOV	lr, sp
-	MOV	r12, #0x26
+	MOV	r12, #38
 	UMULL	r10, r11, r10, r12
 	ADDS	r10, r10, r2
-	ADC	r11, r11, #0x0
-	MOV	r12, #0x13
+	ADC	r11, r11, #0
+	MOV	r12, #19
 	LSL	r11, r11, #1
 	ORR	r11, r11, r10, LSR #31
 	MUL	r11, r11, r12
 	LDM	lr!, {r1, r2}
-	MOV	r12, #0x26
+	MOV	r12, #38
 	ADDS	r1, r1, r11
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r1, r11, r3, r12
 	ADDS	r2, r2, r11
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r2, r11, r4, r12
 	LDM	lr!, {r3, r4}
 	ADDS	r3, r3, r11
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r3, r11, r5, r12
 	ADDS	r4, r4, r11
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r4, r11, r6, r12
 	LDM	lr!, {r5, r6}
 	ADDS	r5, r5, r11
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r5, r11, r7, r12
 	ADDS	r6, r6, r11
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r6, r11, r8, r12
 	LDM	lr!, {r7, r8}
 	ADDS	r7, r7, r11
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r7, r11, r9, r12
 	BFC	r10, #31, #1
 	ADDS	r8, r10, r11
@@ -2306,21 +2876,313 @@ fe_sq_op:
 	POP	{pc}
 	/* Cycle Count = 355 */
 	.size	fe_sq_op,.-fe_sq_op
+	.text
+	.align	4
+	.globl	fe_sq_op_full_red
+	WC_ASM_ATT_HIDDEN(fe_sq_op_full_red)
+	.type	fe_sq_op_full_red, %function
+fe_sq_op_full_red:
+	PUSH	{lr}
+	SUB	sp, sp, #0x44
+	STR	r0, [sp, #64]
+	/* Square */
+	MOV	r0, #0
+	LDR	r12, [r1]
+	/* A[0] * A[1] */
+	LDR	lr, [r1, #4]
+	UMULL	r4, r5, r12, lr
+	/* A[0] * A[3] */
+	LDR	lr, [r1, #12]
+	UMULL	r6, r7, r12, lr
+	/* A[0] * A[5] */
+	LDR	lr, [r1, #20]
+	UMULL	r8, r9, r12, lr
+	/* A[0] * A[7] */
+	LDR	lr, [r1, #28]
+	UMULL	r10, r3, r12, lr
+	/* A[0] * A[2] */
+	LDR	lr, [r1, #8]
+	MOV	r11, #0
+	UMLAL	r5, r11, r12, lr
+	ADDS	r6, r6, r11
+	/* A[0] * A[4] */
+	LDR	lr, [r1, #16]
+	ADCS	r7, r7, #0
+	ADC	r11, r0, #0
+	UMLAL	r7, r11, r12, lr
+	ADDS	r8, r8, r11
+	/* A[0] * A[6] */
+	LDR	lr, [r1, #24]
+	ADCS	r9, r9, #0
+	ADC	r11, r0, #0
+	UMLAL	r9, r11, r12, lr
+	ADDS	r10, r10, r11
+	ADCS	r3, r3, #0
+	STR	r4, [sp, #4]
+	STR	r5, [sp, #8]
+	/* A[1] * A[2] */
+	LDR	r12, [r1, #4]
+	LDR	lr, [r1, #8]
+	MOV	r11, #0
+	UMLAL	r6, r11, r12, lr
+	STR	r6, [sp, #12]
+	ADDS	r7, r7, r11
+	/* A[1] * A[3] */
+	LDR	lr, [r1, #12]
+	ADC	r11, r0, #0
+	UMLAL	r7, r11, r12, lr
+	STR	r7, [sp, #16]
+	ADDS	r8, r8, r11
+	/* A[1] * A[4] */
+	LDR	lr, [r1, #16]
+	ADC	r11, r0, #0
+	UMLAL	r8, r11, r12, lr
+	ADDS	r9, r9, r11
+	/* A[1] * A[5] */
+	LDR	lr, [r1, #20]
+	ADC	r11, r0, #0
+	UMLAL	r9, r11, r12, lr
+	ADDS	r10, r10, r11
+	/* A[1] * A[6] */
+	LDR	lr, [r1, #24]
+	ADC	r11, r0, #0
+	UMLAL	r10, r11, r12, lr
+	ADDS	r3, r3, r11
+	/* A[1] * A[7] */
+	LDR	lr, [r1, #28]
+	ADC	r4, r0, #0
+	UMLAL	r3, r4, r12, lr
+	/* A[2] * A[3] */
+	LDR	r12, [r1, #8]
+	LDR	lr, [r1, #12]
+	MOV	r11, #0
+	UMLAL	r8, r11, r12, lr
+	STR	r8, [sp, #20]
+	ADDS	r9, r9, r11
+	/* A[2] * A[4] */
+	LDR	lr, [r1, #16]
+	ADC	r11, r0, #0
+	UMLAL	r9, r11, r12, lr
+	STR	r9, [sp, #24]
+	ADDS	r10, r10, r11
+	/* A[2] * A[5] */
+	LDR	lr, [r1, #20]
+	ADC	r11, r0, #0
+	UMLAL	r10, r11, r12, lr
+	ADDS	r3, r3, r11
+	/* A[2] * A[6] */
+	LDR	lr, [r1, #24]
+	ADC	r11, r0, #0
+	UMLAL	r3, r11, r12, lr
+	ADDS	r4, r4, r11
+	/* A[2] * A[7] */
+	LDR	lr, [r1, #28]
+	ADC	r5, r0, #0
+	UMLAL	r4, r5, r12, lr
+	/* A[3] * A[4] */
+	LDR	r12, [r1, #12]
+	LDR	lr, [r1, #16]
+	MOV	r11, #0
+	UMLAL	r10, r11, r12, lr
+	STR	r10, [sp, #28]
+	ADDS	r3, r3, r11
+	/* A[3] * A[5] */
+	LDR	lr, [r1, #20]
+	ADC	r11, r0, #0
+	UMLAL	r3, r11, r12, lr
+	ADDS	r4, r4, r11
+	/* A[3] * A[6] */
+	LDR	lr, [r1, #24]
+	ADC	r11, r0, #0
+	UMLAL	r4, r11, r12, lr
+	ADDS	r5, r5, r11
+	/* A[3] * A[7] */
+	LDR	lr, [r1, #28]
+	ADC	r6, r0, #0
+	UMLAL	r5, r6, r12, lr
+	/* A[4] * A[5] */
+	LDR	r12, [r1, #16]
+	LDR	lr, [r1, #20]
+	MOV	r11, #0
+	UMLAL	r4, r11, r12, lr
+	ADDS	r5, r5, r11
+	/* A[4] * A[6] */
+	LDR	lr, [r1, #24]
+	ADC	r11, r0, #0
+	UMLAL	r5, r11, r12, lr
+	ADDS	r6, r6, r11
+	/* A[4] * A[7] */
+	LDR	lr, [r1, #28]
+	ADC	r7, r0, #0
+	UMLAL	r6, r7, r12, lr
+	/* A[5] * A[6] */
+	LDR	r12, [r1, #20]
+	LDR	lr, [r1, #24]
+	MOV	r11, #0
+	UMLAL	r6, r11, r12, lr
+	ADDS	r7, r7, r11
+	/* A[5] * A[7] */
+	LDR	lr, [r1, #28]
+	ADC	r8, r0, #0
+	UMLAL	r7, r8, r12, lr
+	/* A[6] * A[7] */
+	LDR	r12, [r1, #24]
+	LDR	lr, [r1, #28]
+	MOV	r9, #0
+	UMLAL	r8, r9, r12, lr
+	ADD	lr, sp, #32
+	STM	lr, {r3, r4, r5, r6, r7, r8, r9}
+	ADD	lr, sp, #4
+	LDM	lr, {r4, r5, r6, r7, r8, r9, r10}
+	ADDS	r4, r4, r4
+	ADCS	r5, r5, r5
+	ADCS	r6, r6, r6
+	ADCS	r7, r7, r7
+	ADCS	r8, r8, r8
+	ADCS	r9, r9, r9
+	ADCS	r10, r10, r10
+	STM	lr!, {r4, r5, r6, r7, r8, r9, r10}
+	LDM	lr, {r3, r4, r5, r6, r7, r8, r9}
+	ADCS	r3, r3, r3
+	ADCS	r4, r4, r4
+	ADCS	r5, r5, r5
+	ADCS	r6, r6, r6
+	ADCS	r7, r7, r7
+	ADCS	r8, r8, r8
+	ADCS	r9, r9, r9
+	ADC	r10, r0, #0
+	STM	lr, {r3, r4, r5, r6, r7, r8, r9, r10}
+	ADD	lr, sp, #4
+	LDM	lr, {r4, r5, r6, r7, r8, r9, r10}
+	MOV	lr, sp
+	/* A[0] * A[0] */
+	LDR	r12, [r1]
+	UMULL	r3, r11, r12, r12
+	ADDS	r4, r4, r11
+	/* A[1] * A[1] */
+	LDR	r12, [r1, #4]
+	ADCS	r5, r5, #0
+	ADC	r11, r0, #0
+	UMLAL	r5, r11, r12, r12
+	ADDS	r6, r6, r11
+	/* A[2] * A[2] */
+	LDR	r12, [r1, #8]
+	ADCS	r7, r7, #0
+	ADC	r11, r0, #0
+	UMLAL	r7, r11, r12, r12
+	ADDS	r8, r8, r11
+	/* A[3] * A[3] */
+	LDR	r12, [r1, #12]
+	ADCS	r9, r9, #0
+	ADC	r11, r0, #0
+	UMLAL	r9, r11, r12, r12
+	ADDS	r10, r10, r11
+	STM	lr!, {r3, r4, r5, r6, r7, r8, r9, r10}
+	LDM	lr, {r3, r4, r5, r6, r7, r8, r9, r10}
+	/* A[4] * A[4] */
+	LDR	r12, [r1, #16]
+	ADCS	r3, r3, #0
+	ADC	r11, r0, #0
+	UMLAL	r3, r11, r12, r12
+	ADDS	r4, r4, r11
+	/* A[5] * A[5] */
+	LDR	r12, [r1, #20]
+	ADCS	r5, r5, #0
+	ADC	r11, r0, #0
+	UMLAL	r5, r11, r12, r12
+	ADDS	r6, r6, r11
+	/* A[6] * A[6] */
+	LDR	r12, [r1, #24]
+	ADCS	r7, r7, #0
+	ADC	r11, r0, #0
+	UMLAL	r7, r11, r12, r12
+	ADDS	r8, r8, r11
+	/* A[7] * A[7] */
+	LDR	r12, [r1, #28]
+	ADCS	r9, r9, #0
+	ADC	r10, r10, #0
+	UMLAL	r9, r10, r12, r12
+	/* Reduce */
+	LDR	r2, [sp, #28]
+	MOV	lr, sp
+	MOV	r12, #38
+	UMULL	r10, r11, r10, r12
+	ADDS	r10, r10, r2
+	ADC	r11, r11, #0
+	MOV	r12, #19
+	LSL	r11, r11, #1
+	ORR	r11, r11, r10, LSR #31
+	MUL	r11, r11, r12
+	LDM	lr!, {r1, r2}
+	MOV	r12, #38
+	ADDS	r1, r1, r11
+	ADC	r11, r0, #0
+	UMLAL	r1, r11, r3, r12
+	ADDS	r2, r2, r11
+	ADC	r11, r0, #0
+	UMLAL	r2, r11, r4, r12
+	LDM	lr!, {r3, r4}
+	ADDS	r3, r3, r11
+	ADC	r11, r0, #0
+	UMLAL	r3, r11, r5, r12
+	ADDS	r4, r4, r11
+	ADC	r11, r0, #0
+	UMLAL	r4, r11, r6, r12
+	LDM	lr!, {r5, r6}
+	ADDS	r5, r5, r11
+	ADC	r11, r0, #0
+	UMLAL	r5, r11, r7, r12
+	ADDS	r6, r6, r11
+	ADC	r11, r0, #0
+	UMLAL	r6, r11, r8, r12
+	LDM	lr!, {r7, r8}
+	ADDS	r7, r7, r11
+	ADC	r11, r0, #0
+	UMLAL	r7, r11, r9, r12
+	BFC	r10, #31, #1
+	ADDS	r8, r10, r11
+	ADDS	r11, r1, #19
+	ADCS	r11, r2, #0
+	ADCS	r11, r3, #0
+	ADCS	r11, r4, #0
+	ADCS	r11, r5, #0
+	ADCS	r11, r6, #0
+	ADCS	r11, r7, #0
+	ADC	r11, r8, #0
+	ASR	r11, r11, #31
+	AND	r11, r11, #19
+	ADDS	r1, r1, r11
+	ADCS	r2, r2, #0
+	ADCS	r3, r3, #0
+	ADCS	r4, r4, #0
+	ADCS	r5, r5, #0
+	ADCS	r6, r6, #0
+	ADCS	r7, r7, #0
+	ADC	r8, r8, #0
+	BFC	r8, #31, #1
+	/* Store */
+	LDR	r0, [sp, #64]
+	STM	r0, {r1, r2, r3, r4, r5, r6, r7, r8}
+	ADD	sp, sp, #0x44
+	POP	{pc}
+	/* Cycle Count = 374 */
+	.size	fe_sq_op_full_red,.-fe_sq_op_full_red
 #else
 	.text
 	.align	4
 	.globl	fe_sq_op
+	WC_ASM_ATT_HIDDEN(fe_sq_op)
 	.type	fe_sq_op, %function
 fe_sq_op:
 	PUSH	{lr}
-	SUB	sp, sp, #0x20
+	SUB	sp, sp, #32
 	STR	r0, [sp, #28]
 	LDM	r1, {r0, r1, r2, r3, r4, r5, r6, r7}
 	/* Square */
 	UMULL	r9, r10, r0, r0
 	UMULL	r11, r12, r0, r1
 	ADDS	r11, r11, r11
-	MOV	lr, #0x0
+	MOV	lr, #0
 	UMAAL	r10, r11, lr, lr
 	STM	sp, {r9, r10}
 	MOV	r8, lr
@@ -2397,14 +3259,14 @@ fe_sq_op:
 	/* R[14] = r9 */
 	/* R[15] = r7 */
 	/* Reduce */
-	MOV	r6, #0x25
+	MOV	r6, #37
 	UMAAL	r7, r0, r7, r6
-	MOV	r6, #0x13
+	MOV	r6, #19
 	LSL	r0, r0, #1
 	ORR	r0, r0, r7, LSR #31
 	MUL	lr, r0, r6
 	POP	{r0, r1}
-	MOV	r6, #0x26
+	MOV	r6, #38
 	UMAAL	r0, lr, r12, r6
 	UMAAL	r1, lr, r11, r6
 	MOV	r12, r3
@@ -2425,10 +3287,149 @@ fe_sq_op:
 	POP	{pc}
 	/* Cycle Count = 179 */
 	.size	fe_sq_op,.-fe_sq_op
-#endif /* WOLFSSL_SP_NO_UMAAL */
+	.text
+	.align	4
+	.globl	fe_sq_op_full_red
+	WC_ASM_ATT_HIDDEN(fe_sq_op_full_red)
+	.type	fe_sq_op_full_red, %function
+fe_sq_op_full_red:
+	PUSH	{lr}
+	SUB	sp, sp, #32
+	STR	r0, [sp, #28]
+	LDM	r1, {r0, r1, r2, r3, r4, r5, r6, r7}
+	/* Square */
+	UMULL	r9, r10, r0, r0
+	UMULL	r11, r12, r0, r1
+	ADDS	r11, r11, r11
+	MOV	lr, #0
+	UMAAL	r10, r11, lr, lr
+	STM	sp, {r9, r10}
+	MOV	r8, lr
+	UMAAL	r8, r12, r0, r2
+	ADCS	r8, r8, r8
+	UMAAL	r8, r11, r1, r1
+	UMULL	r9, r10, r0, r3
+	UMAAL	r9, r12, r1, r2
+	ADCS	r9, r9, r9
+	UMAAL	r9, r11, lr, lr
+	STRD	r8, r9, [sp, #8]
+	MOV	r9, lr
+	UMAAL	r9, r10, r0, r4
+	UMAAL	r9, r12, r1, r3
+	ADCS	r9, r9, r9
+	UMAAL	r9, r11, r2, r2
+	STR	r9, [sp, #16]
+	UMULL	r9, r8, r0, r5
+	UMAAL	r9, r12, r1, r4
+	UMAAL	r9, r10, r2, r3
+	ADCS	r9, r9, r9
+	UMAAL	r9, r11, lr, lr
+	STR	r9, [sp, #20]
+	MOV	r9, lr
+	UMAAL	r9, r8, r0, r6
+	UMAAL	r9, r12, r1, r5
+	UMAAL	r9, r10, r2, r4
+	ADCS	r9, r9, r9
+	UMAAL	r9, r11, r3, r3
+	STR	r9, [sp, #24]
+	UMULL	r0, r9, r0, r7
+	UMAAL	r0, r8, r1, r6
+	UMAAL	r0, r12, r2, r5
+	UMAAL	r0, r10, r3, r4
+	ADCS	r0, r0, r0
+	UMAAL	r0, r11, lr, lr
+	/* R[7] = r0 */
+	UMAAL	r9, r8, r1, r7
+	UMAAL	r9, r10, r2, r6
+	UMAAL	r12, r9, r3, r5
+	ADCS	r12, r12, r12
+	UMAAL	r12, r11, r4, r4
+	/* R[8] = r12 */
+	UMAAL	r9, r8, r2, r7
+	UMAAL	r10, r9, r3, r6
+	MOV	r2, lr
+	UMAAL	r10, r2, r4, r5
+	ADCS	r10, r10, r10
+	UMAAL	r11, r10, lr, lr
+	/* R[9] = r11 */
+	UMAAL	r2, r8, r3, r7
+	UMAAL	r2, r9, r4, r6
+	ADCS	r3, r2, r2
+	UMAAL	r10, r3, r5, r5
+	/* R[10] = r10 */
+	MOV	r1, lr
+	UMAAL	r1, r8, r4, r7
+	UMAAL	r1, r9, r5, r6
+	ADCS	r4, r1, r1
+	UMAAL	r3, r4, lr, lr
+	/* R[11] = r3 */
+	UMAAL	r8, r9, r5, r7
+	ADCS	r8, r8, r8
+	UMAAL	r4, r8, r6, r6
+	/* R[12] = r4 */
+	MOV	r5, lr
+	UMAAL	r5, r9, r6, r7
+	ADCS	r5, r5, r5
+	UMAAL	r8, r5, lr, lr
+	/* R[13] = r8 */
+	ADCS	r9, r9, r9
+	UMAAL	r9, r5, r7, r7
+	ADCS	r7, r5, lr
+	/* R[14] = r9 */
+	/* R[15] = r7 */
+	/* Reduce */
+	MOV	r6, #37
+	UMAAL	r7, r0, r7, r6
+	MOV	r6, #19
+	LSL	r0, r0, #1
+	ORR	r0, r0, r7, LSR #31
+	MUL	lr, r0, r6
+	POP	{r0, r1}
+	MOV	r6, #38
+	UMAAL	r0, lr, r12, r6
+	UMAAL	r1, lr, r11, r6
+	MOV	r12, r3
+	MOV	r11, r4
+	POP	{r2, r3, r4}
+	UMAAL	r2, lr, r10, r6
+	UMAAL	r3, lr, r12, r6
+	UMAAL	r4, lr, r11, r6
+	MOV	r12, r6
+	POP	{r5, r6}
+	UMAAL	r5, lr, r8, r12
+	BFC	r7, #31, #1
+	UMAAL	r6, lr, r9, r12
+	ADD	r7, r7, lr
+	ADDS	lr, r0, #19
+	ADCS	lr, r1, #0
+	ADCS	lr, r2, #0
+	ADCS	lr, r3, #0
+	ADCS	lr, r4, #0
+	ADCS	lr, r5, #0
+	ADCS	lr, r6, #0
+	ADC	lr, r7, #0
+	ASR	lr, lr, #31
+	AND	lr, lr, #19
+	ADDS	r0, r0, lr
+	ADCS	r1, r1, #0
+	ADCS	r2, r2, #0
+	ADCS	r3, r3, #0
+	ADCS	r4, r4, #0
+	ADCS	r5, r5, #0
+	ADCS	r6, r6, #0
+	ADC	r7, r7, #0
+	BFC	r7, #31, #1
+	POP	{lr}
+	/* Store */
+	STM	lr, {r0, r1, r2, r3, r4, r5, r6, r7}
+	POP	{pc}
+	/* Cycle Count = 198 */
+	.size	fe_sq_op_full_red,.-fe_sq_op_full_red
+#endif /* WOLFSSL_ARM_ARCH_7M */
 	.text
 	.align	4
 	.globl	fe_sq
+	WC_ASM_ATT_HIDDEN(fe_sq)
 	.type	fe_sq, %function
 fe_sq:
 	PUSH	{r4, r5, r6, r7, r8, r9, r10, r11, lr}
@@ -2437,98 +3438,101 @@ fe_sq:
 	/* Cycle Count = 24 */
 	.size	fe_sq,.-fe_sq
 #ifdef HAVE_CURVE25519
-#ifdef WOLFSSL_SP_NO_UMAAL
+#ifdef WOLFSSL_ARM_ARCH_7M
 	.text
 	.align	4
 	.globl	fe_mul121666
+	WC_ASM_ATT_HIDDEN(fe_mul121666)
 	.type	fe_mul121666, %function
 fe_mul121666:
-	PUSH	{r4, r5, r6, r7, r8, r9, r10, r11, lr}
+	PUSH	{r4, r5, r6, r7, r8, r9, r10, lr}
 	/* Multiply by 121666 */
 	LDM	r1, {r2, r3, r4, r5, r6, r7, r8, r9}
-	MOV	r12, #0xdb42
-	MOVT	r12, #0x1
-	UMULL	r2, r10, r2, r12
-	UMULL	r3, r11, r3, r12
-	ADDS	r3, r3, r10
-	ADC	r11, r11, #0x0
-	UMULL	r4, r10, r4, r12
-	ADDS	r4, r4, r11
-	ADC	r10, r10, #0x0
-	UMULL	r5, r11, r5, r12
-	ADDS	r5, r5, r10
-	ADC	r11, r11, #0x0
-	UMULL	r6, r10, r6, r12
-	ADDS	r6, r6, r11
-	ADC	r10, r10, #0x0
-	UMULL	r7, r11, r7, r12
-	ADDS	r7, r7, r10
-	ADC	r11, r11, #0x0
-	UMULL	r8, r10, r8, r12
-	ADDS	r8, r8, r11
-	ADC	r10, r10, #0x0
-	UMULL	r9, r11, r9, r12
-	ADDS	r9, r9, r10
-	MOV	r12, #0x13
-	ADC	r11, r11, #0x0
-	LSL	r11, r11, #1
-	ORR	r11, r11, r9, LSR #31
-	MUL	r11, r11, r12
-	ADDS	r2, r2, r11
-	ADCS	r3, r3, #0x0
-	ADCS	r4, r4, #0x0
-	ADCS	r5, r5, #0x0
-	ADCS	r6, r6, #0x0
-	ADCS	r7, r7, #0x0
+	MOV	r10, #0xdb42
+	MOVT	r10, #0x1
+	UMULL	r2, r12, r2, r10
+	UMULL	r3, lr, r3, r10
+	ADDS	r3, r3, r12
+	ADC	lr, lr, #0
+	UMULL	r4, r12, r4, r10
+	ADDS	r4, r4, lr
+	ADC	r12, r12, #0
+	UMULL	r5, lr, r5, r10
+	ADDS	r5, r5, r12
+	ADC	lr, lr, #0
+	UMULL	r6, r12, r6, r10
+	ADDS	r6, r6, lr
+	ADC	r12, r12, #0
+	UMULL	r7, lr, r7, r10
+	ADDS	r7, r7, r12
+	ADC	lr, lr, #0
+	UMULL	r8, r12, r8, r10
+	ADDS	r8, r8, lr
+	ADC	r12, r12, #0
+	UMULL	r9, lr, r9, r10
+	ADDS	r9, r9, r12
+	MOV	r10, #19
+	ADC	lr, lr, #0
+	LSL	lr, lr, #1
+	ORR	lr, lr, r9, LSR #31
+	MUL	lr, lr, r10
+	ADDS	r2, r2, lr
+	ADCS	r3, r3, #0
+	ADCS	r4, r4, #0
+	ADCS	r5, r5, #0
+	ADCS	r6, r6, #0
+	ADCS	r7, r7, #0
 	BFC	r9, #31, #1
-	ADCS	r8, r8, #0x0
-	ADC	r9, r9, #0x0
+	ADCS	r8, r8, #0
+	ADC	r9, r9, #0
 	STM	r0, {r2, r3, r4, r5, r6, r7, r8, r9}
-	POP	{r4, r5, r6, r7, r8, r9, r10, r11, pc}
-	/* Cycle Count = 75 */
+	POP	{r4, r5, r6, r7, r8, r9, r10, pc}
+	/* Cycle Count = 73 */
 	.size	fe_mul121666,.-fe_mul121666
 #else
 	.text
 	.align	4
 	.globl	fe_mul121666
+	WC_ASM_ATT_HIDDEN(fe_mul121666)
 	.type	fe_mul121666, %function
 fe_mul121666:
-	PUSH	{r4, r5, r6, r7, r8, r9, r10, r11, lr}
+	PUSH	{r4, r5, r6, r7, r8, r9, r10, lr}
 	/* Multiply by 121666 */
 	LDM	r1, {r2, r3, r4, r5, r6, r7, r8, r9}
-	MOV	r11, #0xdb42
-	MOVT	r11, #0x1
-	UMULL	r2, r12, r2, r11
-	SUB	r10, r11, #0x1
-	UMAAL	r3, r12, r3, r10
-	UMAAL	r4, r12, r4, r10
-	UMAAL	r5, r12, r5, r10
-	UMAAL	r6, r12, r6, r10
-	UMAAL	r7, r12, r7, r10
-	UMAAL	r8, r12, r8, r10
-	MOV	r11, #0x13
-	UMAAL	r9, r12, r9, r10
-	LSL	r12, r12, #1
-	ORR	r12, r12, r9, LSR #31
-	MUL	r12, r12, r11
-	ADDS	r2, r2, r12
-	ADCS	r3, r3, #0x0
-	ADCS	r4, r4, #0x0
-	ADCS	r5, r5, #0x0
-	ADCS	r6, r6, #0x0
-	ADCS	r7, r7, #0x0
+	MOV	lr, #0xdb42
+	MOVT	lr, #0x1
+	UMULL	r2, r10, r2, lr
+	SUB	r12, lr, #1
+	UMAAL	r3, r10, r3, r12
+	UMAAL	r4, r10, r4, r12
+	UMAAL	r5, r10, r5, r12
+	UMAAL	r6, r10, r6, r12
+	UMAAL	r7, r10, r7, r12
+	UMAAL	r8, r10, r8, r12
+	MOV	lr, #19
+	UMAAL	r9, r10, r9, r12
+	LSL	r10, r10, #1
+	ORR	r10, r10, r9, LSR #31
+	MUL	r10, r10, lr
+	ADDS	r2, r2, r10
+	ADCS	r3, r3, #0
+	ADCS	r4, r4, #0
+	ADCS	r5, r5, #0
+	ADCS	r6, r6, #0
+	ADCS	r7, r7, #0
 	BFC	r9, #31, #1
-	ADCS	r8, r8, #0x0
-	ADC	r9, r9, #0x0
+	ADCS	r8, r8, #0
+	ADC	r9, r9, #0
 	STM	r0, {r2, r3, r4, r5, r6, r7, r8, r9}
-	POP	{r4, r5, r6, r7, r8, r9, r10, r11, pc}
-	/* Cycle Count = 69 */
+	POP	{r4, r5, r6, r7, r8, r9, r10, pc}
+	/* Cycle Count = 67 */
 	.size	fe_mul121666,.-fe_mul121666
-#endif /* WOLFSSL_SP_NO_UMAAL */
+#endif /* WOLFSSL_ARM_ARCH_7M */
 #ifndef WC_NO_CACHE_RESISTANT
 	.text
 	.align	4
 	.globl	curve25519
+	WC_ASM_ATT_HIDDEN(curve25519)
 	.type	curve25519, %function
 curve25519:
 	PUSH	{r4, r5, r6, r7, r8, r9, r10, r11, lr}
@@ -2536,29 +3540,29 @@ curve25519:
 	STR	r0, [sp, #160]
 	STR	r1, [sp, #164]
 	STR	r2, [sp, #168]
-	MOV	r1, #0x0
+	MOV	r1, #0
 	STR	r1, [sp, #172]
-	MOV	r4, #0x1
-	MOV	r5, #0x0
-	MOV	r6, #0x0
-	MOV	r7, #0x0
-	MOV	r8, #0x0
-	MOV	r9, #0x0
-	MOV	r10, #0x0
-	MOV	r11, #0x0
+	MOV	r4, #1
+	MOV	r5, #0
+	MOV	r6, #0
+	MOV	r7, #0
+	MOV	r8, #0
+	MOV	r9, #0
+	MOV	r10, #0
+	MOV	r11, #0
 	STM	r0, {r4, r5, r6, r7, r8, r9, r10, r11}
-	ADD	r3, sp, #0x20
+	ADD	r3, sp, #32
 	STM	r3, {r4, r5, r6, r7, r8, r9, r10, r11}
-	MOV	r4, #0x0
+	MOV	r4, #0
 	MOV	r3, sp
 	STM	r3, {r4, r5, r6, r7, r8, r9, r10, r11}
 	ADD	r3, sp, #0x40
 	/* Copy */
 	LDM	r2, {r4, r5, r6, r7, r8, r9, r10, r11}
 	STM	r3, {r4, r5, r6, r7, r8, r9, r10, r11}
-	MOV	r1, #0x1e
+	MOV	r1, #30
 	STR	r1, [sp, #180]
-	MOV	r2, #0x1c
+	MOV	r2, #28
 	STR	r2, [sp, #176]
 L_curve25519_words:
 L_curve25519_bits:
@@ -2566,14 +3570,14 @@ L_curve25519_bits:
 	LDR	r2, [r1, r2]
 	LDR	r1, [sp, #180]
 	LSR	r2, r2, r1
-	AND	r2, r2, #0x1
+	AND	r2, r2, #1
 	STR	r2, [sp, #184]
 	LDR	r1, [sp, #172]
 	EOR	r1, r1, r2
 	STR	r1, [sp, #172]
 	LDR	r0, [sp, #160]
 	/* Conditional Swap */
-	RSB	r1, r1, #0x0
+	RSB	r1, r1, #0
 	MOV	r3, r0
 	ADD	r12, sp, #0x40
 	LDM	r3, {r4, r5}
@@ -2626,9 +3630,9 @@ L_curve25519_bits:
 	STM	r12!, {r6, r7}
 	LDR	r1, [sp, #172]
 	/* Conditional Swap */
-	RSB	r1, r1, #0x0
+	RSB	r1, r1, #0
 	MOV	r3, sp
-	ADD	r12, sp, #0x20
+	ADD	r12, sp, #32
 	LDM	r3, {r4, r5}
 	LDM	r12, {r6, r7}
 	EOR	r8, r4, r6
@@ -2684,34 +3688,34 @@ L_curve25519_bits:
 	ADD	r1, sp, #0x80
 	LDR	r0, [sp, #160]
 	BL	fe_add_sub_op
-	ADD	r3, sp, #0x20
+	ADD	r3, sp, #32
 	ADD	r2, sp, #0x40
 	ADD	r1, sp, #0x60
 	MOV	r0, sp
 	BL	fe_add_sub_op
 	LDR	r2, [sp, #160]
 	ADD	r1, sp, #0x60
-	ADD	r0, sp, #0x20
-	BL	fe_mul_op
+	ADD	r0, sp, #32
+	BL	fe_mul_op_full_red
 	ADD	r2, sp, #0x80
 	MOV	r1, sp
 	MOV	r0, sp
-	BL	fe_mul_op
+	BL	fe_mul_op_full_red
 	ADD	r1, sp, #0x80
 	ADD	r0, sp, #0x80
-	BL	fe_sq_op
+	BL	fe_sq_op_full_red
 	LDR	r1, [sp, #160]
 	ADD	r0, sp, #0x60
-	BL	fe_sq_op
+	BL	fe_sq_op_full_red
 	MOV	r3, sp
-	ADD	r2, sp, #0x20
+	ADD	r2, sp, #32
 	MOV	r1, sp
 	ADD	r0, sp, #0x40
 	BL	fe_add_sub_op
 	ADD	r2, sp, #0x80
 	ADD	r1, sp, #0x60
 	LDR	r0, [sp, #160]
-	BL	fe_mul_op
+	BL	fe_mul_op_full_red
 	ADD	r2, sp, #0x80
 	ADD	r1, sp, #0x60
 	ADD	r0, sp, #0x60
@@ -2720,60 +3724,60 @@ L_curve25519_bits:
 	MOV	r0, sp
 	BL	fe_sq_op
 	ADD	r1, sp, #0x60
-	ADD	r0, sp, #0x20
+	ADD	r0, sp, #32
 	BL	fe_mul121666
 	ADD	r1, sp, #0x40
 	ADD	r0, sp, #0x40
-	BL	fe_sq_op
-	ADD	r2, sp, #0x20
+	BL	fe_sq_op_full_red
+	ADD	r2, sp, #32
 	ADD	r1, sp, #0x80
 	ADD	r0, sp, #0x80
 	BL	fe_add_op
 	MOV	r2, sp
 	LDR	r1, [sp, #168]
-	ADD	r0, sp, #0x20
-	BL	fe_mul_op
+	ADD	r0, sp, #32
+	BL	fe_mul_op_full_red
 	ADD	r2, sp, #0x80
 	ADD	r1, sp, #0x60
 	MOV	r0, sp
-	BL	fe_mul_op
+	BL	fe_mul_op_full_red
 	LDR	r2, [sp, #176]
 	LDR	r1, [sp, #180]
-	SUBS	r1, r1, #0x1
+	SUBS	r1, r1, #1
 	STR	r1, [sp, #180]
-#ifdef __GNUC__
+#if defined(__GNUC__) || defined(__ICCARM__) || defined(__IAR_SYSTEMS_ICC__)
 	BGE	L_curve25519_bits
 #else
 	BGE.W	L_curve25519_bits
 #endif
-	MOV	r1, #0x1f
+	MOV	r1, #31
 	STR	r1, [sp, #180]
-	SUBS	r2, r2, #0x4
+	SUBS	r2, r2, #4
 	STR	r2, [sp, #176]
-#ifdef __GNUC__
+#if defined(__GNUC__) || defined(__ICCARM__) || defined(__IAR_SYSTEMS_ICC__)
 	BGE	L_curve25519_words
 #else
 	BGE.W	L_curve25519_words
 #endif
 	/* Invert */
-	ADD	r1, sp, #0x0
-	ADD	r0, sp, #0x20
+	ADD	r1, sp, #0
+	ADD	r0, sp, #32
 	BL	fe_sq_op
-	ADD	r1, sp, #0x20
+	ADD	r1, sp, #32
 	ADD	r0, sp, #0x40
 	BL	fe_sq_op
 	ADD	r1, sp, #0x40
 	ADD	r0, sp, #0x40
 	BL	fe_sq_op
 	ADD	r2, sp, #0x40
-	ADD	r1, sp, #0x0
+	ADD	r1, sp, #0
 	ADD	r0, sp, #0x40
 	BL	fe_mul_op
 	ADD	r2, sp, #0x40
-	ADD	r1, sp, #0x20
-	ADD	r0, sp, #0x20
+	ADD	r1, sp, #32
+	ADD	r0, sp, #32
 	BL	fe_mul_op
-	ADD	r1, sp, #0x20
+	ADD	r1, sp, #32
 	ADD	r0, sp, #0x60
 	BL	fe_sq_op
 	ADD	r2, sp, #0x60
@@ -2783,14 +3787,14 @@ L_curve25519_bits:
 	ADD	r1, sp, #0x40
 	ADD	r0, sp, #0x60
 	BL	fe_sq_op
-	MOV	r12, #0x4
+	MOV	r12, #4
 L_curve25519_inv_1:
 	ADD	r1, sp, #0x60
 	ADD	r0, sp, #0x60
 	PUSH	{r12}
 	BL	fe_sq_op
 	POP	{r12}
-	SUBS	r12, r12, #0x1
+	SUBS	r12, r12, #1
 #if defined(__GNUC__) || defined(__ICCARM__) || defined(__IAR_SYSTEMS_ICC__)
 	BNE	L_curve25519_inv_1
 #else
@@ -2803,14 +3807,14 @@ L_curve25519_inv_1:
 	ADD	r1, sp, #0x40
 	ADD	r0, sp, #0x60
 	BL	fe_sq_op
-	MOV	r12, #0x9
+	MOV	r12, #9
 L_curve25519_inv_2:
 	ADD	r1, sp, #0x60
 	ADD	r0, sp, #0x60
 	PUSH	{r12}
 	BL	fe_sq_op
 	POP	{r12}
-	SUBS	r12, r12, #0x1
+	SUBS	r12, r12, #1
 #if defined(__GNUC__) || defined(__ICCARM__) || defined(__IAR_SYSTEMS_ICC__)
 	BNE	L_curve25519_inv_2
 #else
@@ -2823,14 +3827,14 @@ L_curve25519_inv_2:
 	ADD	r1, sp, #0x60
 	ADD	r0, sp, #0x80
 	BL	fe_sq_op
-	MOV	r12, #0x13
+	MOV	r12, #19
 L_curve25519_inv_3:
 	ADD	r1, sp, #0x80
 	ADD	r0, sp, #0x80
 	PUSH	{r12}
 	BL	fe_sq_op
 	POP	{r12}
-	SUBS	r12, r12, #0x1
+	SUBS	r12, r12, #1
 #if defined(__GNUC__) || defined(__ICCARM__) || defined(__IAR_SYSTEMS_ICC__)
 	BNE	L_curve25519_inv_3
 #else
@@ -2840,14 +3844,14 @@ L_curve25519_inv_3:
 	ADD	r1, sp, #0x80
 	ADD	r0, sp, #0x60
 	BL	fe_mul_op
-	MOV	r12, #0xa
+	MOV	r12, #10
 L_curve25519_inv_4:
 	ADD	r1, sp, #0x60
 	ADD	r0, sp, #0x60
 	PUSH	{r12}
 	BL	fe_sq_op
 	POP	{r12}
-	SUBS	r12, r12, #0x1
+	SUBS	r12, r12, #1
 #if defined(__GNUC__) || defined(__ICCARM__) || defined(__IAR_SYSTEMS_ICC__)
 	BNE	L_curve25519_inv_4
 #else
@@ -2860,14 +3864,14 @@ L_curve25519_inv_4:
 	ADD	r1, sp, #0x40
 	ADD	r0, sp, #0x60
 	BL	fe_sq_op
-	MOV	r12, #0x31
+	MOV	r12, #49
 L_curve25519_inv_5:
 	ADD	r1, sp, #0x60
 	ADD	r0, sp, #0x60
 	PUSH	{r12}
 	BL	fe_sq_op
 	POP	{r12}
-	SUBS	r12, r12, #0x1
+	SUBS	r12, r12, #1
 #if defined(__GNUC__) || defined(__ICCARM__) || defined(__IAR_SYSTEMS_ICC__)
 	BNE	L_curve25519_inv_5
 #else
@@ -2887,7 +3891,7 @@ L_curve25519_inv_6:
 	PUSH	{r12}
 	BL	fe_sq_op
 	POP	{r12}
-	SUBS	r12, r12, #0x1
+	SUBS	r12, r12, #1
 #if defined(__GNUC__) || defined(__ICCARM__) || defined(__IAR_SYSTEMS_ICC__)
 	BNE	L_curve25519_inv_6
 #else
@@ -2897,14 +3901,14 @@ L_curve25519_inv_6:
 	ADD	r1, sp, #0x80
 	ADD	r0, sp, #0x60
 	BL	fe_mul_op
-	MOV	r12, #0x32
+	MOV	r12, #50
 L_curve25519_inv_7:
 	ADD	r1, sp, #0x60
 	ADD	r0, sp, #0x60
 	PUSH	{r12}
 	BL	fe_sq_op
 	POP	{r12}
-	SUBS	r12, r12, #0x1
+	SUBS	r12, r12, #1
 #if defined(__GNUC__) || defined(__ICCARM__) || defined(__IAR_SYSTEMS_ICC__)
 	BNE	L_curve25519_inv_7
 #else
@@ -2914,36 +3918,60 @@ L_curve25519_inv_7:
 	ADD	r1, sp, #0x60
 	ADD	r0, sp, #0x40
 	BL	fe_mul_op
-	MOV	r12, #0x5
+	MOV	r12, #5
 L_curve25519_inv_8:
 	ADD	r1, sp, #0x40
 	ADD	r0, sp, #0x40
 	PUSH	{r12}
 	BL	fe_sq_op
 	POP	{r12}
-	SUBS	r12, r12, #0x1
+	SUBS	r12, r12, #1
 #if defined(__GNUC__) || defined(__ICCARM__) || defined(__IAR_SYSTEMS_ICC__)
 	BNE	L_curve25519_inv_8
 #else
 	BNE.N	L_curve25519_inv_8
 #endif
-	ADD	r2, sp, #0x20
+	ADD	r2, sp, #32
 	ADD	r1, sp, #0x40
-	ADD	r0, sp, #0x0
+	ADD	r0, sp, #0
 	BL	fe_mul_op
 	MOV	r2, sp
 	LDR	r1, [sp, #160]
 	LDR	r0, [sp, #160]
 	BL	fe_mul_op
-	MOV	r0, #0x0
+	/* Ensure result is less than modulus */
+	LDR	r0, [sp, #160]
+	LDM	r0, {r4, r5, r6, r7, r8, r9, r10, r11}
+	ADDS	r2, r4, #19
+	ADCS	r2, r5, #0
+	ADCS	r2, r6, #0
+	ADCS	r2, r7, #0
+	ADCS	r2, r8, #0
+	ADCS	r2, r9, #0
+	ADCS	r2, r10, #0
+	ADC	r2, r11, #0
+	ASR	r2, r2, #31
+	AND	r2, r2, #19
+	ADDS	r4, r4, r2
+	ADCS	r5, r5, #0
+	ADCS	r6, r6, #0
+	ADCS	r7, r7, #0
+	ADCS	r8, r8, #0
+	ADCS	r9, r9, #0
+	ADCS	r10, r10, #0
+	ADC	r11, r11, #0
+	BFC	r11, #31, #1
+	STM	r0, {r4, r5, r6, r7, r8, r9, r10, r11}
+	MOV	r0, #0
 	ADD	sp, sp, #0xbc
 	POP	{r4, r5, r6, r7, r8, r9, r10, r11, pc}
-	/* Cycle Count = 682 */
+	/* Cycle Count = 721 */
 	.size	curve25519,.-curve25519
 #else
 	.text
 	.align	4
 	.globl	curve25519
+	WC_ASM_ATT_HIDDEN(curve25519)
 	.type	curve25519, %function
 curve25519:
 	PUSH	{r4, r5, r6, r7, r8, r9, r10, r11, lr}
@@ -2952,24 +3980,24 @@ curve25519:
 	STR	r1, [sp, #160]
 	STR	r2, [sp, #172]
 	ADD	r5, sp, #0x40
-	ADD	r4, sp, #0x20
+	ADD	r4, sp, #32
 	STR	sp, [sp, #184]
 	STR	r5, [sp, #180]
 	STR	r4, [sp, #188]
-	MOV	r1, #0x0
+	MOV	r1, #0
 	STR	r1, [sp, #164]
-	MOV	r4, #0x1
-	MOV	r5, #0x0
-	MOV	r6, #0x0
-	MOV	r7, #0x0
-	MOV	r8, #0x0
-	MOV	r9, #0x0
-	MOV	r10, #0x0
-	MOV	r11, #0x0
+	MOV	r4, #1
+	MOV	r5, #0
+	MOV	r6, #0
+	MOV	r7, #0
+	MOV	r8, #0
+	MOV	r9, #0
+	MOV	r10, #0
+	MOV	r11, #0
 	STM	r0, {r4, r5, r6, r7, r8, r9, r10, r11}
-	ADD	r3, sp, #0x20
+	ADD	r3, sp, #32
 	STM	r3, {r4, r5, r6, r7, r8, r9, r10, r11}
-	MOV	r4, #0x0
+	MOV	r4, #0
 	MOV	r3, sp
 	STM	r3, {r4, r5, r6, r7, r8, r9, r10, r11}
 	ADD	r3, sp, #0x40
@@ -2980,10 +4008,10 @@ curve25519:
 L_curve25519_bits:
 	STR	r2, [sp, #168]
 	LDR	r1, [sp, #160]
-	AND	r4, r2, #0x1f
+	AND	r4, r2, #31
 	LSR	r2, r2, #5
 	LDR	r2, [r1, r2, LSL #2]
-	RSB	r4, r4, #0x1f
+	RSB	r4, r4, #31
 	LSL	r2, r2, r4
 	LDR	r1, [sp, #164]
 	EOR	r1, r1, r2
@@ -3015,17 +4043,17 @@ L_curve25519_bits:
 	LDR	r2, [sp, #176]
 	ADD	r1, sp, #0x60
 	LDR	r0, [sp, #188]
-	BL	fe_mul_op
+	BL	fe_mul_op_full_red
 	ADD	r2, sp, #0x80
 	LDR	r1, [sp, #184]
 	LDR	r0, [sp, #184]
-	BL	fe_mul_op
+	BL	fe_mul_op_full_red
 	ADD	r1, sp, #0x80
 	ADD	r0, sp, #0x60
-	BL	fe_sq_op
+	BL	fe_sq_op_full_red
 	LDR	r1, [sp, #176]
 	ADD	r0, sp, #0x80
-	BL	fe_sq_op
+	BL	fe_sq_op_full_red
 	LDR	r3, [sp, #184]
 	LDR	r2, [sp, #188]
 	LDR	r1, [sp, #184]
@@ -3034,7 +4062,7 @@ L_curve25519_bits:
 	ADD	r2, sp, #0x60
 	ADD	r1, sp, #0x80
 	LDR	r0, [sp, #176]
-	BL	fe_mul_op
+	BL	fe_mul_op_full_red
 	ADD	r2, sp, #0x60
 	ADD	r1, sp, #0x80
 	ADD	r0, sp, #0x80
@@ -3047,7 +4075,7 @@ L_curve25519_bits:
 	BL	fe_mul121666
 	LDR	r1, [sp, #180]
 	LDR	r0, [sp, #180]
-	BL	fe_sq_op
+	BL	fe_sq_op_full_red
 	LDR	r2, [sp, #188]
 	ADD	r1, sp, #0x60
 	ADD	r0, sp, #0x60
@@ -3055,17 +4083,17 @@ L_curve25519_bits:
 	LDR	r2, [sp, #184]
 	LDR	r1, [sp, #172]
 	LDR	r0, [sp, #188]
-	BL	fe_mul_op
+	BL	fe_mul_op_full_red
 	ADD	r2, sp, #0x60
 	ADD	r1, sp, #0x80
 	LDR	r0, [sp, #184]
-	BL	fe_mul_op
+	BL	fe_mul_op_full_red
 	LDR	r2, [sp, #168]
-	SUBS	r2, r2, #0x1
+	SUBS	r2, r2, #1
 #if defined(__GNUC__) || defined(__ICCARM__) || defined(__IAR_SYSTEMS_ICC__)
 	BGE	L_curve25519_bits
 #else
-	BGE.N	L_curve25519_bits
+	BGE.W	L_curve25519_bits
 #endif
 	/*   Cycle Count: 171 */
 	LDR	r1, [sp, #184]
@@ -3073,24 +4101,24 @@ L_curve25519_bits:
 	LDM	r1, {r4, r5, r6, r7, r8, r9, r10, r11}
 	STM	sp, {r4, r5, r6, r7, r8, r9, r10, r11}
 	/* Invert */
-	ADD	r1, sp, #0x0
-	ADD	r0, sp, #0x20
+	ADD	r1, sp, #0
+	ADD	r0, sp, #32
 	BL	fe_sq_op
-	ADD	r1, sp, #0x20
+	ADD	r1, sp, #32
 	ADD	r0, sp, #0x40
 	BL	fe_sq_op
 	ADD	r1, sp, #0x40
 	ADD	r0, sp, #0x40
 	BL	fe_sq_op
 	ADD	r2, sp, #0x40
-	ADD	r1, sp, #0x0
+	ADD	r1, sp, #0
 	ADD	r0, sp, #0x40
 	BL	fe_mul_op
 	ADD	r2, sp, #0x40
-	ADD	r1, sp, #0x20
-	ADD	r0, sp, #0x20
+	ADD	r1, sp, #32
+	ADD	r0, sp, #32
 	BL	fe_mul_op
-	ADD	r1, sp, #0x20
+	ADD	r1, sp, #32
 	ADD	r0, sp, #0x60
 	BL	fe_sq_op
 	ADD	r2, sp, #0x60
@@ -3100,14 +4128,14 @@ L_curve25519_bits:
 	ADD	r1, sp, #0x40
 	ADD	r0, sp, #0x60
 	BL	fe_sq_op
-	MOV	r12, #0x4
+	MOV	r12, #4
 L_curve25519_inv_1:
 	ADD	r1, sp, #0x60
 	ADD	r0, sp, #0x60
 	PUSH	{r12}
 	BL	fe_sq_op
 	POP	{r12}
-	SUBS	r12, r12, #0x1
+	SUBS	r12, r12, #1
 #if defined(__GNUC__) || defined(__ICCARM__) || defined(__IAR_SYSTEMS_ICC__)
 	BNE	L_curve25519_inv_1
 #else
@@ -3120,14 +4148,14 @@ L_curve25519_inv_1:
 	ADD	r1, sp, #0x40
 	ADD	r0, sp, #0x60
 	BL	fe_sq_op
-	MOV	r12, #0x9
+	MOV	r12, #9
 L_curve25519_inv_2:
 	ADD	r1, sp, #0x60
 	ADD	r0, sp, #0x60
 	PUSH	{r12}
 	BL	fe_sq_op
 	POP	{r12}
-	SUBS	r12, r12, #0x1
+	SUBS	r12, r12, #1
 #if defined(__GNUC__) || defined(__ICCARM__) || defined(__IAR_SYSTEMS_ICC__)
 	BNE	L_curve25519_inv_2
 #else
@@ -3140,14 +4168,14 @@ L_curve25519_inv_2:
 	ADD	r1, sp, #0x60
 	ADD	r0, sp, #0x80
 	BL	fe_sq_op
-	MOV	r12, #0x13
+	MOV	r12, #19
 L_curve25519_inv_3:
 	ADD	r1, sp, #0x80
 	ADD	r0, sp, #0x80
 	PUSH	{r12}
 	BL	fe_sq_op
 	POP	{r12}
-	SUBS	r12, r12, #0x1
+	SUBS	r12, r12, #1
 #if defined(__GNUC__) || defined(__ICCARM__) || defined(__IAR_SYSTEMS_ICC__)
 	BNE	L_curve25519_inv_3
 #else
@@ -3157,14 +4185,14 @@ L_curve25519_inv_3:
 	ADD	r1, sp, #0x80
 	ADD	r0, sp, #0x60
 	BL	fe_mul_op
-	MOV	r12, #0xa
+	MOV	r12, #10
 L_curve25519_inv_4:
 	ADD	r1, sp, #0x60
 	ADD	r0, sp, #0x60
 	PUSH	{r12}
 	BL	fe_sq_op
 	POP	{r12}
-	SUBS	r12, r12, #0x1
+	SUBS	r12, r12, #1
 #if defined(__GNUC__) || defined(__ICCARM__) || defined(__IAR_SYSTEMS_ICC__)
 	BNE	L_curve25519_inv_4
 #else
@@ -3177,14 +4205,14 @@ L_curve25519_inv_4:
 	ADD	r1, sp, #0x40
 	ADD	r0, sp, #0x60
 	BL	fe_sq_op
-	MOV	r12, #0x31
+	MOV	r12, #49
 L_curve25519_inv_5:
 	ADD	r1, sp, #0x60
 	ADD	r0, sp, #0x60
 	PUSH	{r12}
 	BL	fe_sq_op
 	POP	{r12}
-	SUBS	r12, r12, #0x1
+	SUBS	r12, r12, #1
 #if defined(__GNUC__) || defined(__ICCARM__) || defined(__IAR_SYSTEMS_ICC__)
 	BNE	L_curve25519_inv_5
 #else
@@ -3204,7 +4232,7 @@ L_curve25519_inv_6:
 	PUSH	{r12}
 	BL	fe_sq_op
 	POP	{r12}
-	SUBS	r12, r12, #0x1
+	SUBS	r12, r12, #1
 #if defined(__GNUC__) || defined(__ICCARM__) || defined(__IAR_SYSTEMS_ICC__)
 	BNE	L_curve25519_inv_6
 #else
@@ -3214,14 +4242,14 @@ L_curve25519_inv_6:
 	ADD	r1, sp, #0x80
 	ADD	r0, sp, #0x60
 	BL	fe_mul_op
-	MOV	r12, #0x32
+	MOV	r12, #50
 L_curve25519_inv_7:
 	ADD	r1, sp, #0x60
 	ADD	r0, sp, #0x60
 	PUSH	{r12}
 	BL	fe_sq_op
 	POP	{r12}
-	SUBS	r12, r12, #0x1
+	SUBS	r12, r12, #1
 #if defined(__GNUC__) || defined(__ICCARM__) || defined(__IAR_SYSTEMS_ICC__)
 	BNE	L_curve25519_inv_7
 #else
@@ -3231,22 +4259,22 @@ L_curve25519_inv_7:
 	ADD	r1, sp, #0x60
 	ADD	r0, sp, #0x40
 	BL	fe_mul_op
-	MOV	r12, #0x5
+	MOV	r12, #5
 L_curve25519_inv_8:
 	ADD	r1, sp, #0x40
 	ADD	r0, sp, #0x40
 	PUSH	{r12}
 	BL	fe_sq_op
 	POP	{r12}
-	SUBS	r12, r12, #0x1
+	SUBS	r12, r12, #1
 #if defined(__GNUC__) || defined(__ICCARM__) || defined(__IAR_SYSTEMS_ICC__)
 	BNE	L_curve25519_inv_8
 #else
 	BNE.N	L_curve25519_inv_8
 #endif
-	ADD	r2, sp, #0x20
+	ADD	r2, sp, #32
 	ADD	r1, sp, #0x40
-	ADD	r0, sp, #0x0
+	ADD	r0, sp, #0
 	BL	fe_mul_op
 	LDR	r2, [sp, #184]
 	LDR	r1, [sp, #176]
@@ -3255,29 +4283,38 @@ L_curve25519_inv_8:
 	/* Ensure result is less than modulus */
 	LDR	r0, [sp, #176]
 	LDM	r0, {r4, r5, r6, r7, r8, r9, r10, r11}
-	MOV	r2, #0x13
-	AND	r2, r2, r11, ASR #31
+	ADDS	r2, r4, #19
+	ADCS	r2, r5, #0
+	ADCS	r2, r6, #0
+	ADCS	r2, r7, #0
+	ADCS	r2, r8, #0
+	ADCS	r2, r9, #0
+	ADCS	r2, r10, #0
+	ADC	r2, r11, #0
+	ASR	r2, r2, #31
+	AND	r2, r2, #19
 	ADDS	r4, r4, r2
-	ADCS	r5, r5, #0x0
-	ADCS	r6, r6, #0x0
-	ADCS	r7, r7, #0x0
-	ADCS	r8, r8, #0x0
-	ADCS	r9, r9, #0x0
+	ADCS	r5, r5, #0
+	ADCS	r6, r6, #0
+	ADCS	r7, r7, #0
+	ADCS	r8, r8, #0
+	ADCS	r9, r9, #0
+	ADCS	r10, r10, #0
+	ADC	r11, r11, #0
 	BFC	r11, #31, #1
-	ADCS	r10, r10, #0x0
-	ADC	r11, r11, #0x0
 	STM	r0, {r4, r5, r6, r7, r8, r9, r10, r11}
-	MOV	r0, #0x0
+	MOV	r0, #0
 	ADD	sp, sp, #0xc0
 	POP	{r4, r5, r6, r7, r8, r9, r10, r11, pc}
-	/* Cycle Count = 589 */
+	/* Cycle Count = 597 */
 	.size	curve25519,.-curve25519
 #endif /* WC_NO_CACHE_RESISTANT */
 #endif /* HAVE_CURVE25519 */
-#ifdef HAVE_ED25519
+#if defined(HAVE_ED25519) || defined(WOLFSSL_CURVE25519_USE_ED25519)
 	.text
 	.align	4
 	.globl	fe_invert
+	WC_ASM_ATT_HIDDEN(fe_invert)
 	.type	fe_invert, %function
 fe_invert:
 	PUSH	{r4, r5, r6, r7, r8, r9, r10, r11, lr}
@@ -3289,16 +4326,16 @@ fe_invert:
 	MOV	r0, sp
 	BL	fe_sq_op
 	MOV	r1, sp
-	ADD	r0, sp, #0x20
+	ADD	r0, sp, #32
 	BL	fe_sq_op
-	ADD	r1, sp, #0x20
-	ADD	r0, sp, #0x20
+	ADD	r1, sp, #32
+	ADD	r0, sp, #32
 	BL	fe_sq_op
-	ADD	r2, sp, #0x20
+	ADD	r2, sp, #32
 	LDR	r1, [sp, #132]
-	ADD	r0, sp, #0x20
+	ADD	r0, sp, #32
 	BL	fe_mul_op
-	ADD	r2, sp, #0x20
+	ADD	r2, sp, #32
 	MOV	r1, sp
 	MOV	r0, sp
 	BL	fe_mul_op
@@ -3306,60 +4343,60 @@ fe_invert:
 	ADD	r0, sp, #0x40
 	BL	fe_sq_op
 	ADD	r2, sp, #0x40
-	ADD	r1, sp, #0x20
-	ADD	r0, sp, #0x20
+	ADD	r1, sp, #32
+	ADD	r0, sp, #32
 	BL	fe_mul_op
-	ADD	r1, sp, #0x20
+	ADD	r1, sp, #32
 	ADD	r0, sp, #0x40
 	BL	fe_sq_op
-	MOV	r12, #0x4
+	MOV	r12, #4
 L_fe_invert1:
 	ADD	r1, sp, #0x40
 	ADD	r0, sp, #0x40
 	PUSH	{r12}
 	BL	fe_sq_op
 	POP	{r12}
-	SUBS	r12, r12, #0x1
+	SUBS	r12, r12, #1
 #if defined(__GNUC__) || defined(__ICCARM__) || defined(__IAR_SYSTEMS_ICC__)
 	BNE	L_fe_invert1
 #else
 	BNE.N	L_fe_invert1
 #endif
-	ADD	r2, sp, #0x20
+	ADD	r2, sp, #32
 	ADD	r1, sp, #0x40
-	ADD	r0, sp, #0x20
+	ADD	r0, sp, #32
 	BL	fe_mul_op
-	ADD	r1, sp, #0x20
+	ADD	r1, sp, #32
 	ADD	r0, sp, #0x40
 	BL	fe_sq_op
-	MOV	r12, #0x9
+	MOV	r12, #9
 L_fe_invert2:
 	ADD	r1, sp, #0x40
 	ADD	r0, sp, #0x40
 	PUSH	{r12}
 	BL	fe_sq_op
 	POP	{r12}
-	SUBS	r12, r12, #0x1
+	SUBS	r12, r12, #1
 #if defined(__GNUC__) || defined(__ICCARM__) || defined(__IAR_SYSTEMS_ICC__)
 	BNE	L_fe_invert2
 #else
 	BNE.N	L_fe_invert2
 #endif
-	ADD	r2, sp, #0x20
+	ADD	r2, sp, #32
 	ADD	r1, sp, #0x40
 	ADD	r0, sp, #0x40
 	BL	fe_mul_op
 	ADD	r1, sp, #0x40
 	ADD	r0, sp, #0x60
 	BL	fe_sq_op
-	MOV	r12, #0x13
+	MOV	r12, #19
 L_fe_invert3:
 	ADD	r1, sp, #0x60
 	ADD	r0, sp, #0x60
 	PUSH	{r12}
 	BL	fe_sq_op
 	POP	{r12}
-	SUBS	r12, r12, #0x1
+	SUBS	r12, r12, #1
 #if defined(__GNUC__) || defined(__ICCARM__) || defined(__IAR_SYSTEMS_ICC__)
 	BNE	L_fe_invert3
 #else
@@ -3369,40 +4406,40 @@ L_fe_invert3:
 	ADD	r1, sp, #0x60
 	ADD	r0, sp, #0x40
 	BL	fe_mul_op
-	MOV	r12, #0xa
+	MOV	r12, #10
 L_fe_invert4:
 	ADD	r1, sp, #0x40
 	ADD	r0, sp, #0x40
 	PUSH	{r12}
 	BL	fe_sq_op
 	POP	{r12}
-	SUBS	r12, r12, #0x1
+	SUBS	r12, r12, #1
 #if defined(__GNUC__) || defined(__ICCARM__) || defined(__IAR_SYSTEMS_ICC__)
 	BNE	L_fe_invert4
 #else
 	BNE.N	L_fe_invert4
 #endif
-	ADD	r2, sp, #0x20
+	ADD	r2, sp, #32
 	ADD	r1, sp, #0x40
-	ADD	r0, sp, #0x20
+	ADD	r0, sp, #32
 	BL	fe_mul_op
-	ADD	r1, sp, #0x20
+	ADD	r1, sp, #32
 	ADD	r0, sp, #0x40
 	BL	fe_sq_op
-	MOV	r12, #0x31
+	MOV	r12, #49
 L_fe_invert5:
 	ADD	r1, sp, #0x40
 	ADD	r0, sp, #0x40
 	PUSH	{r12}
 	BL	fe_sq_op
 	POP	{r12}
-	SUBS	r12, r12, #0x1
+	SUBS	r12, r12, #1
 #if defined(__GNUC__) || defined(__ICCARM__) || defined(__IAR_SYSTEMS_ICC__)
 	BNE	L_fe_invert5
 #else
 	BNE.N	L_fe_invert5
 #endif
-	ADD	r2, sp, #0x20
+	ADD	r2, sp, #32
 	ADD	r1, sp, #0x40
 	ADD	r0, sp, #0x40
 	BL	fe_mul_op
@@ -3416,7 +4453,7 @@ L_fe_invert6:
 	PUSH	{r12}
 	BL	fe_sq_op
 	POP	{r12}
-	SUBS	r12, r12, #0x1
+	SUBS	r12, r12, #1
 #if defined(__GNUC__) || defined(__ICCARM__) || defined(__IAR_SYSTEMS_ICC__)
 	BNE	L_fe_invert6
 #else
@@ -3426,38 +4463,38 @@ L_fe_invert6:
 	ADD	r1, sp, #0x60
 	ADD	r0, sp, #0x40
 	BL	fe_mul_op
-	MOV	r12, #0x32
+	MOV	r12, #50
 L_fe_invert7:
 	ADD	r1, sp, #0x40
 	ADD	r0, sp, #0x40
 	PUSH	{r12}
 	BL	fe_sq_op
 	POP	{r12}
-	SUBS	r12, r12, #0x1
+	SUBS	r12, r12, #1
 #if defined(__GNUC__) || defined(__ICCARM__) || defined(__IAR_SYSTEMS_ICC__)
 	BNE	L_fe_invert7
 #else
 	BNE.N	L_fe_invert7
 #endif
-	ADD	r2, sp, #0x20
+	ADD	r2, sp, #32
 	ADD	r1, sp, #0x40
-	ADD	r0, sp, #0x20
+	ADD	r0, sp, #32
 	BL	fe_mul_op
-	MOV	r12, #0x5
+	MOV	r12, #5
 L_fe_invert8:
-	ADD	r1, sp, #0x20
-	ADD	r0, sp, #0x20
+	ADD	r1, sp, #32
+	ADD	r0, sp, #32
 	PUSH	{r12}
 	BL	fe_sq_op
 	POP	{r12}
-	SUBS	r12, r12, #0x1
+	SUBS	r12, r12, #1
 #if defined(__GNUC__) || defined(__ICCARM__) || defined(__IAR_SYSTEMS_ICC__)
 	BNE	L_fe_invert8
 #else
 	BNE.N	L_fe_invert8
 #endif
 	MOV	r2, sp
-	ADD	r1, sp, #0x20
+	ADD	r1, sp, #32
 	LDR	r0, [sp, #128]
 	BL	fe_mul_op
 	LDR	r1, [sp, #132]
@@ -3466,17 +4503,18 @@ L_fe_invert8:
 	POP	{r4, r5, r6, r7, r8, r9, r10, r11, pc}
 	/* Cycle Count = 292 */
 	.size	fe_invert,.-fe_invert
-#ifdef WOLFSSL_SP_NO_UMAAL
+#ifdef WOLFSSL_ARM_ARCH_7M
 	.text
 	.align	4
 	.globl	fe_sq2
+	WC_ASM_ATT_HIDDEN(fe_sq2)
 	.type	fe_sq2, %function
 fe_sq2:
 	PUSH	{lr}
 	SUB	sp, sp, #0x44
 	STR	r0, [sp, #64]
 	/* Square * 2 */
-	MOV	r0, #0x0
+	MOV	r0, #0
 	LDR	r12, [r1]
 	/* A[0] * A[1] */
 	LDR	lr, [r1, #4]
@@ -3492,137 +4530,137 @@ fe_sq2:
 	UMULL	r10, r3, r12, lr
 	/* A[0] * A[2] */
 	LDR	lr, [r1, #8]
-	MOV	r11, #0x0
+	MOV	r11, #0
 	UMLAL	r5, r11, r12, lr
 	ADDS	r6, r6, r11
 	/* A[0] * A[4] */
 	LDR	lr, [r1, #16]
-	ADCS	r7, r7, #0x0
-	ADC	r11, r0, #0x0
+	ADCS	r7, r7, #0
+	ADC	r11, r0, #0
 	UMLAL	r7, r11, r12, lr
 	ADDS	r8, r8, r11
 	/* A[0] * A[6] */
 	LDR	lr, [r1, #24]
-	ADCS	r9, r9, #0x0
-	ADC	r11, r0, #0x0
+	ADCS	r9, r9, #0
+	ADC	r11, r0, #0
 	UMLAL	r9, r11, r12, lr
 	ADDS	r10, r10, r11
-	ADCS	r3, r3, #0x0
+	ADCS	r3, r3, #0
 	STR	r4, [sp, #4]
 	STR	r5, [sp, #8]
 	/* A[1] * A[2] */
 	LDR	r12, [r1, #4]
 	LDR	lr, [r1, #8]
-	MOV	r11, #0x0
+	MOV	r11, #0
 	UMLAL	r6, r11, r12, lr
 	STR	r6, [sp, #12]
 	ADDS	r7, r7, r11
 	/* A[1] * A[3] */
 	LDR	lr, [r1, #12]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r7, r11, r12, lr
 	STR	r7, [sp, #16]
 	ADDS	r8, r8, r11
 	/* A[1] * A[4] */
 	LDR	lr, [r1, #16]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r8, r11, r12, lr
 	ADDS	r9, r9, r11
 	/* A[1] * A[5] */
 	LDR	lr, [r1, #20]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r9, r11, r12, lr
 	ADDS	r10, r10, r11
 	/* A[1] * A[6] */
 	LDR	lr, [r1, #24]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r10, r11, r12, lr
 	ADDS	r3, r3, r11
 	/* A[1] * A[7] */
 	LDR	lr, [r1, #28]
-	ADC	r4, r0, #0x0
+	ADC	r4, r0, #0
 	UMLAL	r3, r4, r12, lr
 	/* A[2] * A[3] */
 	LDR	r12, [r1, #8]
 	LDR	lr, [r1, #12]
-	MOV	r11, #0x0
+	MOV	r11, #0
 	UMLAL	r8, r11, r12, lr
 	STR	r8, [sp, #20]
 	ADDS	r9, r9, r11
 	/* A[2] * A[4] */
 	LDR	lr, [r1, #16]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r9, r11, r12, lr
 	STR	r9, [sp, #24]
 	ADDS	r10, r10, r11
 	/* A[2] * A[5] */
 	LDR	lr, [r1, #20]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r10, r11, r12, lr
 	ADDS	r3, r3, r11
 	/* A[2] * A[6] */
 	LDR	lr, [r1, #24]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r3, r11, r12, lr
 	ADDS	r4, r4, r11
 	/* A[2] * A[7] */
 	LDR	lr, [r1, #28]
-	ADC	r5, r0, #0x0
+	ADC	r5, r0, #0
 	UMLAL	r4, r5, r12, lr
 	/* A[3] * A[4] */
 	LDR	r12, [r1, #12]
 	LDR	lr, [r1, #16]
-	MOV	r11, #0x0
+	MOV	r11, #0
 	UMLAL	r10, r11, r12, lr
 	STR	r10, [sp, #28]
 	ADDS	r3, r3, r11
 	/* A[3] * A[5] */
 	LDR	lr, [r1, #20]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r3, r11, r12, lr
 	ADDS	r4, r4, r11
 	/* A[3] * A[6] */
 	LDR	lr, [r1, #24]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r4, r11, r12, lr
 	ADDS	r5, r5, r11
 	/* A[3] * A[7] */
 	LDR	lr, [r1, #28]
-	ADC	r6, r0, #0x0
+	ADC	r6, r0, #0
 	UMLAL	r5, r6, r12, lr
 	/* A[4] * A[5] */
 	LDR	r12, [r1, #16]
 	LDR	lr, [r1, #20]
-	MOV	r11, #0x0
+	MOV	r11, #0
 	UMLAL	r4, r11, r12, lr
 	ADDS	r5, r5, r11
 	/* A[4] * A[6] */
 	LDR	lr, [r1, #24]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r5, r11, r12, lr
 	ADDS	r6, r6, r11
 	/* A[4] * A[7] */
 	LDR	lr, [r1, #28]
-	ADC	r7, r0, #0x0
+	ADC	r7, r0, #0
 	UMLAL	r6, r7, r12, lr
 	/* A[5] * A[6] */
 	LDR	r12, [r1, #20]
 	LDR	lr, [r1, #24]
-	MOV	r11, #0x0
+	MOV	r11, #0
 	UMLAL	r6, r11, r12, lr
 	ADDS	r7, r7, r11
 	/* A[5] * A[7] */
 	LDR	lr, [r1, #28]
-	ADC	r8, r0, #0x0
+	ADC	r8, r0, #0
 	UMLAL	r7, r8, r12, lr
 	/* A[6] * A[7] */
 	LDR	r12, [r1, #24]
 	LDR	lr, [r1, #28]
-	MOV	r9, #0x0
+	MOV	r9, #0
 	UMLAL	r8, r9, r12, lr
-	ADD	lr, sp, #0x20
+	ADD	lr, sp, #32
 	STM	lr, {r3, r4, r5, r6, r7, r8, r9}
-	ADD	lr, sp, #0x4
+	ADD	lr, sp, #4
 	LDM	lr, {r4, r5, r6, r7, r8, r9, r10}
 	ADDS	r4, r4, r4
 	ADCS	r5, r5, r5
@@ -3640,9 +4678,9 @@ fe_sq2:
 	ADCS	r7, r7, r7
 	ADCS	r8, r8, r8
 	ADCS	r9, r9, r9
-	ADC	r10, r0, #0x0
+	ADC	r10, r0, #0
 	STM	lr, {r3, r4, r5, r6, r7, r8, r9, r10}
-	ADD	lr, sp, #0x4
+	ADD	lr, sp, #4
 	LDM	lr, {r4, r5, r6, r7, r8, r9, r10}
 	MOV	lr, sp
 	/* A[0] * A[0] */
@@ -3651,98 +4689,98 @@ fe_sq2:
 	ADDS	r4, r4, r11
 	/* A[1] * A[1] */
 	LDR	r12, [r1, #4]
-	ADCS	r5, r5, #0x0
-	ADC	r11, r0, #0x0
+	ADCS	r5, r5, #0
+	ADC	r11, r0, #0
 	UMLAL	r5, r11, r12, r12
 	ADDS	r6, r6, r11
 	/* A[2] * A[2] */
 	LDR	r12, [r1, #8]
-	ADCS	r7, r7, #0x0
-	ADC	r11, r0, #0x0
+	ADCS	r7, r7, #0
+	ADC	r11, r0, #0
 	UMLAL	r7, r11, r12, r12
 	ADDS	r8, r8, r11
 	/* A[3] * A[3] */
 	LDR	r12, [r1, #12]
-	ADCS	r9, r9, #0x0
-	ADC	r11, r0, #0x0
+	ADCS	r9, r9, #0
+	ADC	r11, r0, #0
 	UMLAL	r9, r11, r12, r12
 	ADDS	r10, r10, r11
 	STM	lr!, {r3, r4, r5, r6, r7, r8, r9, r10}
 	LDM	lr, {r3, r4, r5, r6, r7, r8, r9, r10}
 	/* A[4] * A[4] */
 	LDR	r12, [r1, #16]
-	ADCS	r3, r3, #0x0
-	ADC	r11, r0, #0x0
+	ADCS	r3, r3, #0
+	ADC	r11, r0, #0
 	UMLAL	r3, r11, r12, r12
 	ADDS	r4, r4, r11
 	/* A[5] * A[5] */
 	LDR	r12, [r1, #20]
-	ADCS	r5, r5, #0x0
-	ADC	r11, r0, #0x0
+	ADCS	r5, r5, #0
+	ADC	r11, r0, #0
 	UMLAL	r5, r11, r12, r12
 	ADDS	r6, r6, r11
 	/* A[6] * A[6] */
 	LDR	r12, [r1, #24]
-	ADCS	r7, r7, #0x0
-	ADC	r11, r0, #0x0
+	ADCS	r7, r7, #0
+	ADC	r11, r0, #0
 	UMLAL	r7, r11, r12, r12
 	ADDS	r8, r8, r11
 	/* A[7] * A[7] */
 	LDR	r12, [r1, #28]
-	ADCS	r9, r9, #0x0
-	ADC	r10, r10, #0x0
+	ADCS	r9, r9, #0
+	ADC	r10, r10, #0
 	UMLAL	r9, r10, r12, r12
 	/* Reduce */
 	LDR	r2, [sp, #28]
 	MOV	lr, sp
-	MOV	r12, #0x26
+	MOV	r12, #38
 	UMULL	r10, r11, r10, r12
 	ADDS	r10, r10, r2
-	ADC	r11, r11, #0x0
-	MOV	r12, #0x13
+	ADC	r11, r11, #0
+	MOV	r12, #19
 	LSL	r11, r11, #1
 	ORR	r11, r11, r10, LSR #31
 	MUL	r11, r11, r12
 	LDM	lr!, {r1, r2}
-	MOV	r12, #0x26
+	MOV	r12, #38
 	ADDS	r1, r1, r11
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r1, r11, r3, r12
 	ADDS	r2, r2, r11
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r2, r11, r4, r12
 	LDM	lr!, {r3, r4}
 	ADDS	r3, r3, r11
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r3, r11, r5, r12
 	ADDS	r4, r4, r11
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r4, r11, r6, r12
 	LDM	lr!, {r5, r6}
 	ADDS	r5, r5, r11
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r5, r11, r7, r12
 	ADDS	r6, r6, r11
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r6, r11, r8, r12
 	LDM	lr!, {r7, r8}
 	ADDS	r7, r7, r11
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r7, r11, r9, r12
 	BFC	r10, #31, #1
 	ADDS	r8, r10, r11
 	/* Reduce if top bit set */
-	MOV	r12, #0x13
+	MOV	r12, #19
 	AND	r11, r12, r8, ASR #31
 	ADDS	r1, r1, r11
-	ADCS	r2, r2, #0x0
-	ADCS	r3, r3, #0x0
-	ADCS	r4, r4, #0x0
-	ADCS	r5, r5, #0x0
-	ADCS	r6, r6, #0x0
+	ADCS	r2, r2, #0
+	ADCS	r3, r3, #0
+	ADCS	r4, r4, #0
+	ADCS	r5, r5, #0
+	ADCS	r6, r6, #0
 	BFC	r8, #31, #1
-	ADCS	r7, r7, #0x0
-	ADC	r8, r8, #0x0
+	ADCS	r7, r7, #0
+	ADC	r8, r8, #0
 	/* Double */
 	ADDS	r1, r1, r1
 	ADCS	r2, r2, r2
@@ -3753,39 +4791,59 @@ fe_sq2:
 	ADCS	r7, r7, r7
 	ADC	r8, r8, r8
 	/* Reduce if top bit set */
-	MOV	r12, #0x13
+	MOV	r12, #19
 	AND	r11, r12, r8, ASR #31
 	ADDS	r1, r1, r11
-	ADCS	r2, r2, #0x0
-	ADCS	r3, r3, #0x0
-	ADCS	r4, r4, #0x0
-	ADCS	r5, r5, #0x0
-	ADCS	r6, r6, #0x0
+	ADCS	r2, r2, #0
+	ADCS	r3, r3, #0
+	ADCS	r4, r4, #0
+	ADCS	r5, r5, #0
+	ADCS	r6, r6, #0
 	BFC	r8, #31, #1
-	ADCS	r7, r7, #0x0
-	ADC	r8, r8, #0x0
+	ADCS	r7, r7, #0
+	ADC	r8, r8, #0
+	ADDS	r11, r1, #19
+	ADCS	r11, r2, #0
+	ADCS	r11, r3, #0
+	ADCS	r11, r4, #0
+	ADCS	r11, r5, #0
+	ADCS	r11, r6, #0
+	ADCS	r11, r7, #0
+	ADC	r11, r8, #0
+	ASR	r11, r11, #31
+	AND	r11, r11, #19
+	ADDS	r1, r1, r11
+	ADCS	r2, r2, #0
+	ADCS	r3, r3, #0
+	ADCS	r4, r4, #0
+	ADCS	r5, r5, #0
+	ADCS	r6, r6, #0
+	ADCS	r7, r7, #0
+	ADC	r8, r8, #0
+	BFC	r8, #31, #1
 	/* Store */
 	LDR	r0, [sp, #64]
 	STM	r0, {r1, r2, r3, r4, r5, r6, r7, r8}
 	ADD	sp, sp, #0x44
 	POP	{pc}
-	/* Cycle Count = 385 */
+	/* Cycle Count = 404 */
 	.size	fe_sq2,.-fe_sq2
 #else
 	.text
 	.align	4
 	.globl	fe_sq2
+	WC_ASM_ATT_HIDDEN(fe_sq2)
 	.type	fe_sq2, %function
 fe_sq2:
 	PUSH	{lr}
-	SUB	sp, sp, #0x24
+	SUB	sp, sp, #36
 	STRD	r0, r1, [sp, #28]
 	LDM	r1, {r0, r1, r2, r3, r4, r5, r6, r7}
 	/* Square * 2 */
 	UMULL	r9, r10, r0, r0
 	UMULL	r11, r12, r0, r1
 	ADDS	r11, r11, r11
-	MOV	lr, #0x0
+	MOV	lr, #0
 	UMAAL	r10, r11, lr, lr
 	STM	sp, {r9, r10}
 	MOV	r8, lr
@@ -3862,14 +4920,14 @@ fe_sq2:
 	/* R[14] = r9 */
 	/* R[15] = r7 */
 	/* Reduce */
-	MOV	r6, #0x25
+	MOV	r6, #37
 	UMAAL	r7, r0, r7, r6
-	MOV	r6, #0x13
+	MOV	r6, #19
 	LSL	r0, r0, #1
 	ORR	r0, r0, r7, LSR #31
 	MUL	lr, r0, r6
 	POP	{r0, r1}
-	MOV	r6, #0x26
+	MOV	r6, #38
 	UMAAL	r0, lr, r12, r6
 	UMAAL	r1, lr, r11, r6
 	MOV	r12, r3
@@ -3885,17 +4943,17 @@ fe_sq2:
 	UMAAL	r6, lr, r9, r12
 	ADD	r7, r7, lr
 	/* Reduce if top bit set */
-	MOV	r11, #0x13
+	MOV	r11, #19
 	AND	r12, r11, r7, ASR #31
 	ADDS	r0, r0, r12
-	ADCS	r1, r1, #0x0
-	ADCS	r2, r2, #0x0
-	ADCS	r3, r3, #0x0
-	ADCS	r4, r4, #0x0
-	ADCS	r5, r5, #0x0
+	ADCS	r1, r1, #0
+	ADCS	r2, r2, #0
+	ADCS	r3, r3, #0
+	ADCS	r4, r4, #0
+	ADCS	r5, r5, #0
 	BFC	r7, #31, #1
-	ADCS	r6, r6, #0x0
-	ADC	r7, r7, #0x0
+	ADCS	r6, r6, #0
+	ADC	r7, r7, #0
 	/* Double */
 	ADDS	r0, r0, r0
 	ADCS	r1, r1, r1
@@ -3906,29 +4964,49 @@ fe_sq2:
 	ADCS	r6, r6, r6
 	ADC	r7, r7, r7
 	/* Reduce if top bit set */
-	MOV	r11, #0x13
+	MOV	r11, #19
 	AND	r12, r11, r7, ASR #31
 	ADDS	r0, r0, r12
-	ADCS	r1, r1, #0x0
-	ADCS	r2, r2, #0x0
-	ADCS	r3, r3, #0x0
-	ADCS	r4, r4, #0x0
-	ADCS	r5, r5, #0x0
+	ADCS	r1, r1, #0
+	ADCS	r2, r2, #0
+	ADCS	r3, r3, #0
+	ADCS	r4, r4, #0
+	ADCS	r5, r5, #0
 	BFC	r7, #31, #1
-	ADCS	r6, r6, #0x0
-	ADC	r7, r7, #0x0
+	ADCS	r6, r6, #0
+	ADC	r7, r7, #0
+	ADDS	r12, r0, #19
+	ADCS	r12, r1, #0
+	ADCS	r12, r2, #0
+	ADCS	r12, r3, #0
+	ADCS	r12, r4, #0
+	ADCS	r12, r5, #0
+	ADCS	r12, r6, #0
+	ADC	r12, r7, #0
+	ASR	r12, r12, #31
+	AND	r12, r12, #19
+	ADDS	r0, r0, r12
+	ADCS	r1, r1, #0
+	ADCS	r2, r2, #0
+	ADCS	r3, r3, #0
+	ADCS	r4, r4, #0
+	ADCS	r5, r5, #0
+	ADCS	r6, r6, #0
+	ADC	r7, r7, #0
+	BFC	r7, #31, #1
 	POP	{r12, lr}
 	/* Store */
 	STM	r12, {r0, r1, r2, r3, r4, r5, r6, r7}
 	MOV	r0, r12
 	MOV	r1, lr
 	POP	{pc}
-	/* Cycle Count = 213 */
+	/* Cycle Count = 232 */
 	.size	fe_sq2,.-fe_sq2
-#endif /* WOLFSSL_SP_NO_UMAAL */
+#endif /* WOLFSSL_ARM_ARCH_7M */
 	.text
 	.align	4
 	.globl	fe_pow22523
+	WC_ASM_ATT_HIDDEN(fe_pow22523)
 	.type	fe_pow22523, %function
 fe_pow22523:
 	PUSH	{r4, r5, r6, r7, r8, r9, r10, r11, lr}
@@ -3940,16 +5018,16 @@ fe_pow22523:
 	MOV	r0, sp
 	BL	fe_sq_op
 	MOV	r1, sp
-	ADD	r0, sp, #0x20
+	ADD	r0, sp, #32
 	BL	fe_sq_op
-	ADD	r1, sp, #0x20
-	ADD	r0, sp, #0x20
+	ADD	r1, sp, #32
+	ADD	r0, sp, #32
 	BL	fe_sq_op
-	ADD	r2, sp, #0x20
+	ADD	r2, sp, #32
 	LDR	r1, [sp, #100]
-	ADD	r0, sp, #0x20
+	ADD	r0, sp, #32
 	BL	fe_mul_op
-	ADD	r2, sp, #0x20
+	ADD	r2, sp, #32
 	MOV	r1, sp
 	MOV	r0, sp
 	BL	fe_mul_op
@@ -3957,107 +5035,107 @@ fe_pow22523:
 	MOV	r0, sp
 	BL	fe_sq_op
 	MOV	r2, sp
-	ADD	r1, sp, #0x20
+	ADD	r1, sp, #32
 	MOV	r0, sp
 	BL	fe_mul_op
 	MOV	r1, sp
-	ADD	r0, sp, #0x20
+	ADD	r0, sp, #32
 	BL	fe_sq_op
-	MOV	r12, #0x4
+	MOV	r12, #4
 L_fe_pow22523_1:
-	ADD	r1, sp, #0x20
-	ADD	r0, sp, #0x20
+	ADD	r1, sp, #32
+	ADD	r0, sp, #32
 	PUSH	{r12}
 	BL	fe_sq_op
 	POP	{r12}
-	SUBS	r12, r12, #0x1
+	SUBS	r12, r12, #1
 #if defined(__GNUC__) || defined(__ICCARM__) || defined(__IAR_SYSTEMS_ICC__)
 	BNE	L_fe_pow22523_1
 #else
 	BNE.N	L_fe_pow22523_1
 #endif
 	MOV	r2, sp
-	ADD	r1, sp, #0x20
+	ADD	r1, sp, #32
 	MOV	r0, sp
 	BL	fe_mul_op
 	MOV	r1, sp
-	ADD	r0, sp, #0x20
+	ADD	r0, sp, #32
 	BL	fe_sq_op
-	MOV	r12, #0x9
+	MOV	r12, #9
 L_fe_pow22523_2:
-	ADD	r1, sp, #0x20
-	ADD	r0, sp, #0x20
+	ADD	r1, sp, #32
+	ADD	r0, sp, #32
 	PUSH	{r12}
 	BL	fe_sq_op
 	POP	{r12}
-	SUBS	r12, r12, #0x1
+	SUBS	r12, r12, #1
 #if defined(__GNUC__) || defined(__ICCARM__) || defined(__IAR_SYSTEMS_ICC__)
 	BNE	L_fe_pow22523_2
 #else
 	BNE.N	L_fe_pow22523_2
 #endif
 	MOV	r2, sp
-	ADD	r1, sp, #0x20
-	ADD	r0, sp, #0x20
+	ADD	r1, sp, #32
+	ADD	r0, sp, #32
 	BL	fe_mul_op
-	ADD	r1, sp, #0x20
+	ADD	r1, sp, #32
 	ADD	r0, sp, #0x40
 	BL	fe_sq_op
-	MOV	r12, #0x13
+	MOV	r12, #19
 L_fe_pow22523_3:
 	ADD	r1, sp, #0x40
 	ADD	r0, sp, #0x40
 	PUSH	{r12}
 	BL	fe_sq_op
 	POP	{r12}
-	SUBS	r12, r12, #0x1
+	SUBS	r12, r12, #1
 #if defined(__GNUC__) || defined(__ICCARM__) || defined(__IAR_SYSTEMS_ICC__)
 	BNE	L_fe_pow22523_3
 #else
 	BNE.N	L_fe_pow22523_3
 #endif
-	ADD	r2, sp, #0x20
+	ADD	r2, sp, #32
 	ADD	r1, sp, #0x40
-	ADD	r0, sp, #0x20
+	ADD	r0, sp, #32
 	BL	fe_mul_op
-	MOV	r12, #0xa
+	MOV	r12, #10
 L_fe_pow22523_4:
-	ADD	r1, sp, #0x20
-	ADD	r0, sp, #0x20
+	ADD	r1, sp, #32
+	ADD	r0, sp, #32
 	PUSH	{r12}
 	BL	fe_sq_op
 	POP	{r12}
-	SUBS	r12, r12, #0x1
+	SUBS	r12, r12, #1
 #if defined(__GNUC__) || defined(__ICCARM__) || defined(__IAR_SYSTEMS_ICC__)
 	BNE	L_fe_pow22523_4
 #else
 	BNE.N	L_fe_pow22523_4
 #endif
 	MOV	r2, sp
-	ADD	r1, sp, #0x20
+	ADD	r1, sp, #32
 	MOV	r0, sp
 	BL	fe_mul_op
 	MOV	r1, sp
-	ADD	r0, sp, #0x20
+	ADD	r0, sp, #32
 	BL	fe_sq_op
-	MOV	r12, #0x31
+	MOV	r12, #49
 L_fe_pow22523_5:
-	ADD	r1, sp, #0x20
-	ADD	r0, sp, #0x20
+	ADD	r1, sp, #32
+	ADD	r0, sp, #32
 	PUSH	{r12}
 	BL	fe_sq_op
 	POP	{r12}
-	SUBS	r12, r12, #0x1
+	SUBS	r12, r12, #1
 #if defined(__GNUC__) || defined(__ICCARM__) || defined(__IAR_SYSTEMS_ICC__)
 	BNE	L_fe_pow22523_5
 #else
 	BNE.N	L_fe_pow22523_5
 #endif
 	MOV	r2, sp
-	ADD	r1, sp, #0x20
-	ADD	r0, sp, #0x20
+	ADD	r1, sp, #32
+	ADD	r0, sp, #32
 	BL	fe_mul_op
-	ADD	r1, sp, #0x20
+	ADD	r1, sp, #32
 	ADD	r0, sp, #0x40
 	BL	fe_sq_op
 	MOV	r12, #0x63
@@ -4067,41 +5145,41 @@ L_fe_pow22523_6:
 	PUSH	{r12}
 	BL	fe_sq_op
 	POP	{r12}
-	SUBS	r12, r12, #0x1
+	SUBS	r12, r12, #1
 #if defined(__GNUC__) || defined(__ICCARM__) || defined(__IAR_SYSTEMS_ICC__)
 	BNE	L_fe_pow22523_6
 #else
 	BNE.N	L_fe_pow22523_6
 #endif
-	ADD	r2, sp, #0x20
+	ADD	r2, sp, #32
 	ADD	r1, sp, #0x40
-	ADD	r0, sp, #0x20
+	ADD	r0, sp, #32
 	BL	fe_mul_op
-	MOV	r12, #0x32
+	MOV	r12, #50
 L_fe_pow22523_7:
-	ADD	r1, sp, #0x20
-	ADD	r0, sp, #0x20
+	ADD	r1, sp, #32
+	ADD	r0, sp, #32
 	PUSH	{r12}
 	BL	fe_sq_op
 	POP	{r12}
-	SUBS	r12, r12, #0x1
+	SUBS	r12, r12, #1
 #if defined(__GNUC__) || defined(__ICCARM__) || defined(__IAR_SYSTEMS_ICC__)
 	BNE	L_fe_pow22523_7
 #else
 	BNE.N	L_fe_pow22523_7
 #endif
 	MOV	r2, sp
-	ADD	r1, sp, #0x20
+	ADD	r1, sp, #32
 	MOV	r0, sp
 	BL	fe_mul_op
-	MOV	r12, #0x2
+	MOV	r12, #2
 L_fe_pow22523_8:
 	MOV	r1, sp
 	MOV	r0, sp
 	PUSH	{r12}
 	BL	fe_sq_op
 	POP	{r12}
-	SUBS	r12, r12, #0x1
+	SUBS	r12, r12, #1
 #if defined(__GNUC__) || defined(__ICCARM__) || defined(__IAR_SYSTEMS_ICC__)
 	BNE	L_fe_pow22523_8
 #else
@@ -4120,10 +5198,11 @@ L_fe_pow22523_8:
 	.text
 	.align	4
 	.globl	ge_p1p1_to_p2
+	WC_ASM_ATT_HIDDEN(ge_p1p1_to_p2)
 	.type	ge_p1p1_to_p2, %function
 ge_p1p1_to_p2:
 	PUSH	{r4, r5, r6, r7, r8, r9, r10, r11, lr}
-	SUB	sp, sp, #0x8
+	SUB	sp, sp, #8
 	STR	r0, [sp]
 	STR	r1, [sp, #4]
 	ADD	r2, r1, #0x60
@@ -4131,8 +5210,8 @@ ge_p1p1_to_p2:
 	LDR	r0, [sp]
 	LDR	r1, [sp, #4]
 	ADD	r2, r1, #0x40
-	ADD	r1, r1, #0x20
-	ADD	r0, r0, #0x20
+	ADD	r1, r1, #32
+	ADD	r0, r0, #32
 	BL	fe_mul_op
 	LDR	r0, [sp]
 	LDR	r1, [sp, #4]
@@ -4140,17 +5219,18 @@ ge_p1p1_to_p2:
 	ADD	r1, r1, #0x40
 	ADD	r0, r0, #0x40
 	BL	fe_mul_op
-	ADD	sp, sp, #0x8
+	ADD	sp, sp, #8
 	POP	{r4, r5, r6, r7, r8, r9, r10, r11, pc}
 	/* Cycle Count = 53 */
 	.size	ge_p1p1_to_p2,.-ge_p1p1_to_p2
 	.text
 	.align	4
 	.globl	ge_p1p1_to_p3
+	WC_ASM_ATT_HIDDEN(ge_p1p1_to_p3)
 	.type	ge_p1p1_to_p3, %function
 ge_p1p1_to_p3:
 	PUSH	{r4, r5, r6, r7, r8, r9, r10, r11, lr}
-	SUB	sp, sp, #0x8
+	SUB	sp, sp, #8
 	STR	r0, [sp]
 	STR	r1, [sp, #4]
 	ADD	r2, r1, #0x60
@@ -4158,8 +5238,8 @@ ge_p1p1_to_p3:
 	LDR	r0, [sp]
 	LDR	r1, [sp, #4]
 	ADD	r2, r1, #0x40
-	ADD	r1, r1, #0x20
-	ADD	r0, r0, #0x20
+	ADD	r1, r1, #32
+	ADD	r0, r0, #32
 	BL	fe_mul_op
 	LDR	r0, [sp]
 	LDR	r1, [sp, #4]
@@ -4169,32 +5249,33 @@ ge_p1p1_to_p3:
 	BL	fe_mul_op
 	LDR	r0, [sp]
 	LDR	r1, [sp, #4]
-	ADD	r2, r1, #0x20
+	ADD	r2, r1, #32
 	ADD	r0, r0, #0x60
 	BL	fe_mul_op
-	ADD	sp, sp, #0x8
+	ADD	sp, sp, #8
 	POP	{r4, r5, r6, r7, r8, r9, r10, r11, pc}
 	/* Cycle Count = 63 */
 	.size	ge_p1p1_to_p3,.-ge_p1p1_to_p3
 	.text
 	.align	4
 	.globl	ge_p2_dbl
+	WC_ASM_ATT_HIDDEN(ge_p2_dbl)
 	.type	ge_p2_dbl, %function
 ge_p2_dbl:
 	PUSH	{r4, r5, r6, r7, r8, r9, r10, r11, lr}
-	SUB	sp, sp, #0x8
+	SUB	sp, sp, #8
 	STR	r0, [sp]
 	STR	r1, [sp, #4]
 	BL	fe_sq_op
 	LDR	r0, [sp]
 	LDR	r1, [sp, #4]
-	ADD	r1, r1, #0x20
+	ADD	r1, r1, #32
 	ADD	r0, r0, #0x40
 	BL	fe_sq_op
 	LDR	r0, [sp]
 	LDR	r1, [sp, #4]
-	ADD	r2, r1, #0x20
-	ADD	r0, r0, #0x20
+	ADD	r2, r1, #32
+	ADD	r0, r0, #32
 	BL	fe_add_op
 	MOV	r1, r0
 	ADD	r0, r0, #0x40
@@ -4203,50 +5284,51 @@ ge_p2_dbl:
 	MOV	r3, r0
 	ADD	r2, r0, #0x40
 	ADD	r1, r0, #0x40
-	ADD	r0, r0, #0x20
+	ADD	r0, r0, #32
 	BL	fe_add_sub_op
 	MOV	r2, r0
 	ADD	r1, r0, #0x40
-	SUB	r0, r0, #0x20
+	SUB	r0, r0, #32
 	BL	fe_sub_op
 	LDR	r1, [sp, #4]
 	ADD	r1, r1, #0x40
 	ADD	r0, r0, #0x60
 	BL	fe_sq2
-	SUB	r2, r0, #0x20
+	SUB	r2, r0, #32
 	MOV	r1, r0
 	BL	fe_sub_op
-	ADD	sp, sp, #0x8
+	ADD	sp, sp, #8
 	POP	{r4, r5, r6, r7, r8, r9, r10, r11, pc}
 	/* Cycle Count = 87 */
 	.size	ge_p2_dbl,.-ge_p2_dbl
 	.text
 	.align	4
 	.globl	ge_madd
+	WC_ASM_ATT_HIDDEN(ge_madd)
 	.type	ge_madd, %function
 ge_madd:
 	PUSH	{r4, r5, r6, r7, r8, r9, r10, r11, lr}
-	SUB	sp, sp, #0xc
+	SUB	sp, sp, #12
 	STR	r0, [sp]
 	STR	r1, [sp, #4]
 	STR	r2, [sp, #8]
 	MOV	r2, r1
-	ADD	r1, r1, #0x20
+	ADD	r1, r1, #32
 	BL	fe_add_op
 	LDR	r1, [sp, #4]
 	MOV	r2, r1
-	ADD	r1, r1, #0x20
-	ADD	r0, r0, #0x20
+	ADD	r1, r1, #32
+	ADD	r0, r0, #32
 	BL	fe_sub_op
 	LDR	r2, [sp, #8]
-	SUB	r1, r0, #0x20
-	ADD	r0, r0, #0x20
+	SUB	r1, r0, #32
+	ADD	r0, r0, #32
 	BL	fe_mul_op
 	LDR	r0, [sp]
 	LDR	r2, [sp, #8]
-	ADD	r2, r2, #0x20
-	ADD	r1, r0, #0x20
-	ADD	r0, r0, #0x20
+	ADD	r2, r2, #32
+	ADD	r1, r0, #32
+	ADD	r0, r0, #32
 	BL	fe_mul_op
 	LDR	r0, [sp]
 	LDR	r1, [sp, #8]
@@ -4256,14 +5338,14 @@ ge_madd:
 	ADD	r0, r0, #0x60
 	BL	fe_mul_op
 	LDR	r0, [sp]
-	ADD	r3, r0, #0x20
+	ADD	r3, r0, #32
 	ADD	r2, r0, #0x40
 	MOV	r1, r0
-	ADD	r0, r0, #0x20
+	ADD	r0, r0, #32
 	BL	fe_add_sub_op
 	LDR	r1, [sp, #4]
 	ADD	r1, r1, #0x40
-	ADD	r0, r0, #0x20
+	ADD	r0, r0, #32
 	/* Double */
 	LDM	r1, {r4, r5, r6, r7, r8, r9, r10, r11}
 	ADDS	r4, r4, r4
@@ -4273,58 +5355,59 @@ ge_madd:
 	ADCS	r8, r8, r8
 	ADCS	r9, r9, r9
 	ADCS	r10, r10, r10
-	MOV	lr, #0x0
+	MOV	lr, #0
 	ADCS	r11, r11, r11
-	ADC	lr, lr, #0x0
-	MOV	r12, #0x13
+	ADC	lr, lr, #0
+	MOV	r12, #19
 	LSL	lr, lr, #1
 	ORR	lr, lr, r11, LSR #31
 	MUL	r12, lr, r12
 	ADDS	r4, r4, r12
-	ADCS	r5, r5, #0x0
-	ADCS	r6, r6, #0x0
-	ADCS	r7, r7, #0x0
-	ADCS	r8, r8, #0x0
-	ADCS	r9, r9, #0x0
+	ADCS	r5, r5, #0
+	ADCS	r6, r6, #0
+	ADCS	r7, r7, #0
+	ADCS	r8, r8, #0
+	ADCS	r9, r9, #0
 	BFC	r11, #31, #1
-	ADCS	r10, r10, #0x0
-	ADC	r11, r11, #0x0
+	ADCS	r10, r10, #0
+	ADC	r11, r11, #0
 	STM	r0, {r4, r5, r6, r7, r8, r9, r10, r11}
 	/* Done Double */
-	ADD	r3, r0, #0x20
-	ADD	r1, r0, #0x20
+	ADD	r3, r0, #32
+	ADD	r1, r0, #32
 	BL	fe_add_sub_op
-	ADD	sp, sp, #0xc
+	ADD	sp, sp, #12
 	POP	{r4, r5, r6, r7, r8, r9, r10, r11, pc}
 	/* Cycle Count = 136 */
 	.size	ge_madd,.-ge_madd
 	.text
 	.align	4
 	.globl	ge_msub
+	WC_ASM_ATT_HIDDEN(ge_msub)
 	.type	ge_msub, %function
 ge_msub:
 	PUSH	{r4, r5, r6, r7, r8, r9, r10, r11, lr}
-	SUB	sp, sp, #0xc
+	SUB	sp, sp, #12
 	STR	r0, [sp]
 	STR	r1, [sp, #4]
 	STR	r2, [sp, #8]
 	MOV	r2, r1
-	ADD	r1, r1, #0x20
+	ADD	r1, r1, #32
 	BL	fe_add_op
 	LDR	r1, [sp, #4]
 	MOV	r2, r1
-	ADD	r1, r1, #0x20
-	ADD	r0, r0, #0x20
+	ADD	r1, r1, #32
+	ADD	r0, r0, #32
 	BL	fe_sub_op
 	LDR	r2, [sp, #8]
-	ADD	r2, r2, #0x20
-	SUB	r1, r0, #0x20
-	ADD	r0, r0, #0x20
+	ADD	r2, r2, #32
+	SUB	r1, r0, #32
+	ADD	r0, r0, #32
 	BL	fe_mul_op
 	LDR	r0, [sp]
 	LDR	r2, [sp, #8]
-	ADD	r1, r0, #0x20
-	ADD	r0, r0, #0x20
+	ADD	r1, r0, #32
+	ADD	r0, r0, #32
 	BL	fe_mul_op
 	LDR	r0, [sp]
 	LDR	r1, [sp, #8]
@@ -4334,14 +5417,14 @@ ge_msub:
 	ADD	r0, r0, #0x60
 	BL	fe_mul_op
 	LDR	r0, [sp]
-	ADD	r3, r0, #0x20
+	ADD	r3, r0, #32
 	ADD	r2, r0, #0x40
 	MOV	r1, r0
-	ADD	r0, r0, #0x20
+	ADD	r0, r0, #32
 	BL	fe_add_sub_op
 	LDR	r1, [sp, #4]
 	ADD	r1, r1, #0x40
-	ADD	r0, r0, #0x20
+	ADD	r0, r0, #32
 	/* Double */
 	LDM	r1, {r4, r5, r6, r7, r8, r9, r10, r11}
 	ADDS	r4, r4, r4
@@ -4351,45 +5434,46 @@ ge_msub:
 	ADCS	r8, r8, r8
 	ADCS	r9, r9, r9
 	ADCS	r10, r10, r10
-	MOV	lr, #0x0
+	MOV	lr, #0
 	ADCS	r11, r11, r11
-	ADC	lr, lr, #0x0
-	MOV	r12, #0x13
+	ADC	lr, lr, #0
+	MOV	r12, #19
 	LSL	lr, lr, #1
 	ORR	lr, lr, r11, LSR #31
 	MUL	r12, lr, r12
 	ADDS	r4, r4, r12
-	ADCS	r5, r5, #0x0
-	ADCS	r6, r6, #0x0
-	ADCS	r7, r7, #0x0
-	ADCS	r8, r8, #0x0
-	ADCS	r9, r9, #0x0
+	ADCS	r5, r5, #0
+	ADCS	r6, r6, #0
+	ADCS	r7, r7, #0
+	ADCS	r8, r8, #0
+	ADCS	r9, r9, #0
 	BFC	r11, #31, #1
-	ADCS	r10, r10, #0x0
-	ADC	r11, r11, #0x0
+	ADCS	r10, r10, #0
+	ADC	r11, r11, #0
 	STM	r0, {r4, r5, r6, r7, r8, r9, r10, r11}
 	/* Done Double */
-	ADD	r3, r0, #0x20
+	ADD	r3, r0, #32
 	MOV	r1, r0
-	ADD	r0, r0, #0x20
+	ADD	r0, r0, #32
 	BL	fe_add_sub_op
-	ADD	sp, sp, #0xc
+	ADD	sp, sp, #12
 	POP	{r4, r5, r6, r7, r8, r9, r10, r11, pc}
 	/* Cycle Count = 137 */
 	.size	ge_msub,.-ge_msub
 	.text
 	.align	4
 	.globl	ge_add
+	WC_ASM_ATT_HIDDEN(ge_add)
 	.type	ge_add, %function
 ge_add:
 	PUSH	{r4, r5, r6, r7, r8, r9, r10, r11, lr}
-	SUB	sp, sp, #0x2c
+	SUB	sp, sp, #44
 	STR	r0, [sp]
 	STR	r1, [sp, #4]
 	STR	r2, [sp, #8]
 	MOV	r3, r1
-	ADD	r2, r1, #0x20
-	ADD	r1, r0, #0x20
+	ADD	r2, r1, #32
+	ADD	r1, r0, #32
 	BL	fe_add_sub_op
 	LDR	r2, [sp, #8]
 	MOV	r1, r0
@@ -4397,9 +5481,9 @@ ge_add:
 	BL	fe_mul_op
 	LDR	r0, [sp]
 	LDR	r2, [sp, #8]
-	ADD	r2, r2, #0x20
-	ADD	r1, r0, #0x20
-	ADD	r0, r0, #0x20
+	ADD	r2, r2, #32
+	ADD	r1, r0, #32
+	ADD	r0, r0, #32
 	BL	fe_mul_op
 	LDR	r0, [sp]
 	LDR	r1, [sp, #8]
@@ -4415,7 +5499,7 @@ ge_add:
 	ADD	r1, r1, #0x40
 	BL	fe_mul_op
 	LDR	r1, [sp]
-	ADD	r0, sp, #0xc
+	ADD	r0, sp, #12
 	/* Double */
 	LDM	r1, {r4, r5, r6, r7, r8, r9, r10, r11}
 	ADDS	r4, r4, r4
@@ -4425,60 +5509,61 @@ ge_add:
 	ADCS	r8, r8, r8
 	ADCS	r9, r9, r9
 	ADCS	r10, r10, r10
-	MOV	lr, #0x0
+	MOV	lr, #0
 	ADCS	r11, r11, r11
-	ADC	lr, lr, #0x0
-	MOV	r12, #0x13
+	ADC	lr, lr, #0
+	MOV	r12, #19
 	LSL	lr, lr, #1
 	ORR	lr, lr, r11, LSR #31
 	MUL	r12, lr, r12
 	ADDS	r4, r4, r12
-	ADCS	r5, r5, #0x0
-	ADCS	r6, r6, #0x0
-	ADCS	r7, r7, #0x0
-	ADCS	r8, r8, #0x0
-	ADCS	r9, r9, #0x0
+	ADCS	r5, r5, #0
+	ADCS	r6, r6, #0
+	ADCS	r7, r7, #0
+	ADCS	r8, r8, #0
+	ADCS	r9, r9, #0
 	BFC	r11, #31, #1
-	ADCS	r10, r10, #0x0
-	ADC	r11, r11, #0x0
+	ADCS	r10, r10, #0
+	ADC	r11, r11, #0
 	STM	r0, {r4, r5, r6, r7, r8, r9, r10, r11}
 	/* Done Double */
-	ADD	r3, r1, #0x20
+	ADD	r3, r1, #32
 	ADD	r2, r1, #0x40
-	ADD	r0, r1, #0x20
+	ADD	r0, r1, #32
 	BL	fe_add_sub_op
 	ADD	r3, r0, #0x40
-	ADD	r2, sp, #0xc
+	ADD	r2, sp, #12
 	ADD	r1, r0, #0x40
-	ADD	r0, r0, #0x20
+	ADD	r0, r0, #32
 	BL	fe_add_sub_op
-	ADD	sp, sp, #0x2c
+	ADD	sp, sp, #44
 	POP	{r4, r5, r6, r7, r8, r9, r10, r11, pc}
 	/* Cycle Count = 138 */
 	.size	ge_add,.-ge_add
 	.text
 	.align	4
 	.globl	ge_sub
+	WC_ASM_ATT_HIDDEN(ge_sub)
 	.type	ge_sub, %function
 ge_sub:
 	PUSH	{r4, r5, r6, r7, r8, r9, r10, r11, lr}
-	SUB	sp, sp, #0x2c
+	SUB	sp, sp, #44
 	STR	r0, [sp]
 	STR	r1, [sp, #4]
 	STR	r2, [sp, #8]
 	MOV	r3, r1
-	ADD	r2, r1, #0x20
-	ADD	r1, r0, #0x20
+	ADD	r2, r1, #32
+	ADD	r1, r0, #32
 	BL	fe_add_sub_op
 	LDR	r2, [sp, #8]
-	ADD	r2, r2, #0x20
+	ADD	r2, r2, #32
 	MOV	r1, r0
 	ADD	r0, r0, #0x40
 	BL	fe_mul_op
 	LDR	r0, [sp]
 	LDR	r2, [sp, #8]
-	ADD	r1, r0, #0x20
-	ADD	r0, r0, #0x20
+	ADD	r1, r0, #32
+	ADD	r0, r0, #32
 	BL	fe_mul_op
 	LDR	r0, [sp]
 	LDR	r1, [sp, #8]
@@ -4494,7 +5579,7 @@ ge_sub:
 	ADD	r1, r1, #0x40
 	BL	fe_mul_op
 	LDR	r1, [sp]
-	ADD	r0, sp, #0xc
+	ADD	r0, sp, #12
 	/* Double */
 	LDM	r1, {r4, r5, r6, r7, r8, r9, r10, r11}
 	ADDS	r4, r4, r4
@@ -4504,48 +5589,51 @@ ge_sub:
 	ADCS	r8, r8, r8
 	ADCS	r9, r9, r9
 	ADCS	r10, r10, r10
-	MOV	lr, #0x0
+	MOV	lr, #0
 	ADCS	r11, r11, r11
-	ADC	lr, lr, #0x0
-	MOV	r12, #0x13
+	ADC	lr, lr, #0
+	MOV	r12, #19
 	LSL	lr, lr, #1
 	ORR	lr, lr, r11, LSR #31
 	MUL	r12, lr, r12
 	ADDS	r4, r4, r12
-	ADCS	r5, r5, #0x0
-	ADCS	r6, r6, #0x0
-	ADCS	r7, r7, #0x0
-	ADCS	r8, r8, #0x0
-	ADCS	r9, r9, #0x0
+	ADCS	r5, r5, #0
+	ADCS	r6, r6, #0
+	ADCS	r7, r7, #0
+	ADCS	r8, r8, #0
+	ADCS	r9, r9, #0
 	BFC	r11, #31, #1
-	ADCS	r10, r10, #0x0
-	ADC	r11, r11, #0x0
+	ADCS	r10, r10, #0
+	ADC	r11, r11, #0
 	STM	r0, {r4, r5, r6, r7, r8, r9, r10, r11}
 	/* Done Double */
-	ADD	r3, r1, #0x20
+	ADD	r3, r1, #32
 	ADD	r2, r1, #0x40
-	ADD	r0, r1, #0x20
+	ADD	r0, r1, #32
 	BL	fe_add_sub_op
 	ADD	r3, r0, #0x40
-	ADD	r2, sp, #0xc
-	ADD	r1, r0, #0x20
+	ADD	r2, sp, #12
+	ADD	r1, r0, #32
 	ADD	r0, r0, #0x40
 	BL	fe_add_sub_op
-	ADD	sp, sp, #0x2c
+	ADD	sp, sp, #44
 	POP	{r4, r5, r6, r7, r8, r9, r10, r11, pc}
 	/* Cycle Count = 138 */
 	.size	ge_sub,.-ge_sub
-#ifdef WOLFSSL_SP_NO_UMAAL
+#endif /* HAVE_ED25519 || WOLFSSL_CURVE25519_USE_ED25519 */
+#ifdef HAVE_ED25519
+#ifdef WOLFSSL_ARM_ARCH_7M
 	.text
 	.align	4
 	.globl	sc_reduce
+	WC_ASM_ATT_HIDDEN(sc_reduce)
 	.type	sc_reduce, %function
 sc_reduce:
 	PUSH	{r4, r5, r6, r7, r8, r9, r10, r11, lr}
-	SUB	sp, sp, #0x38
+	SUB	sp, sp, #56
 	STR	r0, [sp, #52]
 	/* Load bits 252-511 */
-	ADD	r0, r0, #0x1c
+	ADD	r0, r0, #28
 	LDM	r0, {r1, r2, r3, r4, r5, r6, r7, r8, r9}
 	LSR	lr, r9, #24
 	LSL	r9, r9, #4
@@ -4565,206 +5653,206 @@ sc_reduce:
 	LSL	r2, r2, #4
 	ORR	r2, r2, r1, LSR #28
 	BFC	r9, #28, #4
-	SUB	r0, r0, #0x1c
+	SUB	r0, r0, #28
 	/* Add order times bits 504..511 */
 	MOV	r10, #0x2c13
 	MOVT	r10, #0xa30a
 	MOV	r11, #0x9ce5
 	MOVT	r11, #0xa7ed
-	MOV	r1, #0x0
+	MOV	r1, #0
 	UMLAL	r2, r1, r10, lr
 	ADDS	r3, r3, r1
-	MOV	r1, #0x0
-	ADC	r1, r1, #0x0
+	MOV	r1, #0
+	ADC	r1, r1, #0
 	UMLAL	r3, r1, r11, lr
 	MOV	r10, #0x6329
 	MOVT	r10, #0x5d08
 	MOV	r11, #0x621
 	MOVT	r11, #0xeb21
 	ADDS	r4, r4, r1
-	MOV	r1, #0x0
-	ADC	r1, r1, #0x0
+	MOV	r1, #0
+	ADC	r1, r1, #0
 	UMLAL	r4, r1, r10, lr
 	ADDS	r5, r5, r1
-	MOV	r1, #0x0
-	ADC	r1, r1, #0x0
+	MOV	r1, #0
+	ADC	r1, r1, #0
 	UMLAL	r5, r1, r11, lr
 	ADDS	r6, r6, r1
-	ADCS	r7, r7, #0x0
-	ADCS	r8, r8, #0x0
-	ADC	r9, r9, #0x0
+	ADCS	r7, r7, #0
+	ADCS	r8, r8, #0
+	ADC	r9, r9, #0
 	SUBS	r6, r6, lr
-	SBCS	r7, r7, #0x0
-	SBCS	r8, r8, #0x0
-	SBC	r9, r9, #0x0
+	SBCS	r7, r7, #0
+	SBCS	r8, r8, #0
+	SBC	r9, r9, #0
 	/* Sub product of top 8 words and order */
 	MOV	r12, sp
 	MOV	r1, #0x2c13
 	MOVT	r1, #0xa30a
-	MOV	lr, #0x0
+	MOV	lr, #0
 	LDM	r0!, {r10, r11}
 	UMLAL	r10, lr, r2, r1
 	ADDS	r11, r11, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r11, lr, r3, r1
 	STM	r12!, {r10, r11}
 	LDM	r0!, {r10, r11}
 	ADDS	r10, r10, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r10, lr, r4, r1
 	ADDS	r11, r11, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r11, lr, r5, r1
 	STM	r12!, {r10, r11}
 	LDM	r0!, {r10, r11}
 	ADDS	r10, r10, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r10, lr, r6, r1
 	ADDS	r11, r11, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r11, lr, r7, r1
 	STM	r12!, {r10, r11}
 	LDM	r0!, {r10, r11}
 	ADDS	r10, r10, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r10, lr, r8, r1
 	BFC	r11, #28, #4
 	ADDS	r11, r11, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r11, lr, r9, r1
 	STM	r12!, {r10, r11, lr}
-	SUB	r0, r0, #0x10
-	SUB	r12, r12, #0x20
+	SUB	r0, r0, #16
+	SUB	r12, r12, #32
 	MOV	r1, #0x9ce5
 	MOVT	r1, #0xa7ed
-	MOV	lr, #0x0
+	MOV	lr, #0
 	LDM	r12, {r10, r11}
 	UMLAL	r10, lr, r2, r1
 	ADDS	r11, r11, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r11, lr, r3, r1
 	STM	r12!, {r10, r11}
 	LDM	r12, {r10, r11}
 	ADDS	r10, r10, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r10, lr, r4, r1
 	ADDS	r11, r11, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r11, lr, r5, r1
 	STM	r12!, {r10, r11}
 	LDM	r12, {r10, r11}
 	ADDS	r10, r10, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r10, lr, r6, r1
 	ADDS	r11, r11, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r11, lr, r7, r1
 	STM	r12!, {r10, r11}
 	LDM	r12, {r10, r11}
 	ADDS	r10, r10, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r10, lr, r8, r1
 	ADDS	r11, r11, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r11, lr, r9, r1
 	STM	r12!, {r10, r11, lr}
-	SUB	r12, r12, #0x20
+	SUB	r12, r12, #32
 	MOV	r1, #0x6329
 	MOVT	r1, #0x5d08
-	MOV	lr, #0x0
+	MOV	lr, #0
 	LDM	r12, {r10, r11}
 	UMLAL	r10, lr, r2, r1
 	ADDS	r11, r11, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r11, lr, r3, r1
 	STM	r12!, {r10, r11}
 	LDM	r12, {r10, r11}
 	ADDS	r10, r10, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r10, lr, r4, r1
 	ADDS	r11, r11, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r11, lr, r5, r1
 	STM	r12!, {r10, r11}
 	LDM	r12, {r10, r11}
 	ADDS	r10, r10, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r10, lr, r6, r1
 	ADDS	r11, r11, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r11, lr, r7, r1
 	STM	r12!, {r10, r11}
 	LDM	r12, {r10, r11}
 	ADDS	r10, r10, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r10, lr, r8, r1
 	ADDS	r11, r11, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r11, lr, r9, r1
 	STM	r12!, {r10, r11, lr}
-	SUB	r12, r12, #0x20
+	SUB	r12, r12, #32
 	MOV	r1, #0x621
 	MOVT	r1, #0xeb21
-	MOV	lr, #0x0
+	MOV	lr, #0
 	LDM	r12, {r10, r11}
 	UMLAL	r10, lr, r2, r1
 	ADDS	r11, r11, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r11, lr, r3, r1
 	STM	r12!, {r10, r11}
 	LDM	r12, {r10, r11}
 	ADDS	r10, r10, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r10, lr, r4, r1
 	ADDS	r11, r11, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r11, lr, r5, r1
 	STM	r12!, {r10, r11}
 	LDM	r12, {r10, r11}
 	ADDS	r10, r10, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r10, lr, r6, r1
 	ADDS	r11, r11, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r11, lr, r7, r1
 	STM	r12!, {r10, r11}
 	LDM	r12, {r10, r11}
 	ADDS	r10, r10, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r10, lr, r8, r1
 	ADDS	r11, r11, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r11, lr, r9, r1
 	STM	r12!, {r10, r11, lr}
-	SUB	r12, r12, #0x20
+	SUB	r12, r12, #32
 	/* Subtract at 4 * 32 */
 	LDM	r12, {r10, r11}
 	SUBS	r10, r10, r2
@@ -4782,7 +5870,7 @@ sc_reduce:
 	SBCS	r10, r10, r8
 	SBC	r11, r11, r9
 	STM	r12!, {r10, r11}
-	SUB	r12, r12, #0x24
+	SUB	r12, r12, #36
 	ASR	lr, r11, #25
 	/* Conditionally subtract order starting at bit 125 */
 	MOV	r1, #0xa0000000
@@ -4811,19 +5899,19 @@ sc_reduce:
 	STM	r12!, {r10, r11}
 	LDM	r12, {r10, r11}
 	ADCS	r10, r10, r5
-	ADCS	r11, r11, #0x0
+	ADCS	r11, r11, #0
 	STM	r12!, {r10, r11}
 	LDM	r12, {r10, r11}
-	ADCS	r10, r10, #0x0
-	ADCS	r11, r11, #0x0
+	ADCS	r10, r10, #0
+	ADCS	r11, r11, #0
 	STM	r12!, {r10, r11}
 	LDM	r12, {r10}
-	ADCS	r10, r10, #0x0
+	ADCS	r10, r10, #0
 	STM	r12!, {r10}
-	SUB	r0, r0, #0x10
+	SUB	r0, r0, #16
 	MOV	r12, sp
 	/* Load bits 252-376 */
-	ADD	r12, r12, #0x1c
+	ADD	r12, r12, #28
 	LDM	r12, {r1, r2, r3, r4, r5}
 	LSL	r5, r5, #4
 	ORR	r5, r5, r4, LSR #28
@@ -4834,89 +5922,89 @@ sc_reduce:
 	LSL	r2, r2, #4
 	ORR	r2, r2, r1, LSR #28
 	BFC	r5, #29, #3
-	SUB	r12, r12, #0x1c
+	SUB	r12, r12, #28
 	/* Sub product of top 4 words and order */
 	MOV	r0, sp
 	/*   * -5cf5d3ed */
 	MOV	r1, #0x2c13
 	MOVT	r1, #0xa30a
-	MOV	lr, #0x0
+	MOV	lr, #0
 	LDM	r0, {r6, r7, r8, r9}
 	UMLAL	r6, lr, r2, r1
 	ADDS	r7, r7, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r7, lr, r3, r1
 	ADDS	r8, r8, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r8, lr, r4, r1
 	ADDS	r9, r9, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r9, lr, r5, r1
 	STM	r0, {r6, r7, r8, r9}
-	ADD	r0, r0, #0x4
+	ADD	r0, r0, #4
 	/*   * -5812631b */
 	MOV	r1, #0x9ce5
 	MOVT	r1, #0xa7ed
-	MOV	r10, #0x0
+	MOV	r10, #0
 	LDM	r0, {r6, r7, r8, r9}
 	UMLAL	r6, r10, r2, r1
 	ADDS	r7, r7, r10
-	MOV	r10, #0x0
-	ADC	r10, r10, #0x0
+	MOV	r10, #0
+	ADC	r10, r10, #0
 	UMLAL	r7, r10, r3, r1
 	ADDS	r8, r8, r10
-	MOV	r10, #0x0
-	ADC	r10, r10, #0x0
+	MOV	r10, #0
+	ADC	r10, r10, #0
 	UMLAL	r8, r10, r4, r1
 	ADDS	r9, r9, r10
-	MOV	r10, #0x0
-	ADC	r10, r10, #0x0
+	MOV	r10, #0
+	ADC	r10, r10, #0
 	UMLAL	r9, r10, r5, r1
 	STM	r0, {r6, r7, r8, r9}
-	ADD	r0, r0, #0x4
+	ADD	r0, r0, #4
 	/*   * -a2f79cd7 */
 	MOV	r1, #0x6329
 	MOVT	r1, #0x5d08
-	MOV	r11, #0x0
+	MOV	r11, #0
 	LDM	r0, {r6, r7, r8, r9}
 	UMLAL	r6, r11, r2, r1
 	ADDS	r7, r7, r11
-	MOV	r11, #0x0
-	ADC	r11, r11, #0x0
+	MOV	r11, #0
+	ADC	r11, r11, #0
 	UMLAL	r7, r11, r3, r1
 	ADDS	r8, r8, r11
-	MOV	r11, #0x0
-	ADC	r11, r11, #0x0
+	MOV	r11, #0
+	ADC	r11, r11, #0
 	UMLAL	r8, r11, r4, r1
 	ADDS	r9, r9, r11
-	MOV	r11, #0x0
-	ADC	r11, r11, #0x0
+	MOV	r11, #0
+	ADC	r11, r11, #0
 	UMLAL	r9, r11, r5, r1
 	STM	r0, {r6, r7, r8, r9}
-	ADD	r0, r0, #0x4
+	ADD	r0, r0, #4
 	/*   * -14def9df */
 	MOV	r1, #0x621
 	MOVT	r1, #0xeb21
-	MOV	r12, #0x0
+	MOV	r12, #0
 	LDM	r0, {r6, r7, r8, r9}
 	UMLAL	r6, r12, r2, r1
 	ADDS	r7, r7, r12
-	MOV	r12, #0x0
-	ADC	r12, r12, #0x0
+	MOV	r12, #0
+	ADC	r12, r12, #0
 	UMLAL	r7, r12, r3, r1
 	ADDS	r8, r8, r12
-	MOV	r12, #0x0
-	ADC	r12, r12, #0x0
+	MOV	r12, #0
+	ADC	r12, r12, #0
 	UMLAL	r8, r12, r4, r1
 	ADDS	r9, r9, r12
-	MOV	r12, #0x0
-	ADC	r12, r12, #0x0
+	MOV	r12, #0
+	ADC	r12, r12, #0
 	UMLAL	r9, r12, r5, r1
 	STM	r0, {r6, r7, r8, r9}
-	ADD	r0, r0, #0x4
+	ADD	r0, r0, #4
 	/* Add overflows at 4 * 32 */
 	LDM	r0, {r6, r7, r8, r9}
 	BFC	r9, #28, #4
@@ -4930,7 +6018,7 @@ sc_reduce:
 	SBCS	r8, r8, r4
 	SBCS	r9, r9, r5
 	SBC	r1, r1, r1
-	SUB	r0, r0, #0x10
+	SUB	r0, r0, #16
 	LDM	r0, {r2, r3, r4, r5}
 	MOV	r10, #0xd3ed
 	MOVT	r10, #0x5cf5
@@ -4948,16 +6036,16 @@ sc_reduce:
 	ADCS	r3, r3, r11
 	ADCS	r4, r4, r12
 	ADCS	r5, r5, lr
-	ADCS	r6, r6, #0x0
-	ADCS	r7, r7, #0x0
+	ADCS	r6, r6, #0
+	ADCS	r7, r7, #0
 	AND	r1, r1, #0x10000000
-	ADCS	r8, r8, #0x0
+	ADCS	r8, r8, #0
 	ADC	r9, r9, r1
 	BFC	r9, #28, #4
 	/* Store result */
 	LDR	r0, [sp, #52]
 	STM	r0, {r2, r3, r4, r5, r6, r7, r8, r9}
-	ADD	sp, sp, #0x38
+	ADD	sp, sp, #56
 	POP	{r4, r5, r6, r7, r8, r9, r10, r11, pc}
 	/* Cycle Count = 588 */
 	.size	sc_reduce,.-sc_reduce
@@ -4965,13 +6053,14 @@ sc_reduce:
 	.text
 	.align	4
 	.globl	sc_reduce
+	WC_ASM_ATT_HIDDEN(sc_reduce)
 	.type	sc_reduce, %function
 sc_reduce:
 	PUSH	{r4, r5, r6, r7, r8, r9, r10, r11, lr}
-	SUB	sp, sp, #0x38
+	SUB	sp, sp, #56
 	STR	r0, [sp, #52]
 	/* Load bits 252-511 */
-	ADD	r0, r0, #0x1c
+	ADD	r0, r0, #28
 	LDM	r0, {r1, r2, r3, r4, r5, r6, r7, r8, r9}
 	LSR	lr, r9, #24
 	LSL	r9, r9, #4
@@ -4991,13 +6080,13 @@ sc_reduce:
 	LSL	r2, r2, #4
 	ORR	r2, r2, r1, LSR #28
 	BFC	r9, #28, #4
-	SUB	r0, r0, #0x1c
+	SUB	r0, r0, #28
 	/* Add order times bits 504..511 */
 	MOV	r10, #0x2c13
 	MOVT	r10, #0xa30a
 	MOV	r11, #0x9ce5
 	MOVT	r11, #0xa7ed
-	MOV	r1, #0x0
+	MOV	r1, #0
 	UMLAL	r2, r1, r10, lr
 	UMAAL	r3, r1, r11, lr
 	MOV	r10, #0x6329
@@ -5007,18 +6096,18 @@ sc_reduce:
 	UMAAL	r4, r1, r10, lr
 	UMAAL	r5, r1, r11, lr
 	ADDS	r6, r6, r1
-	ADCS	r7, r7, #0x0
-	ADCS	r8, r8, #0x0
-	ADC	r9, r9, #0x0
+	ADCS	r7, r7, #0
+	ADCS	r8, r8, #0
+	ADC	r9, r9, #0
 	SUBS	r6, r6, lr
-	SBCS	r7, r7, #0x0
-	SBCS	r8, r8, #0x0
-	SBC	r9, r9, #0x0
+	SBCS	r7, r7, #0
+	SBCS	r8, r8, #0
+	SBC	r9, r9, #0
 	/* Sub product of top 8 words and order */
 	MOV	r12, sp
 	MOV	r1, #0x2c13
 	MOVT	r1, #0xa30a
-	MOV	lr, #0x0
+	MOV	lr, #0
 	LDM	r0!, {r10, r11}
 	UMLAL	r10, lr, r2, r1
 	UMAAL	r11, lr, r3, r1
@@ -5036,11 +6125,11 @@ sc_reduce:
 	BFC	r11, #28, #4
 	UMAAL	r11, lr, r9, r1
 	STM	r12!, {r10, r11, lr}
-	SUB	r0, r0, #0x10
-	SUB	r12, r12, #0x20
+	SUB	r0, r0, #16
+	SUB	r12, r12, #32
 	MOV	r1, #0x9ce5
 	MOVT	r1, #0xa7ed
-	MOV	lr, #0x0
+	MOV	lr, #0
 	LDM	r12, {r10, r11}
 	UMLAL	r10, lr, r2, r1
 	UMAAL	r11, lr, r3, r1
@@ -5057,10 +6146,10 @@ sc_reduce:
 	UMAAL	r10, lr, r8, r1
 	UMAAL	r11, lr, r9, r1
 	STM	r12!, {r10, r11, lr}
-	SUB	r12, r12, #0x20
+	SUB	r12, r12, #32
 	MOV	r1, #0x6329
 	MOVT	r1, #0x5d08
-	MOV	lr, #0x0
+	MOV	lr, #0
 	LDM	r12, {r10, r11}
 	UMLAL	r10, lr, r2, r1
 	UMAAL	r11, lr, r3, r1
@@ -5077,10 +6166,10 @@ sc_reduce:
 	UMAAL	r10, lr, r8, r1
 	UMAAL	r11, lr, r9, r1
 	STM	r12!, {r10, r11, lr}
-	SUB	r12, r12, #0x20
+	SUB	r12, r12, #32
 	MOV	r1, #0x621
 	MOVT	r1, #0xeb21
-	MOV	lr, #0x0
+	MOV	lr, #0
 	LDM	r12, {r10, r11}
 	UMLAL	r10, lr, r2, r1
 	UMAAL	r11, lr, r3, r1
@@ -5097,7 +6186,7 @@ sc_reduce:
 	UMAAL	r10, lr, r8, r1
 	UMAAL	r11, lr, r9, r1
 	STM	r12!, {r10, r11, lr}
-	SUB	r12, r12, #0x20
+	SUB	r12, r12, #32
 	/* Subtract at 4 * 32 */
 	LDM	r12, {r10, r11}
 	SUBS	r10, r10, r2
@@ -5115,7 +6204,7 @@ sc_reduce:
 	SBCS	r10, r10, r8
 	SBC	r11, r11, r9
 	STM	r12!, {r10, r11}
-	SUB	r12, r12, #0x24
+	SUB	r12, r12, #36
 	ASR	lr, r11, #25
 	/* Conditionally subtract order starting at bit 125 */
 	MOV	r1, #0xa0000000
@@ -5144,19 +6233,19 @@ sc_reduce:
 	STM	r12!, {r10, r11}
 	LDM	r12, {r10, r11}
 	ADCS	r10, r10, r5
-	ADCS	r11, r11, #0x0
+	ADCS	r11, r11, #0
 	STM	r12!, {r10, r11}
 	LDM	r12, {r10, r11}
-	ADCS	r10, r10, #0x0
-	ADCS	r11, r11, #0x0
+	ADCS	r10, r10, #0
+	ADCS	r11, r11, #0
 	STM	r12!, {r10, r11}
 	LDM	r12, {r10}
-	ADCS	r10, r10, #0x0
+	ADCS	r10, r10, #0
 	STM	r12!, {r10}
-	SUB	r0, r0, #0x10
+	SUB	r0, r0, #16
 	MOV	r12, sp
 	/* Load bits 252-376 */
-	ADD	r12, r12, #0x1c
+	ADD	r12, r12, #28
 	LDM	r12, {r1, r2, r3, r4, r5}
 	LSL	r5, r5, #4
 	ORR	r5, r5, r4, LSR #28
@@ -5167,53 +6256,53 @@ sc_reduce:
 	LSL	r2, r2, #4
 	ORR	r2, r2, r1, LSR #28
 	BFC	r5, #29, #3
-	SUB	r12, r12, #0x1c
+	SUB	r12, r12, #28
 	/* Sub product of top 4 words and order */
 	MOV	r0, sp
 	/*   * -5cf5d3ed */
 	MOV	r1, #0x2c13
 	MOVT	r1, #0xa30a
-	MOV	lr, #0x0
+	MOV	lr, #0
 	LDM	r0, {r6, r7, r8, r9}
 	UMLAL	r6, lr, r2, r1
 	UMAAL	r7, lr, r3, r1
 	UMAAL	r8, lr, r4, r1
 	UMAAL	r9, lr, r5, r1
 	STM	r0, {r6, r7, r8, r9}
-	ADD	r0, r0, #0x4
+	ADD	r0, r0, #4
 	/*   * -5812631b */
 	MOV	r1, #0x9ce5
 	MOVT	r1, #0xa7ed
-	MOV	r10, #0x0
+	MOV	r10, #0
 	LDM	r0, {r6, r7, r8, r9}
 	UMLAL	r6, r10, r2, r1
 	UMAAL	r7, r10, r3, r1
 	UMAAL	r8, r10, r4, r1
 	UMAAL	r9, r10, r5, r1
 	STM	r0, {r6, r7, r8, r9}
-	ADD	r0, r0, #0x4
+	ADD	r0, r0, #4
 	/*   * -a2f79cd7 */
 	MOV	r1, #0x6329
 	MOVT	r1, #0x5d08
-	MOV	r11, #0x0
+	MOV	r11, #0
 	LDM	r0, {r6, r7, r8, r9}
 	UMLAL	r6, r11, r2, r1
 	UMAAL	r7, r11, r3, r1
 	UMAAL	r8, r11, r4, r1
 	UMAAL	r9, r11, r5, r1
 	STM	r0, {r6, r7, r8, r9}
-	ADD	r0, r0, #0x4
+	ADD	r0, r0, #4
 	/*   * -14def9df */
 	MOV	r1, #0x621
 	MOVT	r1, #0xeb21
-	MOV	r12, #0x0
+	MOV	r12, #0
 	LDM	r0, {r6, r7, r8, r9}
 	UMLAL	r6, r12, r2, r1
 	UMAAL	r7, r12, r3, r1
 	UMAAL	r8, r12, r4, r1
 	UMAAL	r9, r12, r5, r1
 	STM	r0, {r6, r7, r8, r9}
-	ADD	r0, r0, #0x4
+	ADD	r0, r0, #4
 	/* Add overflows at 4 * 32 */
 	LDM	r0, {r6, r7, r8, r9}
 	BFC	r9, #28, #4
@@ -5227,7 +6316,7 @@ sc_reduce:
 	SBCS	r8, r8, r4
 	SBCS	r9, r9, r5
 	SBC	r1, r1, r1
-	SUB	r0, r0, #0x10
+	SUB	r0, r0, #16
 	LDM	r0, {r2, r3, r4, r5}
 	MOV	r10, #0xd3ed
 	MOVT	r10, #0x5cf5
@@ -5245,32 +6334,33 @@ sc_reduce:
 	ADCS	r3, r3, r11
 	ADCS	r4, r4, r12
 	ADCS	r5, r5, lr
-	ADCS	r6, r6, #0x0
-	ADCS	r7, r7, #0x0
+	ADCS	r6, r6, #0
+	ADCS	r7, r7, #0
 	AND	r1, r1, #0x10000000
-	ADCS	r8, r8, #0x0
+	ADCS	r8, r8, #0
 	ADC	r9, r9, r1
 	BFC	r9, #28, #4
 	/* Store result */
 	LDR	r0, [sp, #52]
 	STM	r0, {r2, r3, r4, r5, r6, r7, r8, r9}
-	ADD	sp, sp, #0x38
+	ADD	sp, sp, #56
 	POP	{r4, r5, r6, r7, r8, r9, r10, r11, pc}
 	/* Cycle Count = 502 */
 	.size	sc_reduce,.-sc_reduce
-#endif /* WOLFSSL_SP_NO_UMAAL */
+#endif /* WOLFSSL_ARM_ARCH_7M */
 #ifdef HAVE_ED25519_SIGN
-#ifdef WOLFSSL_SP_NO_UMAAL
+#ifdef WOLFSSL_ARM_ARCH_7M
 	.text
 	.align	4
 	.globl	sc_muladd
+	WC_ASM_ATT_HIDDEN(sc_muladd)
 	.type	sc_muladd, %function
 sc_muladd:
 	PUSH	{r4, r5, r6, r7, r8, r9, r10, r11, lr}
 	SUB	sp, sp, #0x50
 	ADD	lr, sp, #0x44
 	STM	lr, {r0, r1, r3}
-	MOV	r0, #0x0
+	MOV	r0, #0
 	LDR	r12, [r1]
 	/* A[0] * B[0] */
 	LDR	lr, [r2]
@@ -5292,309 +6382,309 @@ sc_muladd:
 	ADDS	r5, r5, r11
 	/* A[0] * B[3] */
 	LDR	lr, [r2, #12]
-	ADCS	r6, r6, #0x0
-	ADC	r11, r0, #0x0
+	ADCS	r6, r6, #0
+	ADC	r11, r0, #0
 	UMLAL	r6, r11, r12, lr
 	ADDS	r7, r7, r11
 	/* A[0] * B[5] */
 	LDR	lr, [r2, #20]
-	ADCS	r8, r8, #0x0
-	ADC	r11, r0, #0x0
+	ADCS	r8, r8, #0
+	ADC	r11, r0, #0
 	UMLAL	r8, r11, r12, lr
 	ADDS	r9, r9, r11
 	/* A[0] * B[7] */
 	LDR	lr, [r2, #28]
-	ADCS	r10, r10, #0x0
-	ADC	r3, r0, #0x0
+	ADCS	r10, r10, #0
+	ADC	r3, r0, #0
 	UMLAL	r10, r3, r12, lr
 	/* A[1] * B[0] */
 	LDR	r12, [r1, #4]
 	LDR	lr, [r2]
-	MOV	r11, #0x0
+	MOV	r11, #0
 	UMLAL	r4, r11, r12, lr
 	STR	r4, [sp, #4]
 	ADDS	r5, r5, r11
 	/* A[1] * B[1] */
 	LDR	lr, [r2, #4]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r5, r11, r12, lr
 	ADDS	r6, r6, r11
 	/* A[1] * B[2] */
 	LDR	lr, [r2, #8]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r6, r11, r12, lr
 	ADDS	r7, r7, r11
 	/* A[1] * B[3] */
 	LDR	lr, [r2, #12]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r7, r11, r12, lr
 	ADDS	r8, r8, r11
 	/* A[1] * B[4] */
 	LDR	lr, [r2, #16]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r8, r11, r12, lr
 	ADDS	r9, r9, r11
 	/* A[1] * B[5] */
 	LDR	lr, [r2, #20]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r9, r11, r12, lr
 	ADDS	r10, r10, r11
 	/* A[1] * B[6] */
 	LDR	lr, [r2, #24]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r10, r11, r12, lr
 	ADDS	r3, r3, r11
 	/* A[1] * B[7] */
 	LDR	lr, [r2, #28]
-	ADC	r4, r0, #0x0
+	ADC	r4, r0, #0
 	UMLAL	r3, r4, r12, lr
 	/* A[2] * B[0] */
 	LDR	r12, [r1, #8]
 	LDR	lr, [r2]
-	MOV	r11, #0x0
+	MOV	r11, #0
 	UMLAL	r5, r11, r12, lr
 	STR	r5, [sp, #8]
 	ADDS	r6, r6, r11
 	/* A[2] * B[1] */
 	LDR	lr, [r2, #4]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r6, r11, r12, lr
 	ADDS	r7, r7, r11
 	/* A[2] * B[2] */
 	LDR	lr, [r2, #8]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r7, r11, r12, lr
 	ADDS	r8, r8, r11
 	/* A[2] * B[3] */
 	LDR	lr, [r2, #12]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r8, r11, r12, lr
 	ADDS	r9, r9, r11
 	/* A[2] * B[4] */
 	LDR	lr, [r2, #16]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r9, r11, r12, lr
 	ADDS	r10, r10, r11
 	/* A[2] * B[5] */
 	LDR	lr, [r2, #20]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r10, r11, r12, lr
 	ADDS	r3, r3, r11
 	/* A[2] * B[6] */
 	LDR	lr, [r2, #24]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r3, r11, r12, lr
 	ADDS	r4, r4, r11
 	/* A[2] * B[7] */
 	LDR	lr, [r2, #28]
-	ADC	r5, r0, #0x0
+	ADC	r5, r0, #0
 	UMLAL	r4, r5, r12, lr
 	/* A[3] * B[0] */
 	LDR	r12, [r1, #12]
 	LDR	lr, [r2]
-	MOV	r11, #0x0
+	MOV	r11, #0
 	UMLAL	r6, r11, r12, lr
 	STR	r6, [sp, #12]
 	ADDS	r7, r7, r11
 	/* A[3] * B[1] */
 	LDR	lr, [r2, #4]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r7, r11, r12, lr
 	ADDS	r8, r8, r11
 	/* A[3] * B[2] */
 	LDR	lr, [r2, #8]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r8, r11, r12, lr
 	ADDS	r9, r9, r11
 	/* A[3] * B[3] */
 	LDR	lr, [r2, #12]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r9, r11, r12, lr
 	ADDS	r10, r10, r11
 	/* A[3] * B[4] */
 	LDR	lr, [r2, #16]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r10, r11, r12, lr
 	ADDS	r3, r3, r11
 	/* A[3] * B[5] */
 	LDR	lr, [r2, #20]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r3, r11, r12, lr
 	ADDS	r4, r4, r11
 	/* A[3] * B[6] */
 	LDR	lr, [r2, #24]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r4, r11, r12, lr
 	ADDS	r5, r5, r11
 	/* A[3] * B[7] */
 	LDR	lr, [r2, #28]
-	ADC	r6, r0, #0x0
+	ADC	r6, r0, #0
 	UMLAL	r5, r6, r12, lr
 	/* A[4] * B[0] */
 	LDR	r12, [r1, #16]
 	LDR	lr, [r2]
-	MOV	r11, #0x0
+	MOV	r11, #0
 	UMLAL	r7, r11, r12, lr
 	STR	r7, [sp, #16]
 	ADDS	r8, r8, r11
 	/* A[4] * B[1] */
 	LDR	lr, [r2, #4]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r8, r11, r12, lr
 	ADDS	r9, r9, r11
 	/* A[4] * B[2] */
 	LDR	lr, [r2, #8]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r9, r11, r12, lr
 	ADDS	r10, r10, r11
 	/* A[4] * B[3] */
 	LDR	lr, [r2, #12]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r10, r11, r12, lr
 	ADDS	r3, r3, r11
 	/* A[4] * B[4] */
 	LDR	lr, [r2, #16]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r3, r11, r12, lr
 	ADDS	r4, r4, r11
 	/* A[4] * B[5] */
 	LDR	lr, [r2, #20]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r4, r11, r12, lr
 	ADDS	r5, r5, r11
 	/* A[4] * B[6] */
 	LDR	lr, [r2, #24]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r5, r11, r12, lr
 	ADDS	r6, r6, r11
 	/* A[4] * B[7] */
 	LDR	lr, [r2, #28]
-	ADC	r7, r0, #0x0
+	ADC	r7, r0, #0
 	UMLAL	r6, r7, r12, lr
 	/* A[5] * B[0] */
 	LDR	r12, [r1, #20]
 	LDR	lr, [r2]
-	MOV	r11, #0x0
+	MOV	r11, #0
 	UMLAL	r8, r11, r12, lr
 	STR	r8, [sp, #20]
 	ADDS	r9, r9, r11
 	/* A[5] * B[1] */
 	LDR	lr, [r2, #4]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r9, r11, r12, lr
 	ADDS	r10, r10, r11
 	/* A[5] * B[2] */
 	LDR	lr, [r2, #8]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r10, r11, r12, lr
 	ADDS	r3, r3, r11
 	/* A[5] * B[3] */
 	LDR	lr, [r2, #12]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r3, r11, r12, lr
 	ADDS	r4, r4, r11
 	/* A[5] * B[4] */
 	LDR	lr, [r2, #16]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r4, r11, r12, lr
 	ADDS	r5, r5, r11
 	/* A[5] * B[5] */
 	LDR	lr, [r2, #20]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r5, r11, r12, lr
 	ADDS	r6, r6, r11
 	/* A[5] * B[6] */
 	LDR	lr, [r2, #24]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r6, r11, r12, lr
 	ADDS	r7, r7, r11
 	/* A[5] * B[7] */
 	LDR	lr, [r2, #28]
-	ADC	r8, r0, #0x0
+	ADC	r8, r0, #0
 	UMLAL	r7, r8, r12, lr
 	/* A[6] * B[0] */
 	LDR	r12, [r1, #24]
 	LDR	lr, [r2]
-	MOV	r11, #0x0
+	MOV	r11, #0
 	UMLAL	r9, r11, r12, lr
 	STR	r9, [sp, #24]
 	ADDS	r10, r10, r11
 	/* A[6] * B[1] */
 	LDR	lr, [r2, #4]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r10, r11, r12, lr
 	ADDS	r3, r3, r11
 	/* A[6] * B[2] */
 	LDR	lr, [r2, #8]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r3, r11, r12, lr
 	ADDS	r4, r4, r11
 	/* A[6] * B[3] */
 	LDR	lr, [r2, #12]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r4, r11, r12, lr
 	ADDS	r5, r5, r11
 	/* A[6] * B[4] */
 	LDR	lr, [r2, #16]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r5, r11, r12, lr
 	ADDS	r6, r6, r11
 	/* A[6] * B[5] */
 	LDR	lr, [r2, #20]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r6, r11, r12, lr
 	ADDS	r7, r7, r11
 	/* A[6] * B[6] */
 	LDR	lr, [r2, #24]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r7, r11, r12, lr
 	ADDS	r8, r8, r11
 	/* A[6] * B[7] */
 	LDR	lr, [r2, #28]
-	ADC	r9, r0, #0x0
+	ADC	r9, r0, #0
 	UMLAL	r8, r9, r12, lr
 	/* A[7] * B[0] */
 	LDR	r12, [r1, #28]
 	LDR	lr, [r2]
-	MOV	r11, #0x0
+	MOV	r11, #0
 	UMLAL	r10, r11, r12, lr
 	STR	r10, [sp, #28]
 	ADDS	r3, r3, r11
 	/* A[7] * B[1] */
 	LDR	lr, [r2, #4]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r3, r11, r12, lr
 	ADDS	r4, r4, r11
 	/* A[7] * B[2] */
 	LDR	lr, [r2, #8]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r4, r11, r12, lr
 	ADDS	r5, r5, r11
 	/* A[7] * B[3] */
 	LDR	lr, [r2, #12]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r5, r11, r12, lr
 	ADDS	r6, r6, r11
 	/* A[7] * B[4] */
 	LDR	lr, [r2, #16]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r6, r11, r12, lr
 	ADDS	r7, r7, r11
 	/* A[7] * B[5] */
 	LDR	lr, [r2, #20]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r7, r11, r12, lr
 	ADDS	r8, r8, r11
 	/* A[7] * B[6] */
 	LDR	lr, [r2, #24]
-	ADC	r11, r0, #0x0
+	ADC	r11, r0, #0
 	UMLAL	r8, r11, r12, lr
 	ADDS	r9, r9, r11
 	/* A[7] * B[7] */
 	LDR	lr, [r2, #28]
-	ADC	r10, r0, #0x0
+	ADC	r10, r0, #0
 	UMLAL	r9, r10, r12, lr
-	ADD	lr, sp, #0x20
+	ADD	lr, sp, #32
 	STM	lr, {r3, r4, r5, r6, r7, r8, r9, r10}
 	MOV	r0, sp
 	/* Add c to a * b */
@@ -5613,15 +6703,15 @@ sc_muladd:
 	MOV	r1, r9
 	STM	r0!, {r2, r3, r4, r5, r6, r7, r8, r9}
 	LDM	r0, {r2, r3, r4, r5, r6, r7, r8, r9}
-	ADCS	r2, r2, #0x0
-	ADCS	r3, r3, #0x0
-	ADCS	r4, r4, #0x0
-	ADCS	r5, r5, #0x0
-	ADCS	r6, r6, #0x0
-	ADCS	r7, r7, #0x0
-	ADCS	r8, r8, #0x0
-	ADC	r9, r9, #0x0
-	SUB	r0, r0, #0x20
+	ADCS	r2, r2, #0
+	ADCS	r3, r3, #0
+	ADCS	r4, r4, #0
+	ADCS	r5, r5, #0
+	ADCS	r6, r6, #0
+	ADCS	r7, r7, #0
+	ADCS	r8, r8, #0
+	ADC	r9, r9, #0
+	SUB	r0, r0, #32
 	/* Get 252..503 and 504..507 */
 	LSR	lr, r9, #24
 	LSL	r9, r9, #4
@@ -5646,200 +6736,200 @@ sc_muladd:
 	MOVT	r10, #0xa30a
 	MOV	r11, #0x9ce5
 	MOVT	r11, #0xa7ed
-	MOV	r1, #0x0
+	MOV	r1, #0
 	UMLAL	r2, r1, r10, lr
 	ADDS	r3, r3, r1
-	MOV	r1, #0x0
-	ADC	r1, r1, #0x0
+	MOV	r1, #0
+	ADC	r1, r1, #0
 	UMLAL	r3, r1, r11, lr
 	MOV	r10, #0x6329
 	MOVT	r10, #0x5d08
 	MOV	r11, #0x621
 	MOVT	r11, #0xeb21
 	ADDS	r4, r4, r1
-	MOV	r1, #0x0
-	ADC	r1, r1, #0x0
+	MOV	r1, #0
+	ADC	r1, r1, #0
 	UMLAL	r4, r1, r10, lr
 	ADDS	r5, r5, r1
-	MOV	r1, #0x0
-	ADC	r1, r1, #0x0
+	MOV	r1, #0
+	ADC	r1, r1, #0
 	UMLAL	r5, r1, r11, lr
 	ADDS	r6, r6, r1
-	ADCS	r7, r7, #0x0
-	ADCS	r8, r8, #0x0
-	ADC	r9, r9, #0x0
+	ADCS	r7, r7, #0
+	ADCS	r8, r8, #0
+	ADC	r9, r9, #0
 	SUBS	r6, r6, lr
-	SBCS	r7, r7, #0x0
-	SBCS	r8, r8, #0x0
-	SBC	r9, r9, #0x0
+	SBCS	r7, r7, #0
+	SBCS	r8, r8, #0
+	SBC	r9, r9, #0
 	/* Sub product of top 8 words and order */
 	MOV	r12, sp
 	MOV	r1, #0x2c13
 	MOVT	r1, #0xa30a
-	MOV	lr, #0x0
+	MOV	lr, #0
 	LDM	r0!, {r10, r11}
 	UMLAL	r10, lr, r2, r1
 	ADDS	r11, r11, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r11, lr, r3, r1
 	STM	r12!, {r10, r11}
 	LDM	r0!, {r10, r11}
 	ADDS	r10, r10, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r10, lr, r4, r1
 	ADDS	r11, r11, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r11, lr, r5, r1
 	STM	r12!, {r10, r11}
 	LDM	r0!, {r10, r11}
 	ADDS	r10, r10, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r10, lr, r6, r1
 	ADDS	r11, r11, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r11, lr, r7, r1
 	STM	r12!, {r10, r11}
 	LDM	r0!, {r10, r11}
 	ADDS	r10, r10, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r10, lr, r8, r1
 	BFC	r11, #28, #4
 	ADDS	r11, r11, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r11, lr, r9, r1
 	STM	r12!, {r10, r11, lr}
-	SUB	r0, r0, #0x10
-	SUB	r12, r12, #0x20
+	SUB	r0, r0, #16
+	SUB	r12, r12, #32
 	MOV	r1, #0x9ce5
 	MOVT	r1, #0xa7ed
-	MOV	lr, #0x0
+	MOV	lr, #0
 	LDM	r12, {r10, r11}
 	UMLAL	r10, lr, r2, r1
 	ADDS	r11, r11, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r11, lr, r3, r1
 	STM	r12!, {r10, r11}
 	LDM	r12, {r10, r11}
 	ADDS	r10, r10, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r10, lr, r4, r1
 	ADDS	r11, r11, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r11, lr, r5, r1
 	STM	r12!, {r10, r11}
 	LDM	r12, {r10, r11}
 	ADDS	r10, r10, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r10, lr, r6, r1
 	ADDS	r11, r11, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r11, lr, r7, r1
 	STM	r12!, {r10, r11}
 	LDM	r12, {r10, r11}
 	ADDS	r10, r10, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r10, lr, r8, r1
 	ADDS	r11, r11, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r11, lr, r9, r1
 	STM	r12!, {r10, r11, lr}
-	SUB	r12, r12, #0x20
+	SUB	r12, r12, #32
 	MOV	r1, #0x6329
 	MOVT	r1, #0x5d08
-	MOV	lr, #0x0
+	MOV	lr, #0
 	LDM	r12, {r10, r11}
 	UMLAL	r10, lr, r2, r1
 	ADDS	r11, r11, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r11, lr, r3, r1
 	STM	r12!, {r10, r11}
 	LDM	r12, {r10, r11}
 	ADDS	r10, r10, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r10, lr, r4, r1
 	ADDS	r11, r11, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r11, lr, r5, r1
 	STM	r12!, {r10, r11}
 	LDM	r12, {r10, r11}
 	ADDS	r10, r10, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r10, lr, r6, r1
 	ADDS	r11, r11, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r11, lr, r7, r1
 	STM	r12!, {r10, r11}
 	LDM	r12, {r10, r11}
 	ADDS	r10, r10, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r10, lr, r8, r1
 	ADDS	r11, r11, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r11, lr, r9, r1
 	STM	r12!, {r10, r11, lr}
-	SUB	r12, r12, #0x20
+	SUB	r12, r12, #32
 	MOV	r1, #0x621
 	MOVT	r1, #0xeb21
-	MOV	lr, #0x0
+	MOV	lr, #0
 	LDM	r12, {r10, r11}
 	UMLAL	r10, lr, r2, r1
 	ADDS	r11, r11, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r11, lr, r3, r1
 	STM	r12!, {r10, r11}
 	LDM	r12, {r10, r11}
 	ADDS	r10, r10, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r10, lr, r4, r1
 	ADDS	r11, r11, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r11, lr, r5, r1
 	STM	r12!, {r10, r11}
 	LDM	r12, {r10, r11}
 	ADDS	r10, r10, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r10, lr, r6, r1
 	ADDS	r11, r11, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r11, lr, r7, r1
 	STM	r12!, {r10, r11}
 	LDM	r12, {r10, r11}
 	ADDS	r10, r10, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r10, lr, r8, r1
 	ADDS	r11, r11, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r11, lr, r9, r1
 	STM	r12!, {r10, r11, lr}
-	SUB	r12, r12, #0x20
+	SUB	r12, r12, #32
 	/* Subtract at 4 * 32 */
 	LDM	r12, {r10, r11}
 	SUBS	r10, r10, r2
@@ -5857,7 +6947,7 @@ sc_muladd:
 	SBCS	r10, r10, r8
 	SBC	r11, r11, r9
 	STM	r12!, {r10, r11}
-	SUB	r12, r12, #0x24
+	SUB	r12, r12, #36
 	ASR	lr, r11, #25
 	/* Conditionally subtract order starting at bit 125 */
 	MOV	r1, #0xa0000000
@@ -5886,19 +6976,19 @@ sc_muladd:
 	STM	r12!, {r10, r11}
 	LDM	r12, {r10, r11}
 	ADCS	r10, r10, r5
-	ADCS	r11, r11, #0x0
+	ADCS	r11, r11, #0
 	STM	r12!, {r10, r11}
 	LDM	r12, {r10, r11}
-	ADCS	r10, r10, #0x0
-	ADCS	r11, r11, #0x0
+	ADCS	r10, r10, #0
+	ADCS	r11, r11, #0
 	STM	r12!, {r10, r11}
 	LDM	r12, {r10}
-	ADCS	r10, r10, #0x0
+	ADCS	r10, r10, #0
 	STM	r12!, {r10}
-	SUB	r0, r0, #0x10
+	SUB	r0, r0, #16
 	MOV	r12, sp
 	/* Load bits 252-376 */
-	ADD	r12, r12, #0x1c
+	ADD	r12, r12, #28
 	LDM	r12, {r1, r2, r3, r4, r5}
 	LSL	r5, r5, #4
 	ORR	r5, r5, r4, LSR #28
@@ -5909,89 +6999,89 @@ sc_muladd:
 	LSL	r2, r2, #4
 	ORR	r2, r2, r1, LSR #28
 	BFC	r5, #29, #3
-	SUB	r12, r12, #0x1c
+	SUB	r12, r12, #28
 	/* Sub product of top 4 words and order */
 	MOV	r0, sp
 	/*   * -5cf5d3ed */
 	MOV	r1, #0x2c13
 	MOVT	r1, #0xa30a
-	MOV	lr, #0x0
+	MOV	lr, #0
 	LDM	r0, {r6, r7, r8, r9}
 	UMLAL	r6, lr, r2, r1
 	ADDS	r7, r7, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r7, lr, r3, r1
 	ADDS	r8, r8, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r8, lr, r4, r1
 	ADDS	r9, r9, lr
-	MOV	lr, #0x0
-	ADC	lr, lr, #0x0
+	MOV	lr, #0
+	ADC	lr, lr, #0
 	UMLAL	r9, lr, r5, r1
 	STM	r0, {r6, r7, r8, r9}
-	ADD	r0, r0, #0x4
+	ADD	r0, r0, #4
 	/*   * -5812631b */
 	MOV	r1, #0x9ce5
 	MOVT	r1, #0xa7ed
-	MOV	r10, #0x0
+	MOV	r10, #0
 	LDM	r0, {r6, r7, r8, r9}
 	UMLAL	r6, r10, r2, r1
 	ADDS	r7, r7, r10
-	MOV	r10, #0x0
-	ADC	r10, r10, #0x0
+	MOV	r10, #0
+	ADC	r10, r10, #0
 	UMLAL	r7, r10, r3, r1
 	ADDS	r8, r8, r10
-	MOV	r10, #0x0
-	ADC	r10, r10, #0x0
+	MOV	r10, #0
+	ADC	r10, r10, #0
 	UMLAL	r8, r10, r4, r1
 	ADDS	r9, r9, r10
-	MOV	r10, #0x0
-	ADC	r10, r10, #0x0
+	MOV	r10, #0
+	ADC	r10, r10, #0
 	UMLAL	r9, r10, r5, r1
 	STM	r0, {r6, r7, r8, r9}
-	ADD	r0, r0, #0x4
+	ADD	r0, r0, #4
 	/*   * -a2f79cd7 */
 	MOV	r1, #0x6329
 	MOVT	r1, #0x5d08
-	MOV	r11, #0x0
+	MOV	r11, #0
 	LDM	r0, {r6, r7, r8, r9}
 	UMLAL	r6, r11, r2, r1
 	ADDS	r7, r7, r11
-	MOV	r11, #0x0
-	ADC	r11, r11, #0x0
+	MOV	r11, #0
+	ADC	r11, r11, #0
 	UMLAL	r7, r11, r3, r1
 	ADDS	r8, r8, r11
-	MOV	r11, #0x0
-	ADC	r11, r11, #0x0
+	MOV	r11, #0
+	ADC	r11, r11, #0
 	UMLAL	r8, r11, r4, r1
 	ADDS	r9, r9, r11
-	MOV	r11, #0x0
-	ADC	r11, r11, #0x0
+	MOV	r11, #0
+	ADC	r11, r11, #0
 	UMLAL	r9, r11, r5, r1
 	STM	r0, {r6, r7, r8, r9}
-	ADD	r0, r0, #0x4
+	ADD	r0, r0, #4
 	/*   * -14def9df */
 	MOV	r1, #0x621
 	MOVT	r1, #0xeb21
-	MOV	r12, #0x0
+	MOV	r12, #0
 	LDM	r0, {r6, r7, r8, r9}
 	UMLAL	r6, r12, r2, r1
 	ADDS	r7, r7, r12
-	MOV	r12, #0x0
-	ADC	r12, r12, #0x0
+	MOV	r12, #0
+	ADC	r12, r12, #0
 	UMLAL	r7, r12, r3, r1
 	ADDS	r8, r8, r12
-	MOV	r12, #0x0
-	ADC	r12, r12, #0x0
+	MOV	r12, #0
+	ADC	r12, r12, #0
 	UMLAL	r8, r12, r4, r1
 	ADDS	r9, r9, r12
-	MOV	r12, #0x0
-	ADC	r12, r12, #0x0
+	MOV	r12, #0
+	ADC	r12, r12, #0
 	UMLAL	r9, r12, r5, r1
 	STM	r0, {r6, r7, r8, r9}
-	ADD	r0, r0, #0x4
+	ADD	r0, r0, #4
 	/* Add overflows at 4 * 32 */
 	LDM	r0, {r6, r7, r8, r9}
 	BFC	r9, #28, #4
@@ -6005,7 +7095,7 @@ sc_muladd:
 	SBCS	r8, r8, r4
 	SBCS	r9, r9, r5
 	SBC	r1, r1, r1
-	SUB	r0, r0, #0x10
+	SUB	r0, r0, #16
 	LDM	r0, {r2, r3, r4, r5}
 	MOV	r10, #0xd3ed
 	MOVT	r10, #0x5cf5
@@ -6023,10 +7113,10 @@ sc_muladd:
 	ADCS	r3, r3, r11
 	ADCS	r4, r4, r12
 	ADCS	r5, r5, lr
-	ADCS	r6, r6, #0x0
-	ADCS	r7, r7, #0x0
+	ADCS	r6, r6, #0
+	ADCS	r7, r7, #0
 	AND	r1, r1, #0x10000000
-	ADCS	r8, r8, #0x0
+	ADCS	r8, r8, #0
 	ADC	r9, r9, r1
 	BFC	r9, #28, #4
 	LDR	r0, [sp, #68]
@@ -6047,6 +7137,7 @@ sc_muladd:
 	.text
 	.align	4
 	.globl	sc_muladd
+	WC_ASM_ATT_HIDDEN(sc_muladd)
 	.type	sc_muladd, %function
 sc_muladd:
 	PUSH	{r4, r5, r6, r7, r8, r9, r10, r11, lr}
@@ -6076,54 +7167,54 @@ sc_muladd:
 	UMAAL	r9, r10, r2, r4
 	UMAAL	r10, r11, r3, r4
 	LDM	lr, {r4, r5, r6, r7}
-	MOV	r12, #0x0
+	MOV	r12, #0
 	UMLAL	r8, r12, r0, r4
 	UMAAL	r9, r12, r1, r4
 	UMAAL	r10, r12, r2, r4
 	UMAAL	r11, r12, r3, r4
-	MOV	r4, #0x0
+	MOV	r4, #0
 	UMLAL	r9, r4, r0, r5
 	UMAAL	r10, r4, r1, r5
 	UMAAL	r11, r4, r2, r5
 	UMAAL	r12, r4, r3, r5
-	MOV	r5, #0x0
+	MOV	r5, #0
 	UMLAL	r10, r5, r0, r6
 	UMAAL	r11, r5, r1, r6
 	UMAAL	r12, r5, r2, r6
 	UMAAL	r4, r5, r3, r6
-	MOV	r6, #0x0
+	MOV	r6, #0
 	UMLAL	r11, r6, r0, r7
 	LDR	r0, [sp, #72]
 	UMAAL	r12, r6, r1, r7
-	ADD	r0, r0, #0x10
+	ADD	r0, r0, #16
 	UMAAL	r4, r6, r2, r7
-	SUB	lr, lr, #0x10
+	SUB	lr, lr, #16
 	UMAAL	r5, r6, r3, r7
 	LDM	r0, {r0, r1, r2, r3}
 	STR	r6, [sp, #64]
 	LDM	lr!, {r6}
-	MOV	r7, #0x0
+	MOV	r7, #0
 	UMLAL	r8, r7, r0, r6
 	UMAAL	r9, r7, r1, r6
 	STR	r8, [sp, #16]
 	UMAAL	r10, r7, r2, r6
 	UMAAL	r11, r7, r3, r6
 	LDM	lr!, {r6}
-	MOV	r8, #0x0
+	MOV	r8, #0
 	UMLAL	r9, r8, r0, r6
 	UMAAL	r10, r8, r1, r6
 	STR	r9, [sp, #20]
 	UMAAL	r11, r8, r2, r6
 	UMAAL	r12, r8, r3, r6
 	LDM	lr!, {r6}
-	MOV	r9, #0x0
+	MOV	r9, #0
 	UMLAL	r10, r9, r0, r6
 	UMAAL	r11, r9, r1, r6
 	STR	r10, [sp, #24]
 	UMAAL	r12, r9, r2, r6
 	UMAAL	r4, r9, r3, r6
 	LDM	lr!, {r6}
-	MOV	r10, #0x0
+	MOV	r10, #0
 	UMLAL	r11, r10, r0, r6
 	UMAAL	r12, r10, r1, r6
 	STR	r11, [sp, #28]
@@ -6150,7 +7241,7 @@ sc_muladd:
 	UMAAL	r8, r9, r3, r11
 	UMAAL	r9, r10, r3, lr
 	MOV	r3, r12
-	ADD	lr, sp, #0x20
+	ADD	lr, sp, #32
 	STM	lr, {r3, r4, r5, r6, r7, r8, r9, r10}
 	MOV	r0, sp
 	/* Add c to a * b */
@@ -6169,15 +7260,15 @@ sc_muladd:
 	MOV	r1, r9
 	STM	r0!, {r2, r3, r4, r5, r6, r7, r8, r9}
 	LDM	r0, {r2, r3, r4, r5, r6, r7, r8, r9}
-	ADCS	r2, r2, #0x0
-	ADCS	r3, r3, #0x0
-	ADCS	r4, r4, #0x0
-	ADCS	r5, r5, #0x0
-	ADCS	r6, r6, #0x0
-	ADCS	r7, r7, #0x0
-	ADCS	r8, r8, #0x0
-	ADC	r9, r9, #0x0
-	SUB	r0, r0, #0x20
+	ADCS	r2, r2, #0
+	ADCS	r3, r3, #0
+	ADCS	r4, r4, #0
+	ADCS	r5, r5, #0
+	ADCS	r6, r6, #0
+	ADCS	r7, r7, #0
+	ADCS	r8, r8, #0
+	ADC	r9, r9, #0
+	SUB	r0, r0, #32
 	/* Get 252..503 and 504..507 */
 	LSR	lr, r9, #24
 	LSL	r9, r9, #4
@@ -6202,7 +7293,7 @@ sc_muladd:
 	MOVT	r10, #0xa30a
 	MOV	r11, #0x9ce5
 	MOVT	r11, #0xa7ed
-	MOV	r1, #0x0
+	MOV	r1, #0
 	UMLAL	r2, r1, r10, lr
 	UMAAL	r3, r1, r11, lr
 	MOV	r10, #0x6329
@@ -6212,18 +7303,18 @@ sc_muladd:
 	UMAAL	r4, r1, r10, lr
 	UMAAL	r5, r1, r11, lr
 	ADDS	r6, r6, r1
-	ADCS	r7, r7, #0x0
-	ADCS	r8, r8, #0x0
-	ADC	r9, r9, #0x0
+	ADCS	r7, r7, #0
+	ADCS	r8, r8, #0
+	ADC	r9, r9, #0
 	SUBS	r6, r6, lr
-	SBCS	r7, r7, #0x0
-	SBCS	r8, r8, #0x0
-	SBC	r9, r9, #0x0
+	SBCS	r7, r7, #0
+	SBCS	r8, r8, #0
+	SBC	r9, r9, #0
 	/* Sub product of top 8 words and order */
 	MOV	r12, sp
 	MOV	r1, #0x2c13
 	MOVT	r1, #0xa30a
-	MOV	lr, #0x0
+	MOV	lr, #0
 	LDM	r0!, {r10, r11}
 	UMLAL	r10, lr, r2, r1
 	UMAAL	r11, lr, r3, r1
@@ -6241,11 +7332,11 @@ sc_muladd:
 	BFC	r11, #28, #4
 	UMAAL	r11, lr, r9, r1
 	STM	r12!, {r10, r11, lr}
-	SUB	r0, r0, #0x10
-	SUB	r12, r12, #0x20
+	SUB	r0, r0, #16
+	SUB	r12, r12, #32
 	MOV	r1, #0x9ce5
 	MOVT	r1, #0xa7ed
-	MOV	lr, #0x0
+	MOV	lr, #0
 	LDM	r12, {r10, r11}
 	UMLAL	r10, lr, r2, r1
 	UMAAL	r11, lr, r3, r1
@@ -6262,10 +7353,10 @@ sc_muladd:
 	UMAAL	r10, lr, r8, r1
 	UMAAL	r11, lr, r9, r1
 	STM	r12!, {r10, r11, lr}
-	SUB	r12, r12, #0x20
+	SUB	r12, r12, #32
 	MOV	r1, #0x6329
 	MOVT	r1, #0x5d08
-	MOV	lr, #0x0
+	MOV	lr, #0
 	LDM	r12, {r10, r11}
 	UMLAL	r10, lr, r2, r1
 	UMAAL	r11, lr, r3, r1
@@ -6282,10 +7373,10 @@ sc_muladd:
 	UMAAL	r10, lr, r8, r1
 	UMAAL	r11, lr, r9, r1
 	STM	r12!, {r10, r11, lr}
-	SUB	r12, r12, #0x20
+	SUB	r12, r12, #32
 	MOV	r1, #0x621
 	MOVT	r1, #0xeb21
-	MOV	lr, #0x0
+	MOV	lr, #0
 	LDM	r12, {r10, r11}
 	UMLAL	r10, lr, r2, r1
 	UMAAL	r11, lr, r3, r1
@@ -6302,7 +7393,7 @@ sc_muladd:
 	UMAAL	r10, lr, r8, r1
 	UMAAL	r11, lr, r9, r1
 	STM	r12!, {r10, r11, lr}
-	SUB	r12, r12, #0x20
+	SUB	r12, r12, #32
 	/* Subtract at 4 * 32 */
 	LDM	r12, {r10, r11}
 	SUBS	r10, r10, r2
@@ -6320,7 +7411,7 @@ sc_muladd:
 	SBCS	r10, r10, r8
 	SBC	r11, r11, r9
 	STM	r12!, {r10, r11}
-	SUB	r12, r12, #0x24
+	SUB	r12, r12, #36
 	ASR	lr, r11, #25
 	/* Conditionally subtract order starting at bit 125 */
 	MOV	r1, #0xa0000000
@@ -6349,19 +7440,19 @@ sc_muladd:
 	STM	r12!, {r10, r11}
 	LDM	r12, {r10, r11}
 	ADCS	r10, r10, r5
-	ADCS	r11, r11, #0x0
+	ADCS	r11, r11, #0
 	STM	r12!, {r10, r11}
 	LDM	r12, {r10, r11}
-	ADCS	r10, r10, #0x0
-	ADCS	r11, r11, #0x0
+	ADCS	r10, r10, #0
+	ADCS	r11, r11, #0
 	STM	r12!, {r10, r11}
 	LDM	r12, {r10}
-	ADCS	r10, r10, #0x0
+	ADCS	r10, r10, #0
 	STM	r12!, {r10}
-	SUB	r0, r0, #0x10
+	SUB	r0, r0, #16
 	MOV	r12, sp
 	/* Load bits 252-376 */
-	ADD	r12, r12, #0x1c
+	ADD	r12, r12, #28
 	LDM	r12, {r1, r2, r3, r4, r5}
 	LSL	r5, r5, #4
 	ORR	r5, r5, r4, LSR #28
@@ -6372,53 +7463,53 @@ sc_muladd:
 	LSL	r2, r2, #4
 	ORR	r2, r2, r1, LSR #28
 	BFC	r5, #29, #3
-	SUB	r12, r12, #0x1c
+	SUB	r12, r12, #28
 	/* Sub product of top 4 words and order */
 	MOV	r0, sp
 	/*   * -5cf5d3ed */
 	MOV	r1, #0x2c13
 	MOVT	r1, #0xa30a
-	MOV	lr, #0x0
+	MOV	lr, #0
 	LDM	r0, {r6, r7, r8, r9}
 	UMLAL	r6, lr, r2, r1
 	UMAAL	r7, lr, r3, r1
 	UMAAL	r8, lr, r4, r1
 	UMAAL	r9, lr, r5, r1
 	STM	r0, {r6, r7, r8, r9}
-	ADD	r0, r0, #0x4
+	ADD	r0, r0, #4
 	/*   * -5812631b */
 	MOV	r1, #0x9ce5
 	MOVT	r1, #0xa7ed
-	MOV	r10, #0x0
+	MOV	r10, #0
 	LDM	r0, {r6, r7, r8, r9}
 	UMLAL	r6, r10, r2, r1
 	UMAAL	r7, r10, r3, r1
 	UMAAL	r8, r10, r4, r1
 	UMAAL	r9, r10, r5, r1
 	STM	r0, {r6, r7, r8, r9}
-	ADD	r0, r0, #0x4
+	ADD	r0, r0, #4
 	/*   * -a2f79cd7 */
 	MOV	r1, #0x6329
 	MOVT	r1, #0x5d08
-	MOV	r11, #0x0
+	MOV	r11, #0
 	LDM	r0, {r6, r7, r8, r9}
 	UMLAL	r6, r11, r2, r1
 	UMAAL	r7, r11, r3, r1
 	UMAAL	r8, r11, r4, r1
 	UMAAL	r9, r11, r5, r1
 	STM	r0, {r6, r7, r8, r9}
-	ADD	r0, r0, #0x4
+	ADD	r0, r0, #4
 	/*   * -14def9df */
 	MOV	r1, #0x621
 	MOVT	r1, #0xeb21
-	MOV	r12, #0x0
+	MOV	r12, #0
 	LDM	r0, {r6, r7, r8, r9}
 	UMLAL	r6, r12, r2, r1
 	UMAAL	r7, r12, r3, r1
 	UMAAL	r8, r12, r4, r1
 	UMAAL	r9, r12, r5, r1
 	STM	r0, {r6, r7, r8, r9}
-	ADD	r0, r0, #0x4
+	ADD	r0, r0, #4
 	/* Add overflows at 4 * 32 */
 	LDM	r0, {r6, r7, r8, r9}
 	BFC	r9, #28, #4
@@ -6432,7 +7523,7 @@ sc_muladd:
 	SBCS	r8, r8, r4
 	SBCS	r9, r9, r5
 	SBC	r1, r1, r1
-	SUB	r0, r0, #0x10
+	SUB	r0, r0, #16
 	LDM	r0, {r2, r3, r4, r5}
 	MOV	r10, #0xd3ed
 	MOVT	r10, #0x5cf5
@@ -6450,10 +7541,10 @@ sc_muladd:
 	ADCS	r3, r3, r11
 	ADCS	r4, r4, r12
 	ADCS	r5, r5, lr
-	ADCS	r6, r6, #0x0
-	ADCS	r7, r7, #0x0
+	ADCS	r6, r6, #0
+	ADCS	r7, r7, #0
 	AND	r1, r1, #0x10000000
-	ADCS	r8, r8, #0x0
+	ADCS	r8, r8, #0
 	ADC	r9, r9, r1
 	BFC	r9, #28, #4
 	LDR	r0, [sp, #68]
@@ -6470,16 +7561,16 @@ sc_muladd:
 	POP	{r4, r5, r6, r7, r8, r9, r10, r11, pc}
 	/* Cycle Count = 752 */
 	.size	sc_muladd,.-sc_muladd
-#endif /* WOLFSSL_SP_NO_UMAAL */
+#endif /* WOLFSSL_ARM_ARCH_7M */
 #endif /* HAVE_ED25519_SIGN */
 #endif /* HAVE_ED25519 */
 
 #endif /* !CURVE25519_SMALL || !ED25519_SMALL */
 #endif /* HAVE_CURVE25519 || HAVE_ED25519 */
-#endif /* !__aarch64__ && __thumb__ */
-#endif /* WOLFSSL_ARMASM */
 
 #if defined(__linux__) && defined(__ELF__)
-.section        .note.GNU-stack,"",%progbits
+.section	.note.GNU-stack,"",%progbits
 #endif
 #endif /* !WOLFSSL_ARMASM_INLINE */
+#endif /* WOLFSSL_ARMASM_THUMB2 */
+#endif /* WOLFSSL_ARMASM */

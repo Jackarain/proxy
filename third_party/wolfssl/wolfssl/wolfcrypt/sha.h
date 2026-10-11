@@ -1,12 +1,12 @@
 /* sha.h
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -31,8 +31,7 @@
 
 #ifndef NO_SHA
 
-#if defined(HAVE_FIPS) && \
-    defined(HAVE_FIPS_VERSION) && (HAVE_FIPS_VERSION >= 2)
+#if FIPS_VERSION3_GE(2,0,0)
     #include <wolfssl/wolfcrypt/fips.h>
 #endif /* HAVE_FIPS_VERSION >= 2 */
 
@@ -49,8 +48,22 @@
     #include "fsl_dcp.h"
 #endif
 
+#if defined(WOLFSSL_PSOC6_CRYPTO)
+    #include <wolfssl/wolfcrypt/port/cypress/psoc6_crypto.h>
+
+    #include "cy_crypto_core_sha.h"
+    #include "cy_device_headers.h"
+    #include "cy_crypto_common.h"
+    #include "cy_crypto_core.h"
+#endif
+
 #ifdef __cplusplus
     extern "C" {
+#endif
+
+#if FIPS_VERSION3_GE(6,0,0)
+    extern const unsigned int wolfCrypt_FIPS_sha_ro_sanity[2];
+    WOLFSSL_LOCAL int wolfCrypt_FIPS_SHA_sanity(void);
 #endif
 
 /* avoid redefinition of structs */
@@ -69,8 +82,11 @@
 #ifdef WOLFSSL_ESP32_CRYPT
     #include <wolfssl/wolfcrypt/port/Espressif/esp32-crypt.h>
 #endif
-#if defined(WOLFSSL_SILABS_SE_ACCEL)
+#if defined(WOLFSSL_SILABS_SE_TYPES)
     #include <wolfssl/wolfcrypt/port/silabs/silabs_hash.h>
+#endif
+#if defined(WOLFSSL_MAX3266X) || defined(WOLFSSL_MAX3266X_OLD)
+    #include <wolfssl/wolfcrypt/port/maxim/max3266x.h>
 #endif
 
 #if !defined(NO_OLD_SHA_NAMES)
@@ -85,12 +101,10 @@
 #endif
 
 /* in bytes */
-enum {
-    WC_SHA              =  WC_HASH_TYPE_SHA,
-    WC_SHA_BLOCK_SIZE   = 64,
-    WC_SHA_DIGEST_SIZE  = 20,
-    WC_SHA_PAD_SIZE     = 56
-};
+#define WC_SHA              WC_HASH_TYPE_SHA
+#define WC_SHA_BLOCK_SIZE   64
+#define WC_SHA_DIGEST_SIZE  20
+#define WC_SHA_PAD_SIZE     56
 
 
 #if defined(WOLFSSL_TI_HASH)
@@ -106,7 +120,7 @@ enum {
     #include "wolfssl/wolfcrypt/port/Renesas/renesas-rx64-hw-crypt.h"
 #elif defined(WOLFSSL_RENESAS_RSIP) && \
     !defined(NO_WOLFSSL_RENESAS_FSPSM_HASH)
-    #include "wolfssl/wolfcrypt/port/Renesas/renesas-fspsm-crypt.h"
+    #include "wolfssl/wolfcrypt/port/Renesas/renesas_fspsm_internal.h"
 #else
 
 #if defined(WOLFSSL_SE050) && defined(WOLFSSL_SE050_HASH)
@@ -122,48 +136,58 @@ enum {
 /* Sha digest */
 struct wc_Sha {
 #ifdef FREESCALE_LTC_SHA
-        ltc_hash_ctx_t ctx;
+    ltc_hash_ctx_t ctx;
 #elif defined(WOLFSSL_SE050) && defined(WOLFSSL_SE050_HASH)
-        SE050_HASH_Context se050Ctx;
+    SE050_HASH_Context se050Ctx;
 #elif defined(STM32_HASH)
-        STM32_HASH_Context stmCtx;
+    STM32_HASH_Context stmCtx;
 #elif defined(WOLFSSL_SILABS_SE_ACCEL)
-        wc_silabs_sha_t silabsCtx;
+    wc_silabs_sha_t silabsCtx;
 #elif defined(WOLFSSL_IMXRT_DCP)
-        dcp_handle_t handle;
-        dcp_hash_ctx_t ctx;
+    dcp_handle_t handle;
+    dcp_hash_ctx_t ctx;
 #elif defined(WOLFSSL_HAVE_PSA) && !defined(WOLFSSL_PSA_NO_HASH)
-        psa_hash_operation_t psa_ctx;
+    psa_hash_operation_t psa_ctx;
+#elif defined(PSOC6_HASH_SHA1)
+    cy_stc_crypto_sha_state_t hash_state;
+    cy_stc_crypto_v2_sha1_buffers_t sha_buffers;
 #else
-        word32  buffLen;   /* in bytes          */
-        word32  loLen;     /* length in bytes   */
-        word32  hiLen;     /* length in bytes   */
-        word32  buffer[WC_SHA_BLOCK_SIZE  / sizeof(word32)];
+    word32  buffLen;   /* in bytes          */
+    word32  loLen;     /* length in bytes   */
+    word32  hiLen;     /* length in bytes   */
+    word32  buffer[WC_SHA_BLOCK_SIZE  / sizeof(word32)];
     #ifdef WOLFSSL_PIC32MZ_HASH
-        word32  digest[PIC32_DIGEST_SIZE / sizeof(word32)];
+    word32  digest[PIC32_DIGEST_SIZE / sizeof(word32)];
     #else
-        word32  digest[WC_SHA_DIGEST_SIZE / sizeof(word32)];
+    word32  digest[WC_SHA_DIGEST_SIZE / sizeof(word32)];
     #endif
-        void*   heap;
-    #ifdef WOLFSSL_PIC32MZ_HASH
-        hashUpdCache cache; /* cache for updates */
-    #endif
-    #ifdef WOLFSSL_ASYNC_CRYPT
-        WC_ASYNC_DEV asyncDev;
-    #endif /* WOLFSSL_ASYNC_CRYPT */
-    #ifdef WOLF_CRYPTO_CB
-        int    devId;
-        void*  devCtx; /* generic crypto callback context */
-    #endif
-    #ifdef WOLFSSL_IMXRT1170_CAAM
-        caam_hash_ctx_t ctx;
-        caam_handle_t hndl;
-    #endif
-    #if defined(WOLFSSL_DEVCRYPTO_HASH) || defined(WOLFSSL_HASH_KEEP)
-        byte*  msg;
-        word32 used;
-        word32 len;
-    #endif
+#endif /* end of the hardware-vs-software member chain */
+
+/* The callback port keeps the software implementation compiled in for
+ * fallback, so the SE context is added alongside those members rather than
+ * replacing them - hence this block sits outside the chain closed above. */
+#if defined(WOLFSSL_SILABS_CRYPTOCB)
+    wc_silabs_sha_t silabsCtx;
+#endif /* WOLFSSL_SILABS_CRYPTOCB */
+    void*   heap;
+#ifdef WOLFSSL_PIC32MZ_HASH
+    hashUpdCache cache; /* cache for updates */
+#endif
+#ifdef WOLFSSL_ASYNC_CRYPT
+    WC_ASYNC_DEV asyncDev;
+#endif /* WOLFSSL_ASYNC_CRYPT */
+#ifdef WOLF_CRYPTO_CB
+    int    devId;
+    void*  devCtx; /* generic crypto callback context */
+#endif
+#ifdef WOLFSSL_IMXRT1170_CAAM
+    caam_hash_ctx_t ctx;
+    caam_handle_t hndl;
+#endif
+#if defined(WOLFSSL_DEVCRYPTO_HASH) || defined(WOLFSSL_HASH_KEEP)
+    byte*  msg;
+    word32 used;
+    word32 len;
 #endif
 #if defined(WOLFSSL_ESP32_CRYPT) && \
    !defined(NO_WOLFSSL_ESP32_CRYPT_HASH)

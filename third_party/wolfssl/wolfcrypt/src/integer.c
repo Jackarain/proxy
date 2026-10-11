@@ -1,12 +1,12 @@
 /* integer.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -19,20 +19,12 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1335, USA
  */
 
-
+#include <wolfssl/wolfcrypt/libwolfssl_sources.h>
 
 /*
  * Based on public domain LibTomMath 0.38 by Tom St Denis, tomstdenis@iahu.ca,
  * http://math.libtomcrypt.com
  */
-
-
-#ifdef HAVE_CONFIG_H
-    #include <config.h>
-#endif
-
-/* in case user set USE_FAST_MATH there */
-#include <wolfssl/wolfcrypt/settings.h>
 
 #ifndef NO_BIG_INT
 
@@ -106,12 +98,10 @@ word32 CheckRunTimeSettings(void)
 }
 
 
-/* handle up to 6 inits */
+/* handle up to 6 inits; returns MP_OKAY */
 int mp_init_multi(mp_int* a, mp_int* b, mp_int* c, mp_int* d, mp_int* e,
                   mp_int* f)
 {
-    int res = MP_OKAY;
-
     if (a) XMEMSET(a, 0, sizeof(mp_int));
     if (b) XMEMSET(b, 0, sizeof(mp_int));
     if (c) XMEMSET(c, 0, sizeof(mp_int));
@@ -119,35 +109,18 @@ int mp_init_multi(mp_int* a, mp_int* b, mp_int* c, mp_int* d, mp_int* e,
     if (e) XMEMSET(e, 0, sizeof(mp_int));
     if (f) XMEMSET(f, 0, sizeof(mp_int));
 
-    if (a && ((res = mp_init(a)) != MP_OKAY))
-        return res;
+    /* mp_init() has exactly one failure mode, a NULL argument, and the guard
+     * on each call excludes it, so every one of these returns MP_OKAY and the
+     * result is discarded. Same shape as sp_init_multi() and tfm.c's
+     * mp_init_multi(), which also return MP_OKAY unconditionally. */
+    if (a) (void)mp_init(a);
+    if (b) (void)mp_init(b);
+    if (c) (void)mp_init(c);
+    if (d) (void)mp_init(d);
+    if (e) (void)mp_init(e);
+    if (f) (void)mp_init(f);
 
-    if (b && ((res = mp_init(b)) != MP_OKAY)) {
-        mp_clear(a);
-        return res;
-    }
-
-    if (c && ((res = mp_init(c)) != MP_OKAY)) {
-        mp_clear(a); mp_clear(b);
-        return res;
-    }
-
-    if (d && ((res = mp_init(d)) != MP_OKAY)) {
-        mp_clear(a); mp_clear(b); mp_clear(c);
-        return res;
-    }
-
-    if (e && ((res = mp_init(e)) != MP_OKAY)) {
-        mp_clear(a); mp_clear(b); mp_clear(c); mp_clear(d);
-        return res;
-    }
-
-    if (f && ((res = mp_init(f)) != MP_OKAY)) {
-        mp_clear(a); mp_clear(b); mp_clear(c); mp_clear(d); mp_clear(e);
-        return res;
-    }
-
-    return res;
+    return MP_OKAY;
 }
 
 
@@ -177,6 +150,9 @@ int mp_init (mp_int * a)
 /* clear one (frees)  */
 void mp_clear (mp_int * a)
 {
+#ifdef HAVE_FIPS
+    mp_forcezero(a);
+#else
   int i;
 
   if (a == NULL)
@@ -202,6 +178,7 @@ void mp_clear (mp_int * a)
     a->alloc = a->used = 0;
     a->sign  = MP_ZPOS;
   }
+#endif
 }
 
 void mp_free (mp_int * a)
@@ -301,7 +278,7 @@ int mp_to_unsigned_bin_at_pos(int x, mp_int *t, unsigned char *b)
 }
 
 /* store in unsigned [big endian] format */
-int mp_to_unsigned_bin (mp_int * a, unsigned char *b)
+int mp_to_unsigned_bin (const mp_int * a, unsigned char *b)
 {
   int     x, res;
   mp_int  t;
@@ -339,7 +316,7 @@ int mp_to_unsigned_bin_len(mp_int * a, unsigned char *b, int c)
 }
 
 /* creates "a" then copies b into it */
-int mp_init_copy (mp_int * a, mp_int * b)
+int mp_init_copy (mp_int * a, const mp_int * b)
 {
   int     res;
 
@@ -409,11 +386,10 @@ int mp_copy (const mp_int * a, mp_int * b)
 /* grow as required */
 int mp_grow (mp_int * a, int size)
 {
-  int     i;
   mp_digit *tmp;
 
   /* if the alloc size is smaller alloc more ram */
-  if (a->alloc < size || size == 0) {
+  if ((a->alloc < size) || (size == 0) || (a->alloc == 0)) {
     /* ensure there are always at least MP_PREC digits extra on top */
     size += (MP_PREC * 2) - (size % MP_PREC);
 
@@ -434,11 +410,12 @@ int mp_grow (mp_int * a, int size)
     a->dp = tmp;
 
     /* zero excess digits */
-    i        = a->alloc;
+    XMEMSET(&a->dp[a->alloc], 0, sizeof (mp_digit) * (size - a->alloc));
     a->alloc = size;
-    for (; i < a->alloc; i++) {
-      a->dp[i] = 0;
-    }
+  }
+  else if (a->dp == NULL) {
+      /* opportunistic sanity check for null a->dp with nonzero a->alloc */
+      return MP_VAL;
   }
   return MP_OKAY;
 }
@@ -553,21 +530,48 @@ int mp_exch (mp_int * a, mp_int * b)
   return MP_OKAY;
 }
 
+/* Constant-time conditional swap: must not branch on m (leaks scalar bit).
+ * m must be 0 or 1. The t parameter is unused; XOR is performed in place
+ * with a single-digit stack scratch so callers don't need to clear t->dp. */
 int mp_cond_swap_ct_ex (mp_int * a, mp_int * b, int c, int m, mp_int * t)
 {
-    (void)c;
+    int i;
+    int err;
+    int imask;
+    int idiff;
+    mp_digit mask;
+    mp_digit d;
+
     (void)t;
-    if (m == 1)
-        mp_exch(a, b);
+
+    m &= 1;
+    imask = -m;
+    mask = (mp_digit)0 - (mp_digit)m;
+
+    if ((err = mp_grow(a, c)) != MP_OKAY)
+        return err;
+    if ((err = mp_grow(b, c)) != MP_OKAY)
+        return err;
+
+    idiff = (a->used ^ b->used) & imask;
+    a->used ^= idiff;
+    b->used ^= idiff;
+    idiff = (a->sign ^ b->sign) & imask;
+    a->sign ^= idiff;
+    b->sign ^= idiff;
+
+    for (i = 0; i < c; i++) {
+        d = (a->dp[i] ^ b->dp[i]) & mask;
+        a->dp[i] ^= d;
+        b->dp[i] ^= d;
+    }
+
     return MP_OKAY;
 }
 
 int mp_cond_swap_ct (mp_int * a, mp_int * b, int c, int m)
 {
-    (void)c;
-    if (m == 1)
-        mp_exch(a, b);
-    return MP_OKAY;
+    return mp_cond_swap_ct_ex(a, b, c, m, NULL);
 }
 
 
@@ -739,12 +743,22 @@ int mp_read_unsigned_bin (mp_int * a, const unsigned char *b, int c)
   int     res;
   int     digits_needed;
 
+  if (c < 0) {
+      return MP_VAL;
+  }
+
   while (c > 0 && b[0] == 0) {
       c--;
       b++;
   }
 
-  digits_needed = ((c * CHAR_BIT) + DIGIT_BIT - 1) / DIGIT_BIT;
+  /* reject sizes where the bit count would overflow, doing the math in
+   * word32 so c * CHAR_BIT can't overflow */
+  if ((word32)c > (WOLFSSL_MAX_32BIT - (DIGIT_BIT - 1)) / CHAR_BIT) {
+      return MP_VAL;
+  }
+
+  digits_needed = (int)(((word32)c * CHAR_BIT + DIGIT_BIT - 1) / DIGIT_BIT);
 
   /* make sure there are enough digits available */
   if (a->alloc < digits_needed) {
@@ -1396,10 +1410,10 @@ LBL_ERR:mp_clear(&x);
 
 
 /* compare magnitude of two ints (unsigned) */
-int mp_cmp_mag (mp_int * a, mp_int * b)
+int mp_cmp_mag (const mp_int * a, const mp_int * b)
 {
   int     n;
-  mp_digit *tmpa, *tmpb;
+  const mp_digit *tmpa, *tmpb;
 
   /* compare based on # of non-zero digits */
   if (a->used > b->used) {
@@ -1434,7 +1448,7 @@ int mp_cmp_mag (mp_int * a, mp_int * b)
 
 
 /* compare two ints (signed)*/
-int mp_cmp (mp_int * a, mp_int * b)
+int mp_cmp (const mp_int * a, const mp_int * b)
 {
   /* compare based on sign */
   if (a->sign != b->sign) {
@@ -1758,6 +1772,12 @@ int s_mp_add (mp_int * a, mp_int * b, mp_int * c)
     /* destination */
     tmpc = c->dp;
 
+    /* sanity-check dp pointers. */
+    if ((min_ab > 0) && ((tmpa == NULL) || (tmpb == NULL)))
+    {
+        return MP_VAL;
+    }
+
     /* zero the carry */
     u = 0;
     for (i = 0; i < min_ab; i++) {
@@ -1832,6 +1852,13 @@ int s_mp_sub (mp_int * a, mp_int * b, mp_int * c)
     tmpa = a->dp;
     tmpb = b->dp;
     tmpc = c->dp;
+
+    /* sanity-check dp pointers from a and b. */
+    if ((min_b > 0) &&
+        ((tmpa == NULL) || (tmpb == NULL)))
+    {
+        return MP_VAL;
+    }
 
     /* set carry to zero */
     u = 0;
@@ -2006,23 +2033,15 @@ int mp_exptmod_fast (mp_int * G, mp_int * X, mp_int * P, mp_int * Y,
   mp_int res;
   mp_digit buf, mp;
   int     err, bitbuf, bitcpy, bitcnt, mode, digidx, x, y, winsize;
-#ifdef WOLFSSL_SMALL_STACK
-  mp_int* M;
-#else
-  mp_int M[TAB_SIZE];
-#endif
+  WC_DECLARE_VAR(M, mp_int, TAB_SIZE, 0);
   /* use a pointer to the reduction algorithm.  This allows us to use
    * one of many reduction algorithms without modding the guts of
    * the code with if statements everywhere.
    */
   int     (*redux)(mp_int*,mp_int*,mp_digit) = NULL;
 
-#ifdef WOLFSSL_SMALL_STACK
-  M = (mp_int*) XMALLOC(sizeof(mp_int) * TAB_SIZE, NULL,
-                                                       DYNAMIC_TYPE_BIGINT);
-  if (M == NULL)
-    return MP_MEM;
-#endif
+  WC_ALLOC_VAR_EX(M, mp_int, TAB_SIZE, NULL, DYNAMIC_TYPE_BIGINT,
+      return MP_MEM);
 
   /* find window size */
   x = mp_count_bits (X);
@@ -2051,9 +2070,7 @@ int mp_exptmod_fast (mp_int * G, mp_int * X, mp_int * P, mp_int * Y,
   /* init M array */
   /* init first cell */
   if ((err = mp_init_size(&M[1], P->alloc)) != MP_OKAY) {
-#ifdef WOLFSSL_SMALL_STACK
-     XFREE(M, NULL, DYNAMIC_TYPE_BIGINT);
-#endif
+     WC_FREE_VAR_EX(M, NULL, DYNAMIC_TYPE_BIGINT);
 
      return err;
   }
@@ -2066,9 +2083,7 @@ int mp_exptmod_fast (mp_int * G, mp_int * X, mp_int * P, mp_int * Y,
       }
       mp_clear(&M[1]);
 
-#ifdef WOLFSSL_SMALL_STACK
-      XFREE(M, NULL, DYNAMIC_TYPE_BIGINT);
-#endif
+      WC_FREE_VAR_EX(M, NULL, DYNAMIC_TYPE_BIGINT);
 
       return err;
     }
@@ -2307,9 +2322,7 @@ LBL_M:
     mp_clear (&M[x]);
   }
 
-#ifdef WOLFSSL_SMALL_STACK
-  XFREE(M, NULL, DYNAMIC_TYPE_BIGINT);
-#endif
+  WC_FREE_VAR_EX(M, NULL, DYNAMIC_TYPE_BIGINT);
 
   return err;
 }
@@ -2517,11 +2530,8 @@ int mp_montgomery_setup (mp_int * n, mp_digit * rho)
 int fast_mp_montgomery_reduce (mp_int * x, mp_int * n, mp_digit rho)
 {
   int     ix, res, olduse;
-#ifdef WOLFSSL_SMALL_STACK
-  mp_word* W;    /* uses dynamic memory and slower */
-#else
-  mp_word W[MP_WARRAY];
-#endif
+  /* uses dynamic memory and slower */
+  WC_DECLARE_VAR(W, mp_word, MP_WARRAY, 0);
 
   /* get old used count */
   olduse = x->used;
@@ -2533,12 +2543,8 @@ int fast_mp_montgomery_reduce (mp_int * x, mp_int * n, mp_digit rho)
     }
   }
 
-#ifdef WOLFSSL_SMALL_STACK
-  W = (mp_word*)XMALLOC(sizeof(mp_word) * (n->used * 2 + 2), NULL,
-    DYNAMIC_TYPE_BIGINT);
-  if (W == NULL)
-    return MP_MEM;
-#endif
+  WC_ALLOC_VAR_EX(W, mp_word, (n->used*2+2), NULL, DYNAMIC_TYPE_BIGINT,
+      return MP_MEM);
 
   XMEMSET(W, 0, sizeof(mp_word) * (n->used * 2 + 2));
 
@@ -2658,9 +2664,7 @@ int fast_mp_montgomery_reduce (mp_int * x, mp_int * n, mp_digit rho)
   x->used = n->used + 1;
   mp_clamp (x);
 
-#ifdef WOLFSSL_SMALL_STACK
-  XFREE(W, NULL, DYNAMIC_TYPE_BIGINT);
-#endif
+  WC_FREE_VAR_EX(W, NULL, DYNAMIC_TYPE_BIGINT);
 
   /* if A >= m then A = A - m */
   if (mp_cmp_mag (x, n) != MP_LT) {
@@ -3290,6 +3294,12 @@ int mp_div_3 (mp_int * a, mp_int *c, mp_digit * d)
   q.used = a->used;
   q.sign = a->sign;
   w = 0;
+
+  if (a->used == 0) {
+      mp_clear(&q);
+      return MP_VAL;
+  }
+
   for (ix = a->used - 1; ix >= 0; ix--) {
      w = (w << ((mp_word)DIGIT_BIT)) | ((mp_word)a->dp[ix]);
 
@@ -3332,8 +3342,6 @@ int mp_div_3 (mp_int * a, mp_int *c, mp_digit * d)
 /* init an mp_init for a given size */
 int mp_init_size (mp_int * a, int size)
 {
-  int x;
-
   /* pad size so there are always extra digits */
   size += (MP_PREC * 2) - (size % MP_PREC);
 
@@ -3353,9 +3361,7 @@ int mp_init_size (mp_int * a, int size)
 #endif
 
   /* zero the digits */
-  for (x = 0; x < size; x++) {
-      a->dp[x] = 0;
-  }
+  XMEMSET(a->dp, 0, sizeof (mp_digit) * size);
 
   return MP_OKAY;
 }
@@ -3374,11 +3380,8 @@ After that loop you do the squares and add them in.
 int fast_s_mp_sqr (mp_int * a, mp_int * b)
 {
   int       olduse, res, pa, ix, iz;
-#ifdef WOLFSSL_SMALL_STACK
-  mp_digit* W;    /* uses dynamic memory and slower */
-#else
-  mp_digit W[MP_WARRAY];
-#endif
+  /* uses dynamic memory and slower */
+  WC_DECLARE_VAR(W, mp_digit, MP_WARRAY, 0);
   mp_digit  *tmpx;
   mp_word   W1;
 
@@ -3399,11 +3402,8 @@ int fast_s_mp_sqr (mp_int * a, mp_int * b)
     return MP_OKAY;
   }
 
-#ifdef WOLFSSL_SMALL_STACK
-  W = (mp_digit*)XMALLOC(sizeof(mp_digit) * pa, NULL, DYNAMIC_TYPE_BIGINT);
-  if (W == NULL)
-    return MP_MEM;
-#endif
+  WC_ALLOC_VAR_EX(W, mp_digit, pa, NULL, DYNAMIC_TYPE_BIGINT,
+      return MP_MEM);
 
   /* number of output digits to produce */
   W1 = 0;
@@ -3472,9 +3472,7 @@ int fast_s_mp_sqr (mp_int * a, mp_int * b)
   }
   mp_clamp (b);
 
-#ifdef WOLFSSL_SMALL_STACK
-  XFREE(W, NULL, DYNAMIC_TYPE_BIGINT);
-#endif
+  WC_FREE_VAR_EX(W, NULL, DYNAMIC_TYPE_BIGINT);
 
   return MP_OKAY;
 }
@@ -3499,11 +3497,8 @@ int fast_s_mp_sqr (mp_int * a, mp_int * b)
 int fast_s_mp_mul_digs (mp_int * a, mp_int * b, mp_int * c, int digs)
 {
   int     olduse, res, pa, ix, iz;
-#ifdef WOLFSSL_SMALL_STACK
-  mp_digit* W;    /* uses dynamic memory and slower */
-#else
-  mp_digit W[MP_WARRAY];
-#endif
+  /* uses dynamic memory and slower */
+  WC_DECLARE_VAR(W, mp_digit, MP_WARRAY, 0);
   mp_word  _W;
 
   /* grow the destination as required */
@@ -3524,11 +3519,8 @@ int fast_s_mp_mul_digs (mp_int * a, mp_int * b, mp_int * c, int digs)
     return MP_OKAY;
   }
 
-#ifdef WOLFSSL_SMALL_STACK
-  W = (mp_digit*)XMALLOC(sizeof(mp_digit) * pa, NULL, DYNAMIC_TYPE_BIGINT);
-  if (W == NULL)
-    return MP_MEM;
-#endif
+  WC_ALLOC_VAR_EX(W, mp_digit, pa, NULL, DYNAMIC_TYPE_BIGINT,
+      return MP_MEM);
 
   /* clear the carry */
   _W = 0;
@@ -3584,9 +3576,7 @@ int fast_s_mp_mul_digs (mp_int * a, mp_int * b, mp_int * c, int digs)
   }
   mp_clamp (c);
 
-#ifdef WOLFSSL_SMALL_STACK
-  XFREE(W, NULL, DYNAMIC_TYPE_BIGINT);
-#endif
+  WC_FREE_VAR_EX(W, NULL, DYNAMIC_TYPE_BIGINT);
 
   return MP_OKAY;
 }
@@ -4237,11 +4227,8 @@ int s_mp_mul_high_digs (mp_int * a, mp_int * b, mp_int * c, int digs)
 int fast_s_mp_mul_high_digs (mp_int * a, mp_int * b, mp_int * c, int digs)
 {
   int     olduse, res, pa, ix, iz;
-#ifdef WOLFSSL_SMALL_STACK
-  mp_digit* W;    /* uses dynamic memory and slower */
-#else
-  mp_digit W[MP_WARRAY];
-#endif
+  /* uses dynamic memory and slower */
+  WC_DECLARE_VAR(W, mp_digit, MP_WARRAY, 0);
   mp_word  _W;
 
   if (a->dp == NULL) { /* JRB, avoid reading uninitialized values */
@@ -4259,11 +4246,8 @@ int fast_s_mp_mul_high_digs (mp_int * a, mp_int * b, mp_int * c, int digs)
   if (pa > (int)MP_WARRAY)
     return MP_RANGE;  /* TAO range check */
 
-#ifdef WOLFSSL_SMALL_STACK
-  W = (mp_digit*)XMALLOC(sizeof(mp_digit) * pa, NULL, DYNAMIC_TYPE_BIGINT);
-  if (W == NULL)
-    return MP_MEM;
-#endif
+  WC_ALLOC_VAR_EX(W, mp_digit, pa, NULL, DYNAMIC_TYPE_BIGINT,
+      return MP_MEM);
 
   /* number of output digits to produce */
   _W = 0;
@@ -4316,9 +4300,7 @@ int fast_s_mp_mul_high_digs (mp_int * a, mp_int * b, mp_int * c, int digs)
   }
   mp_clamp (c);
 
-#ifdef WOLFSSL_SMALL_STACK
-  XFREE(W, NULL, DYNAMIC_TYPE_BIGINT);
-#endif
+  WC_FREE_VAR_EX(W, NULL, DYNAMIC_TYPE_BIGINT);
 
   return MP_OKAY;
 }
@@ -4425,9 +4407,6 @@ int mp_add_d (mp_int* a, mp_digit b, mp_int* c) /* //NOLINT(misc-no-recursion) *
   /* old number of used digits in c */
   oldused = c->used;
 
-  /* sign always positive */
-  c->sign = MP_ZPOS;
-
   /* source alias */
   tmpa    = a->dp;
 
@@ -4477,6 +4456,9 @@ int mp_add_d (mp_int* a, mp_digit b, mp_int* c) /* //NOLINT(misc-no-recursion) *
       */
      ix       = 1;
   }
+
+  /* sign always positive */
+  c->sign = MP_ZPOS;
 
   /* now zero to oldused */
   while (ix++ < oldused) {
@@ -4588,6 +4570,13 @@ int mp_cnt_lsb(mp_int *a)
 
     /* scan lower digits until non-zero */
     for (x = 0; x < a->used && a->dp[x] == 0; x++) {}
+    /* All used digits are zero -- a non-normalized zero that mp_iszero() above
+     * did not catch. There is no set bit; return before reading dp[x] past the
+     * used digits (which, if also zero, would spin the scan-for-1 loop below
+     * forever). */
+    if (x == a->used) {
+        return 0;
+    }
     if (a->dp)
         q = a->dp[x];
     x *= DIGIT_BIT;
@@ -4681,8 +4670,11 @@ static int mp_div_d (mp_int * a, mp_digit b, mp_int * c, mp_digit * d)
       }
   }
 
-
   w = 0;
+
+  if (a->used == 0)
+      return MP_VAL;
+
   for (ix = a->used - 1; ix >= 0; ix--) {
      w = (w << ((mp_word)DIGIT_BIT)) | ((mp_word)a->dp[ix]);
 
@@ -5358,6 +5350,9 @@ int mp_read_radix (mp_int * a, const char *str, int radix)
     ++str;
   }
 
+  /* Skip whitespace at end of str */
+  while (CharIsWhiteSpace(*str))
+    ++str;
   /* if digit in isn't null term, then invalid character was found */
   if (*str != '\0') {
      mp_zero (a);

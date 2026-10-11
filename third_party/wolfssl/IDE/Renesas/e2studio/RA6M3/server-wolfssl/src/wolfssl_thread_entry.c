@@ -1,12 +1,12 @@
 /* wolfssl_thread_entry.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -32,20 +32,8 @@
 #include <stdio.h>
 #include "hal_data.h"
 
-/* the function is called just before main() to set up pins */
-/* this needs to be called to setup IO Port */
-void R_BSP_WarmStart (bsp_warm_start_event_t event)
-{
 
-    if (BSP_WARM_START_POST_C == event) {
-        /* C runtime environment and system clocks are setup. */
-        /* Configure pins. */
-        R_IOPORT_Open(&g_ioport_ctrl, g_ioport.p_cfg);
-    }
-}
-
-
-void wolfssl_thread_entry(void *pvParameters) {
+void wolfssl_tst_thd_entry(void *pvParameters) {
     FSP_PARAMETER_NOT_USED(pvParameters);
 
     /* FreeRTOS+TCP parameters and objects */
@@ -151,7 +139,7 @@ void wolfssl_thread_entry(void *pvParameters) {
 
         /* Read the client data into our buff array */
         if (ret != WOLFSSL_SUCCESS) {
-            printf("Error [%d]: wolfSSL_set_fd.\n",ret);
+            printf("Error [%d]: wolfSSL_accept.\n",ret);
             break;
         }
         memset(buff, 0, sizeof(buff));

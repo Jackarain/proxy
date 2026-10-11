@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 check_result(){
     if [ $1 -ne 0 ]; then
@@ -15,7 +15,7 @@ check_result(){
 echo "Updating root-rsapss.pem"
 echo ""
 #pipe the following arguments to openssl req...
-echo -e "US\\nMontana\\nBozeman\\nwolfSSL_RSA-PSS\\nRoot-RSA-PSS\\nwww.wolfssl.com\\ninfo@wolfssl.com\\n.\\n.\\n" | \
+echo -e "US\\nMontana\\nBozeman\\nwolfSSL_RSA-PSS\\nRoot-RSA-PSS\\nwww.wolfssl.com\\nfacts@wolfssl.com\\n.\\n.\\n" | \
 openssl req -new -key root-rsapss-priv.pem -config ../renewcerts/wolfssl.cnf -nodes -out root-rsapss.csr
 check_result $? "Generate request"
 
@@ -37,7 +37,7 @@ echo "---------------------------------------------------------------------"
 echo "Updating ca-rsapss.pem"
 echo ""
 #pipe the following arguments to openssl req...
-echo -e "US\\nMontana\\nBozeman\\nwolfSSL_RSAPSS\\nCA-RSAPSS\\nwww.wolfssl.com\\ninfo@wolfssl.com\\n\\n\\n\\n" | openssl req -new -key ca-rsapss-priv.pem -config ../renewcerts/wolfssl.cnf -nodes -out ca-rsapss.csr
+echo -e "US\\nMontana\\nBozeman\\nwolfSSL_RSAPSS\\nCA-RSAPSS\\nwww.wolfssl.com\\nfacts@wolfssl.com\\n\\n\\n\\n" | openssl req -new -key ca-rsapss-priv.pem -config ../renewcerts/wolfssl.cnf -nodes -out ca-rsapss.csr
 check_result $? "Generate request"
 
 openssl x509 -req -in ca-rsapss.csr -days 1000 -extfile ../renewcerts/wolfssl.cnf -extensions ca_ecc_cert -CA root-rsapss.pem -CAkey root-rsapss-priv.pem -set_serial 01 -out ca-rsapss.pem
@@ -58,7 +58,7 @@ echo "---------------------------------------------------------------------"
 echo "Updating server-mix-rsapss.pem"
 echo ""
 #pipe the following arguments to openssl req...
-echo -e "US\\nMontana\\nBozeman\\nwolfSSL_RSAPSS\\nServer-MIX-RSAPSS\\nwww.wolfssl.com\\ninfo@wolfssl.com\\n\\n\\n\\n" | openssl req -new -key ../server-key.pem -config ../renewcerts/wolfssl.cnf -nodes -out server-mix-rsapss.csr
+echo -e "US\\nMontana\\nBozeman\\nwolfSSL_RSAPSS\\nServer-MIX-RSAPSS\\nwww.wolfssl.com\\nfacts@wolfssl.com\\n\\n\\n\\n" | openssl req -new -key ../server-key.pem -config ../renewcerts/wolfssl.cnf -nodes -out server-mix-rsapss.csr
 check_result $? "Generate request"
 
 openssl x509 -req -in server-mix-rsapss.csr -days 1000 -extfile ../renewcerts/wolfssl.cnf -extensions server_ecc -CA ../ca-cert.pem -CAkey ../ca-key.pem -sigopt rsa_padding_mode:pss -set_serial 01 -out server-mix-rsapss-cert.pem
@@ -77,7 +77,7 @@ echo "---------------------------------------------------------------------"
 echo "Updating server-rsapss.pem"
 echo ""
 #pipe the following arguments to openssl req...
-echo -e "US\\nMontana\\nBozeman\\nwolfSSL_RSAPSS\\nServer-RSAPSS\\nwww.wolfssl.com\\ninfo@wolfssl.com\\n\\n\\n\\n" | openssl req -new -key server-rsapss-priv.pem -config ../renewcerts/wolfssl.cnf -nodes -out server-rsapss.csr
+echo -e "US\\nMontana\\nBozeman\\nwolfSSL_RSAPSS\\nServer-RSAPSS\\nwww.wolfssl.com\\nfacts@wolfssl.com\\n\\n\\n\\n" | openssl req -new -key server-rsapss-priv.pem -config ../renewcerts/wolfssl.cnf -nodes -out server-rsapss.csr
 check_result $? "Generate request"
 
 openssl x509 -req -in server-rsapss.csr -days 1000 -extfile ../renewcerts/wolfssl.cnf -extensions server_ecc -CA ca-rsapss.pem -CAkey ca-rsapss-priv.pem -set_serial 01 -out server-rsapss-cert.pem
@@ -100,7 +100,7 @@ echo "---------------------------------------------------------------------"
 echo "Updating client-rsapss.pem"
 echo ""
 #pipe the following arguments to openssl req...
-echo -e "US\\nMontana\\nBozeman\\nwolfSSL_RSAPSS\\nClient-RSAPSS\\nwww.wolfssl.com\\ninfo@wolfssl.com\\n\\n\\n\\n" | openssl req -new -key client-rsapss-priv.pem -config ../renewcerts/wolfssl.cnf -nodes -out client-rsapss.csr
+echo -e "US\\nMontana\\nBozeman\\nwolfSSL_RSAPSS\\nClient-RSAPSS\\nwww.wolfssl.com\\nfacts@wolfssl.com\\n\\n\\n\\n" | openssl req -new -key client-rsapss-priv.pem -config ../renewcerts/wolfssl.cnf -nodes -out client-rsapss.csr
 check_result $? "Generate request"
 
 openssl x509 -req -in client-rsapss.csr -days 1000 -extfile ../renewcerts/wolfssl.cnf -extensions wolfssl_opts -signkey client-rsapss-priv.pem -out client-rsapss.pem
@@ -126,7 +126,7 @@ echo "---------------------------------------------------------------------"
 echo "Updating root-3072-rsapss.pem"
 echo ""
 #pipe the following arguments to openssl req...
-echo -e "US\\nMontana\\nBozeman\\nwolfSSL_RSA-PSS\\nRoot-RSA-PSS\\nwww.wolfssl.com\\ninfo@wolfssl.com\\n.\\n.\\n" | \
+echo -e "US\\nMontana\\nBozeman\\nwolfSSL_RSA-PSS\\nRoot-RSA-PSS\\nwww.wolfssl.com\\nfacts@wolfssl.com\\n.\\n.\\n" | \
 openssl req -new -key root-3072-rsapss-priv.pem -config ../renewcerts/wolfssl.cnf -nodes -out root-3072-rsapss.csr
 check_result $? "Generate request"
 
@@ -148,7 +148,7 @@ echo "---------------------------------------------------------------------"
 echo "Updating ca-3072-rsapss.pem"
 echo ""
 #pipe the following arguments to openssl req...
-echo -e "US\\nMontana\\nBozeman\\nwolfSSL_RSAPSS\\nCA-RSAPSS\\nwww.wolfssl.com\\ninfo@wolfssl.com\\n\\n\\n\\n" | openssl req -new -key ca-3072-rsapss-priv.pem -config ../renewcerts/wolfssl.cnf -nodes -out ca-3072-rsapss.csr
+echo -e "US\\nMontana\\nBozeman\\nwolfSSL_RSAPSS\\nCA-RSAPSS\\nwww.wolfssl.com\\nfacts@wolfssl.com\\n\\n\\n\\n" | openssl req -new -key ca-3072-rsapss-priv.pem -config ../renewcerts/wolfssl.cnf -nodes -out ca-3072-rsapss.csr
 check_result $? "Generate request"
 
 openssl x509 -req -in ca-3072-rsapss.csr -days 1000 -extfile ../renewcerts/wolfssl.cnf -extensions ca_ecc_cert -CA root-3072-rsapss.pem -CAkey root-3072-rsapss-priv.pem -sha384 -set_serial 01 -out ca-3072-rsapss.pem
@@ -169,7 +169,7 @@ echo "---------------------------------------------------------------------"
 echo "Updating server-3072-rsapss.pem"
 echo ""
 #pipe the following arguments to openssl req...
-echo -e "US\\nMontana\\nBozeman\\nwolfSSL_RSAPSS\\nServer-RSAPSS\\nwww.wolfssl.com\\ninfo@wolfssl.com\\n\\n\\n\\n" | openssl req -new -key server-3072-rsapss-priv.pem -config ../renewcerts/wolfssl.cnf -nodes -out server-3072-rsapss.csr
+echo -e "US\\nMontana\\nBozeman\\nwolfSSL_RSAPSS\\nServer-RSAPSS\\nwww.wolfssl.com\\nfacts@wolfssl.com\\n\\n\\n\\n" | openssl req -new -key server-3072-rsapss-priv.pem -config ../renewcerts/wolfssl.cnf -nodes -out server-3072-rsapss.csr
 check_result $? "Generate request"
 
 openssl x509 -req -in server-3072-rsapss.csr -days 1000 -extfile ../renewcerts/wolfssl.cnf -extensions server_ecc -CA ca-3072-rsapss.pem -CAkey ca-3072-rsapss-priv.pem -sha384 -set_serial 01 -out server-3072-rsapss-cert.pem
@@ -192,7 +192,7 @@ echo "---------------------------------------------------------------------"
 echo "Updating client-3072-rsapss.pem"
 echo ""
 #pipe the following arguments to openssl req...
-echo -e "US\\nMontana\\nBozeman\\nwolfSSL_RSAPSS\\nClient-RSAPSS\\nwww.wolfssl.com\\ninfo@wolfssl.com\\n\\n\\n\\n" | openssl req -new -key client-3072-rsapss-priv.pem -config ../renewcerts/wolfssl.cnf -nodes -out client-3072-rsapss.csr
+echo -e "US\\nMontana\\nBozeman\\nwolfSSL_RSAPSS\\nClient-RSAPSS\\nwww.wolfssl.com\\nfacts@wolfssl.com\\n\\n\\n\\n" | openssl req -new -key client-3072-rsapss-priv.pem -config ../renewcerts/wolfssl.cnf -nodes -out client-3072-rsapss.csr
 check_result $? "Generate request"
 
 openssl x509 -req -in client-3072-rsapss.csr -days 1000 -extfile ../renewcerts/wolfssl.cnf -extensions wolfssl_opts -signkey client-3072-rsapss-priv.pem -sha384 -out client-3072-rsapss.pem
@@ -204,6 +204,26 @@ check_result $? "Convert to DER"
 openssl x509 -in client-3072-rsapss.pem -text > tmp.pem
 check_result $? "Add text"
 mv tmp.pem client-3072-rsapss.pem
+echo "End of section"
+echo "---------------------------------------------------------------------"
+
+############################################################
+###### ecc-leaf-rsapss.pem: P-256 leaf signed by ca ########
+############################################################
+# Drives RSA-PSS cert verify with a tiny ECC leaf key in
+# examples/tls13/tls13_memio.c.
+echo "Updating ecc-leaf-rsapss.pem"
+echo ""
+cat > ecc-leaf.ext <<EOF
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid:always
+EOF
+openssl req -new -key ../ecc-key.pem -subj "/CN=localhost" -out ecc-leaf-rsapss.csr
+check_result $? "Generate request"
+
+openssl x509 -req -in ecc-leaf-rsapss.csr -days 3650 -extfile ecc-leaf.ext -CA ca-rsapss.pem -CAkey ca-rsapss-priv.pem -sigopt rsa_padding_mode:pss -CAcreateserial -out ecc-leaf-rsapss.pem
+check_result $? "Generate certificate"
+rm -f ecc-leaf-rsapss.csr ecc-leaf.ext ca-rsapss.srl
 echo "End of section"
 echo "---------------------------------------------------------------------"
 

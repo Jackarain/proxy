@@ -1,0 +1,424 @@
+/*
+ * Copyright (C) 2006-2026 wolfSSL Inc.
+ *
+ * This file is part of wolfSSL.
+ *
+ * wolfSSL is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * wolfSSL is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1335, USA
+ */
+
+/*!
+This module provides a Rust wrapper for the wolfCrypt library's HMAC
+functionality.
+*/
+
+#![cfg(hmac)]
+
+use crate::sys;
+use core::cell::UnsafeCell;
+use core::mem::MaybeUninit;
+
+/// Rust wrapper for wolfSSL `Hmac` object.
+///
+/// The wolfSSL context is held in an `UnsafeCell` because `wc_HmacCopy()`
+/// takes its source argument by non-const pointer and genuinely may write
+/// through it: it forwards `&src->hash` to the per-digest copy routines
+/// (e.g. `wc_Sha256Copy()`, which calls `wc_MAXQ10XX_Sha256Copy(src)` on
+/// MAXQ10XX), and under `WOLF_CRYPTO_CB` + `WOLF_CRYPTO_CB_COPY` it hands
+/// `src` to the device callback as a writable pointer.  `Clone` therefore
+/// needs a pointer that may be written to while only holding a `&self`,
+/// which is sound only through `UnsafeCell`.  `UnsafeCell` is also `!Sync`,
+/// so no other thread can be touching the context at the same time.
+pub struct HMAC {
+    wc_hmac: UnsafeCell<sys::Hmac>,
+}
+
+impl HMAC {
+    pub const TYPE_MD5: i32 = sys::wc_HashType_WC_HASH_TYPE_MD5 as i32;
+    pub const TYPE_SHA: i32 = sys::wc_HashType_WC_HASH_TYPE_SHA as i32;
+    pub const TYPE_SHA256: i32 = sys::wc_HashType_WC_HASH_TYPE_SHA256 as i32;
+    pub const TYPE_SHA512: i32 = sys::wc_HashType_WC_HASH_TYPE_SHA512 as i32;
+    #[cfg(sha512_224)]
+    pub const TYPE_SHA512_224: i32 = sys::wc_HashType_WC_HASH_TYPE_SHA512_224 as i32;
+    #[cfg(sha512_256)]
+    pub const TYPE_SHA512_256: i32 = sys::wc_HashType_WC_HASH_TYPE_SHA512_256 as i32;
+    pub const TYPE_SHA384: i32 = sys::wc_HashType_WC_HASH_TYPE_SHA384 as i32;
+    pub const TYPE_SHA224: i32 = sys::wc_HashType_WC_HASH_TYPE_SHA224 as i32;
+    pub const TYPE_SHA3_224: i32 = sys::wc_HashType_WC_HASH_TYPE_SHA3_224 as i32;
+    pub const TYPE_SHA3_256: i32 = sys::wc_HashType_WC_HASH_TYPE_SHA3_256 as i32;
+    pub const TYPE_SHA3_384: i32 = sys::wc_HashType_WC_HASH_TYPE_SHA3_384 as i32;
+    pub const TYPE_SHA3_512: i32 = sys::wc_HashType_WC_HASH_TYPE_SHA3_512 as i32;
+
+    /// Get HMAC hash size by type.
+    ///
+    /// # Parameters
+    ///
+    /// * `typ`: Hash type, one of `HMAC::TYPE_*`.
+    ///
+    /// # Returns
+    ///
+    /// Returns either Ok(size) containing the HMAC hash size or Err(e)
+    /// containing the wolfSSL library error code value.
+    pub fn get_hmac_size_by_type(typ: i32) -> Result<usize, i32> {
+        let rc = unsafe { sys::wc_HmacSizeByType(typ) };
+        if rc < 0 {
+            return Err(rc);
+        }
+        Ok(rc as u32 as usize)
+    }
+
+    /// Create a new HMAC object with the given hash type and encryption key.
+    ///
+    /// # Parameters
+    ///
+    /// * `typ`: Hash type, one of `HMAC::TYPE_*`.
+    /// * `key`: Encryption key.
+    ///
+    /// # Returns
+    ///
+    /// Returns either Ok(hmac) containing the HMAC struct instance or Err(e)
+    /// containing the wolfSSL library error code value.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use wolfssl_wolfcrypt::hmac::HMAC;
+    /// let key = [0x42u8; 16];
+    /// let mut hmac = HMAC::new(HMAC::TYPE_SHA256, &key).expect("Error with new()");
+    /// ```
+    pub fn new(typ: i32, key: &[u8]) -> Result<Self, i32> {
+        Self::new_ex(typ, key, None, None)
+    }
+
+    /// Create a new HMAC object with the given hash type and encryption key
+    /// with optional heap and device ID.
+    ///
+    /// # Parameters
+    ///
+    /// * `typ`: Hash type, one of `HMAC::TYPE_*`.
+    /// * `key`: Encryption key.
+    /// * `heap`: Optional heap hint.
+    /// * `dev_id` Optional device ID to use with crypto callbacks or async hardware.
+    ///
+    /// # Returns
+    ///
+    /// Returns either Ok(hmac) containing the HMAC struct instance or Err(e)
+    /// containing the wolfSSL library error code value.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use wolfssl_wolfcrypt::hmac::HMAC;
+    /// let key = [0x42u8; 16];
+    /// let mut hmac = HMAC::new_ex(HMAC::TYPE_SHA256, &key, None, None).expect("Error with new_ex()");
+    /// ```
+    pub fn new_ex(typ: i32, key: &[u8], heap: Option<*mut core::ffi::c_void>, dev_id: Option<i32>) -> Result<Self, i32> {
+        let key_size = crate::buffer_len_to_u32(key.len())?;
+        let mut wc_hmac: MaybeUninit<sys::Hmac> = MaybeUninit::uninit();
+        let heap = match heap {
+            Some(heap) => heap,
+            None => core::ptr::null_mut(),
+        };
+        let dev_id = match dev_id {
+            Some(dev_id) => dev_id,
+            None => sys::INVALID_DEVID,
+        };
+        let rc = unsafe {
+            sys::wc_HmacInit(wc_hmac.as_mut_ptr(), heap, dev_id)
+        };
+        if rc != 0 {
+            return Err(rc);
+        }
+        let wc_hmac = unsafe { wc_hmac.assume_init() };
+        let mut hmac = HMAC { wc_hmac: UnsafeCell::new(wc_hmac) };
+        let rc = unsafe {
+            sys::wc_HmacSetKey(hmac.wc_hmac.get_mut(), typ, key.as_ptr(), key_size)
+        };
+        if rc != 0 {
+            return Err(rc);
+        }
+        Ok(hmac)
+    }
+
+    /// Create a new HMAC object with the given hash type and encryption key,
+    /// allowing for short encryption keys (< 112 bits) to be used.
+    ///
+    /// # Parameters
+    ///
+    /// * `typ`: Hash type, one of `HMAC::TYPE_*`.
+    /// * `key`: Encryption key.
+    ///
+    /// # Returns
+    ///
+    /// Returns either Ok(hmac) containing the HMAC struct instance or Err(e)
+    /// containing the wolfSSL library error code value.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// #![cfg(hmac_setkey_ex)]
+    /// use wolfssl_wolfcrypt::hmac::HMAC;
+    /// let key = [0x42u8; 3];
+    /// let mut hmac = HMAC::new_allow_short_key(HMAC::TYPE_SHA256, &key).expect("Error with new_allow_short_key()");
+    /// ```
+    #[cfg(hmac_setkey_ex)]
+    pub fn new_allow_short_key(typ: i32, key: &[u8]) -> Result<Self, i32> {
+        Self::new_allow_short_key_ex(typ, key, None, None)
+    }
+
+    /// Create a new HMAC object with the given hash type and encryption key,
+    /// allowing for short encryption keys (< 112 bits) to be used.
+    ///
+    /// # Parameters
+    ///
+    /// * `typ`: Hash type, one of `HMAC::TYPE_*`.
+    /// * `key`: Encryption key.
+    /// * `heap`: Optional heap hint.
+    /// * `dev_id` Optional device ID to use with crypto callbacks or async hardware.
+    ///
+    /// # Returns
+    ///
+    /// Returns either Ok(hmac) containing the HMAC struct instance or Err(e)
+    /// containing the wolfSSL library error code value.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// #![cfg(hmac_setkey_ex)]
+    /// use wolfssl_wolfcrypt::hmac::HMAC;
+    /// let key = [0x42u8; 3];
+    /// let mut hmac = HMAC::new_allow_short_key_ex(HMAC::TYPE_SHA256, &key, None, None).expect("Error with new_allow_short_key_ex()");
+    /// ```
+    #[cfg(hmac_setkey_ex)]
+    pub fn new_allow_short_key_ex(typ: i32, key: &[u8], heap: Option<*mut core::ffi::c_void>, dev_id: Option<i32>) -> Result<Self, i32> {
+        let key_size = crate::buffer_len_to_u32(key.len())?;
+        let mut wc_hmac: MaybeUninit<sys::Hmac> = MaybeUninit::uninit();
+        let heap = match heap {
+            Some(heap) => heap,
+            None => core::ptr::null_mut(),
+        };
+        let dev_id = match dev_id {
+            Some(dev_id) => dev_id,
+            None => sys::INVALID_DEVID,
+        };
+        let rc = unsafe {
+            sys::wc_HmacInit(wc_hmac.as_mut_ptr(), heap, dev_id)
+        };
+        if rc != 0 {
+            return Err(rc);
+        }
+        let wc_hmac = unsafe { wc_hmac.assume_init() };
+        let mut hmac = HMAC { wc_hmac: UnsafeCell::new(wc_hmac) };
+        let rc = unsafe {
+            sys::wc_HmacSetKey_ex(hmac.wc_hmac.get_mut(), typ, key.as_ptr(), key_size, 1)
+        };
+        if rc != 0 {
+            return Err(rc);
+        }
+        Ok(hmac)
+    }
+
+    /// Update the message to authenticate using HMAC.
+    ///
+    /// This function may be called multiple times to update the message to
+    /// hash.
+    ///
+    /// # Parameters
+    ///
+    /// * `data`: Buffer containing message data to append.
+    ///
+    /// # Returns
+    ///
+    /// Returns either Ok(()) on success or Err(e) containing the wolfSSL
+    /// library error code value.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use wolfssl_wolfcrypt::hmac::HMAC;
+    /// let key = [0x42u8; 16];
+    /// let mut hmac = HMAC::new(HMAC::TYPE_SHA256, &key).expect("Error with new()");
+    /// hmac.update(b"input").expect("Error with update()");
+    /// ```
+    pub fn update(&mut self, data: &[u8]) -> Result<(), i32> {
+        let data_size = crate::buffer_len_to_u32(data.len())?;
+        let rc = unsafe {
+            sys::wc_HmacUpdate(self.wc_hmac.get_mut(), data.as_ptr(), data_size)
+        };
+        if rc != 0 {
+            return Err(rc);
+        }
+        Ok(())
+    }
+
+    /// Compute the final hash of the input message.
+    ///
+    /// # Parameters
+    ///
+    /// * `hash`: Output buffer to contain the calculated hash. The length must
+    ///   match that returned by `get_hmac_size()`.
+    ///
+    /// # Returns
+    ///
+    /// Returns either Ok(()) on success or Err(e) containing the wolfSSL
+    /// library error code value.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use wolfssl_wolfcrypt::hmac::HMAC;
+    /// let key = [0x42u8; 16];
+    /// let mut hmac = HMAC::new(HMAC::TYPE_SHA256, &key).expect("Error with new()");
+    /// hmac.update(b"input").expect("Error with update()");
+    /// let hash_size = hmac.get_hmac_size().expect("Error with get_hmac_size()");
+    /// let mut hash = vec![0u8; hash_size];
+    /// hmac.finalize(&mut hash).expect("Error with finalize()");
+    /// ```
+    pub fn finalize(&mut self, hash: &mut [u8]) -> Result<(), i32> {
+        // Check the output buffer size since wc_HmacFinal() does not accept
+        // a length parameter.
+        let typ = self.wc_hmac.get_mut().macType as i32;
+        let rc = unsafe { sys::wc_HmacSizeByType(typ) };
+        if rc < 0 {
+            return Err(rc);
+        }
+        let expected_size = rc as usize;
+        if hash.len() != expected_size {
+            return Err(sys::wolfCrypt_ErrorCodes_BUFFER_E);
+        }
+        let rc = unsafe {
+            sys::wc_HmacFinal(self.wc_hmac.get_mut(), hash.as_mut_ptr())
+        };
+        if rc != 0 {
+            return Err(rc);
+        }
+        Ok(())
+    }
+
+    /// Get the HMAC hash size.
+    ///
+    /// # Returns
+    ///
+    /// Returns either Ok(size) containing the HMAC hash size or Err(e)
+    /// containing the wolfSSL library error code value.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use wolfssl_wolfcrypt::hmac::HMAC;
+    /// let key = [0x42u8; 16];
+    /// let mut hmac = HMAC::new(HMAC::TYPE_SHA256, &key).expect("Error with new()");
+    /// hmac.update(b"input").expect("Error with update()");
+    /// let hash_size = hmac.get_hmac_size().expect("Error with get_hmac_size()");
+    /// let mut hash = vec![0u8; hash_size];
+    /// hmac.finalize(&mut hash).expect("Error with finalize()");
+    /// ```
+    pub fn get_hmac_size(&self) -> Result<usize, i32> {
+        /* Read-only access to the cell contents; HMAC is !Sync, so nothing
+         * else can be mutating the context while this &self is held. */
+        let typ = unsafe { (*self.wc_hmac.get()).macType } as u32 as i32;
+        let rc = unsafe { sys::wc_HmacSizeByType(typ) };
+        if rc < 0 {
+            return Err(rc);
+        }
+        let expected_size = rc as u32 as usize;
+        Ok(expected_size)
+    }
+}
+
+impl HMAC {
+    /// Copy the HMAC state into a new independent instance via
+    /// `wc_HmacCopy()`.
+    ///
+    /// Allows the same in-progress authentication to be continued
+    /// independently from the same point.
+    ///
+    /// This is the fallible equivalent of `clone()`, which panics on failure.
+    ///
+    /// # Returns
+    ///
+    /// Returns either Ok(hmac) containing the new HMAC struct instance or
+    /// Err(e) containing the wolfSSL library error code value.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use wolfssl_wolfcrypt::hmac::HMAC;
+    /// let key = [0x42u8; 16];
+    /// let mut hmac = HMAC::new(HMAC::TYPE_SHA256, &key).expect("Error with new()");
+    /// hmac.update(b"prefix").expect("Error with update()");
+    /// let mut forked = hmac.copy().expect("Error with copy()");
+    /// forked.update(b"suffix").expect("Error with update()");
+    /// ```
+    pub fn copy(&mut self) -> Result<Self, i32> {
+        /* &mut self, so a writable pointer to the context is available
+         * directly. */
+        unsafe { Self::copy_from(self.wc_hmac.get_mut()) }
+    }
+
+    /// Deep-copy the HMAC context pointed to by `src` into a new instance.
+    ///
+    /// # Safety
+    ///
+    /// `src` must point to an initialized `Hmac` context that nothing else is
+    /// accessing for the duration of the call; `wc_HmacCopy()` may write
+    /// through it.
+    unsafe fn copy_from(src: *mut sys::Hmac) -> Result<Self, i32> {
+        /* wc_HmacCopy() fills dst with XMEMCPY() before touching it, so an
+         * uninitialized destination is fine here (unlike wc_Sha256Copy(),
+         * which frees dst first). */
+        let mut wc_hmac: MaybeUninit<sys::Hmac> = MaybeUninit::uninit();
+        let rc = unsafe { sys::wc_HmacCopy(src, wc_hmac.as_mut_ptr()) };
+        if rc != 0 {
+            return Err(rc);
+        }
+        let wc_hmac = unsafe { wc_hmac.assume_init() };
+        Ok(HMAC { wc_hmac: UnsafeCell::new(wc_hmac) })
+    }
+
+    fn zeroize(&mut self) {
+        unsafe { crate::zeroize_raw(self.wc_hmac.get_mut()); }
+    }
+}
+
+impl Clone for HMAC {
+    /// Deep-copy the HMAC state via `wc_HmacCopy()`.
+    ///
+    /// Panics if the underlying wolfSSL copy fails.  Use `copy()` instead to
+    /// get the error code back.
+    fn clone(&self) -> Self {
+        /* wc_HmacCopy() may write through its src pointer, so the writable
+         * pointer must come from the UnsafeCell rather than from a cast of
+         * &self.  HMAC is !Sync, and no other borrow of the context is live
+         * for the duration of the call. */
+        match unsafe { Self::copy_from(self.wc_hmac.get()) } {
+            Ok(hmac) => hmac,
+            Err(rc) => panic!("wc_HmacCopy() failed: {}", rc),
+        }
+    }
+}
+
+impl Drop for HMAC {
+    /// Safely free the underlying wolfSSL Hmac context.
+    ///
+    /// This calls the `wc_HmacFree()` wolfssl library function.
+    ///
+    /// The Rust Drop trait guarantees that this method is called when the
+    /// HMAC struct instance goes out of scope, automatically cleaning up
+    /// resources and preventing memory leaks.
+    fn drop(&mut self) {
+        unsafe { sys::wc_HmacFree(self.wc_hmac.get_mut()); }
+        self.zeroize();
+    }
+}

@@ -1,12 +1,12 @@
 /* user_settings.h
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -31,9 +31,9 @@
     #ifndef SERVER_IP
         #define SERVER_IP "192.168.1.200" /* Local Test Server IP */
     #endif
-	#ifndef DEFAULT_PORT
-		#define DEFAULT_PORT 11111
-	#endif
+    #ifndef DEFAULT_PORT
+        #define DEFAULT_PORT 11111
+    #endif
     #define CERT         ca_cert_der_2048
     #define SIZEOF_CERT  sizeof_ca_cert_der_2048
     static const char msg[] = "Are you listening wolfSSL Server?";
@@ -41,9 +41,9 @@
     #ifndef SERVER_IP
         #define SERVER_IP "www.wolfssl.com"
     #endif
-	#ifndef DEFAULT_PORT
-		#define DEFAULT_PORT 443
-	#endif
+    #ifndef DEFAULT_PORT
+        #define DEFAULT_PORT 443
+    #endif
     #define CERT         wolfssl_website_root_ca
     #define SIZEOF_CERT  sizeof_wolfssl_website_root_ca
     static const char msg[] = "GET /index.html HTTP/1.1\r\n\r\n";
@@ -60,6 +60,7 @@
 #define HAVE_ECC
 #define HAVE_SUPPORTED_CURVES
 #define HAVE_TLS_EXTENSIONS
+#define HAVE_SERVER_RENEGOTIATION_INFO
 #define HAVE_ONE_TIME_AUTH
 #define HAVE_TRUNCATED_HMAC
 #define HAVE_EXTENDED_MASTER
@@ -85,6 +86,7 @@
 
 /* Filesystem */
 #define NO_FILESYSTEM
+#define HAVE_NETDB_H
 
 /* Debug */
 #include <applibs/log.h>

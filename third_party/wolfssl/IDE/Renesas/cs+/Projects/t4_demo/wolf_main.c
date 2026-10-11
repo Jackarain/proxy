@@ -1,12 +1,12 @@
 /* wolf_main.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -40,7 +40,7 @@ static void timeTick(void *pdata)
 double current_time(int reset)
 {
       if(reset) tick = 0 ;
-      return ((double)tick/FREQ) ;	
+      return ((double)tick/FREQ) ;
 }
 
 #define ARG_SZ 256
@@ -50,10 +50,10 @@ static int get_arg(func_args *args)
     int i;
     char *arg = argBuff;
     args->argc = 0;
-    
+
     for(i=0; i<ARG_SZ; i++) {
         *arg = getchar();
-        
+
 	switch(*arg){
 	case '\n':
 	     *arg = '\0';
@@ -84,10 +84,10 @@ void wolfSSL_main()
 {
     int c;
     func_args args = {0};
-    
+
     printf("wolfSSL Demo\nt: test, b: benchmark, s: server, or c <IP addr> <Port>: client\n$ ");
     c = getchar();
-    
+
     switch(c) {
     case 't':
         get_arg(&args);
@@ -95,14 +95,14 @@ void wolfSSL_main()
         wolfcrypt_test(&args);
         printf("End wolfCrypt Test\n");
 	break;
-	
+
     case 'b':
         get_arg(&args);
         printf("Start wolfCrypt Benchmark\n");
         benchmark_test(NULL);
         printf("End wolfCrypt Benchmark\n");
 	break;
-	
+
     case 'c':
         if(get_arg(&args) < 0)
             break;
@@ -110,7 +110,7 @@ void wolfSSL_main()
 	wolfSSL_TLS_client(wolfSSL_cl_ctx, &args);
         printf("End TLS Client\n");
 	break;
-	
+
     case 's':
         if(get_arg(&args) < 0)
             break;

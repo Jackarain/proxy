@@ -1,12 +1,12 @@
 /* armv8-curve25519
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -19,15 +19,17 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1335, USA
  */
 
-#ifdef HAVE_CONFIG_H
-    #include <config.h>
-#endif /* HAVE_CONFIG_H */
-#include <wolfssl/wolfcrypt/settings.h>
-
 /* Generated using (from wolfssl):
  *   cd ../scripts
- *   ruby ./x25519/x25519.rb arm64 ../wolfssl/wolfcrypt/src/port/arm/armv8-curve25519.S
+ *   ruby ./x25519/x25519.rb arm64 \
+ *       ../wolfssl/wolfcrypt/src/port/arm/armv8-curve25519.S
  */
+
+#define WC_FIPS_LL_CRYPTO
+#define _WC_BUILDING_ARMV8_CURVE25519_S
+
+#include <wolfssl/wolfcrypt/libwolfssl_sources_asm.h>
+
 #ifdef WOLFSSL_ARMASM
 #ifdef __aarch64__
 #ifndef WOLFSSL_ARMASM_INLINE
@@ -36,12 +38,14 @@
 #ifndef __APPLE__
 .text
 .globl	fe_init
+WC_ASM_ATT_HIDDEN(fe_init)
 .type	fe_init,@function
 .align	2
 fe_init:
 #else
 .section	__TEXT,__text
 .globl	_fe_init
+WC_ASM_ATT_HIDDEN(_fe_init)
 .p2align	2
 _fe_init:
 #endif /* __APPLE__ */
@@ -49,16 +53,17 @@ _fe_init:
 #ifndef __APPLE__
 	.size	fe_init,.-fe_init
 #endif /* __APPLE__ */
-#ifdef HAVE_ED25519
 #ifndef __APPLE__
 .text
 .globl	fe_frombytes
+WC_ASM_ATT_HIDDEN(fe_frombytes)
 .type	fe_frombytes,@function
 .align	2
 fe_frombytes:
 #else
 .section	__TEXT,__text
 .globl	_fe_frombytes
+WC_ASM_ATT_HIDDEN(_fe_frombytes)
 .p2align	2
 _fe_frombytes:
 #endif /* __APPLE__ */
@@ -74,12 +79,14 @@ _fe_frombytes:
 #ifndef __APPLE__
 .text
 .globl	fe_tobytes
+WC_ASM_ATT_HIDDEN(fe_tobytes)
 .type	fe_tobytes,@function
 .align	2
 fe_tobytes:
 #else
 .section	__TEXT,__text
 .globl	_fe_tobytes
+WC_ASM_ATT_HIDDEN(_fe_tobytes)
 .p2align	2
 _fe_tobytes:
 #endif /* __APPLE__ */
@@ -105,12 +112,14 @@ _fe_tobytes:
 #ifndef __APPLE__
 .text
 .globl	fe_1
+WC_ASM_ATT_HIDDEN(fe_1)
 .type	fe_1,@function
 .align	2
 fe_1:
 #else
 .section	__TEXT,__text
 .globl	_fe_1
+WC_ASM_ATT_HIDDEN(_fe_1)
 .p2align	2
 _fe_1:
 #endif /* __APPLE__ */
@@ -125,12 +134,14 @@ _fe_1:
 #ifndef __APPLE__
 .text
 .globl	fe_0
+WC_ASM_ATT_HIDDEN(fe_0)
 .type	fe_0,@function
 .align	2
 fe_0:
 #else
 .section	__TEXT,__text
 .globl	_fe_0
+WC_ASM_ATT_HIDDEN(_fe_0)
 .p2align	2
 _fe_0:
 #endif /* __APPLE__ */
@@ -144,12 +155,14 @@ _fe_0:
 #ifndef __APPLE__
 .text
 .globl	fe_copy
+WC_ASM_ATT_HIDDEN(fe_copy)
 .type	fe_copy,@function
 .align	2
 fe_copy:
 #else
 .section	__TEXT,__text
 .globl	_fe_copy
+WC_ASM_ATT_HIDDEN(_fe_copy)
 .p2align	2
 _fe_copy:
 #endif /* __APPLE__ */
@@ -165,12 +178,14 @@ _fe_copy:
 #ifndef __APPLE__
 .text
 .globl	fe_sub
+WC_ASM_ATT_HIDDEN(fe_sub)
 .type	fe_sub,@function
 .align	2
 fe_sub:
 #else
 .section	__TEXT,__text
 .globl	_fe_sub
+WC_ASM_ATT_HIDDEN(_fe_sub)
 .p2align	2
 _fe_sub:
 #endif /* __APPLE__ */
@@ -203,12 +218,14 @@ _fe_sub:
 #ifndef __APPLE__
 .text
 .globl	fe_add
+WC_ASM_ATT_HIDDEN(fe_add)
 .type	fe_add,@function
 .align	2
 fe_add:
 #else
 .section	__TEXT,__text
 .globl	_fe_add
+WC_ASM_ATT_HIDDEN(_fe_add)
 .p2align	2
 _fe_add:
 #endif /* __APPLE__ */
@@ -241,12 +258,14 @@ _fe_add:
 #ifndef __APPLE__
 .text
 .globl	fe_neg
+WC_ASM_ATT_HIDDEN(fe_neg)
 .type	fe_neg,@function
 .align	2
 fe_neg:
 #else
 .section	__TEXT,__text
 .globl	_fe_neg
+WC_ASM_ATT_HIDDEN(_fe_neg)
 .p2align	2
 _fe_neg:
 #endif /* __APPLE__ */
@@ -269,12 +288,14 @@ _fe_neg:
 #ifndef __APPLE__
 .text
 .globl	fe_isnonzero
+WC_ASM_ATT_HIDDEN(fe_isnonzero)
 .type	fe_isnonzero,@function
 .align	2
 fe_isnonzero:
 #else
 .section	__TEXT,__text
 .globl	_fe_isnonzero
+WC_ASM_ATT_HIDDEN(_fe_isnonzero)
 .p2align	2
 _fe_isnonzero:
 #endif /* __APPLE__ */
@@ -301,12 +322,14 @@ _fe_isnonzero:
 #ifndef __APPLE__
 .text
 .globl	fe_isnegative
+WC_ASM_ATT_HIDDEN(fe_isnegative)
 .type	fe_isnegative,@function
 .align	2
 fe_isnegative:
 #else
 .section	__TEXT,__text
 .globl	_fe_isnegative
+WC_ASM_ATT_HIDDEN(_fe_isnegative)
 .p2align	2
 _fe_isnegative:
 #endif /* __APPLE__ */
@@ -326,19 +349,20 @@ _fe_isnegative:
 #ifndef __APPLE__
 .text
 .globl	fe_cmov_table
+WC_ASM_ATT_HIDDEN(fe_cmov_table)
 .type	fe_cmov_table,@function
 .align	2
 fe_cmov_table:
 #else
 .section	__TEXT,__text
 .globl	_fe_cmov_table
+WC_ASM_ATT_HIDDEN(_fe_cmov_table)
 .p2align	2
 _fe_cmov_table:
 #endif /* __APPLE__ */
 	stp	x29, x30, [sp, #-128]!
 	add	x29, sp, #0
-	str	x17, [x29, #40]
-	str	x19, [x29, #48]
+	stp	x17, x19, [x29, #40]
 	stp	x20, x21, [x29, #56]
 	stp	x22, x23, [x29, #72]
 	stp	x24, x25, [x29, #88]
@@ -546,8 +570,7 @@ _fe_cmov_table:
 	stp	x10, x11, [x0, #48]
 	stp	x12, x13, [x0, #64]
 	stp	x14, x15, [x0, #80]
-	ldr	x17, [x29, #40]
-	ldr	x19, [x29, #48]
+	ldp	x17, x19, [x29, #40]
 	ldp	x20, x21, [x29, #56]
 	ldp	x22, x23, [x29, #72]
 	ldp	x24, x25, [x29, #88]
@@ -558,23 +581,272 @@ _fe_cmov_table:
 #ifndef __APPLE__
 	.size	fe_cmov_table,.-fe_cmov_table
 #endif /* __APPLE__ */
-#endif /* HAVE_ED25519 */
+#ifndef __APPLE__
+.text
+.globl	fe_invert_nct
+WC_ASM_ATT_HIDDEN(fe_invert_nct)
+.type	fe_invert_nct,@function
+.align	2
+fe_invert_nct:
+#else
+.section	__TEXT,__text
+.globl	_fe_invert_nct
+WC_ASM_ATT_HIDDEN(_fe_invert_nct)
+.p2align	2
+_fe_invert_nct:
+#endif /* __APPLE__ */
+	stp	x29, x30, [sp, #-80]!
+	add	x29, sp, #0
+	stp	x17, x19, [x29, #24]
+	stp	x20, x21, [x29, #40]
+	stp	x22, x23, [x29, #56]
+	str	x24, [x29, #72]
+	mov	x19, #-19
+	mov	x20, #-1
+	mov	x21, #0x7fffffffffffffff
+	ldr	x6, [x1]
+	ldr	x7, [x1, #8]
+	ldr	x8, [x1, #16]
+	ldr	x9, [x1, #24]
+	mov	x2, x19
+	mov	x3, x20
+	mov	x4, x20
+	mov	x5, x21
+	mov	x10, xzr
+	mov	x11, xzr
+	mov	x12, xzr
+	mov	x13, xzr
+	mov	x14, #1
+	mov	x15, xzr
+	mov	x16, xzr
+	mov	x17, xzr
+	mov	x22, #0xff
+	cmp	x9, #0
+	beq	L_fe_invert_nct_num_bits_init_v_0
+	mov	x24, #0x100
+	clz	x23, x9
+	sub	x23, x24, x23
+	b	L_fe_invert_nct_num_bits_init_v_3
+L_fe_invert_nct_num_bits_init_v_0:
+	cmp	x8, #0
+	beq	L_fe_invert_nct_num_bits_init_v_1
+	mov	x24, #0xc0
+	clz	x23, x8
+	sub	x23, x24, x23
+	b	L_fe_invert_nct_num_bits_init_v_3
+L_fe_invert_nct_num_bits_init_v_1:
+	cmp	x7, #0
+	beq	L_fe_invert_nct_num_bits_init_v_2
+	mov	x24, #0x80
+	clz	x23, x7
+	sub	x23, x24, x23
+	b	L_fe_invert_nct_num_bits_init_v_3
+L_fe_invert_nct_num_bits_init_v_2:
+	mov	x24, #0x40
+	clz	x23, x6
+	sub	x23, x24, x23
+L_fe_invert_nct_num_bits_init_v_3:
+	tst	x6, #1
+	bne	L_fe_invert_nct_loop
+L_fe_invert_nct_even_init_v_0:
+	extr	x6, x7, x6, #1
+	extr	x7, x8, x7, #1
+	extr	x8, x9, x8, #1
+	lsr	x9, x9, #1
+	sub	x23, x23, #1
+	ands	x24, x14, #1
+	beq	L_fe_invert_nct_even_init_v_1
+	adds	x14, x14, x19
+	adcs	x15, x15, x20
+	adcs	x16, x16, x20
+	adcs	x17, x17, x21
+	cset	x24, cs
+L_fe_invert_nct_even_init_v_1:
+	extr	x14, x15, x14, #1
+	extr	x15, x16, x15, #1
+	extr	x16, x17, x16, #1
+	extr	x17, x24, x17, #1
+	tst	x6, #1
+	beq	L_fe_invert_nct_even_init_v_0
+L_fe_invert_nct_loop:
+	cmp	x22, #1
+	beq	L_fe_invert_nct_u_done
+	cmp	x23, #1
+	beq	L_fe_invert_nct_v_done
+	cmp	x22, x23
+	bhi	L_fe_invert_nct_u_larger
+	bcc	L_fe_invert_nct_v_larger
+	cmp	x5, x9
+	bhi	L_fe_invert_nct_u_larger
+	bcc	L_fe_invert_nct_v_larger
+	cmp	x4, x8
+	bhi	L_fe_invert_nct_u_larger
+	bcc	L_fe_invert_nct_v_larger
+	cmp	x3, x7
+	bhi	L_fe_invert_nct_u_larger
+	bcc	L_fe_invert_nct_v_larger
+	cmp	x2, x6
+	bcc	L_fe_invert_nct_v_larger
+L_fe_invert_nct_u_larger:
+	subs	x2, x2, x6
+	sbcs	x3, x3, x7
+	sbcs	x4, x4, x8
+	sbc	x5, x5, x9
+	subs	x10, x10, x14
+	sbcs	x11, x11, x15
+	sbcs	x12, x12, x16
+	sbcs	x13, x13, x17
+	bcs	L_fe_invert_nct_sub_uv
+	adds	x10, x10, x19
+	adcs	x11, x11, x20
+	adcs	x12, x12, x20
+	adc	x13, x13, x21
+L_fe_invert_nct_sub_uv:
+	cmp	x5, #0
+	beq	L_fe_invert_nct_nct_num_bits_u_0
+	mov	x24, #0x100
+	clz	x22, x5
+	sub	x22, x24, x22
+	b	L_fe_invert_nct_nct_num_bits_u_3
+L_fe_invert_nct_nct_num_bits_u_0:
+	cmp	x4, #0
+	beq	L_fe_invert_nct_nct_num_bits_u_1
+	mov	x24, #0xc0
+	clz	x22, x4
+	sub	x22, x24, x22
+	b	L_fe_invert_nct_nct_num_bits_u_3
+L_fe_invert_nct_nct_num_bits_u_1:
+	cmp	x3, #0
+	beq	L_fe_invert_nct_nct_num_bits_u_2
+	mov	x24, #0x80
+	clz	x22, x3
+	sub	x22, x24, x22
+	b	L_fe_invert_nct_nct_num_bits_u_3
+L_fe_invert_nct_nct_num_bits_u_2:
+	mov	x24, #0x40
+	clz	x22, x2
+	sub	x22, x24, x22
+L_fe_invert_nct_nct_num_bits_u_3:
+L_fe_invert_nct_even_u_0:
+	extr	x2, x3, x2, #1
+	extr	x3, x4, x3, #1
+	extr	x4, x5, x4, #1
+	lsr	x5, x5, #1
+	sub	x22, x22, #1
+	ands	x24, x10, #1
+	beq	L_fe_invert_nct_even_u_1
+	adds	x10, x10, x19
+	adcs	x11, x11, x20
+	adcs	x12, x12, x20
+	adcs	x13, x13, x21
+	cset	x24, cs
+L_fe_invert_nct_even_u_1:
+	extr	x10, x11, x10, #1
+	extr	x11, x12, x11, #1
+	extr	x12, x13, x12, #1
+	extr	x13, x24, x13, #1
+	tst	x2, #1
+	beq	L_fe_invert_nct_even_u_0
+	b	L_fe_invert_nct_loop
+L_fe_invert_nct_v_larger:
+	subs	x6, x6, x2
+	sbcs	x7, x7, x3
+	sbcs	x8, x8, x4
+	sbc	x9, x9, x5
+	subs	x14, x14, x10
+	sbcs	x15, x15, x11
+	sbcs	x16, x16, x12
+	sbcs	x17, x17, x13
+	bcs	L_fe_invert_nct_sub_vu
+	adds	x14, x14, x19
+	adcs	x15, x15, x20
+	adcs	x16, x16, x20
+	adc	x17, x17, x21
+L_fe_invert_nct_sub_vu:
+	cmp	x9, #0
+	beq	L_fe_invert_nct_nct_num_bits_v_0
+	mov	x24, #0x100
+	clz	x23, x9
+	sub	x23, x24, x23
+	b	L_fe_invert_nct_nct_num_bits_v_3
+L_fe_invert_nct_nct_num_bits_v_0:
+	cmp	x8, #0
+	beq	L_fe_invert_nct_nct_num_bits_v_1
+	mov	x24, #0xc0
+	clz	x23, x8
+	sub	x23, x24, x23
+	b	L_fe_invert_nct_nct_num_bits_v_3
+L_fe_invert_nct_nct_num_bits_v_1:
+	cmp	x7, #0
+	beq	L_fe_invert_nct_nct_num_bits_v_2
+	mov	x24, #0x80
+	clz	x23, x7
+	sub	x23, x24, x23
+	b	L_fe_invert_nct_nct_num_bits_v_3
+L_fe_invert_nct_nct_num_bits_v_2:
+	mov	x24, #0x40
+	clz	x23, x6
+	sub	x23, x24, x23
+L_fe_invert_nct_nct_num_bits_v_3:
+L_fe_invert_nct_even_v_0:
+	extr	x6, x7, x6, #1
+	extr	x7, x8, x7, #1
+	extr	x8, x9, x8, #1
+	lsr	x9, x9, #1
+	sub	x23, x23, #1
+	ands	x24, x14, #1
+	beq	L_fe_invert_nct_even_v_1
+	adds	x14, x14, x19
+	adcs	x15, x15, x20
+	adcs	x16, x16, x20
+	adcs	x17, x17, x21
+	cset	x24, cs
+L_fe_invert_nct_even_v_1:
+	extr	x14, x15, x14, #1
+	extr	x15, x16, x15, #1
+	extr	x16, x17, x16, #1
+	extr	x17, x24, x17, #1
+	tst	x6, #1
+	beq	L_fe_invert_nct_even_v_0
+	b	L_fe_invert_nct_loop
+L_fe_invert_nct_u_done:
+	str	x10, [x0]
+	str	x11, [x0, #8]
+	str	x12, [x0, #16]
+	str	x13, [x0, #24]
+	b	L_fe_invert_nct_done
+L_fe_invert_nct_v_done:
+	str	x14, [x0]
+	str	x15, [x0, #8]
+	str	x16, [x0, #16]
+	str	x17, [x0, #24]
+L_fe_invert_nct_done:
+	ldp	x17, x19, [x29, #24]
+	ldp	x20, x21, [x29, #40]
+	ldp	x22, x23, [x29, #56]
+	ldr	x24, [x29, #72]
+	ldp	x29, x30, [sp], #0x50
+	ret
+#ifndef __APPLE__
+	.size	fe_invert_nct,.-fe_invert_nct
+#endif /* __APPLE__ */
 #ifndef __APPLE__
 .text
 .globl	fe_mul
+WC_ASM_ATT_HIDDEN(fe_mul)
 .type	fe_mul,@function
 .align	2
 fe_mul:
 #else
 .section	__TEXT,__text
 .globl	_fe_mul
+WC_ASM_ATT_HIDDEN(_fe_mul)
 .p2align	2
 _fe_mul:
 #endif /* __APPLE__ */
 	stp	x29, x30, [sp, #-64]!
 	add	x29, sp, #0
-	str	x17, [x29, #24]
-	str	x19, [x29, #32]
+	stp	x17, x19, [x29, #24]
 	stp	x20, x21, [x29, #40]
 	str	x22, [x29, #56]
 	# Multiply
@@ -703,8 +975,7 @@ _fe_mul:
 	# Store
 	stp	x6, x7, [x0]
 	stp	x8, x9, [x0, #16]
-	ldr	x17, [x29, #24]
-	ldr	x19, [x29, #32]
+	ldp	x17, x19, [x29, #24]
 	ldp	x20, x21, [x29, #40]
 	ldr	x22, [x29, #56]
 	ldp	x29, x30, [sp], #0x40
@@ -715,12 +986,14 @@ _fe_mul:
 #ifndef __APPLE__
 .text
 .globl	fe_sq
+WC_ASM_ATT_HIDDEN(fe_sq)
 .type	fe_sq,@function
 .align	2
 fe_sq:
 #else
 .section	__TEXT,__text
 .globl	_fe_sq
+WC_ASM_ATT_HIDDEN(_fe_sq)
 .p2align	2
 _fe_sq:
 #endif /* __APPLE__ */
@@ -824,19 +1097,20 @@ _fe_sq:
 #ifndef __APPLE__
 .text
 .globl	fe_invert
+WC_ASM_ATT_HIDDEN(fe_invert)
 .type	fe_invert,@function
 .align	2
 fe_invert:
 #else
 .section	__TEXT,__text
 .globl	_fe_invert
+WC_ASM_ATT_HIDDEN(_fe_invert)
 .p2align	2
 _fe_invert:
 #endif /* __APPLE__ */
 	stp	x29, x30, [sp, #-176]!
 	add	x29, sp, #0
-	str	x17, [x29, #160]
-	str	x20, [x29, #168]
+	stp	x17, x20, [x29, #160]
 	# Invert
 	str	x0, [x29, #144]
 	str	x1, [x29, #152]
@@ -1694,57 +1968,84 @@ L_fe_invert8:
 #else
 	bl	_fe_mul
 #endif /* __APPLE__ */
-	ldr	x17, [x29, #160]
-	ldr	x20, [x29, #168]
+	ldp	x17, x20, [x29, #160]
 	ldp	x29, x30, [sp], #0xb0
 	ret
 #ifndef __APPLE__
 	.size	fe_invert,.-fe_invert
 #endif /* __APPLE__ */
+#if !defined(HAVE_ED25519) && !defined(WOLFSSL_CURVE25519_USE_ED25519)
+#ifndef __APPLE__
+	.text
+	.section	.rodata
+	.type	L_curve25519_base_x2, %object
+	.size	L_curve25519_base_x2, 32
+#else
+	.section	__DATA,__data
+#endif /* __APPLE__ */
+	# 16-byte aligned, 128-bit aligned
+#ifndef __APPLE__
+	.align	4
+#else
+	.p2align	4
+#endif /* __APPLE__ */
+L_curve25519_base_x2:
+	.quad	0x5cae469cdd684efb,0x8f3f5ced1e350b5c
+	.quad	0xd9750c687d157114,0x20d342d51873f1b7
 #ifndef __APPLE__
 .text
-.globl	curve25519
-.type	curve25519,@function
+.globl	curve25519_base
+WC_ASM_ATT_HIDDEN(curve25519_base)
+.type	curve25519_base,@function
 .align	2
-curve25519:
+curve25519_base:
 #else
 .section	__TEXT,__text
-.globl	_curve25519
+.globl	_curve25519_base
+WC_ASM_ATT_HIDDEN(_curve25519_base)
 .p2align	2
-_curve25519:
+_curve25519_base:
 #endif /* __APPLE__ */
-	stp	x29, x30, [sp, #-288]!
+	stp	x29, x30, [sp, #-272]!
 	add	x29, sp, #0
-	str	x17, [x29, #200]
-	str	x19, [x29, #208]
-	stp	x20, x21, [x29, #216]
-	stp	x22, x23, [x29, #232]
-	stp	x24, x25, [x29, #248]
-	stp	x26, x27, [x29, #264]
-	str	x28, [x29, #280]
-	mov	x23, xzr
-	str	x0, [x29, #176]
-	str	x2, [x29, #184]
+	stp	x17, x19, [x29, #184]
+	stp	x20, x21, [x29, #200]
+	stp	x22, x23, [x29, #216]
+	stp	x24, x25, [x29, #232]
+	stp	x26, x27, [x29, #248]
+	str	x28, [x29, #264]
+#ifndef __APPLE__
+	adrp x2, L_curve25519_base_x2
+	add  x2, x2, :lo12:L_curve25519_base_x2
+#else
+	adrp x2, L_curve25519_base_x2@PAGE
+	add  x2, x2, L_curve25519_base_x2@PAGEOFF
+#endif /* __APPLE__ */
 	ldp	x6, x7, [x2]
 	ldp	x8, x9, [x2, #16]
 	mov	x10, #1
 	mov	x11, xzr
 	mov	x12, xzr
 	mov	x13, xzr
-	stp	x10, x11, [x0]
-	stp	x12, x13, [x0, #16]
-	# Set zero
-	stp	xzr, xzr, [x29, #16]
+	# Set base point x-ordinate
+	mov	x24, #9
+	stp	x24, xzr, [x0]
+	stp	xzr, xzr, [x0, #16]
+	# Set one
+	mov	x24, #1
+	stp	x24, xzr, [x29, #16]
 	stp	xzr, xzr, [x29, #32]
-	mov	x24, #0xfe
-L_curve25519_bits:
+	mov	x2, xzr
+	mov	x23, x0
+	mov	x24, #0xfd
+L_curve25519_base_bits:
 	lsr	x3, x24, #6
 	and	x4, x24, #63
 	ldr	x5, [x1, x3, LSL 3]
 	lsr	x5, x5, x4
-	eor	x23, x23, x5
+	eor	x2, x2, x5
 	# Conditional Swap
-	subs	xzr, xzr, x23, lsl 63
+	subs	xzr, xzr, x2, lsl 63
 	ldp	x25, x26, [x29, #16]
 	ldp	x27, x28, [x29, #32]
 	csel	x19, x25, x10, ne
@@ -1756,7 +2057,7 @@ L_curve25519_bits:
 	csel	x22, x28, x13, ne
 	csel	x28, x13, x28, ne
 	# Conditional Swap
-	subs	xzr, xzr, x23, lsl 63
+	subs	xzr, xzr, x2, lsl 63
 	ldp	x10, x11, [x0]
 	ldp	x12, x13, [x0, #16]
 	csel	x14, x10, x6, ne
@@ -1767,7 +2068,7 @@ L_curve25519_bits:
 	csel	x12, x8, x12, ne
 	csel	x17, x13, x9, ne
 	csel	x13, x9, x13, ne
-	mov	x23, x5
+	mov	x2, x5
 	# Add
 	adds	x6, x10, x25
 	adcs	x7, x11, x26
@@ -2694,6 +2995,2540 @@ L_curve25519_bits:
 	adcs	x15, x15, x25
 	adcs	x16, x16, x26
 	adc	x17, x17, x27
+	# Multiply by 9
+	mov	x5, #9
+	mul	x10, x14, x5
+	umulh	x11, x14, x5
+	mul	x3, x15, x5
+	umulh	x12, x15, x5
+	adds	x11, x11, x3
+	adc	x12, x12, xzr
+	mul	x3, x16, x5
+	umulh	x13, x16, x5
+	adds	x12, x12, x3
+	adc	x13, x13, xzr
+	mul	x3, x17, x5
+	umulh	x4, x17, x5
+	adds	x13, x13, x3
+	adc	x4, x4, xzr
+	mov	x5, #19
+	extr	x4, x4, x13, #63
+	mul	x4, x4, x5
+	adds	x10, x10, x4
+	adcs	x11, x11, xzr
+	and	x13, x13, #0x7fffffffffffffff
+	adcs	x12, x12, xzr
+	adc	x13, x13, xzr
+	subs	x24, x24, #1
+	cmp	x24, #3
+	bge	L_curve25519_base_bits
+	# Conditional Swap
+	subs	xzr, xzr, x2, lsl 63
+	ldp	x25, x26, [x29, #16]
+	ldp	x27, x28, [x29, #32]
+	csel	x19, x25, x10, ne
+	csel	x25, x10, x25, ne
+	csel	x20, x26, x11, ne
+	csel	x26, x11, x26, ne
+	csel	x21, x27, x12, ne
+	csel	x27, x12, x27, ne
+	csel	x22, x28, x13, ne
+	csel	x28, x13, x28, ne
+	# Conditional Swap
+	subs	xzr, xzr, x2, lsl 63
+	ldp	x10, x11, [x0]
+	ldp	x12, x13, [x0, #16]
+	csel	x14, x10, x6, ne
+	csel	x10, x6, x10, ne
+	csel	x15, x11, x7, ne
+	csel	x11, x7, x11, ne
+	csel	x16, x12, x8, ne
+	csel	x12, x8, x12, ne
+	csel	x17, x13, x9, ne
+	csel	x13, x9, x13, ne
+L_curve25519_base_3:
+	# Add
+	adds	x6, x10, x25
+	adcs	x7, x11, x26
+	adcs	x8, x12, x27
+	adcs	x9, x13, x28
+	cset	x5, cs
+	mov	x3, #19
+	extr	x5, x5, x9, #63
+	mul	x3, x5, x3
+	#   Sub modulus (if overflow)
+	adds	x6, x6, x3
+	adcs	x7, x7, xzr
+	and	x9, x9, #0x7fffffffffffffff
+	adcs	x8, x8, xzr
+	adc	x9, x9, xzr
+	# Sub
+	subs	x25, x10, x25
+	sbcs	x26, x11, x26
+	sbcs	x27, x12, x27
+	sbcs	x28, x13, x28
+	csetm	x5, cc
+	mov	x3, #-19
+	extr	x5, x5, x28, #63
+	mul	x3, x5, x3
+	#   Add modulus (if underflow)
+	subs	x25, x25, x3
+	sbcs	x26, x26, xzr
+	and	x28, x28, #0x7fffffffffffffff
+	sbcs	x27, x27, xzr
+	sbc	x28, x28, xzr
+	# Square
+	#  A[0] * A[1]
+	umulh	x21, x25, x26
+	mul	x20, x25, x26
+	#  A[0] * A[3]
+	umulh	x14, x25, x28
+	mul	x22, x25, x28
+	#  A[0] * A[2]
+	mul	x3, x25, x27
+	adds	x21, x21, x3
+	umulh	x4, x25, x27
+	adcs	x22, x22, x4
+	#  A[1] * A[3]
+	mul	x3, x26, x28
+	adcs	x14, x14, x3
+	umulh	x15, x26, x28
+	adc	x15, x15, xzr
+	#  A[1] * A[2]
+	mul	x3, x26, x27
+	adds	x22, x22, x3
+	umulh	x4, x26, x27
+	adcs	x14, x14, x4
+	#  A[2] * A[3]
+	mul	x3, x27, x28
+	adcs	x15, x15, x3
+	umulh	x16, x27, x28
+	adc	x16, x16, xzr
+	# Double
+	adds	x20, x20, x20
+	adcs	x21, x21, x21
+	adcs	x22, x22, x22
+	adcs	x14, x14, x14
+	adcs	x15, x15, x15
+	adcs	x16, x16, x16
+	adc	x17, xzr, xzr
+	#  A[0] * A[0]
+	umulh	x4, x25, x25
+	mul	x19, x25, x25
+	#  A[1] * A[1]
+	mul	x3, x26, x26
+	adds	x20, x20, x4
+	umulh	x4, x26, x26
+	adcs	x21, x21, x3
+	#  A[2] * A[2]
+	mul	x3, x27, x27
+	adcs	x22, x22, x4
+	umulh	x4, x27, x27
+	adcs	x14, x14, x3
+	#  A[3] * A[3]
+	mul	x3, x28, x28
+	adcs	x15, x15, x4
+	umulh	x4, x28, x28
+	adcs	x16, x16, x3
+	adc	x17, x17, x4
+	# Reduce
+	mov	x3, #38
+	mul	x4, x3, x17
+	adds	x22, x22, x4
+	umulh	x5, x3, x17
+	adc	x5, x5, xzr
+	mov	x3, #19
+	extr	x5, x5, x22, #63
+	mul	x5, x5, x3
+	and	x22, x22, #0x7fffffffffffffff
+	mov	x3, #38
+	mul	x4, x3, x14
+	adds	x19, x19, x4
+	umulh	x14, x3, x14
+	mul	x4, x3, x15
+	adcs	x20, x20, x4
+	umulh	x15, x3, x15
+	mul	x4, x3, x16
+	adcs	x21, x21, x4
+	umulh	x16, x3, x16
+	adc	x22, x22, xzr
+	#  Add high product results in
+	adds	x19, x19, x5
+	adcs	x20, x20, x14
+	adcs	x21, x21, x15
+	adc	x22, x22, x16
+	# Square
+	#  A[0] * A[1]
+	umulh	x16, x6, x7
+	mul	x15, x6, x7
+	#  A[0] * A[3]
+	umulh	x25, x6, x9
+	mul	x17, x6, x9
+	#  A[0] * A[2]
+	mul	x3, x6, x8
+	adds	x16, x16, x3
+	umulh	x4, x6, x8
+	adcs	x17, x17, x4
+	#  A[1] * A[3]
+	mul	x3, x7, x9
+	adcs	x25, x25, x3
+	umulh	x26, x7, x9
+	adc	x26, x26, xzr
+	#  A[1] * A[2]
+	mul	x3, x7, x8
+	adds	x17, x17, x3
+	umulh	x4, x7, x8
+	adcs	x25, x25, x4
+	#  A[2] * A[3]
+	mul	x3, x8, x9
+	adcs	x26, x26, x3
+	umulh	x27, x8, x9
+	adc	x27, x27, xzr
+	# Double
+	adds	x15, x15, x15
+	adcs	x16, x16, x16
+	adcs	x17, x17, x17
+	adcs	x25, x25, x25
+	adcs	x26, x26, x26
+	adcs	x27, x27, x27
+	adc	x28, xzr, xzr
+	#  A[0] * A[0]
+	umulh	x4, x6, x6
+	mul	x14, x6, x6
+	#  A[1] * A[1]
+	mul	x3, x7, x7
+	adds	x15, x15, x4
+	umulh	x4, x7, x7
+	adcs	x16, x16, x3
+	#  A[2] * A[2]
+	mul	x3, x8, x8
+	adcs	x17, x17, x4
+	umulh	x4, x8, x8
+	adcs	x25, x25, x3
+	#  A[3] * A[3]
+	mul	x3, x9, x9
+	adcs	x26, x26, x4
+	umulh	x4, x9, x9
+	adcs	x27, x27, x3
+	adc	x28, x28, x4
+	# Reduce
+	mov	x3, #38
+	mul	x4, x3, x28
+	adds	x17, x17, x4
+	umulh	x5, x3, x28
+	adc	x5, x5, xzr
+	mov	x3, #19
+	extr	x5, x5, x17, #63
+	mul	x5, x5, x3
+	and	x17, x17, #0x7fffffffffffffff
+	mov	x3, #38
+	mul	x4, x3, x25
+	adds	x14, x14, x4
+	umulh	x25, x3, x25
+	mul	x4, x3, x26
+	adcs	x15, x15, x4
+	umulh	x26, x3, x26
+	mul	x4, x3, x27
+	adcs	x16, x16, x4
+	umulh	x27, x3, x27
+	adc	x17, x17, xzr
+	#  Add high product results in
+	adds	x14, x14, x5
+	adcs	x15, x15, x25
+	adcs	x16, x16, x26
+	adc	x17, x17, x27
+	# Multiply
+	# A[0] * B[0]
+	umulh	x11, x14, x19
+	mul	x10, x14, x19
+	# A[2] * B[0]
+	umulh	x13, x16, x19
+	mul	x12, x16, x19
+	# A[1] * B[0]
+	mul	x3, x15, x19
+	adds	x11, x11, x3
+	umulh	x4, x15, x19
+	adcs	x12, x12, x4
+	# A[1] * B[3]
+	umulh	x26, x15, x22
+	adc	x13, x13, xzr
+	mul	x25, x15, x22
+	# A[0] * B[1]
+	mul	x3, x14, x20
+	adds	x11, x11, x3
+	umulh	x4, x14, x20
+	adcs	x12, x12, x4
+	# A[2] * B[1]
+	mul	x3, x16, x20
+	adcs	x13, x13, x3
+	umulh	x4, x16, x20
+	adcs	x25, x25, x4
+	adc	x26, x26, xzr
+	# A[1] * B[2]
+	mul	x3, x15, x21
+	adds	x13, x13, x3
+	umulh	x4, x15, x21
+	adcs	x25, x25, x4
+	adcs	x26, x26, xzr
+	adc	x27, xzr, xzr
+	# A[0] * B[2]
+	mul	x3, x14, x21
+	adds	x12, x12, x3
+	umulh	x4, x14, x21
+	adcs	x13, x13, x4
+	adcs	x25, x25, xzr
+	adcs	x26, x26, xzr
+	adc	x27, x27, xzr
+	# A[1] * B[1]
+	mul	x3, x15, x20
+	adds	x12, x12, x3
+	umulh	x4, x15, x20
+	adcs	x13, x13, x4
+	# A[3] * B[1]
+	mul	x3, x17, x20
+	adcs	x25, x25, x3
+	umulh	x4, x17, x20
+	adcs	x26, x26, x4
+	adc	x27, x27, xzr
+	# A[2] * B[2]
+	mul	x3, x16, x21
+	adds	x25, x25, x3
+	umulh	x4, x16, x21
+	adcs	x26, x26, x4
+	# A[3] * B[3]
+	mul	x3, x17, x22
+	adcs	x27, x27, x3
+	umulh	x28, x17, x22
+	adc	x28, x28, xzr
+	# A[0] * B[3]
+	mul	x3, x14, x22
+	adds	x13, x13, x3
+	umulh	x4, x14, x22
+	adcs	x25, x25, x4
+	# A[2] * B[3]
+	mul	x3, x16, x22
+	adcs	x26, x26, x3
+	umulh	x4, x16, x22
+	adcs	x27, x27, x4
+	adc	x28, x28, xzr
+	# A[3] * B[0]
+	mul	x3, x17, x19
+	adds	x13, x13, x3
+	umulh	x4, x17, x19
+	adcs	x25, x25, x4
+	# A[3] * B[2]
+	mul	x3, x17, x21
+	adcs	x26, x26, x3
+	umulh	x4, x17, x21
+	adcs	x27, x27, x4
+	adc	x28, x28, xzr
+	# Reduce
+	mov	x3, #38
+	mul	x4, x3, x28
+	adds	x13, x13, x4
+	umulh	x5, x3, x28
+	adc	x5, x5, xzr
+	mov	x3, #19
+	extr	x5, x5, x13, #63
+	mul	x5, x5, x3
+	and	x13, x13, #0x7fffffffffffffff
+	mov	x3, #38
+	mul	x4, x3, x25
+	adds	x10, x10, x4
+	umulh	x25, x3, x25
+	mul	x4, x3, x26
+	adcs	x11, x11, x4
+	umulh	x26, x3, x26
+	mul	x4, x3, x27
+	adcs	x12, x12, x4
+	umulh	x27, x3, x27
+	adc	x13, x13, xzr
+	#  Add high product results in
+	adds	x10, x10, x5
+	adcs	x11, x11, x25
+	adcs	x12, x12, x26
+	adc	x13, x13, x27
+	# Store
+	stp	x10, x11, [x0]
+	stp	x12, x13, [x0, #16]
+	# Sub
+	subs	x14, x14, x19
+	sbcs	x15, x15, x20
+	sbcs	x16, x16, x21
+	sbcs	x17, x17, x22
+	csetm	x5, cc
+	mov	x3, #-19
+	#   Mask the modulus
+	extr	x5, x5, x17, #63
+	mul	x3, x5, x3
+	#   Add modulus (if underflow)
+	subs	x14, x14, x3
+	sbcs	x15, x15, xzr
+	and	x17, x17, #0x7fffffffffffffff
+	sbcs	x16, x16, xzr
+	sbc	x17, x17, xzr
+	# Multiply by 121666
+	mov	x5, #0xdb42
+	movk	x5, #1, lsl 16
+	mul	x6, x14, x5
+	umulh	x7, x14, x5
+	mul	x3, x15, x5
+	umulh	x8, x15, x5
+	adds	x7, x7, x3
+	adc	x8, x8, xzr
+	mul	x3, x16, x5
+	umulh	x9, x16, x5
+	adds	x8, x8, x3
+	adc	x9, x9, xzr
+	mul	x3, x17, x5
+	umulh	x4, x17, x5
+	adds	x9, x9, x3
+	adc	x4, x4, xzr
+	mov	x5, #19
+	extr	x4, x4, x9, #63
+	mul	x4, x4, x5
+	adds	x6, x6, x4
+	adcs	x7, x7, xzr
+	and	x9, x9, #0x7fffffffffffffff
+	adcs	x8, x8, xzr
+	adc	x9, x9, xzr
+	# Add
+	adds	x19, x19, x6
+	adcs	x20, x20, x7
+	adcs	x21, x21, x8
+	adcs	x22, x22, x9
+	cset	x5, cs
+	mov	x3, #19
+	#   Mask the modulus
+	extr	x5, x5, x22, #63
+	mul	x3, x5, x3
+	#   Sub modulus (if overflow)
+	adds	x19, x19, x3
+	adcs	x20, x20, xzr
+	and	x22, x22, #0x7fffffffffffffff
+	adcs	x21, x21, xzr
+	adc	x22, x22, xzr
+	# Multiply
+	# A[0] * B[0]
+	umulh	x26, x14, x19
+	mul	x25, x14, x19
+	# A[2] * B[0]
+	umulh	x28, x16, x19
+	mul	x27, x16, x19
+	# A[1] * B[0]
+	mul	x3, x15, x19
+	adds	x26, x26, x3
+	umulh	x4, x15, x19
+	adcs	x27, x27, x4
+	# A[1] * B[3]
+	umulh	x7, x15, x22
+	adc	x28, x28, xzr
+	mul	x6, x15, x22
+	# A[0] * B[1]
+	mul	x3, x14, x20
+	adds	x26, x26, x3
+	umulh	x4, x14, x20
+	adcs	x27, x27, x4
+	# A[2] * B[1]
+	mul	x3, x16, x20
+	adcs	x28, x28, x3
+	umulh	x4, x16, x20
+	adcs	x6, x6, x4
+	adc	x7, x7, xzr
+	# A[1] * B[2]
+	mul	x3, x15, x21
+	adds	x28, x28, x3
+	umulh	x4, x15, x21
+	adcs	x6, x6, x4
+	adcs	x7, x7, xzr
+	adc	x8, xzr, xzr
+	# A[0] * B[2]
+	mul	x3, x14, x21
+	adds	x27, x27, x3
+	umulh	x4, x14, x21
+	adcs	x28, x28, x4
+	adcs	x6, x6, xzr
+	adcs	x7, x7, xzr
+	adc	x8, x8, xzr
+	# A[1] * B[1]
+	mul	x3, x15, x20
+	adds	x27, x27, x3
+	umulh	x4, x15, x20
+	adcs	x28, x28, x4
+	# A[3] * B[1]
+	mul	x3, x17, x20
+	adcs	x6, x6, x3
+	umulh	x4, x17, x20
+	adcs	x7, x7, x4
+	adc	x8, x8, xzr
+	# A[2] * B[2]
+	mul	x3, x16, x21
+	adds	x6, x6, x3
+	umulh	x4, x16, x21
+	adcs	x7, x7, x4
+	# A[3] * B[3]
+	mul	x3, x17, x22
+	adcs	x8, x8, x3
+	umulh	x9, x17, x22
+	adc	x9, x9, xzr
+	# A[0] * B[3]
+	mul	x3, x14, x22
+	adds	x28, x28, x3
+	umulh	x4, x14, x22
+	adcs	x6, x6, x4
+	# A[2] * B[3]
+	mul	x3, x16, x22
+	adcs	x7, x7, x3
+	umulh	x4, x16, x22
+	adcs	x8, x8, x4
+	adc	x9, x9, xzr
+	# A[3] * B[0]
+	mul	x3, x17, x19
+	adds	x28, x28, x3
+	umulh	x4, x17, x19
+	adcs	x6, x6, x4
+	# A[3] * B[2]
+	mul	x3, x17, x21
+	adcs	x7, x7, x3
+	umulh	x4, x17, x21
+	adcs	x8, x8, x4
+	adc	x9, x9, xzr
+	# Reduce
+	mov	x3, #38
+	mul	x4, x3, x9
+	adds	x28, x28, x4
+	umulh	x5, x3, x9
+	adc	x5, x5, xzr
+	mov	x3, #19
+	extr	x5, x5, x28, #63
+	mul	x5, x5, x3
+	and	x28, x28, #0x7fffffffffffffff
+	mov	x3, #38
+	mul	x4, x3, x6
+	adds	x25, x25, x4
+	umulh	x6, x3, x6
+	mul	x4, x3, x7
+	adcs	x26, x26, x4
+	umulh	x7, x3, x7
+	mul	x4, x3, x8
+	adcs	x27, x27, x4
+	umulh	x8, x3, x8
+	adc	x28, x28, xzr
+	#  Add high product results in
+	adds	x25, x25, x5
+	adcs	x26, x26, x6
+	adcs	x27, x27, x7
+	adc	x28, x28, x8
+	# Store
+	stp	x25, x26, [x29, #16]
+	stp	x27, x28, [x29, #32]
+	subs	x24, x24, #1
+	bge	L_curve25519_base_3
+	# Invert
+	add	x0, x29, #48
+	add	x1, x29, #16
+#ifndef __APPLE__
+	bl	fe_sq
+#else
+	bl	_fe_sq
+#endif /* __APPLE__ */
+	add	x0, x29, #0x50
+	add	x1, x29, #48
+#ifndef __APPLE__
+	bl	fe_sq
+#else
+	bl	_fe_sq
+#endif /* __APPLE__ */
+#ifndef NDEBUG
+	add	x0, x29, #0x50
+#endif /* !NDEBUG */
+	add	x1, x29, #0x50
+#ifndef __APPLE__
+	bl	fe_sq
+#else
+	bl	_fe_sq
+#endif /* __APPLE__ */
+#ifndef NDEBUG
+	add	x0, x29, #0x50
+#endif /* !NDEBUG */
+	add	x1, x29, #16
+	add	x2, x29, #0x50
+#ifndef __APPLE__
+	bl	fe_mul
+#else
+	bl	_fe_mul
+#endif /* __APPLE__ */
+	add	x0, x29, #48
+	add	x1, x29, #48
+	add	x2, x29, #0x50
+#ifndef __APPLE__
+	bl	fe_mul
+#else
+	bl	_fe_mul
+#endif /* __APPLE__ */
+	add	x0, x29, #0x70
+#ifndef NDEBUG
+	add	x1, x29, #48
+#endif /* !NDEBUG */
+#ifndef __APPLE__
+	bl	fe_sq
+#else
+	bl	_fe_sq
+#endif /* __APPLE__ */
+	add	x0, x29, #0x50
+	add	x1, x29, #0x50
+	add	x2, x29, #0x70
+#ifndef __APPLE__
+	bl	fe_mul
+#else
+	bl	_fe_mul
+#endif /* __APPLE__ */
+	# Loop: 5 times
+	mov	x24, #5
+	ldp	x6, x7, [x29, #80]
+	ldp	x8, x9, [x29, #96]
+L_curve25519_base_inv_1:
+	# Square
+	#  A[0] * A[1]
+	umulh	x12, x6, x7
+	mul	x11, x6, x7
+	#  A[0] * A[3]
+	umulh	x14, x6, x9
+	mul	x13, x6, x9
+	#  A[0] * A[2]
+	mul	x3, x6, x8
+	adds	x12, x12, x3
+	umulh	x4, x6, x8
+	adcs	x13, x13, x4
+	#  A[1] * A[3]
+	mul	x3, x7, x9
+	adcs	x14, x14, x3
+	umulh	x15, x7, x9
+	adc	x15, x15, xzr
+	#  A[1] * A[2]
+	mul	x3, x7, x8
+	adds	x13, x13, x3
+	umulh	x4, x7, x8
+	adcs	x14, x14, x4
+	#  A[2] * A[3]
+	mul	x3, x8, x9
+	adcs	x15, x15, x3
+	umulh	x16, x8, x9
+	adc	x16, x16, xzr
+	# Double
+	adds	x11, x11, x11
+	adcs	x12, x12, x12
+	adcs	x13, x13, x13
+	adcs	x14, x14, x14
+	adcs	x15, x15, x15
+	adcs	x16, x16, x16
+	adc	x17, xzr, xzr
+	#  A[0] * A[0]
+	umulh	x4, x6, x6
+	mul	x10, x6, x6
+	#  A[1] * A[1]
+	mul	x3, x7, x7
+	adds	x11, x11, x4
+	umulh	x4, x7, x7
+	adcs	x12, x12, x3
+	#  A[2] * A[2]
+	mul	x3, x8, x8
+	adcs	x13, x13, x4
+	umulh	x4, x8, x8
+	adcs	x14, x14, x3
+	#  A[3] * A[3]
+	mul	x3, x9, x9
+	adcs	x15, x15, x4
+	umulh	x4, x9, x9
+	adcs	x16, x16, x3
+	adc	x17, x17, x4
+	# Reduce
+	mov	x3, #38
+	mul	x4, x3, x17
+	adds	x13, x13, x4
+	umulh	x5, x3, x17
+	adc	x5, x5, xzr
+	mov	x3, #19
+	extr	x5, x5, x13, #63
+	mul	x5, x5, x3
+	and	x13, x13, #0x7fffffffffffffff
+	mov	x3, #38
+	mul	x4, x3, x14
+	adds	x10, x10, x4
+	umulh	x14, x3, x14
+	mul	x4, x3, x15
+	adcs	x11, x11, x4
+	umulh	x15, x3, x15
+	mul	x4, x3, x16
+	adcs	x12, x12, x4
+	umulh	x16, x3, x16
+	adc	x13, x13, xzr
+	#  Add high product results in
+	adds	x6, x10, x5
+	adcs	x7, x11, x14
+	adcs	x8, x12, x15
+	adc	x9, x13, x16
+	subs	x24, x24, #1
+	bne	L_curve25519_base_inv_1
+	# Store
+	stp	x6, x7, [x29, #112]
+	stp	x8, x9, [x29, #128]
+#ifndef NDEBUG
+	add	x0, x29, #0x50
+#endif /* !NDEBUG */
+	add	x1, x29, #0x70
+	add	x2, x29, #0x50
+#ifndef __APPLE__
+	bl	fe_mul
+#else
+	bl	_fe_mul
+#endif /* __APPLE__ */
+	# Loop: 10 times
+	mov	x24, #10
+	ldp	x6, x7, [x29, #80]
+	ldp	x8, x9, [x29, #96]
+L_curve25519_base_inv_2:
+	# Square
+	#  A[0] * A[1]
+	umulh	x12, x6, x7
+	mul	x11, x6, x7
+	#  A[0] * A[3]
+	umulh	x14, x6, x9
+	mul	x13, x6, x9
+	#  A[0] * A[2]
+	mul	x3, x6, x8
+	adds	x12, x12, x3
+	umulh	x4, x6, x8
+	adcs	x13, x13, x4
+	#  A[1] * A[3]
+	mul	x3, x7, x9
+	adcs	x14, x14, x3
+	umulh	x15, x7, x9
+	adc	x15, x15, xzr
+	#  A[1] * A[2]
+	mul	x3, x7, x8
+	adds	x13, x13, x3
+	umulh	x4, x7, x8
+	adcs	x14, x14, x4
+	#  A[2] * A[3]
+	mul	x3, x8, x9
+	adcs	x15, x15, x3
+	umulh	x16, x8, x9
+	adc	x16, x16, xzr
+	# Double
+	adds	x11, x11, x11
+	adcs	x12, x12, x12
+	adcs	x13, x13, x13
+	adcs	x14, x14, x14
+	adcs	x15, x15, x15
+	adcs	x16, x16, x16
+	adc	x17, xzr, xzr
+	#  A[0] * A[0]
+	umulh	x4, x6, x6
+	mul	x10, x6, x6
+	#  A[1] * A[1]
+	mul	x3, x7, x7
+	adds	x11, x11, x4
+	umulh	x4, x7, x7
+	adcs	x12, x12, x3
+	#  A[2] * A[2]
+	mul	x3, x8, x8
+	adcs	x13, x13, x4
+	umulh	x4, x8, x8
+	adcs	x14, x14, x3
+	#  A[3] * A[3]
+	mul	x3, x9, x9
+	adcs	x15, x15, x4
+	umulh	x4, x9, x9
+	adcs	x16, x16, x3
+	adc	x17, x17, x4
+	# Reduce
+	mov	x3, #38
+	mul	x4, x3, x17
+	adds	x13, x13, x4
+	umulh	x5, x3, x17
+	adc	x5, x5, xzr
+	mov	x3, #19
+	extr	x5, x5, x13, #63
+	mul	x5, x5, x3
+	and	x13, x13, #0x7fffffffffffffff
+	mov	x3, #38
+	mul	x4, x3, x14
+	adds	x10, x10, x4
+	umulh	x14, x3, x14
+	mul	x4, x3, x15
+	adcs	x11, x11, x4
+	umulh	x15, x3, x15
+	mul	x4, x3, x16
+	adcs	x12, x12, x4
+	umulh	x16, x3, x16
+	adc	x13, x13, xzr
+	#  Add high product results in
+	adds	x6, x10, x5
+	adcs	x7, x11, x14
+	adcs	x8, x12, x15
+	adc	x9, x13, x16
+	subs	x24, x24, #1
+	bne	L_curve25519_base_inv_2
+	# Store
+	stp	x6, x7, [x29, #112]
+	stp	x8, x9, [x29, #128]
+	add	x0, x29, #0x70
+#ifndef NDEBUG
+	add	x1, x29, #0x70
+#endif /* !NDEBUG */
+	add	x2, x29, #0x50
+#ifndef __APPLE__
+	bl	fe_mul
+#else
+	bl	_fe_mul
+#endif /* __APPLE__ */
+	# Loop: 20 times
+	mov	x24, #20
+	ldp	x6, x7, [x29, #112]
+	ldp	x8, x9, [x29, #128]
+L_curve25519_base_inv_3:
+	# Square
+	#  A[0] * A[1]
+	umulh	x12, x6, x7
+	mul	x11, x6, x7
+	#  A[0] * A[3]
+	umulh	x14, x6, x9
+	mul	x13, x6, x9
+	#  A[0] * A[2]
+	mul	x3, x6, x8
+	adds	x12, x12, x3
+	umulh	x4, x6, x8
+	adcs	x13, x13, x4
+	#  A[1] * A[3]
+	mul	x3, x7, x9
+	adcs	x14, x14, x3
+	umulh	x15, x7, x9
+	adc	x15, x15, xzr
+	#  A[1] * A[2]
+	mul	x3, x7, x8
+	adds	x13, x13, x3
+	umulh	x4, x7, x8
+	adcs	x14, x14, x4
+	#  A[2] * A[3]
+	mul	x3, x8, x9
+	adcs	x15, x15, x3
+	umulh	x16, x8, x9
+	adc	x16, x16, xzr
+	# Double
+	adds	x11, x11, x11
+	adcs	x12, x12, x12
+	adcs	x13, x13, x13
+	adcs	x14, x14, x14
+	adcs	x15, x15, x15
+	adcs	x16, x16, x16
+	adc	x17, xzr, xzr
+	#  A[0] * A[0]
+	umulh	x4, x6, x6
+	mul	x10, x6, x6
+	#  A[1] * A[1]
+	mul	x3, x7, x7
+	adds	x11, x11, x4
+	umulh	x4, x7, x7
+	adcs	x12, x12, x3
+	#  A[2] * A[2]
+	mul	x3, x8, x8
+	adcs	x13, x13, x4
+	umulh	x4, x8, x8
+	adcs	x14, x14, x3
+	#  A[3] * A[3]
+	mul	x3, x9, x9
+	adcs	x15, x15, x4
+	umulh	x4, x9, x9
+	adcs	x16, x16, x3
+	adc	x17, x17, x4
+	# Reduce
+	mov	x3, #38
+	mul	x4, x3, x17
+	adds	x13, x13, x4
+	umulh	x5, x3, x17
+	adc	x5, x5, xzr
+	mov	x3, #19
+	extr	x5, x5, x13, #63
+	mul	x5, x5, x3
+	and	x13, x13, #0x7fffffffffffffff
+	mov	x3, #38
+	mul	x4, x3, x14
+	adds	x10, x10, x4
+	umulh	x14, x3, x14
+	mul	x4, x3, x15
+	adcs	x11, x11, x4
+	umulh	x15, x3, x15
+	mul	x4, x3, x16
+	adcs	x12, x12, x4
+	umulh	x16, x3, x16
+	adc	x13, x13, xzr
+	#  Add high product results in
+	adds	x6, x10, x5
+	adcs	x7, x11, x14
+	adcs	x8, x12, x15
+	adc	x9, x13, x16
+	subs	x24, x24, #1
+	bne	L_curve25519_base_inv_3
+	# Store
+	stp	x6, x7, [x29, #144]
+	stp	x8, x9, [x29, #160]
+#ifndef NDEBUG
+	add	x0, x29, #0x70
+#endif /* !NDEBUG */
+	add	x1, x29, #0x90
+	add	x2, x29, #0x70
+#ifndef __APPLE__
+	bl	fe_mul
+#else
+	bl	_fe_mul
+#endif /* __APPLE__ */
+	# Loop: 10 times
+	mov	x24, #10
+	ldp	x6, x7, [x29, #112]
+	ldp	x8, x9, [x29, #128]
+L_curve25519_base_inv_4:
+	# Square
+	#  A[0] * A[1]
+	umulh	x12, x6, x7
+	mul	x11, x6, x7
+	#  A[0] * A[3]
+	umulh	x14, x6, x9
+	mul	x13, x6, x9
+	#  A[0] * A[2]
+	mul	x3, x6, x8
+	adds	x12, x12, x3
+	umulh	x4, x6, x8
+	adcs	x13, x13, x4
+	#  A[1] * A[3]
+	mul	x3, x7, x9
+	adcs	x14, x14, x3
+	umulh	x15, x7, x9
+	adc	x15, x15, xzr
+	#  A[1] * A[2]
+	mul	x3, x7, x8
+	adds	x13, x13, x3
+	umulh	x4, x7, x8
+	adcs	x14, x14, x4
+	#  A[2] * A[3]
+	mul	x3, x8, x9
+	adcs	x15, x15, x3
+	umulh	x16, x8, x9
+	adc	x16, x16, xzr
+	# Double
+	adds	x11, x11, x11
+	adcs	x12, x12, x12
+	adcs	x13, x13, x13
+	adcs	x14, x14, x14
+	adcs	x15, x15, x15
+	adcs	x16, x16, x16
+	adc	x17, xzr, xzr
+	#  A[0] * A[0]
+	umulh	x4, x6, x6
+	mul	x10, x6, x6
+	#  A[1] * A[1]
+	mul	x3, x7, x7
+	adds	x11, x11, x4
+	umulh	x4, x7, x7
+	adcs	x12, x12, x3
+	#  A[2] * A[2]
+	mul	x3, x8, x8
+	adcs	x13, x13, x4
+	umulh	x4, x8, x8
+	adcs	x14, x14, x3
+	#  A[3] * A[3]
+	mul	x3, x9, x9
+	adcs	x15, x15, x4
+	umulh	x4, x9, x9
+	adcs	x16, x16, x3
+	adc	x17, x17, x4
+	# Reduce
+	mov	x3, #38
+	mul	x4, x3, x17
+	adds	x13, x13, x4
+	umulh	x5, x3, x17
+	adc	x5, x5, xzr
+	mov	x3, #19
+	extr	x5, x5, x13, #63
+	mul	x5, x5, x3
+	and	x13, x13, #0x7fffffffffffffff
+	mov	x3, #38
+	mul	x4, x3, x14
+	adds	x10, x10, x4
+	umulh	x14, x3, x14
+	mul	x4, x3, x15
+	adcs	x11, x11, x4
+	umulh	x15, x3, x15
+	mul	x4, x3, x16
+	adcs	x12, x12, x4
+	umulh	x16, x3, x16
+	adc	x13, x13, xzr
+	#  Add high product results in
+	adds	x6, x10, x5
+	adcs	x7, x11, x14
+	adcs	x8, x12, x15
+	adc	x9, x13, x16
+	subs	x24, x24, #1
+	bne	L_curve25519_base_inv_4
+	# Store
+	stp	x6, x7, [x29, #112]
+	stp	x8, x9, [x29, #128]
+	add	x0, x29, #0x50
+	add	x1, x29, #0x70
+	add	x2, x29, #0x50
+#ifndef __APPLE__
+	bl	fe_mul
+#else
+	bl	_fe_mul
+#endif /* __APPLE__ */
+	# Loop: 50 times
+	mov	x24, #50
+	ldp	x6, x7, [x29, #80]
+	ldp	x8, x9, [x29, #96]
+L_curve25519_base_inv_5:
+	# Square
+	#  A[0] * A[1]
+	umulh	x12, x6, x7
+	mul	x11, x6, x7
+	#  A[0] * A[3]
+	umulh	x14, x6, x9
+	mul	x13, x6, x9
+	#  A[0] * A[2]
+	mul	x3, x6, x8
+	adds	x12, x12, x3
+	umulh	x4, x6, x8
+	adcs	x13, x13, x4
+	#  A[1] * A[3]
+	mul	x3, x7, x9
+	adcs	x14, x14, x3
+	umulh	x15, x7, x9
+	adc	x15, x15, xzr
+	#  A[1] * A[2]
+	mul	x3, x7, x8
+	adds	x13, x13, x3
+	umulh	x4, x7, x8
+	adcs	x14, x14, x4
+	#  A[2] * A[3]
+	mul	x3, x8, x9
+	adcs	x15, x15, x3
+	umulh	x16, x8, x9
+	adc	x16, x16, xzr
+	# Double
+	adds	x11, x11, x11
+	adcs	x12, x12, x12
+	adcs	x13, x13, x13
+	adcs	x14, x14, x14
+	adcs	x15, x15, x15
+	adcs	x16, x16, x16
+	adc	x17, xzr, xzr
+	#  A[0] * A[0]
+	umulh	x4, x6, x6
+	mul	x10, x6, x6
+	#  A[1] * A[1]
+	mul	x3, x7, x7
+	adds	x11, x11, x4
+	umulh	x4, x7, x7
+	adcs	x12, x12, x3
+	#  A[2] * A[2]
+	mul	x3, x8, x8
+	adcs	x13, x13, x4
+	umulh	x4, x8, x8
+	adcs	x14, x14, x3
+	#  A[3] * A[3]
+	mul	x3, x9, x9
+	adcs	x15, x15, x4
+	umulh	x4, x9, x9
+	adcs	x16, x16, x3
+	adc	x17, x17, x4
+	# Reduce
+	mov	x3, #38
+	mul	x4, x3, x17
+	adds	x13, x13, x4
+	umulh	x5, x3, x17
+	adc	x5, x5, xzr
+	mov	x3, #19
+	extr	x5, x5, x13, #63
+	mul	x5, x5, x3
+	and	x13, x13, #0x7fffffffffffffff
+	mov	x3, #38
+	mul	x4, x3, x14
+	adds	x10, x10, x4
+	umulh	x14, x3, x14
+	mul	x4, x3, x15
+	adcs	x11, x11, x4
+	umulh	x15, x3, x15
+	mul	x4, x3, x16
+	adcs	x12, x12, x4
+	umulh	x16, x3, x16
+	adc	x13, x13, xzr
+	#  Add high product results in
+	adds	x6, x10, x5
+	adcs	x7, x11, x14
+	adcs	x8, x12, x15
+	adc	x9, x13, x16
+	subs	x24, x24, #1
+	bne	L_curve25519_base_inv_5
+	# Store
+	stp	x6, x7, [x29, #112]
+	stp	x8, x9, [x29, #128]
+	add	x0, x29, #0x70
+#ifndef NDEBUG
+	add	x1, x29, #0x70
+#endif /* !NDEBUG */
+	add	x2, x29, #0x50
+#ifndef __APPLE__
+	bl	fe_mul
+#else
+	bl	_fe_mul
+#endif /* __APPLE__ */
+	# Loop: 100 times
+	mov	x24, #0x64
+	ldp	x6, x7, [x29, #112]
+	ldp	x8, x9, [x29, #128]
+L_curve25519_base_inv_6:
+	# Square
+	#  A[0] * A[1]
+	umulh	x12, x6, x7
+	mul	x11, x6, x7
+	#  A[0] * A[3]
+	umulh	x14, x6, x9
+	mul	x13, x6, x9
+	#  A[0] * A[2]
+	mul	x3, x6, x8
+	adds	x12, x12, x3
+	umulh	x4, x6, x8
+	adcs	x13, x13, x4
+	#  A[1] * A[3]
+	mul	x3, x7, x9
+	adcs	x14, x14, x3
+	umulh	x15, x7, x9
+	adc	x15, x15, xzr
+	#  A[1] * A[2]
+	mul	x3, x7, x8
+	adds	x13, x13, x3
+	umulh	x4, x7, x8
+	adcs	x14, x14, x4
+	#  A[2] * A[3]
+	mul	x3, x8, x9
+	adcs	x15, x15, x3
+	umulh	x16, x8, x9
+	adc	x16, x16, xzr
+	# Double
+	adds	x11, x11, x11
+	adcs	x12, x12, x12
+	adcs	x13, x13, x13
+	adcs	x14, x14, x14
+	adcs	x15, x15, x15
+	adcs	x16, x16, x16
+	adc	x17, xzr, xzr
+	#  A[0] * A[0]
+	umulh	x4, x6, x6
+	mul	x10, x6, x6
+	#  A[1] * A[1]
+	mul	x3, x7, x7
+	adds	x11, x11, x4
+	umulh	x4, x7, x7
+	adcs	x12, x12, x3
+	#  A[2] * A[2]
+	mul	x3, x8, x8
+	adcs	x13, x13, x4
+	umulh	x4, x8, x8
+	adcs	x14, x14, x3
+	#  A[3] * A[3]
+	mul	x3, x9, x9
+	adcs	x15, x15, x4
+	umulh	x4, x9, x9
+	adcs	x16, x16, x3
+	adc	x17, x17, x4
+	# Reduce
+	mov	x3, #38
+	mul	x4, x3, x17
+	adds	x13, x13, x4
+	umulh	x5, x3, x17
+	adc	x5, x5, xzr
+	mov	x3, #19
+	extr	x5, x5, x13, #63
+	mul	x5, x5, x3
+	and	x13, x13, #0x7fffffffffffffff
+	mov	x3, #38
+	mul	x4, x3, x14
+	adds	x10, x10, x4
+	umulh	x14, x3, x14
+	mul	x4, x3, x15
+	adcs	x11, x11, x4
+	umulh	x15, x3, x15
+	mul	x4, x3, x16
+	adcs	x12, x12, x4
+	umulh	x16, x3, x16
+	adc	x13, x13, xzr
+	#  Add high product results in
+	adds	x6, x10, x5
+	adcs	x7, x11, x14
+	adcs	x8, x12, x15
+	adc	x9, x13, x16
+	subs	x24, x24, #1
+	bne	L_curve25519_base_inv_6
+	# Store
+	stp	x6, x7, [x29, #144]
+	stp	x8, x9, [x29, #160]
+#ifndef NDEBUG
+	add	x0, x29, #0x70
+#endif /* !NDEBUG */
+	add	x1, x29, #0x90
+	add	x2, x29, #0x70
+#ifndef __APPLE__
+	bl	fe_mul
+#else
+	bl	_fe_mul
+#endif /* __APPLE__ */
+	# Loop: 50 times
+	mov	x24, #50
+	ldp	x6, x7, [x29, #112]
+	ldp	x8, x9, [x29, #128]
+L_curve25519_base_inv_7:
+	# Square
+	#  A[0] * A[1]
+	umulh	x12, x6, x7
+	mul	x11, x6, x7
+	#  A[0] * A[3]
+	umulh	x14, x6, x9
+	mul	x13, x6, x9
+	#  A[0] * A[2]
+	mul	x3, x6, x8
+	adds	x12, x12, x3
+	umulh	x4, x6, x8
+	adcs	x13, x13, x4
+	#  A[1] * A[3]
+	mul	x3, x7, x9
+	adcs	x14, x14, x3
+	umulh	x15, x7, x9
+	adc	x15, x15, xzr
+	#  A[1] * A[2]
+	mul	x3, x7, x8
+	adds	x13, x13, x3
+	umulh	x4, x7, x8
+	adcs	x14, x14, x4
+	#  A[2] * A[3]
+	mul	x3, x8, x9
+	adcs	x15, x15, x3
+	umulh	x16, x8, x9
+	adc	x16, x16, xzr
+	# Double
+	adds	x11, x11, x11
+	adcs	x12, x12, x12
+	adcs	x13, x13, x13
+	adcs	x14, x14, x14
+	adcs	x15, x15, x15
+	adcs	x16, x16, x16
+	adc	x17, xzr, xzr
+	#  A[0] * A[0]
+	umulh	x4, x6, x6
+	mul	x10, x6, x6
+	#  A[1] * A[1]
+	mul	x3, x7, x7
+	adds	x11, x11, x4
+	umulh	x4, x7, x7
+	adcs	x12, x12, x3
+	#  A[2] * A[2]
+	mul	x3, x8, x8
+	adcs	x13, x13, x4
+	umulh	x4, x8, x8
+	adcs	x14, x14, x3
+	#  A[3] * A[3]
+	mul	x3, x9, x9
+	adcs	x15, x15, x4
+	umulh	x4, x9, x9
+	adcs	x16, x16, x3
+	adc	x17, x17, x4
+	# Reduce
+	mov	x3, #38
+	mul	x4, x3, x17
+	adds	x13, x13, x4
+	umulh	x5, x3, x17
+	adc	x5, x5, xzr
+	mov	x3, #19
+	extr	x5, x5, x13, #63
+	mul	x5, x5, x3
+	and	x13, x13, #0x7fffffffffffffff
+	mov	x3, #38
+	mul	x4, x3, x14
+	adds	x10, x10, x4
+	umulh	x14, x3, x14
+	mul	x4, x3, x15
+	adcs	x11, x11, x4
+	umulh	x15, x3, x15
+	mul	x4, x3, x16
+	adcs	x12, x12, x4
+	umulh	x16, x3, x16
+	adc	x13, x13, xzr
+	#  Add high product results in
+	adds	x6, x10, x5
+	adcs	x7, x11, x14
+	adcs	x8, x12, x15
+	adc	x9, x13, x16
+	subs	x24, x24, #1
+	bne	L_curve25519_base_inv_7
+	# Store
+	stp	x6, x7, [x29, #112]
+	stp	x8, x9, [x29, #128]
+	add	x0, x29, #0x50
+	add	x1, x29, #0x70
+	add	x2, x29, #0x50
+#ifndef __APPLE__
+	bl	fe_mul
+#else
+	bl	_fe_mul
+#endif /* __APPLE__ */
+	# Loop: 5 times
+	mov	x24, #5
+	ldp	x6, x7, [x29, #80]
+	ldp	x8, x9, [x29, #96]
+L_curve25519_base_inv_8:
+	# Square
+	#  A[0] * A[1]
+	umulh	x12, x6, x7
+	mul	x11, x6, x7
+	#  A[0] * A[3]
+	umulh	x14, x6, x9
+	mul	x13, x6, x9
+	#  A[0] * A[2]
+	mul	x3, x6, x8
+	adds	x12, x12, x3
+	umulh	x4, x6, x8
+	adcs	x13, x13, x4
+	#  A[1] * A[3]
+	mul	x3, x7, x9
+	adcs	x14, x14, x3
+	umulh	x15, x7, x9
+	adc	x15, x15, xzr
+	#  A[1] * A[2]
+	mul	x3, x7, x8
+	adds	x13, x13, x3
+	umulh	x4, x7, x8
+	adcs	x14, x14, x4
+	#  A[2] * A[3]
+	mul	x3, x8, x9
+	adcs	x15, x15, x3
+	umulh	x16, x8, x9
+	adc	x16, x16, xzr
+	# Double
+	adds	x11, x11, x11
+	adcs	x12, x12, x12
+	adcs	x13, x13, x13
+	adcs	x14, x14, x14
+	adcs	x15, x15, x15
+	adcs	x16, x16, x16
+	adc	x17, xzr, xzr
+	#  A[0] * A[0]
+	umulh	x4, x6, x6
+	mul	x10, x6, x6
+	#  A[1] * A[1]
+	mul	x3, x7, x7
+	adds	x11, x11, x4
+	umulh	x4, x7, x7
+	adcs	x12, x12, x3
+	#  A[2] * A[2]
+	mul	x3, x8, x8
+	adcs	x13, x13, x4
+	umulh	x4, x8, x8
+	adcs	x14, x14, x3
+	#  A[3] * A[3]
+	mul	x3, x9, x9
+	adcs	x15, x15, x4
+	umulh	x4, x9, x9
+	adcs	x16, x16, x3
+	adc	x17, x17, x4
+	# Reduce
+	mov	x3, #38
+	mul	x4, x3, x17
+	adds	x13, x13, x4
+	umulh	x5, x3, x17
+	adc	x5, x5, xzr
+	mov	x3, #19
+	extr	x5, x5, x13, #63
+	mul	x5, x5, x3
+	and	x13, x13, #0x7fffffffffffffff
+	mov	x3, #38
+	mul	x4, x3, x14
+	adds	x10, x10, x4
+	umulh	x14, x3, x14
+	mul	x4, x3, x15
+	adcs	x11, x11, x4
+	umulh	x15, x3, x15
+	mul	x4, x3, x16
+	adcs	x12, x12, x4
+	umulh	x16, x3, x16
+	adc	x13, x13, xzr
+	#  Add high product results in
+	adds	x6, x10, x5
+	adcs	x7, x11, x14
+	adcs	x8, x12, x15
+	adc	x9, x13, x16
+	subs	x24, x24, #1
+	bne	L_curve25519_base_inv_8
+	# Store
+	stp	x6, x7, [x29, #80]
+	stp	x8, x9, [x29, #96]
+	add	x0, x29, #16
+	add	x1, x29, #0x50
+	add	x2, x29, #48
+#ifndef __APPLE__
+	bl	fe_mul
+#else
+	bl	_fe_mul
+#endif /* __APPLE__ */
+	mov	x0, x23
+	# Multiply
+	ldp	x6, x7, [x0]
+	ldp	x8, x9, [x0, #16]
+	ldp	x10, x11, [x29, #16]
+	ldp	x12, x13, [x29, #32]
+	# A[0] * B[0]
+	umulh	x15, x6, x10
+	mul	x14, x6, x10
+	# A[2] * B[0]
+	umulh	x17, x8, x10
+	mul	x16, x8, x10
+	# A[1] * B[0]
+	mul	x3, x7, x10
+	adds	x15, x15, x3
+	umulh	x4, x7, x10
+	adcs	x16, x16, x4
+	# A[1] * B[3]
+	umulh	x20, x7, x13
+	adc	x17, x17, xzr
+	mul	x19, x7, x13
+	# A[0] * B[1]
+	mul	x3, x6, x11
+	adds	x15, x15, x3
+	umulh	x4, x6, x11
+	adcs	x16, x16, x4
+	# A[2] * B[1]
+	mul	x3, x8, x11
+	adcs	x17, x17, x3
+	umulh	x4, x8, x11
+	adcs	x19, x19, x4
+	adc	x20, x20, xzr
+	# A[1] * B[2]
+	mul	x3, x7, x12
+	adds	x17, x17, x3
+	umulh	x4, x7, x12
+	adcs	x19, x19, x4
+	adcs	x20, x20, xzr
+	adc	x21, xzr, xzr
+	# A[0] * B[2]
+	mul	x3, x6, x12
+	adds	x16, x16, x3
+	umulh	x4, x6, x12
+	adcs	x17, x17, x4
+	adcs	x19, x19, xzr
+	adcs	x20, x20, xzr
+	adc	x21, x21, xzr
+	# A[1] * B[1]
+	mul	x3, x7, x11
+	adds	x16, x16, x3
+	umulh	x4, x7, x11
+	adcs	x17, x17, x4
+	# A[3] * B[1]
+	mul	x3, x9, x11
+	adcs	x19, x19, x3
+	umulh	x4, x9, x11
+	adcs	x20, x20, x4
+	adc	x21, x21, xzr
+	# A[2] * B[2]
+	mul	x3, x8, x12
+	adds	x19, x19, x3
+	umulh	x4, x8, x12
+	adcs	x20, x20, x4
+	# A[3] * B[3]
+	mul	x3, x9, x13
+	adcs	x21, x21, x3
+	umulh	x22, x9, x13
+	adc	x22, x22, xzr
+	# A[0] * B[3]
+	mul	x3, x6, x13
+	adds	x17, x17, x3
+	umulh	x4, x6, x13
+	adcs	x19, x19, x4
+	# A[2] * B[3]
+	mul	x3, x8, x13
+	adcs	x20, x20, x3
+	umulh	x4, x8, x13
+	adcs	x21, x21, x4
+	adc	x22, x22, xzr
+	# A[3] * B[0]
+	mul	x3, x9, x10
+	adds	x17, x17, x3
+	umulh	x4, x9, x10
+	adcs	x19, x19, x4
+	# A[3] * B[2]
+	mul	x3, x9, x12
+	adcs	x20, x20, x3
+	umulh	x4, x9, x12
+	adcs	x21, x21, x4
+	adc	x22, x22, xzr
+	# Reduce
+	mov	x3, #38
+	mul	x4, x3, x22
+	adds	x17, x17, x4
+	umulh	x5, x3, x22
+	adc	x5, x5, xzr
+	mov	x3, #19
+	extr	x5, x5, x17, #63
+	mul	x5, x5, x3
+	and	x17, x17, #0x7fffffffffffffff
+	mov	x3, #38
+	mul	x4, x3, x19
+	adds	x14, x14, x4
+	umulh	x19, x3, x19
+	mul	x4, x3, x20
+	adcs	x15, x15, x4
+	umulh	x20, x3, x20
+	mul	x4, x3, x21
+	adcs	x16, x16, x4
+	umulh	x21, x3, x21
+	adc	x17, x17, xzr
+	#  Add high product results in
+	adds	x14, x14, x5
+	adcs	x15, x15, x19
+	adcs	x16, x16, x20
+	adc	x17, x17, x21
+	# Reduce if top bit set
+	mov	x3, #19
+	and	x4, x3, x17, asr 63
+	adds	x14, x14, x4
+	adcs	x15, x15, xzr
+	and	x17, x17, #0x7fffffffffffffff
+	adcs	x16, x16, xzr
+	adc	x17, x17, xzr
+	adds	x4, x14, x3
+	adcs	x4, x15, xzr
+	adcs	x4, x16, xzr
+	adc	x4, x17, xzr
+	and	x4, x3, x4, asr 63
+	adds	x14, x14, x4
+	adcs	x15, x15, xzr
+	mov	x4, #0x7fffffffffffffff
+	adcs	x16, x16, xzr
+	adc	x17, x17, xzr
+	and	x17, x17, x4
+	# Store
+	stp	x14, x15, [x0]
+	stp	x16, x17, [x0, #16]
+	mov	x0, xzr
+	ldp	x17, x19, [x29, #184]
+	ldp	x20, x21, [x29, #200]
+	ldp	x22, x23, [x29, #216]
+	ldp	x24, x25, [x29, #232]
+	ldp	x26, x27, [x29, #248]
+	ldr	x28, [x29, #264]
+	ldp	x29, x30, [sp], #0x110
+	ret
+#ifndef __APPLE__
+	.size	curve25519_base,.-curve25519_base
+#endif /* __APPLE__ */
+#endif /* !HAVE_ED25519 && !WOLFSSL_CURVE25519_USE_ED25519 */
+#ifndef __APPLE__
+.text
+.globl	curve25519
+WC_ASM_ATT_HIDDEN(curve25519)
+.type	curve25519,@function
+.align	2
+curve25519:
+#else
+.section	__TEXT,__text
+.globl	_curve25519
+WC_ASM_ATT_HIDDEN(_curve25519)
+.p2align	2
+_curve25519:
+#endif /* __APPLE__ */
+	stp	x29, x30, [sp, #-288]!
+	add	x29, sp, #0
+	stp	x17, x19, [x29, #200]
+	stp	x20, x21, [x29, #216]
+	stp	x22, x23, [x29, #232]
+	stp	x24, x25, [x29, #248]
+	stp	x26, x27, [x29, #264]
+	str	x28, [x29, #280]
+	mov	x23, xzr
+	str	x0, [x29, #176]
+	ldp	x6, x7, [x2]
+	ldp	x8, x9, [x2, #16]
+	mov	x10, #1
+	mov	x11, xzr
+	mov	x12, xzr
+	mov	x13, xzr
+	stp	x10, x11, [x0]
+	stp	x12, x13, [x0, #16]
+	# Set zero
+	stp	xzr, xzr, [x29, #16]
+	stp	xzr, xzr, [x29, #32]
+	mov	x24, #0xfe
+L_curve25519_bits:
+	lsr	x3, x24, #6
+	and	x4, x24, #63
+	ldr	x5, [x1, x3, LSL 3]
+	lsr	x5, x5, x4
+	eor	x23, x23, x5
+	# Conditional Swap
+	subs	xzr, xzr, x23, lsl 63
+	ldp	x25, x26, [x29, #16]
+	ldp	x27, x28, [x29, #32]
+	csel	x19, x25, x10, ne
+	csel	x25, x10, x25, ne
+	csel	x20, x26, x11, ne
+	csel	x26, x11, x26, ne
+	csel	x21, x27, x12, ne
+	csel	x27, x12, x27, ne
+	csel	x22, x28, x13, ne
+	csel	x28, x13, x28, ne
+	# Conditional Swap
+	subs	xzr, xzr, x23, lsl 63
+	ldp	x10, x11, [x0]
+	ldp	x12, x13, [x0, #16]
+	csel	x14, x10, x6, ne
+	csel	x10, x6, x10, ne
+	csel	x15, x11, x7, ne
+	csel	x11, x7, x11, ne
+	csel	x16, x12, x8, ne
+	csel	x12, x8, x12, ne
+	csel	x17, x13, x9, ne
+	csel	x13, x9, x13, ne
+	mov	x23, x5
+	# Add
+	adds	x6, x10, x25
+	adcs	x7, x11, x26
+	adcs	x8, x12, x27
+	adcs	x9, x13, x28
+	cset	x5, cs
+	mov	x3, #19
+	extr	x5, x5, x9, #63
+	mul	x3, x5, x3
+	#   Sub modulus (if overflow)
+	adds	x6, x6, x3
+	adcs	x7, x7, xzr
+	and	x9, x9, #0x7fffffffffffffff
+	adcs	x8, x8, xzr
+	adc	x9, x9, xzr
+	# Sub
+	subs	x25, x10, x25
+	sbcs	x26, x11, x26
+	sbcs	x27, x12, x27
+	sbcs	x28, x13, x28
+	csetm	x5, cc
+	mov	x3, #-19
+	extr	x5, x5, x28, #63
+	mul	x3, x5, x3
+	#   Add modulus (if underflow)
+	subs	x25, x25, x3
+	sbcs	x26, x26, xzr
+	and	x28, x28, #0x7fffffffffffffff
+	sbcs	x27, x27, xzr
+	sbc	x28, x28, xzr
+	stp	x25, x26, [x29, #80]
+	stp	x27, x28, [x29, #96]
+	# Add
+	adds	x10, x14, x19
+	adcs	x11, x15, x20
+	adcs	x12, x16, x21
+	adcs	x13, x17, x22
+	cset	x5, cs
+	mov	x3, #19
+	extr	x5, x5, x13, #63
+	mul	x3, x5, x3
+	#   Sub modulus (if overflow)
+	adds	x10, x10, x3
+	adcs	x11, x11, xzr
+	and	x13, x13, #0x7fffffffffffffff
+	adcs	x12, x12, xzr
+	adc	x13, x13, xzr
+	# Sub
+	subs	x14, x14, x19
+	sbcs	x15, x15, x20
+	sbcs	x16, x16, x21
+	sbcs	x17, x17, x22
+	csetm	x5, cc
+	mov	x3, #-19
+	extr	x5, x5, x17, #63
+	mul	x3, x5, x3
+	#   Add modulus (if underflow)
+	subs	x14, x14, x3
+	sbcs	x15, x15, xzr
+	and	x17, x17, #0x7fffffffffffffff
+	sbcs	x16, x16, xzr
+	sbc	x17, x17, xzr
+	# Multiply
+	# A[0] * B[0]
+	umulh	x20, x14, x6
+	mul	x19, x14, x6
+	# A[2] * B[0]
+	umulh	x22, x16, x6
+	mul	x21, x16, x6
+	# A[1] * B[0]
+	mul	x3, x15, x6
+	adds	x20, x20, x3
+	umulh	x4, x15, x6
+	adcs	x21, x21, x4
+	# A[1] * B[3]
+	umulh	x26, x15, x9
+	adc	x22, x22, xzr
+	mul	x25, x15, x9
+	# A[0] * B[1]
+	mul	x3, x14, x7
+	adds	x20, x20, x3
+	umulh	x4, x14, x7
+	adcs	x21, x21, x4
+	# A[2] * B[1]
+	mul	x3, x16, x7
+	adcs	x22, x22, x3
+	umulh	x4, x16, x7
+	adcs	x25, x25, x4
+	adc	x26, x26, xzr
+	# A[1] * B[2]
+	mul	x3, x15, x8
+	adds	x22, x22, x3
+	umulh	x4, x15, x8
+	adcs	x25, x25, x4
+	adcs	x26, x26, xzr
+	adc	x27, xzr, xzr
+	# A[0] * B[2]
+	mul	x3, x14, x8
+	adds	x21, x21, x3
+	umulh	x4, x14, x8
+	adcs	x22, x22, x4
+	adcs	x25, x25, xzr
+	adcs	x26, x26, xzr
+	adc	x27, x27, xzr
+	# A[1] * B[1]
+	mul	x3, x15, x7
+	adds	x21, x21, x3
+	umulh	x4, x15, x7
+	adcs	x22, x22, x4
+	# A[3] * B[1]
+	mul	x3, x17, x7
+	adcs	x25, x25, x3
+	umulh	x4, x17, x7
+	adcs	x26, x26, x4
+	adc	x27, x27, xzr
+	# A[2] * B[2]
+	mul	x3, x16, x8
+	adds	x25, x25, x3
+	umulh	x4, x16, x8
+	adcs	x26, x26, x4
+	# A[3] * B[3]
+	mul	x3, x17, x9
+	adcs	x27, x27, x3
+	umulh	x28, x17, x9
+	adc	x28, x28, xzr
+	# A[0] * B[3]
+	mul	x3, x14, x9
+	adds	x22, x22, x3
+	umulh	x4, x14, x9
+	adcs	x25, x25, x4
+	# A[2] * B[3]
+	mul	x3, x16, x9
+	adcs	x26, x26, x3
+	umulh	x4, x16, x9
+	adcs	x27, x27, x4
+	adc	x28, x28, xzr
+	# A[3] * B[0]
+	mul	x3, x17, x6
+	adds	x22, x22, x3
+	umulh	x4, x17, x6
+	adcs	x25, x25, x4
+	# A[3] * B[2]
+	mul	x3, x17, x8
+	adcs	x26, x26, x3
+	umulh	x4, x17, x8
+	adcs	x27, x27, x4
+	adc	x28, x28, xzr
+	# Reduce
+	mov	x3, #38
+	mul	x4, x3, x28
+	adds	x22, x22, x4
+	umulh	x5, x3, x28
+	adc	x5, x5, xzr
+	mov	x3, #19
+	extr	x5, x5, x22, #63
+	mul	x5, x5, x3
+	and	x22, x22, #0x7fffffffffffffff
+	mov	x3, #38
+	mul	x4, x3, x25
+	adds	x19, x19, x4
+	umulh	x25, x3, x25
+	mul	x4, x3, x26
+	adcs	x20, x20, x4
+	umulh	x26, x3, x26
+	mul	x4, x3, x27
+	adcs	x21, x21, x4
+	umulh	x27, x3, x27
+	adc	x22, x22, xzr
+	#  Add high product results in
+	adds	x19, x19, x5
+	adcs	x20, x20, x25
+	adcs	x21, x21, x26
+	adc	x22, x22, x27
+	# Store
+	stp	x19, x20, [x29, #48]
+	stp	x21, x22, [x29, #64]
+	# Multiply
+	ldp	x25, x26, [x29, #80]
+	ldp	x27, x28, [x29, #96]
+	# A[0] * B[0]
+	umulh	x20, x10, x25
+	mul	x19, x10, x25
+	# A[2] * B[0]
+	umulh	x22, x12, x25
+	mul	x21, x12, x25
+	# A[1] * B[0]
+	mul	x3, x11, x25
+	adds	x20, x20, x3
+	umulh	x4, x11, x25
+	adcs	x21, x21, x4
+	# A[1] * B[3]
+	umulh	x15, x11, x28
+	adc	x22, x22, xzr
+	mul	x14, x11, x28
+	# A[0] * B[1]
+	mul	x3, x10, x26
+	adds	x20, x20, x3
+	umulh	x4, x10, x26
+	adcs	x21, x21, x4
+	# A[2] * B[1]
+	mul	x3, x12, x26
+	adcs	x22, x22, x3
+	umulh	x4, x12, x26
+	adcs	x14, x14, x4
+	adc	x15, x15, xzr
+	# A[1] * B[2]
+	mul	x3, x11, x27
+	adds	x22, x22, x3
+	umulh	x4, x11, x27
+	adcs	x14, x14, x4
+	adcs	x15, x15, xzr
+	adc	x16, xzr, xzr
+	# A[0] * B[2]
+	mul	x3, x10, x27
+	adds	x21, x21, x3
+	umulh	x4, x10, x27
+	adcs	x22, x22, x4
+	adcs	x14, x14, xzr
+	adcs	x15, x15, xzr
+	adc	x16, x16, xzr
+	# A[1] * B[1]
+	mul	x3, x11, x26
+	adds	x21, x21, x3
+	umulh	x4, x11, x26
+	adcs	x22, x22, x4
+	# A[3] * B[1]
+	mul	x3, x13, x26
+	adcs	x14, x14, x3
+	umulh	x4, x13, x26
+	adcs	x15, x15, x4
+	adc	x16, x16, xzr
+	# A[2] * B[2]
+	mul	x3, x12, x27
+	adds	x14, x14, x3
+	umulh	x4, x12, x27
+	adcs	x15, x15, x4
+	# A[3] * B[3]
+	mul	x3, x13, x28
+	adcs	x16, x16, x3
+	umulh	x17, x13, x28
+	adc	x17, x17, xzr
+	# A[0] * B[3]
+	mul	x3, x10, x28
+	adds	x22, x22, x3
+	umulh	x4, x10, x28
+	adcs	x14, x14, x4
+	# A[2] * B[3]
+	mul	x3, x12, x28
+	adcs	x15, x15, x3
+	umulh	x4, x12, x28
+	adcs	x16, x16, x4
+	adc	x17, x17, xzr
+	# A[3] * B[0]
+	mul	x3, x13, x25
+	adds	x22, x22, x3
+	umulh	x4, x13, x25
+	adcs	x14, x14, x4
+	# A[3] * B[2]
+	mul	x3, x13, x27
+	adcs	x15, x15, x3
+	umulh	x4, x13, x27
+	adcs	x16, x16, x4
+	adc	x17, x17, xzr
+	# Reduce
+	mov	x3, #38
+	mul	x4, x3, x17
+	adds	x22, x22, x4
+	umulh	x5, x3, x17
+	adc	x5, x5, xzr
+	mov	x3, #19
+	extr	x5, x5, x22, #63
+	mul	x5, x5, x3
+	and	x22, x22, #0x7fffffffffffffff
+	mov	x3, #38
+	mul	x4, x3, x14
+	adds	x19, x19, x4
+	umulh	x14, x3, x14
+	mul	x4, x3, x15
+	adcs	x20, x20, x4
+	umulh	x15, x3, x15
+	mul	x4, x3, x16
+	adcs	x21, x21, x4
+	umulh	x16, x3, x16
+	adc	x22, x22, xzr
+	#  Add high product results in
+	adds	x19, x19, x5
+	adcs	x20, x20, x14
+	adcs	x21, x21, x15
+	adc	x22, x22, x16
+	# Square
+	#  A[0] * A[1]
+	umulh	x12, x25, x26
+	mul	x11, x25, x26
+	#  A[0] * A[3]
+	umulh	x14, x25, x28
+	mul	x13, x25, x28
+	#  A[0] * A[2]
+	mul	x3, x25, x27
+	adds	x12, x12, x3
+	umulh	x4, x25, x27
+	adcs	x13, x13, x4
+	#  A[1] * A[3]
+	mul	x3, x26, x28
+	adcs	x14, x14, x3
+	umulh	x15, x26, x28
+	adc	x15, x15, xzr
+	#  A[1] * A[2]
+	mul	x3, x26, x27
+	adds	x13, x13, x3
+	umulh	x4, x26, x27
+	adcs	x14, x14, x4
+	#  A[2] * A[3]
+	mul	x3, x27, x28
+	adcs	x15, x15, x3
+	umulh	x16, x27, x28
+	adc	x16, x16, xzr
+	# Double
+	adds	x11, x11, x11
+	adcs	x12, x12, x12
+	adcs	x13, x13, x13
+	adcs	x14, x14, x14
+	adcs	x15, x15, x15
+	adcs	x16, x16, x16
+	adc	x17, xzr, xzr
+	#  A[0] * A[0]
+	umulh	x4, x25, x25
+	mul	x10, x25, x25
+	#  A[1] * A[1]
+	mul	x3, x26, x26
+	adds	x11, x11, x4
+	umulh	x4, x26, x26
+	adcs	x12, x12, x3
+	#  A[2] * A[2]
+	mul	x3, x27, x27
+	adcs	x13, x13, x4
+	umulh	x4, x27, x27
+	adcs	x14, x14, x3
+	#  A[3] * A[3]
+	mul	x3, x28, x28
+	adcs	x15, x15, x4
+	umulh	x4, x28, x28
+	adcs	x16, x16, x3
+	adc	x17, x17, x4
+	# Reduce
+	mov	x3, #38
+	mul	x4, x3, x17
+	adds	x13, x13, x4
+	umulh	x5, x3, x17
+	adc	x5, x5, xzr
+	mov	x3, #19
+	extr	x5, x5, x13, #63
+	mul	x5, x5, x3
+	and	x13, x13, #0x7fffffffffffffff
+	mov	x3, #38
+	mul	x4, x3, x14
+	adds	x10, x10, x4
+	umulh	x14, x3, x14
+	mul	x4, x3, x15
+	adcs	x11, x11, x4
+	umulh	x15, x3, x15
+	mul	x4, x3, x16
+	adcs	x12, x12, x4
+	umulh	x16, x3, x16
+	adc	x13, x13, xzr
+	#  Add high product results in
+	adds	x10, x10, x5
+	adcs	x11, x11, x14
+	adcs	x12, x12, x15
+	adc	x13, x13, x16
+	# Square
+	#  A[0] * A[1]
+	umulh	x16, x6, x7
+	mul	x15, x6, x7
+	#  A[0] * A[3]
+	umulh	x25, x6, x9
+	mul	x17, x6, x9
+	#  A[0] * A[2]
+	mul	x3, x6, x8
+	adds	x16, x16, x3
+	umulh	x4, x6, x8
+	adcs	x17, x17, x4
+	#  A[1] * A[3]
+	mul	x3, x7, x9
+	adcs	x25, x25, x3
+	umulh	x26, x7, x9
+	adc	x26, x26, xzr
+	#  A[1] * A[2]
+	mul	x3, x7, x8
+	adds	x17, x17, x3
+	umulh	x4, x7, x8
+	adcs	x25, x25, x4
+	#  A[2] * A[3]
+	mul	x3, x8, x9
+	adcs	x26, x26, x3
+	umulh	x27, x8, x9
+	adc	x27, x27, xzr
+	# Double
+	adds	x15, x15, x15
+	adcs	x16, x16, x16
+	adcs	x17, x17, x17
+	adcs	x25, x25, x25
+	adcs	x26, x26, x26
+	adcs	x27, x27, x27
+	adc	x28, xzr, xzr
+	#  A[0] * A[0]
+	umulh	x4, x6, x6
+	mul	x14, x6, x6
+	#  A[1] * A[1]
+	mul	x3, x7, x7
+	adds	x15, x15, x4
+	umulh	x4, x7, x7
+	adcs	x16, x16, x3
+	#  A[2] * A[2]
+	mul	x3, x8, x8
+	adcs	x17, x17, x4
+	umulh	x4, x8, x8
+	adcs	x25, x25, x3
+	#  A[3] * A[3]
+	mul	x3, x9, x9
+	adcs	x26, x26, x4
+	umulh	x4, x9, x9
+	adcs	x27, x27, x3
+	adc	x28, x28, x4
+	# Reduce
+	mov	x3, #38
+	mul	x4, x3, x28
+	adds	x17, x17, x4
+	umulh	x5, x3, x28
+	adc	x5, x5, xzr
+	mov	x3, #19
+	extr	x5, x5, x17, #63
+	mul	x5, x5, x3
+	and	x17, x17, #0x7fffffffffffffff
+	mov	x3, #38
+	mul	x4, x3, x25
+	adds	x14, x14, x4
+	umulh	x25, x3, x25
+	mul	x4, x3, x26
+	adcs	x15, x15, x4
+	umulh	x26, x3, x26
+	mul	x4, x3, x27
+	adcs	x16, x16, x4
+	umulh	x27, x3, x27
+	adc	x17, x17, xzr
+	#  Add high product results in
+	adds	x14, x14, x5
+	adcs	x15, x15, x25
+	adcs	x16, x16, x26
+	adc	x17, x17, x27
+	# Multiply
+	# A[0] * B[0]
+	umulh	x7, x14, x10
+	mul	x6, x14, x10
+	# A[2] * B[0]
+	umulh	x9, x16, x10
+	mul	x8, x16, x10
+	# A[1] * B[0]
+	mul	x3, x15, x10
+	adds	x7, x7, x3
+	umulh	x4, x15, x10
+	adcs	x8, x8, x4
+	# A[1] * B[3]
+	umulh	x26, x15, x13
+	adc	x9, x9, xzr
+	mul	x25, x15, x13
+	# A[0] * B[1]
+	mul	x3, x14, x11
+	adds	x7, x7, x3
+	umulh	x4, x14, x11
+	adcs	x8, x8, x4
+	# A[2] * B[1]
+	mul	x3, x16, x11
+	adcs	x9, x9, x3
+	umulh	x4, x16, x11
+	adcs	x25, x25, x4
+	adc	x26, x26, xzr
+	# A[1] * B[2]
+	mul	x3, x15, x12
+	adds	x9, x9, x3
+	umulh	x4, x15, x12
+	adcs	x25, x25, x4
+	adcs	x26, x26, xzr
+	adc	x27, xzr, xzr
+	# A[0] * B[2]
+	mul	x3, x14, x12
+	adds	x8, x8, x3
+	umulh	x4, x14, x12
+	adcs	x9, x9, x4
+	adcs	x25, x25, xzr
+	adcs	x26, x26, xzr
+	adc	x27, x27, xzr
+	# A[1] * B[1]
+	mul	x3, x15, x11
+	adds	x8, x8, x3
+	umulh	x4, x15, x11
+	adcs	x9, x9, x4
+	# A[3] * B[1]
+	mul	x3, x17, x11
+	adcs	x25, x25, x3
+	umulh	x4, x17, x11
+	adcs	x26, x26, x4
+	adc	x27, x27, xzr
+	# A[2] * B[2]
+	mul	x3, x16, x12
+	adds	x25, x25, x3
+	umulh	x4, x16, x12
+	adcs	x26, x26, x4
+	# A[3] * B[3]
+	mul	x3, x17, x13
+	adcs	x27, x27, x3
+	umulh	x28, x17, x13
+	adc	x28, x28, xzr
+	# A[0] * B[3]
+	mul	x3, x14, x13
+	adds	x9, x9, x3
+	umulh	x4, x14, x13
+	adcs	x25, x25, x4
+	# A[2] * B[3]
+	mul	x3, x16, x13
+	adcs	x26, x26, x3
+	umulh	x4, x16, x13
+	adcs	x27, x27, x4
+	adc	x28, x28, xzr
+	# A[3] * B[0]
+	mul	x3, x17, x10
+	adds	x9, x9, x3
+	umulh	x4, x17, x10
+	adcs	x25, x25, x4
+	# A[3] * B[2]
+	mul	x3, x17, x12
+	adcs	x26, x26, x3
+	umulh	x4, x17, x12
+	adcs	x27, x27, x4
+	adc	x28, x28, xzr
+	# Reduce
+	mov	x3, #38
+	mul	x4, x3, x28
+	adds	x9, x9, x4
+	umulh	x5, x3, x28
+	adc	x5, x5, xzr
+	mov	x3, #19
+	extr	x5, x5, x9, #63
+	mul	x5, x5, x3
+	and	x9, x9, #0x7fffffffffffffff
+	mov	x3, #38
+	mul	x4, x3, x25
+	adds	x6, x6, x4
+	umulh	x25, x3, x25
+	mul	x4, x3, x26
+	adcs	x7, x7, x4
+	umulh	x26, x3, x26
+	mul	x4, x3, x27
+	adcs	x8, x8, x4
+	umulh	x27, x3, x27
+	adc	x9, x9, xzr
+	#  Add high product results in
+	adds	x6, x6, x5
+	adcs	x7, x7, x25
+	adcs	x8, x8, x26
+	adc	x9, x9, x27
+	# Store
+	stp	x6, x7, [x0]
+	stp	x8, x9, [x0, #16]
+	# Sub
+	subs	x14, x14, x10
+	sbcs	x15, x15, x11
+	sbcs	x16, x16, x12
+	sbcs	x17, x17, x13
+	csetm	x5, cc
+	mov	x3, #-19
+	#   Mask the modulus
+	extr	x5, x5, x17, #63
+	mul	x3, x5, x3
+	#   Add modulus (if underflow)
+	subs	x14, x14, x3
+	sbcs	x15, x15, xzr
+	and	x17, x17, #0x7fffffffffffffff
+	sbcs	x16, x16, xzr
+	sbc	x17, x17, xzr
+	# Multiply by 121666
+	mov	x5, #0xdb42
+	movk	x5, #1, lsl 16
+	mul	x6, x14, x5
+	umulh	x7, x14, x5
+	mul	x3, x15, x5
+	umulh	x8, x15, x5
+	adds	x7, x7, x3
+	adc	x8, x8, xzr
+	mul	x3, x16, x5
+	umulh	x9, x16, x5
+	adds	x8, x8, x3
+	adc	x9, x9, xzr
+	mul	x3, x17, x5
+	umulh	x4, x17, x5
+	adds	x9, x9, x3
+	adc	x4, x4, xzr
+	mov	x5, #19
+	extr	x4, x4, x9, #63
+	mul	x4, x4, x5
+	adds	x6, x6, x4
+	adcs	x7, x7, xzr
+	and	x9, x9, #0x7fffffffffffffff
+	adcs	x8, x8, xzr
+	adc	x9, x9, xzr
+	# Add
+	adds	x10, x10, x6
+	adcs	x11, x11, x7
+	adcs	x12, x12, x8
+	adcs	x13, x13, x9
+	cset	x5, cs
+	mov	x3, #19
+	#   Mask the modulus
+	extr	x5, x5, x13, #63
+	mul	x3, x5, x3
+	#   Sub modulus (if overflow)
+	adds	x10, x10, x3
+	adcs	x11, x11, xzr
+	and	x13, x13, #0x7fffffffffffffff
+	adcs	x12, x12, xzr
+	adc	x13, x13, xzr
+	# Multiply
+	# A[0] * B[0]
+	umulh	x7, x14, x10
+	mul	x6, x14, x10
+	# A[2] * B[0]
+	umulh	x9, x16, x10
+	mul	x8, x16, x10
+	# A[1] * B[0]
+	mul	x3, x15, x10
+	adds	x7, x7, x3
+	umulh	x4, x15, x10
+	adcs	x8, x8, x4
+	# A[1] * B[3]
+	umulh	x26, x15, x13
+	adc	x9, x9, xzr
+	mul	x25, x15, x13
+	# A[0] * B[1]
+	mul	x3, x14, x11
+	adds	x7, x7, x3
+	umulh	x4, x14, x11
+	adcs	x8, x8, x4
+	# A[2] * B[1]
+	mul	x3, x16, x11
+	adcs	x9, x9, x3
+	umulh	x4, x16, x11
+	adcs	x25, x25, x4
+	adc	x26, x26, xzr
+	# A[1] * B[2]
+	mul	x3, x15, x12
+	adds	x9, x9, x3
+	umulh	x4, x15, x12
+	adcs	x25, x25, x4
+	adcs	x26, x26, xzr
+	adc	x27, xzr, xzr
+	# A[0] * B[2]
+	mul	x3, x14, x12
+	adds	x8, x8, x3
+	umulh	x4, x14, x12
+	adcs	x9, x9, x4
+	adcs	x25, x25, xzr
+	adcs	x26, x26, xzr
+	adc	x27, x27, xzr
+	# A[1] * B[1]
+	mul	x3, x15, x11
+	adds	x8, x8, x3
+	umulh	x4, x15, x11
+	adcs	x9, x9, x4
+	# A[3] * B[1]
+	mul	x3, x17, x11
+	adcs	x25, x25, x3
+	umulh	x4, x17, x11
+	adcs	x26, x26, x4
+	adc	x27, x27, xzr
+	# A[2] * B[2]
+	mul	x3, x16, x12
+	adds	x25, x25, x3
+	umulh	x4, x16, x12
+	adcs	x26, x26, x4
+	# A[3] * B[3]
+	mul	x3, x17, x13
+	adcs	x27, x27, x3
+	umulh	x28, x17, x13
+	adc	x28, x28, xzr
+	# A[0] * B[3]
+	mul	x3, x14, x13
+	adds	x9, x9, x3
+	umulh	x4, x14, x13
+	adcs	x25, x25, x4
+	# A[2] * B[3]
+	mul	x3, x16, x13
+	adcs	x26, x26, x3
+	umulh	x4, x16, x13
+	adcs	x27, x27, x4
+	adc	x28, x28, xzr
+	# A[3] * B[0]
+	mul	x3, x17, x10
+	adds	x9, x9, x3
+	umulh	x4, x17, x10
+	adcs	x25, x25, x4
+	# A[3] * B[2]
+	mul	x3, x17, x12
+	adcs	x26, x26, x3
+	umulh	x4, x17, x12
+	adcs	x27, x27, x4
+	adc	x28, x28, xzr
+	# Reduce
+	mov	x3, #38
+	mul	x4, x3, x28
+	adds	x9, x9, x4
+	umulh	x5, x3, x28
+	adc	x5, x5, xzr
+	mov	x3, #19
+	extr	x5, x5, x9, #63
+	mul	x5, x5, x3
+	and	x9, x9, #0x7fffffffffffffff
+	mov	x3, #38
+	mul	x4, x3, x25
+	adds	x6, x6, x4
+	umulh	x25, x3, x25
+	mul	x4, x3, x26
+	adcs	x7, x7, x4
+	umulh	x26, x3, x26
+	mul	x4, x3, x27
+	adcs	x8, x8, x4
+	umulh	x27, x3, x27
+	adc	x9, x9, xzr
+	#  Add high product results in
+	adds	x6, x6, x5
+	adcs	x7, x7, x25
+	adcs	x8, x8, x26
+	adc	x9, x9, x27
+	# Store
+	stp	x6, x7, [x29, #16]
+	stp	x8, x9, [x29, #32]
+	# Add
+	ldp	x25, x26, [x29, #48]
+	ldp	x27, x28, [x29, #64]
+	adds	x10, x25, x19
+	adcs	x11, x26, x20
+	adcs	x12, x27, x21
+	adcs	x13, x28, x22
+	cset	x5, cs
+	mov	x3, #19
+	extr	x5, x5, x13, #63
+	mul	x3, x5, x3
+	#   Sub modulus (if overflow)
+	adds	x10, x10, x3
+	adcs	x11, x11, xzr
+	and	x13, x13, #0x7fffffffffffffff
+	adcs	x12, x12, xzr
+	adc	x13, x13, xzr
+	# Sub
+	subs	x19, x25, x19
+	sbcs	x20, x26, x20
+	sbcs	x21, x27, x21
+	sbcs	x22, x28, x22
+	csetm	x5, cc
+	mov	x3, #-19
+	extr	x5, x5, x22, #63
+	mul	x3, x5, x3
+	#   Add modulus (if underflow)
+	subs	x19, x19, x3
+	sbcs	x20, x20, xzr
+	and	x22, x22, #0x7fffffffffffffff
+	sbcs	x21, x21, xzr
+	sbc	x22, x22, xzr
+	# Square
+	#  A[0] * A[1]
+	umulh	x8, x10, x11
+	mul	x7, x10, x11
+	#  A[0] * A[3]
+	umulh	x25, x10, x13
+	mul	x9, x10, x13
+	#  A[0] * A[2]
+	mul	x3, x10, x12
+	adds	x8, x8, x3
+	umulh	x4, x10, x12
+	adcs	x9, x9, x4
+	#  A[1] * A[3]
+	mul	x3, x11, x13
+	adcs	x25, x25, x3
+	umulh	x26, x11, x13
+	adc	x26, x26, xzr
+	#  A[1] * A[2]
+	mul	x3, x11, x12
+	adds	x9, x9, x3
+	umulh	x4, x11, x12
+	adcs	x25, x25, x4
+	#  A[2] * A[3]
+	mul	x3, x12, x13
+	adcs	x26, x26, x3
+	umulh	x27, x12, x13
+	adc	x27, x27, xzr
+	# Double
+	adds	x7, x7, x7
+	adcs	x8, x8, x8
+	adcs	x9, x9, x9
+	adcs	x25, x25, x25
+	adcs	x26, x26, x26
+	adcs	x27, x27, x27
+	adc	x28, xzr, xzr
+	#  A[0] * A[0]
+	umulh	x4, x10, x10
+	mul	x6, x10, x10
+	#  A[1] * A[1]
+	mul	x3, x11, x11
+	adds	x7, x7, x4
+	umulh	x4, x11, x11
+	adcs	x8, x8, x3
+	#  A[2] * A[2]
+	mul	x3, x12, x12
+	adcs	x9, x9, x4
+	umulh	x4, x12, x12
+	adcs	x25, x25, x3
+	#  A[3] * A[3]
+	mul	x3, x13, x13
+	adcs	x26, x26, x4
+	umulh	x4, x13, x13
+	adcs	x27, x27, x3
+	adc	x28, x28, x4
+	# Reduce
+	mov	x3, #38
+	mul	x4, x3, x28
+	adds	x9, x9, x4
+	umulh	x5, x3, x28
+	adc	x5, x5, xzr
+	mov	x3, #19
+	extr	x5, x5, x9, #63
+	mul	x5, x5, x3
+	and	x9, x9, #0x7fffffffffffffff
+	mov	x3, #38
+	mul	x4, x3, x25
+	adds	x6, x6, x4
+	umulh	x25, x3, x25
+	mul	x4, x3, x26
+	adcs	x7, x7, x4
+	umulh	x26, x3, x26
+	mul	x4, x3, x27
+	adcs	x8, x8, x4
+	umulh	x27, x3, x27
+	adc	x9, x9, xzr
+	#  Add high product results in
+	adds	x6, x6, x5
+	adcs	x7, x7, x25
+	adcs	x8, x8, x26
+	adc	x9, x9, x27
+	# Reduce if top bit set
+	mov	x3, #19
+	and	x4, x3, x9, asr 63
+	adds	x6, x6, x4
+	adcs	x7, x7, xzr
+	and	x9, x9, #0x7fffffffffffffff
+	adcs	x8, x8, xzr
+	adc	x9, x9, xzr
+	# Square
+	#  A[0] * A[1]
+	umulh	x16, x19, x20
+	mul	x15, x19, x20
+	#  A[0] * A[3]
+	umulh	x25, x19, x22
+	mul	x17, x19, x22
+	#  A[0] * A[2]
+	mul	x3, x19, x21
+	adds	x16, x16, x3
+	umulh	x4, x19, x21
+	adcs	x17, x17, x4
+	#  A[1] * A[3]
+	mul	x3, x20, x22
+	adcs	x25, x25, x3
+	umulh	x26, x20, x22
+	adc	x26, x26, xzr
+	#  A[1] * A[2]
+	mul	x3, x20, x21
+	adds	x17, x17, x3
+	umulh	x4, x20, x21
+	adcs	x25, x25, x4
+	#  A[2] * A[3]
+	mul	x3, x21, x22
+	adcs	x26, x26, x3
+	umulh	x27, x21, x22
+	adc	x27, x27, xzr
+	# Double
+	adds	x15, x15, x15
+	adcs	x16, x16, x16
+	adcs	x17, x17, x17
+	adcs	x25, x25, x25
+	adcs	x26, x26, x26
+	adcs	x27, x27, x27
+	adc	x28, xzr, xzr
+	#  A[0] * A[0]
+	umulh	x4, x19, x19
+	mul	x14, x19, x19
+	#  A[1] * A[1]
+	mul	x3, x20, x20
+	adds	x15, x15, x4
+	umulh	x4, x20, x20
+	adcs	x16, x16, x3
+	#  A[2] * A[2]
+	mul	x3, x21, x21
+	adcs	x17, x17, x4
+	umulh	x4, x21, x21
+	adcs	x25, x25, x3
+	#  A[3] * A[3]
+	mul	x3, x22, x22
+	adcs	x26, x26, x4
+	umulh	x4, x22, x22
+	adcs	x27, x27, x3
+	adc	x28, x28, x4
+	# Reduce
+	mov	x3, #38
+	mul	x4, x3, x28
+	adds	x17, x17, x4
+	umulh	x5, x3, x28
+	adc	x5, x5, xzr
+	mov	x3, #19
+	extr	x5, x5, x17, #63
+	mul	x5, x5, x3
+	and	x17, x17, #0x7fffffffffffffff
+	mov	x3, #38
+	mul	x4, x3, x25
+	adds	x14, x14, x4
+	umulh	x25, x3, x25
+	mul	x4, x3, x26
+	adcs	x15, x15, x4
+	umulh	x26, x3, x26
+	mul	x4, x3, x27
+	adcs	x16, x16, x4
+	umulh	x27, x3, x27
+	adc	x17, x17, xzr
+	#  Add high product results in
+	adds	x14, x14, x5
+	adcs	x15, x15, x25
+	adcs	x16, x16, x26
+	adc	x17, x17, x27
 	# Multiply
 	ldp	x19, x20, [x2]
 	ldp	x21, x22, [x2, #16]
@@ -2808,7 +5643,510 @@ L_curve25519_bits:
 	adcs	x12, x12, x26
 	adc	x13, x13, x27
 	subs	x24, x24, #1
+	cmp	x24, #3
 	bge	L_curve25519_bits
+	# Conditional Swap
+	subs	xzr, xzr, x23, lsl 63
+	ldp	x25, x26, [x29, #16]
+	ldp	x27, x28, [x29, #32]
+	csel	x19, x25, x10, ne
+	csel	x25, x10, x25, ne
+	csel	x20, x26, x11, ne
+	csel	x26, x11, x26, ne
+	csel	x21, x27, x12, ne
+	csel	x27, x12, x27, ne
+	csel	x22, x28, x13, ne
+	csel	x28, x13, x28, ne
+	# Conditional Swap
+	subs	xzr, xzr, x23, lsl 63
+	ldp	x10, x11, [x0]
+	ldp	x12, x13, [x0, #16]
+	csel	x14, x10, x6, ne
+	csel	x10, x6, x10, ne
+	csel	x15, x11, x7, ne
+	csel	x11, x7, x11, ne
+	csel	x16, x12, x8, ne
+	csel	x12, x8, x12, ne
+	csel	x17, x13, x9, ne
+	csel	x13, x9, x13, ne
+L_curve25519_3:
+	# Add
+	adds	x6, x10, x25
+	adcs	x7, x11, x26
+	adcs	x8, x12, x27
+	adcs	x9, x13, x28
+	cset	x5, cs
+	mov	x3, #19
+	extr	x5, x5, x9, #63
+	mul	x3, x5, x3
+	#   Sub modulus (if overflow)
+	adds	x6, x6, x3
+	adcs	x7, x7, xzr
+	and	x9, x9, #0x7fffffffffffffff
+	adcs	x8, x8, xzr
+	adc	x9, x9, xzr
+	# Sub
+	subs	x25, x10, x25
+	sbcs	x26, x11, x26
+	sbcs	x27, x12, x27
+	sbcs	x28, x13, x28
+	csetm	x5, cc
+	mov	x3, #-19
+	extr	x5, x5, x28, #63
+	mul	x3, x5, x3
+	#   Add modulus (if underflow)
+	subs	x25, x25, x3
+	sbcs	x26, x26, xzr
+	and	x28, x28, #0x7fffffffffffffff
+	sbcs	x27, x27, xzr
+	sbc	x28, x28, xzr
+	# Square
+	#  A[0] * A[1]
+	umulh	x21, x25, x26
+	mul	x20, x25, x26
+	#  A[0] * A[3]
+	umulh	x14, x25, x28
+	mul	x22, x25, x28
+	#  A[0] * A[2]
+	mul	x3, x25, x27
+	adds	x21, x21, x3
+	umulh	x4, x25, x27
+	adcs	x22, x22, x4
+	#  A[1] * A[3]
+	mul	x3, x26, x28
+	adcs	x14, x14, x3
+	umulh	x15, x26, x28
+	adc	x15, x15, xzr
+	#  A[1] * A[2]
+	mul	x3, x26, x27
+	adds	x22, x22, x3
+	umulh	x4, x26, x27
+	adcs	x14, x14, x4
+	#  A[2] * A[3]
+	mul	x3, x27, x28
+	adcs	x15, x15, x3
+	umulh	x16, x27, x28
+	adc	x16, x16, xzr
+	# Double
+	adds	x20, x20, x20
+	adcs	x21, x21, x21
+	adcs	x22, x22, x22
+	adcs	x14, x14, x14
+	adcs	x15, x15, x15
+	adcs	x16, x16, x16
+	adc	x17, xzr, xzr
+	#  A[0] * A[0]
+	umulh	x4, x25, x25
+	mul	x19, x25, x25
+	#  A[1] * A[1]
+	mul	x3, x26, x26
+	adds	x20, x20, x4
+	umulh	x4, x26, x26
+	adcs	x21, x21, x3
+	#  A[2] * A[2]
+	mul	x3, x27, x27
+	adcs	x22, x22, x4
+	umulh	x4, x27, x27
+	adcs	x14, x14, x3
+	#  A[3] * A[3]
+	mul	x3, x28, x28
+	adcs	x15, x15, x4
+	umulh	x4, x28, x28
+	adcs	x16, x16, x3
+	adc	x17, x17, x4
+	# Reduce
+	mov	x3, #38
+	mul	x4, x3, x17
+	adds	x22, x22, x4
+	umulh	x5, x3, x17
+	adc	x5, x5, xzr
+	mov	x3, #19
+	extr	x5, x5, x22, #63
+	mul	x5, x5, x3
+	and	x22, x22, #0x7fffffffffffffff
+	mov	x3, #38
+	mul	x4, x3, x14
+	adds	x19, x19, x4
+	umulh	x14, x3, x14
+	mul	x4, x3, x15
+	adcs	x20, x20, x4
+	umulh	x15, x3, x15
+	mul	x4, x3, x16
+	adcs	x21, x21, x4
+	umulh	x16, x3, x16
+	adc	x22, x22, xzr
+	#  Add high product results in
+	adds	x19, x19, x5
+	adcs	x20, x20, x14
+	adcs	x21, x21, x15
+	adc	x22, x22, x16
+	# Square
+	#  A[0] * A[1]
+	umulh	x16, x6, x7
+	mul	x15, x6, x7
+	#  A[0] * A[3]
+	umulh	x25, x6, x9
+	mul	x17, x6, x9
+	#  A[0] * A[2]
+	mul	x3, x6, x8
+	adds	x16, x16, x3
+	umulh	x4, x6, x8
+	adcs	x17, x17, x4
+	#  A[1] * A[3]
+	mul	x3, x7, x9
+	adcs	x25, x25, x3
+	umulh	x26, x7, x9
+	adc	x26, x26, xzr
+	#  A[1] * A[2]
+	mul	x3, x7, x8
+	adds	x17, x17, x3
+	umulh	x4, x7, x8
+	adcs	x25, x25, x4
+	#  A[2] * A[3]
+	mul	x3, x8, x9
+	adcs	x26, x26, x3
+	umulh	x27, x8, x9
+	adc	x27, x27, xzr
+	# Double
+	adds	x15, x15, x15
+	adcs	x16, x16, x16
+	adcs	x17, x17, x17
+	adcs	x25, x25, x25
+	adcs	x26, x26, x26
+	adcs	x27, x27, x27
+	adc	x28, xzr, xzr
+	#  A[0] * A[0]
+	umulh	x4, x6, x6
+	mul	x14, x6, x6
+	#  A[1] * A[1]
+	mul	x3, x7, x7
+	adds	x15, x15, x4
+	umulh	x4, x7, x7
+	adcs	x16, x16, x3
+	#  A[2] * A[2]
+	mul	x3, x8, x8
+	adcs	x17, x17, x4
+	umulh	x4, x8, x8
+	adcs	x25, x25, x3
+	#  A[3] * A[3]
+	mul	x3, x9, x9
+	adcs	x26, x26, x4
+	umulh	x4, x9, x9
+	adcs	x27, x27, x3
+	adc	x28, x28, x4
+	# Reduce
+	mov	x3, #38
+	mul	x4, x3, x28
+	adds	x17, x17, x4
+	umulh	x5, x3, x28
+	adc	x5, x5, xzr
+	mov	x3, #19
+	extr	x5, x5, x17, #63
+	mul	x5, x5, x3
+	and	x17, x17, #0x7fffffffffffffff
+	mov	x3, #38
+	mul	x4, x3, x25
+	adds	x14, x14, x4
+	umulh	x25, x3, x25
+	mul	x4, x3, x26
+	adcs	x15, x15, x4
+	umulh	x26, x3, x26
+	mul	x4, x3, x27
+	adcs	x16, x16, x4
+	umulh	x27, x3, x27
+	adc	x17, x17, xzr
+	#  Add high product results in
+	adds	x14, x14, x5
+	adcs	x15, x15, x25
+	adcs	x16, x16, x26
+	adc	x17, x17, x27
+	# Multiply
+	# A[0] * B[0]
+	umulh	x11, x14, x19
+	mul	x10, x14, x19
+	# A[2] * B[0]
+	umulh	x13, x16, x19
+	mul	x12, x16, x19
+	# A[1] * B[0]
+	mul	x3, x15, x19
+	adds	x11, x11, x3
+	umulh	x4, x15, x19
+	adcs	x12, x12, x4
+	# A[1] * B[3]
+	umulh	x26, x15, x22
+	adc	x13, x13, xzr
+	mul	x25, x15, x22
+	# A[0] * B[1]
+	mul	x3, x14, x20
+	adds	x11, x11, x3
+	umulh	x4, x14, x20
+	adcs	x12, x12, x4
+	# A[2] * B[1]
+	mul	x3, x16, x20
+	adcs	x13, x13, x3
+	umulh	x4, x16, x20
+	adcs	x25, x25, x4
+	adc	x26, x26, xzr
+	# A[1] * B[2]
+	mul	x3, x15, x21
+	adds	x13, x13, x3
+	umulh	x4, x15, x21
+	adcs	x25, x25, x4
+	adcs	x26, x26, xzr
+	adc	x27, xzr, xzr
+	# A[0] * B[2]
+	mul	x3, x14, x21
+	adds	x12, x12, x3
+	umulh	x4, x14, x21
+	adcs	x13, x13, x4
+	adcs	x25, x25, xzr
+	adcs	x26, x26, xzr
+	adc	x27, x27, xzr
+	# A[1] * B[1]
+	mul	x3, x15, x20
+	adds	x12, x12, x3
+	umulh	x4, x15, x20
+	adcs	x13, x13, x4
+	# A[3] * B[1]
+	mul	x3, x17, x20
+	adcs	x25, x25, x3
+	umulh	x4, x17, x20
+	adcs	x26, x26, x4
+	adc	x27, x27, xzr
+	# A[2] * B[2]
+	mul	x3, x16, x21
+	adds	x25, x25, x3
+	umulh	x4, x16, x21
+	adcs	x26, x26, x4
+	# A[3] * B[3]
+	mul	x3, x17, x22
+	adcs	x27, x27, x3
+	umulh	x28, x17, x22
+	adc	x28, x28, xzr
+	# A[0] * B[3]
+	mul	x3, x14, x22
+	adds	x13, x13, x3
+	umulh	x4, x14, x22
+	adcs	x25, x25, x4
+	# A[2] * B[3]
+	mul	x3, x16, x22
+	adcs	x26, x26, x3
+	umulh	x4, x16, x22
+	adcs	x27, x27, x4
+	adc	x28, x28, xzr
+	# A[3] * B[0]
+	mul	x3, x17, x19
+	adds	x13, x13, x3
+	umulh	x4, x17, x19
+	adcs	x25, x25, x4
+	# A[3] * B[2]
+	mul	x3, x17, x21
+	adcs	x26, x26, x3
+	umulh	x4, x17, x21
+	adcs	x27, x27, x4
+	adc	x28, x28, xzr
+	# Reduce
+	mov	x3, #38
+	mul	x4, x3, x28
+	adds	x13, x13, x4
+	umulh	x5, x3, x28
+	adc	x5, x5, xzr
+	mov	x3, #19
+	extr	x5, x5, x13, #63
+	mul	x5, x5, x3
+	and	x13, x13, #0x7fffffffffffffff
+	mov	x3, #38
+	mul	x4, x3, x25
+	adds	x10, x10, x4
+	umulh	x25, x3, x25
+	mul	x4, x3, x26
+	adcs	x11, x11, x4
+	umulh	x26, x3, x26
+	mul	x4, x3, x27
+	adcs	x12, x12, x4
+	umulh	x27, x3, x27
+	adc	x13, x13, xzr
+	#  Add high product results in
+	adds	x10, x10, x5
+	adcs	x11, x11, x25
+	adcs	x12, x12, x26
+	adc	x13, x13, x27
+	# Store
+	stp	x10, x11, [x0]
+	stp	x12, x13, [x0, #16]
+	# Sub
+	subs	x14, x14, x19
+	sbcs	x15, x15, x20
+	sbcs	x16, x16, x21
+	sbcs	x17, x17, x22
+	csetm	x5, cc
+	mov	x3, #-19
+	#   Mask the modulus
+	extr	x5, x5, x17, #63
+	mul	x3, x5, x3
+	#   Add modulus (if underflow)
+	subs	x14, x14, x3
+	sbcs	x15, x15, xzr
+	and	x17, x17, #0x7fffffffffffffff
+	sbcs	x16, x16, xzr
+	sbc	x17, x17, xzr
+	# Multiply by 121666
+	mov	x5, #0xdb42
+	movk	x5, #1, lsl 16
+	mul	x6, x14, x5
+	umulh	x7, x14, x5
+	mul	x3, x15, x5
+	umulh	x8, x15, x5
+	adds	x7, x7, x3
+	adc	x8, x8, xzr
+	mul	x3, x16, x5
+	umulh	x9, x16, x5
+	adds	x8, x8, x3
+	adc	x9, x9, xzr
+	mul	x3, x17, x5
+	umulh	x4, x17, x5
+	adds	x9, x9, x3
+	adc	x4, x4, xzr
+	mov	x5, #19
+	extr	x4, x4, x9, #63
+	mul	x4, x4, x5
+	adds	x6, x6, x4
+	adcs	x7, x7, xzr
+	and	x9, x9, #0x7fffffffffffffff
+	adcs	x8, x8, xzr
+	adc	x9, x9, xzr
+	# Add
+	adds	x19, x19, x6
+	adcs	x20, x20, x7
+	adcs	x21, x21, x8
+	adcs	x22, x22, x9
+	cset	x5, cs
+	mov	x3, #19
+	#   Mask the modulus
+	extr	x5, x5, x22, #63
+	mul	x3, x5, x3
+	#   Sub modulus (if overflow)
+	adds	x19, x19, x3
+	adcs	x20, x20, xzr
+	and	x22, x22, #0x7fffffffffffffff
+	adcs	x21, x21, xzr
+	adc	x22, x22, xzr
+	# Multiply
+	# A[0] * B[0]
+	umulh	x26, x14, x19
+	mul	x25, x14, x19
+	# A[2] * B[0]
+	umulh	x28, x16, x19
+	mul	x27, x16, x19
+	# A[1] * B[0]
+	mul	x3, x15, x19
+	adds	x26, x26, x3
+	umulh	x4, x15, x19
+	adcs	x27, x27, x4
+	# A[1] * B[3]
+	umulh	x7, x15, x22
+	adc	x28, x28, xzr
+	mul	x6, x15, x22
+	# A[0] * B[1]
+	mul	x3, x14, x20
+	adds	x26, x26, x3
+	umulh	x4, x14, x20
+	adcs	x27, x27, x4
+	# A[2] * B[1]
+	mul	x3, x16, x20
+	adcs	x28, x28, x3
+	umulh	x4, x16, x20
+	adcs	x6, x6, x4
+	adc	x7, x7, xzr
+	# A[1] * B[2]
+	mul	x3, x15, x21
+	adds	x28, x28, x3
+	umulh	x4, x15, x21
+	adcs	x6, x6, x4
+	adcs	x7, x7, xzr
+	adc	x8, xzr, xzr
+	# A[0] * B[2]
+	mul	x3, x14, x21
+	adds	x27, x27, x3
+	umulh	x4, x14, x21
+	adcs	x28, x28, x4
+	adcs	x6, x6, xzr
+	adcs	x7, x7, xzr
+	adc	x8, x8, xzr
+	# A[1] * B[1]
+	mul	x3, x15, x20
+	adds	x27, x27, x3
+	umulh	x4, x15, x20
+	adcs	x28, x28, x4
+	# A[3] * B[1]
+	mul	x3, x17, x20
+	adcs	x6, x6, x3
+	umulh	x4, x17, x20
+	adcs	x7, x7, x4
+	adc	x8, x8, xzr
+	# A[2] * B[2]
+	mul	x3, x16, x21
+	adds	x6, x6, x3
+	umulh	x4, x16, x21
+	adcs	x7, x7, x4
+	# A[3] * B[3]
+	mul	x3, x17, x22
+	adcs	x8, x8, x3
+	umulh	x9, x17, x22
+	adc	x9, x9, xzr
+	# A[0] * B[3]
+	mul	x3, x14, x22
+	adds	x28, x28, x3
+	umulh	x4, x14, x22
+	adcs	x6, x6, x4
+	# A[2] * B[3]
+	mul	x3, x16, x22
+	adcs	x7, x7, x3
+	umulh	x4, x16, x22
+	adcs	x8, x8, x4
+	adc	x9, x9, xzr
+	# A[3] * B[0]
+	mul	x3, x17, x19
+	adds	x28, x28, x3
+	umulh	x4, x17, x19
+	adcs	x6, x6, x4
+	# A[3] * B[2]
+	mul	x3, x17, x21
+	adcs	x7, x7, x3
+	umulh	x4, x17, x21
+	adcs	x8, x8, x4
+	adc	x9, x9, xzr
+	# Reduce
+	mov	x3, #38
+	mul	x4, x3, x9
+	adds	x28, x28, x4
+	umulh	x5, x3, x9
+	adc	x5, x5, xzr
+	mov	x3, #19
+	extr	x5, x5, x28, #63
+	mul	x5, x5, x3
+	and	x28, x28, #0x7fffffffffffffff
+	mov	x3, #38
+	mul	x4, x3, x6
+	adds	x25, x25, x4
+	umulh	x6, x3, x6
+	mul	x4, x3, x7
+	adcs	x26, x26, x4
+	umulh	x7, x3, x7
+	mul	x4, x3, x8
+	adcs	x27, x27, x4
+	umulh	x8, x3, x8
+	adc	x28, x28, xzr
+	#  Add high product results in
+	adds	x25, x25, x5
+	adcs	x26, x26, x6
+	adcs	x27, x27, x7
+	adc	x28, x28, x8
+	# Store
+	stp	x25, x26, [x29, #16]
+	stp	x27, x28, [x29, #32]
+	subs	x24, x24, #1
+	bge	L_curve25519_3
 	# Invert
 	add	x0, x29, #48
 	add	x1, x29, #16
@@ -3801,8 +7139,7 @@ L_curve25519_inv_8:
 	stp	x14, x15, [x0]
 	stp	x16, x17, [x0, #16]
 	mov	x0, xzr
-	ldr	x17, [x29, #200]
-	ldr	x19, [x29, #208]
+	ldp	x17, x19, [x29, #200]
 	ldp	x20, x21, [x29, #216]
 	ldp	x22, x23, [x29, #232]
 	ldp	x24, x25, [x29, #248]
@@ -3813,23 +7150,23 @@ L_curve25519_inv_8:
 #ifndef __APPLE__
 	.size	curve25519,.-curve25519
 #endif /* __APPLE__ */
-#ifdef HAVE_ED25519
 #ifndef __APPLE__
 .text
 .globl	fe_pow22523
+WC_ASM_ATT_HIDDEN(fe_pow22523)
 .type	fe_pow22523,@function
 .align	2
 fe_pow22523:
 #else
 .section	__TEXT,__text
 .globl	_fe_pow22523
+WC_ASM_ATT_HIDDEN(_fe_pow22523)
 .p2align	2
 _fe_pow22523:
 #endif /* __APPLE__ */
 	stp	x29, x30, [sp, #-144]!
 	add	x29, sp, #0
-	str	x17, [x29, #128]
-	str	x23, [x29, #136]
+	stp	x17, x23, [x29, #128]
 	# pow22523
 	str	x0, [x29, #112]
 	str	x1, [x29, #120]
@@ -4619,8 +7956,7 @@ L_fe_pow22523_7:
 #else
 	bl	_fe_mul
 #endif /* __APPLE__ */
-	ldr	x17, [x29, #128]
-	ldr	x23, [x29, #136]
+	ldp	x17, x23, [x29, #128]
 	ldp	x29, x30, [sp], #0x90
 	ret
 #ifndef __APPLE__
@@ -4629,19 +7965,20 @@ L_fe_pow22523_7:
 #ifndef __APPLE__
 .text
 .globl	ge_p1p1_to_p2
+WC_ASM_ATT_HIDDEN(ge_p1p1_to_p2)
 .type	ge_p1p1_to_p2,@function
 .align	2
 ge_p1p1_to_p2:
 #else
 .section	__TEXT,__text
 .globl	_ge_p1p1_to_p2
+WC_ASM_ATT_HIDDEN(_ge_p1p1_to_p2)
 .p2align	2
 _ge_p1p1_to_p2:
 #endif /* __APPLE__ */
 	stp	x29, x30, [sp, #-80]!
 	add	x29, sp, #0
-	str	x17, [x29, #40]
-	str	x19, [x29, #48]
+	stp	x17, x19, [x29, #40]
 	stp	x20, x21, [x29, #56]
 	str	x22, [x29, #72]
 	str	x0, [x29, #16]
@@ -5002,8 +8339,7 @@ _ge_p1p1_to_p2:
 	# Store
 	stp	x14, x15, [x0]
 	stp	x16, x17, [x0, #16]
-	ldr	x17, [x29, #40]
-	ldr	x19, [x29, #48]
+	ldp	x17, x19, [x29, #40]
 	ldp	x20, x21, [x29, #56]
 	ldr	x22, [x29, #72]
 	ldp	x29, x30, [sp], #0x50
@@ -5014,19 +8350,20 @@ _ge_p1p1_to_p2:
 #ifndef __APPLE__
 .text
 .globl	ge_p1p1_to_p3
+WC_ASM_ATT_HIDDEN(ge_p1p1_to_p3)
 .type	ge_p1p1_to_p3,@function
 .align	2
 ge_p1p1_to_p3:
 #else
 .section	__TEXT,__text
 .globl	_ge_p1p1_to_p3
+WC_ASM_ATT_HIDDEN(_ge_p1p1_to_p3)
 .p2align	2
 _ge_p1p1_to_p3:
 #endif /* __APPLE__ */
 	stp	x29, x30, [sp, #-112]!
 	add	x29, sp, #0
-	str	x17, [x29, #40]
-	str	x19, [x29, #48]
+	stp	x17, x19, [x29, #40]
 	stp	x20, x21, [x29, #56]
 	stp	x22, x23, [x29, #72]
 	stp	x24, x25, [x29, #88]
@@ -5505,8 +8842,7 @@ _ge_p1p1_to_p3:
 	# Store
 	stp	x14, x15, [x0]
 	stp	x16, x17, [x0, #16]
-	ldr	x17, [x29, #40]
-	ldr	x19, [x29, #48]
+	ldp	x17, x19, [x29, #40]
 	ldp	x20, x21, [x29, #56]
 	ldp	x22, x23, [x29, #72]
 	ldp	x24, x25, [x29, #88]
@@ -5519,19 +8855,20 @@ _ge_p1p1_to_p3:
 #ifndef __APPLE__
 .text
 .globl	ge_p2_dbl
+WC_ASM_ATT_HIDDEN(ge_p2_dbl)
 .type	ge_p2_dbl,@function
 .align	2
 ge_p2_dbl:
 #else
 .section	__TEXT,__text
 .globl	_ge_p2_dbl
+WC_ASM_ATT_HIDDEN(_ge_p2_dbl)
 .p2align	2
 _ge_p2_dbl:
 #endif /* __APPLE__ */
 	stp	x29, x30, [sp, #-128]!
 	add	x29, sp, #0
-	str	x17, [x29, #40]
-	str	x19, [x29, #48]
+	stp	x17, x19, [x29, #40]
 	stp	x20, x21, [x29, #56]
 	stp	x22, x23, [x29, #72]
 	stp	x24, x25, [x29, #88]
@@ -5986,8 +9323,7 @@ _ge_p2_dbl:
 	sbc	x7, x7, xzr
 	stp	x4, x5, [x0]
 	stp	x6, x7, [x0, #16]
-	ldr	x17, [x29, #40]
-	ldr	x19, [x29, #48]
+	ldp	x17, x19, [x29, #40]
 	ldp	x20, x21, [x29, #56]
 	ldp	x22, x23, [x29, #72]
 	ldp	x24, x25, [x29, #88]
@@ -6001,19 +9337,20 @@ _ge_p2_dbl:
 #ifndef __APPLE__
 .text
 .globl	ge_madd
+WC_ASM_ATT_HIDDEN(ge_madd)
 .type	ge_madd,@function
 .align	2
 ge_madd:
 #else
 .section	__TEXT,__text
 .globl	_ge_madd
+WC_ASM_ATT_HIDDEN(_ge_madd)
 .p2align	2
 _ge_madd:
 #endif /* __APPLE__ */
 	stp	x29, x30, [sp, #-144]!
 	add	x29, sp, #0
-	str	x17, [x29, #56]
-	str	x19, [x29, #64]
+	stp	x17, x19, [x29, #56]
 	stp	x20, x21, [x29, #72]
 	stp	x22, x23, [x29, #88]
 	stp	x24, x25, [x29, #104]
@@ -6503,8 +9840,7 @@ _ge_madd:
 	stp	x10, x11, [x0, #16]
 	stp	x4, x5, [x1]
 	stp	x6, x7, [x1, #16]
-	ldr	x17, [x29, #56]
-	ldr	x19, [x29, #64]
+	ldp	x17, x19, [x29, #56]
 	ldp	x20, x21, [x29, #72]
 	ldp	x22, x23, [x29, #88]
 	ldp	x24, x25, [x29, #104]
@@ -6518,19 +9854,20 @@ _ge_madd:
 #ifndef __APPLE__
 .text
 .globl	ge_msub
+WC_ASM_ATT_HIDDEN(ge_msub)
 .type	ge_msub,@function
 .align	2
 ge_msub:
 #else
 .section	__TEXT,__text
 .globl	_ge_msub
+WC_ASM_ATT_HIDDEN(_ge_msub)
 .p2align	2
 _ge_msub:
 #endif /* __APPLE__ */
 	stp	x29, x30, [sp, #-144]!
 	add	x29, sp, #0
-	str	x17, [x29, #56]
-	str	x19, [x29, #64]
+	stp	x17, x19, [x29, #56]
 	stp	x20, x21, [x29, #72]
 	stp	x22, x23, [x29, #88]
 	stp	x24, x25, [x29, #104]
@@ -7020,8 +10357,7 @@ _ge_msub:
 	stp	x10, x11, [x0, #16]
 	stp	x4, x5, [x1]
 	stp	x6, x7, [x1, #16]
-	ldr	x17, [x29, #56]
-	ldr	x19, [x29, #64]
+	ldp	x17, x19, [x29, #56]
 	ldp	x20, x21, [x29, #72]
 	ldp	x22, x23, [x29, #88]
 	ldp	x24, x25, [x29, #104]
@@ -7035,19 +10371,20 @@ _ge_msub:
 #ifndef __APPLE__
 .text
 .globl	ge_add
+WC_ASM_ATT_HIDDEN(ge_add)
 .type	ge_add,@function
 .align	2
 ge_add:
 #else
 .section	__TEXT,__text
 .globl	_ge_add
+WC_ASM_ATT_HIDDEN(_ge_add)
 .p2align	2
 _ge_add:
 #endif /* __APPLE__ */
 	stp	x29, x30, [sp, #-144]!
 	add	x29, sp, #0
-	str	x17, [x29, #56]
-	str	x19, [x29, #64]
+	stp	x17, x19, [x29, #56]
 	stp	x20, x21, [x29, #72]
 	stp	x22, x23, [x29, #88]
 	stp	x24, x25, [x29, #104]
@@ -7663,8 +11000,7 @@ _ge_add:
 	stp	x23, x24, [x0, #16]
 	stp	x12, x13, [x1]
 	stp	x14, x15, [x1, #16]
-	ldr	x17, [x29, #56]
-	ldr	x19, [x29, #64]
+	ldp	x17, x19, [x29, #56]
 	ldp	x20, x21, [x29, #72]
 	ldp	x22, x23, [x29, #88]
 	ldp	x24, x25, [x29, #104]
@@ -7678,19 +11014,20 @@ _ge_add:
 #ifndef __APPLE__
 .text
 .globl	ge_sub
+WC_ASM_ATT_HIDDEN(ge_sub)
 .type	ge_sub,@function
 .align	2
 ge_sub:
 #else
 .section	__TEXT,__text
 .globl	_ge_sub
+WC_ASM_ATT_HIDDEN(_ge_sub)
 .p2align	2
 _ge_sub:
 #endif /* __APPLE__ */
 	stp	x29, x30, [sp, #-144]!
 	add	x29, sp, #0
-	str	x17, [x29, #56]
-	str	x19, [x29, #64]
+	stp	x17, x19, [x29, #56]
 	stp	x20, x21, [x29, #72]
 	stp	x22, x23, [x29, #88]
 	stp	x24, x25, [x29, #104]
@@ -8321,8 +11658,7 @@ _ge_sub:
 	stp	x14, x15, [x0, #16]
 	stp	x21, x22, [x1]
 	stp	x23, x24, [x1, #16]
-	ldr	x17, [x29, #56]
-	ldr	x19, [x29, #64]
+	ldp	x17, x19, [x29, #56]
 	ldp	x20, x21, [x29, #72]
 	ldp	x22, x23, [x29, #88]
 	ldp	x24, x25, [x29, #104]
@@ -8333,22 +11669,24 @@ _ge_sub:
 #ifndef __APPLE__
 	.size	ge_sub,.-ge_sub
 #endif /* __APPLE__ */
+#ifdef HAVE_ED25519
 #ifndef __APPLE__
 .text
 .globl	sc_reduce
+WC_ASM_ATT_HIDDEN(sc_reduce)
 .type	sc_reduce,@function
 .align	2
 sc_reduce:
 #else
 .section	__TEXT,__text
 .globl	_sc_reduce
+WC_ASM_ATT_HIDDEN(_sc_reduce)
 .p2align	2
 _sc_reduce:
 #endif /* __APPLE__ */
 	stp	x29, x30, [sp, #-64]!
 	add	x29, sp, #0
-	str	x17, [x29, #16]
-	str	x19, [x29, #24]
+	stp	x17, x19, [x29, #16]
 	stp	x20, x21, [x29, #32]
 	stp	x22, x23, [x29, #48]
 	ldp	x2, x3, [x0]
@@ -8525,8 +11863,7 @@ _sc_reduce:
 	# Store result
 	stp	x2, x3, [x0]
 	stp	x4, x5, [x0, #16]
-	ldr	x17, [x29, #16]
-	ldr	x19, [x29, #24]
+	ldp	x17, x19, [x29, #16]
 	ldp	x20, x21, [x29, #32]
 	ldp	x22, x23, [x29, #48]
 	ldp	x29, x30, [sp], #0x40
@@ -8537,19 +11874,20 @@ _sc_reduce:
 #ifndef __APPLE__
 .text
 .globl	sc_muladd
+WC_ASM_ATT_HIDDEN(sc_muladd)
 .type	sc_muladd,@function
 .align	2
 sc_muladd:
 #else
 .section	__TEXT,__text
 .globl	_sc_muladd
+WC_ASM_ATT_HIDDEN(_sc_muladd)
 .p2align	2
 _sc_muladd:
 #endif /* __APPLE__ */
 	stp	x29, x30, [sp, #-96]!
 	add	x29, sp, #0
-	str	x17, [x29, #24]
-	str	x19, [x29, #32]
+	stp	x17, x19, [x29, #24]
 	stp	x20, x21, [x29, #40]
 	stp	x22, x23, [x29, #56]
 	stp	x24, x25, [x29, #72]
@@ -8824,8 +12162,7 @@ _sc_muladd:
 	# Store result
 	stp	x4, x5, [x0]
 	stp	x6, x7, [x0, #16]
-	ldr	x17, [x29, #24]
-	ldr	x19, [x29, #32]
+	ldp	x17, x19, [x29, #24]
 	ldp	x20, x21, [x29, #40]
 	ldp	x22, x23, [x29, #56]
 	ldp	x24, x25, [x29, #72]

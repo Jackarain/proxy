@@ -2,6 +2,45 @@
 
 #benchmark.test
 
+# timeout(1) is GNU coreutils and absent on macOS; where it's missing, run the
+# command unbounded (the flaky hang this guards against is Linux-only CI).
+# A prefix variable rather than a shell function: backgrounding a function
+# makes $! the forked subshell, so a later "kill $server_pid" would stop the
+# wrapper and orphan the server it was meant to kill.
+if command -v timeout >/dev/null 2>&1; then
+    TIMEOUT_KILL_2M="timeout -s KILL 2m"
+else
+    TIMEOUT_KILL_2M=""
+fi
+
+# if we can, isolate the network namespace to eliminate port collisions.
+if [ -n "$NETWORK_UNSHARE_HELPER" ]; then
+     if [ -z "$NETWORK_UNSHARE_HELPER_CALLED" ]; then
+         export NETWORK_UNSHARE_HELPER_CALLED=yes
+         exec "$NETWORK_UNSHARE_HELPER" "$0" "$@" || exit $?
+     fi
+elif [ "${AM_BWRAPPED-}" != "yes" ]; then
+    bwrap_path="$(command -v bwrap)"
+    if [ -n "$bwrap_path" ]; then
+        export AM_BWRAPPED=yes
+        exec "$bwrap_path" --unshare-net --dev-bind / / "$0" "$@"
+    fi
+    unset AM_BWRAPPED
+fi
+
+[ ! -x ./examples/client/client ] && printf '\n\n%s\n' "Client doesn't exist" \
+                                  && exit 1
+
+if ./examples/client/client -? 2>&1 | grep "Client not compiled in!" ; then
+    echo 'skipping benchmark.test because client not compiled in.' 1>&2
+    exit 77
+fi
+
+if ./examples/server/server -? 2>&1 | grep "Server not compiled in!" ; then
+    echo 'skipping benchmark.test because server not compiled in.' 1>&2
+    exit 77
+fi
+
 if [ "$#" -lt 2 ]; then
     echo "Usage: $0 [mode] [num] [clientargs] [serverargs]" >&2
     echo "    [mode]: 1=Connection Rate (TPS), 2=Throughput Bytes" >&2
@@ -14,17 +53,20 @@ if [ "$#" -lt 2 ]; then
     exit 1
 fi
 
-# Use unique benchmark port so it won't conflict with any other tests
-bench_port=11113
+# Bind an ephemeral port and read it back from the ready file below, rather
+# than hoping a fixed number is free. The ready file is per-run for the same
+# reason - a fixed path is shared by any concurrent run.
+bench_port=0
+ready_file=/tmp/wolfssl_server_ready$$
 no_pid=-1
 server_pid=$no_pid
 counter=0
 client_result=-1
 
 remove_ready_file() {
-    if test -e /tmp/wolfssl_server_ready; then
+    if test -e "$ready_file"; then
         echo "removing existing server_ready file"
-        rm /tmp/wolfssl_server_ready
+        rm "$ready_file"
     fi
 }
 
@@ -32,8 +74,10 @@ remove_ready_file() {
 do_cleanup() {
     echo "in cleanup"
 
-    if  [ $server_pid != $no_pid ]
+    if [ $server_pid != $no_pid ] && kill -0 $server_pid 2>&-
     then
+        # sleep to give sanitizers time to dump backtraces.
+        sleep 1
         echo "killing server"
         kill -9 $server_pid
     fi
@@ -55,7 +99,7 @@ remove_ready_file
 if [ $1 -eq 1 ]
 then
     # start server in loop mode with port
-    ./examples/server/server -i -p $bench_port $4 &
+    ./examples/server/server -i -p $bench_port -R "$ready_file" $4 &
     server_pid=$!
 fi
 
@@ -63,25 +107,37 @@ fi
 if [ $1 -eq 2 ]
 then
     # start server in loop mode, non-blocking, benchmark throughput with port
-    ./examples/server/server -i -N -B $2 -p $bench_port $4 &
+    ./examples/server/server -i -N -B $2 -p $bench_port -R "$ready_file" $4 &
     server_pid=$!
 fi
 
-# NOTE: We sleep for 2 seconds below. If timing the execution of this script
-#       with "time", bear in mind that those 2 seconds will be reflected in
+# NOTE: We wait up to 10 seconds below. If timing the execution of this script
+#       with "time", bear in mind that this wait will be reflected in
 #       the "real" time.
 echo "Waiting for server_ready file..."
-while [ ! -s /tmp/wolfssl_server_ready -a "$counter" -lt 20 ]; do
+while [ ! -s "$ready_file" -a "$counter" -lt 100 ]; do
     sleep 0.1
     counter=$((counter+ 1))
 done
+
+if [ ! -s "$ready_file" ]; then
+    echo "Server never reported a port!"
+    do_cleanup
+    exit 1
+fi
+
+# sleep for an additional 0.1 to mitigate race on write/read of $ready_file:
+sleep 0.1
+
+bench_port=$(cat "$ready_file")
+echo "Server listening on port $bench_port"
 
 # benchmark connections
 if [ $1 -eq 1 ]
 then
     echo "Starting example client to benchmark connection average time"
     # start client to benchmark average time for each connection using port
-    ./examples/client/client -b $2 -p $bench_port $3
+    $TIMEOUT_KILL_2M ./examples/client/client -b $2 -p $bench_port $3
     client_result=$?
 fi
 
@@ -90,7 +146,7 @@ if [ $1 -eq 2 ]
 then
     echo "Starting example client to benchmark throughput"
     # start client in non-blocking mode, benchmark throughput using port
-    ./examples/client/client -N -B $2 -p $bench_port $3
+    $TIMEOUT_KILL_2M ./examples/client/client -N -B $2 -p $bench_port $3
     client_result=$?
 fi
 

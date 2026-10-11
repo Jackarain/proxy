@@ -1,12 +1,12 @@
 /* iotsafe.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -75,6 +75,55 @@ static wolfSSL_IOTSafe_CSIM_write_cb csim_write_cb = NULL;
 #define MAXBUF 2048
 static char csim_read_buf[MAXBUF];
 static char csim_cmd[IOTSAFE_CMDSIZE_MAX];
+
+/* All APDU transactions run against a single shared CSIM channel
+ * (one modem/SIM), so they must be serialized. In multi-threaded
+ * builds the port keeps a mutex for that purpose; in single-threaded
+ * builds the lock helpers are no-ops.
+ *
+ * The mutex has static lifetime: it is either statically initialized,
+ * or elected once through wc_local_InitMutexOnce() on ports with no
+ * static mutex initializer. It is deliberately not created by
+ * iotsafe_init_locked(): the applet initialization itself runs under
+ * this lock (see iotsafe_ensure_init_locked()), so a first use racing
+ * from several threads can neither re-initialize the mutex nor drive
+ * APDUs over the shared csim_cmd buffer.
+ *
+ * The lock is not recursive: nothing called while it is held may re-enter
+ * the port. In particular, with HAVE_IOTSAFE_HWRNG the RNG is served by
+ * wolfIoTSafe_GetRandom(), so no code path under the lock may generate
+ * random data.
+ */
+#if !defined(SINGLE_THREADED)
+static wolfSSL_Mutex iotsafe_mutex
+    WOLFSSL_MUTEX_INITIALIZER_CLAUSE(iotsafe_mutex);
+#ifndef WOLFSSL_MUTEX_INITIALIZER
+/* Elects a single initializer for iotsafe_mutex. */
+static wc_MutexOnceFlag iotsafe_mutex_init = WOLFSSL_ATOMIC_INITIALIZER(0);
+#endif
+#endif
+
+/* Take the port lock, creating the mutex first on ports without a static
+ * mutex initializer. Returns 0 on success, BAD_MUTEX_E on failure. */
+static int iotsafe_lock(void)
+{
+#if !defined(SINGLE_THREADED)
+#ifndef WOLFSSL_MUTEX_INITIALIZER
+    if (wc_local_InitMutexOnce(&iotsafe_mutex, &iotsafe_mutex_init) != 0)
+        return BAD_MUTEX_E;
+#endif
+    if (wc_LockMutex(&iotsafe_mutex) != 0)
+        return BAD_MUTEX_E;
+#endif
+    return 0;
+}
+
+static void iotsafe_unlock(void)
+{
+#if !defined(SINGLE_THREADED)
+    wc_UnLockMutex(&iotsafe_mutex);
+#endif
+}
 
 /* APDU layer: I/O */
 static int csim_read(char *buf, int len)
@@ -198,7 +247,7 @@ static char *search_tlv(const char *haystack, int size, uint8_t tag)
     int i = 0;
     uint8_t t;
     uint8_t l;
-    while (i < size) {
+    while (i <= size - 4) {
         if (hex_to_bytes(&haystack[i], &t, 1) < 0)
             return NULL;
         if (hex_to_bytes(&haystack[i + 2], &l, 1) < 0)
@@ -277,6 +326,9 @@ static int iotsafe_cmd_add_tlv_ex(char *cmd, byte tag, uint16_t len,
         return BAD_FUNC_ARG;
     }
 
+    if ((int)cur_lc + 1 + taglen_size + len > 0xFF) {
+        return BAD_FUNC_ARG;
+    }
     /* Increase Lc and CSIM length according to the TLV len */
     cur_lc += 1 + taglen_size + len;
     cur_csim_len += 2 + (2 * taglen_size) + 2*len;
@@ -401,10 +453,12 @@ static int expect_csim_response(const char *cmd, word32 size, char **reply)
 }
 
 /* Internal initialization function.
- * Load the IoT-Safe applet
+ * Load the IoT-Safe applet.
+ * Must be called with iotsafe_mutex held: it drives APDUs over the
+ * shared csim_cmd buffer like any other transaction.
  */
 
-static int iotsafe_init(void)
+static int iotsafe_init_locked(void)
 {
     char *reply;
     const char atcmd_load_applet_str[]=
@@ -416,8 +470,9 @@ static int iotsafe_init(void)
         if (ret == 0)
             ret = expect_tok(NULL, 0, NULL, NULL);
     } while (ret == 0);
-    if (ret < 0)
+    if (ret < 0) {
         return ret;
+    }
 
     WOLFSSL_MSG("ATE0 OK!");
     if (expect_csim_response(atcmd_load_applet_str,
@@ -427,15 +482,29 @@ static int iotsafe_init(void)
     } else {
         WOLFSSL_MSG("IoT Safe Applet INIT OK");
     }
-    if (expect_tok(NULL, 0, NULL, NULL) < 0)
+    if (expect_tok(NULL, 0, NULL, NULL) < 0) {
         return -1;
+    }
     wolfIoT_initialized++;
+    return 0;
+}
+
+/* Ensure the applet is loaded, loading it on first use.
+ * Must be called with iotsafe_mutex held, so that a first use racing
+ * from several threads runs the applet load exactly once.
+ * Returns 0 on success, WC_HW_E if initialization failed. */
+static int iotsafe_ensure_init_locked(void)
+{
+    if (wolfIoT_initialized)
+        return 0;
+    if (iotsafe_init_locked() < 0)
+        return WC_HW_E;
     return 0;
 }
 
 
 /* internal: Read File content into a buffer */
-static int iotsafe_readfile(uint8_t *file_id, uint16_t file_id_sz,
+static int iotsafe_readfile_locked(uint8_t *file_id, uint16_t file_id_sz,
         unsigned char *content, int max_size)
 {
     char *resp;
@@ -457,7 +526,7 @@ static int iotsafe_readfile(uint8_t *file_id, uint16_t file_id_sz,
         return ret;
     }
 
-    filesz_s = search_tlv(resp + 4, ret, 0x20);
+    filesz_s = search_tlv(resp + 4, ret - 4, 0x20);
     if ((filesz_s) && (XSTRLEN(filesz_s)) >= 8) {
         uint8_t fs_msb, fs_lsb;
         if (hex_to_bytes(filesz_s + 4, &fs_msb, 1) < 0)
@@ -486,7 +555,7 @@ static int iotsafe_readfile(uint8_t *file_id, uint16_t file_id_sz,
         iotsafe_cmd_add_tlv(csim_cmd, IOTSAFE_TAG_FILE_ID, file_id_sz, file_id);
         iotsafe_cmd_complete(csim_cmd);
         ret = expect_csim_response(csim_cmd, (word32)XSTRLEN(csim_cmd), &resp);
-        if (ret > 0) {
+        if (ret >= 2) {
             if (ret > 2 * (file_sz - off))
                 ret = 2 * (file_sz - off);
             if (hex_to_bytes(resp, content + off, (ret / 2)) < 0) {
@@ -494,7 +563,7 @@ static int iotsafe_readfile(uint8_t *file_id, uint16_t file_id_sz,
             }
             off += ret/2;
 #ifdef IOTSAFE_NO_GETDATA
-            if (XSTRNCMP(&resp[ret-4], "0000", 4) == 0) {
+            if (ret >= 4 && XSTRNCMP(&resp[ret-4], "0000", 4) == 0) {
                 /* Strip trailing zeros */
                 int idx = 0;
                 for (idx = 0; idx < off-1; idx+=2) {
@@ -519,19 +588,39 @@ static int iotsafe_readfile(uint8_t *file_id, uint16_t file_id_sz,
     return off;
 }
 
+/* Serialized entry point: holds iotsafe_mutex across the APDU
+ * transaction. */
+static int iotsafe_readfile(uint8_t *file_id, uint16_t file_id_sz,
+        unsigned char *content, int max_size)
+{
+    int ret;
+    if (iotsafe_lock() != 0)
+        return BAD_MUTEX_E;
+    ret = iotsafe_ensure_init_locked();
+    if (ret == 0)
+        ret = iotsafe_readfile_locked(file_id, file_id_sz, content, max_size);
+    iotsafe_unlock();
+    return ret;
+}
+
 static int iotsafe_getrandom(unsigned char* output, unsigned long sz)
 {
     char *resp = NULL;
     int ret;
     int i;
     byte len = (byte)sz;
-    if (sz == 0) {
+
+    if (sz == 0 || sz > 255) {
         return BAD_FUNC_ARG;
     }
-    if (!wolfIoT_initialized) {
-        if (iotsafe_init() < 0) {
-            return WC_HW_E;
-        }
+
+    if (iotsafe_lock() != 0)
+        return BAD_MUTEX_E;
+
+    ret = iotsafe_ensure_init_locked();
+    if (ret != 0) {
+        iotsafe_unlock();
+        return ret;
     }
 
     iotsafe_cmd_start(csim_cmd, IOTSAFE_CLASS, IOTSAFE_INS_GETRANDOM,0,0);
@@ -553,10 +642,9 @@ static int iotsafe_getrandom(unsigned char* output, unsigned long sz)
 
     /* Send an empty command until the applet is responsive again */
     for (i = 0; i < IOTSAFE_MAX_RETRIES; i++) {
-        if (expect_tok(NULL, 0, NULL, NULL) < 0) {
-            ret = WC_HW_E;
-        }
+        (void)expect_tok(NULL, 0, NULL, NULL);
     }
+    iotsafe_unlock();
     return ret;
 }
 
@@ -597,6 +685,11 @@ static int iotsafe_parse_public_key(char* resp, int len, ecc_key *key)
         WOLFSSL_MSG("Cannot initialize ecc key to store IoTSafe public key");
         return -1;
     }
+    if ((int)(payload_str - resp) + 6 + (int)(IOTSAFE_ECC_KSIZE * 4) > len) {
+        WOLFSSL_MSG("IoT safe: response too short for key data");
+        wc_ecc_free(key);
+        return BAD_STATE_E;
+    }
     XSTRNCPY(Qx, payload_str + 6, IOTSAFE_ECC_KSIZE * 2);
     XSTRNCPY(Qy, payload_str + 6 + IOTSAFE_ECC_KSIZE * 2, IOTSAFE_ECC_KSIZE * 2);
 
@@ -612,15 +705,15 @@ static int iotsafe_parse_public_key(char* resp, int len, ecc_key *key)
 /* Execute GEN_KEYPAIR on the IoT-SAFE applet.
  *
  * Return -1 on error; 0 if the operation is successful, but
- * the generated public key was not yet stored in `key`; 1 if 
+ * the generated public key was not yet stored in `key`; 1 if
  * the operation is successful and the public key was found in the
  * command response and copied to the `key` structure, if not NULL.
  */
-static int iotsafe_gen_keypair(byte *wr_slot, unsigned long id_size,
-                               ecc_key *key)
+static int iotsafe_gen_keypair_locked(byte *wr_slot, unsigned long id_size,
+                                      ecc_key *key)
 {
     char *resp;
-    int ret = WC_HW_E;
+    int ret = WC_NO_ERR_TRACE(WC_HW_E);
     iotsafe_cmd_start(csim_cmd, IOTSAFE_CLASS, IOTSAFE_INS_GEN_KEYPAIR, 0, 0);
     iotsafe_cmd_add_tlv(csim_cmd, IOTSAFE_TAG_PRIVKEY_ID, id_size, wr_slot);
     iotsafe_cmd_complete(csim_cmd);
@@ -646,7 +739,22 @@ static int iotsafe_gen_keypair(byte *wr_slot, unsigned long id_size,
     return ret;
 }
 
-static int iotsafe_get_public_key(byte *pubkey_id, unsigned long id_size,
+/* Serialized entry point: holds iotsafe_mutex across the APDU
+ * transaction. */
+static int iotsafe_gen_keypair(byte *wr_slot, unsigned long id_size,
+                               ecc_key *key)
+{
+    int ret;
+    if (iotsafe_lock() != 0)
+        return BAD_MUTEX_E;
+    ret = iotsafe_ensure_init_locked();
+    if (ret == 0)
+        ret = iotsafe_gen_keypair_locked(wr_slot, id_size, key);
+    iotsafe_unlock();
+    return ret;
+}
+
+static int iotsafe_get_public_key_locked(byte *pubkey_id, unsigned long id_size,
         ecc_key *key)
 {
     int ret;
@@ -665,8 +773,23 @@ static int iotsafe_get_public_key(byte *pubkey_id, unsigned long id_size,
     return iotsafe_parse_public_key(resp, ret, key);
 }
 
+/* Serialized entry point: holds iotsafe_mutex across the APDU
+ * transaction. */
+static int iotsafe_get_public_key(byte *pubkey_id, unsigned long id_size,
+        ecc_key *key)
+{
+    int ret;
+    if (iotsafe_lock() != 0)
+        return BAD_MUTEX_E;
+    ret = iotsafe_ensure_init_locked();
+    if (ret == 0)
+        ret = iotsafe_get_public_key_locked(pubkey_id, id_size, key);
+    iotsafe_unlock();
+    return ret;
+}
+
 #define PUT_PK_SID 0x02
-static int iotsafe_put_public_key(byte *pubkey_id, unsigned long id_size,
+static int iotsafe_put_public_key_locked(byte *pubkey_id, unsigned long id_size,
         ecc_key *key)
 {
     char *resp;
@@ -742,50 +865,59 @@ static int iotsafe_put_public_key(byte *pubkey_id, unsigned long id_size,
     }
     return ret;
 }
+
+/* Serialized entry point: holds iotsafe_mutex across the APDU
+ * transaction. */
+static int iotsafe_put_public_key(byte *pubkey_id, unsigned long id_size,
+        ecc_key *key)
+{
+    int ret;
+    if (iotsafe_lock() != 0)
+        return BAD_MUTEX_E;
+    ret = iotsafe_ensure_init_locked();
+    if (ret == 0)
+        ret = iotsafe_put_public_key_locked(pubkey_id, id_size, key);
+    iotsafe_unlock();
+    return ret;
+}
 #ifdef HAVE_HKDF
-static int iotsafe_hkdf_extract(byte* prk, const byte* salt, word32 saltLen,
+static int iotsafe_hkdf_extract_locked(byte* prk, const byte* salt, word32 saltLen,
        byte* ikm, word32 ikmLen, int digest)
 {
     int ret;
     char *resp;
     uint16_t hash_algo = 0;
-    int len;
+    int hash_len;
     uint16_t hash_algo_be = 0;
 
     WOLFSSL_MSG("Enter iotsafe_hkdf_extract");
-     switch (digest) {
-        #ifndef NO_SHA256
+    switch (digest) {
+#ifndef NO_SHA256
         case WC_SHA256:
-        hash_algo = (uint16_t)1;
-        if (ikmLen == 0) {
-            len = WC_SHA256_DIGEST_SIZE;
-        }
+            hash_algo = (uint16_t)1;
+            hash_len = WC_SHA256_DIGEST_SIZE;
             break;
-        #endif
-        #ifdef WOLFSSL_SHA384
+#endif
+#ifdef WOLFSSL_SHA384
         case WC_SHA384:
-        hash_algo = (uint16_t)2;
-        if (ikmLen == 0) {
-            len = WC_SHA384_DIGEST_SIZE;
-        }
+            hash_algo = (uint16_t)2;
+            hash_len = WC_SHA384_DIGEST_SIZE;
             break;
-        #endif
-        #ifdef WOLFSSL_TLS13_SHA512
+#endif
+#ifdef WOLFSSL_SHA512
         case WC_SHA512:
-        hash_algo = (uint16_t)4;
-        if (ikmLen == 0) {
-            len = WC_SHA512_DIGEST_SIZE;
-        }
+            hash_algo = (uint16_t)4;
+            hash_len = WC_SHA512_DIGEST_SIZE;
             break;
-        #endif
+#endif
         default:
             return BAD_FUNC_ARG;
             break;
-     }
+    }
 
     if (ikmLen == 0) {
-        ikmLen = len;
-        XMEMSET(ikm, 0, len);
+        ikmLen = hash_len;
+        XMEMSET(ikm, 0, hash_len);
     }
 
 #ifdef DEBUG_IOTSAFE
@@ -812,25 +944,39 @@ static int iotsafe_hkdf_extract(byte* prk, const byte* salt, word32 saltLen,
         WOLFSSL_MSG("Unexpected reply from HKDF extract");
         ret = WC_HW_E;
     } else {
-
-         ret = hexbuffer_conv(resp, prk, 32);
+        ret = hexbuffer_conv(resp, prk, hash_len);
         if (ret < 0)
             ret = WC_HW_E;
         else
             ret = 0;
     }
+    return ret;
+}
 
+/* Serialized entry point: holds iotsafe_mutex across the APDU
+ * transaction. */
+static int iotsafe_hkdf_extract(byte* prk, const byte* salt, word32 saltLen,
+       byte* ikm, word32 ikmLen, int digest)
+{
+    int ret;
+    if (iotsafe_lock() != 0)
+        return BAD_MUTEX_E;
+    ret = iotsafe_ensure_init_locked();
+    if (ret == 0)
+        ret = iotsafe_hkdf_extract_locked(prk, salt, saltLen, ikm, ikmLen,
+                digest);
+    iotsafe_unlock();
     return ret;
 }
 #endif
 
-static int iotsafe_sign_hash(byte *privkey_idx, uint16_t id_size,
+static int iotsafe_sign_hash_locked(byte *privkey_idx, uint16_t id_size,
         uint16_t hash_algo, uint8_t sign_algo, const byte *hash, word32 hashLen,
         byte *signature, word32 *sigLen)
 {
     byte mode_of_operation = IOTSAFE_MOO_SIGN_ONLY;
     uint16_t hash_algo_be = XHTONS(hash_algo);
-    int ret = WC_HW_E;
+    int ret = WC_NO_ERR_TRACE(WC_HW_E);
     char *resp;
     char R[2 * IOTSAFE_ECC_KSIZE + 1];
     char S[2 * IOTSAFE_ECC_KSIZE + 1];
@@ -886,19 +1032,27 @@ static int iotsafe_sign_hash(byte *privkey_idx, uint16_t id_size,
 #ifdef IOTSAFE_SIG_8BIT_LENGTH
             else if ((sig_hdr[0] == IOTSAFE_TAG_SIGNATURE_FIELD) &&
                        (sig_hdr[1] == 2 * IOTSAFE_ECC_KSIZE)) {
-                XSTRNCPY(R, resp + 4, IOTSAFE_ECC_KSIZE * 2);
-                XSTRNCPY(S, resp + 4 + IOTSAFE_ECC_KSIZE * 2,
-                        IOTSAFE_ECC_KSIZE * 2);
-                ret = wc_ecc_rs_to_sig(R, S, signature, sigLen);
+                if (ret < 4 + (int)(IOTSAFE_ECC_KSIZE * 4)) {
+                    ret = WC_HW_E;
+                } else {
+                    XSTRNCPY(R, resp + 4, IOTSAFE_ECC_KSIZE * 2);
+                    XSTRNCPY(S, resp + 4 + IOTSAFE_ECC_KSIZE * 2,
+                            IOTSAFE_ECC_KSIZE * 2);
+                    ret = wc_ecc_rs_to_sig(R, S, signature, sigLen);
+                }
             }
 #endif
             else if ((sig_hdr[0] == IOTSAFE_TAG_SIGNATURE_FIELD) &&
                        (sig_hdr[1] == 0) &&
                        (sig_hdr[2] == 2 * IOTSAFE_ECC_KSIZE)) {
-                XSTRNCPY(R, resp + 6, IOTSAFE_ECC_KSIZE * 2);
-                XSTRNCPY(S, resp + 6 + IOTSAFE_ECC_KSIZE * 2,
-                        IOTSAFE_ECC_KSIZE * 2);
-                ret = wc_ecc_rs_to_sig(R, S, signature, sigLen);
+                if (ret < 6 + (int)(IOTSAFE_ECC_KSIZE * 4)) {
+                    ret = WC_HW_E;
+                } else {
+                    XSTRNCPY(R, resp + 6, IOTSAFE_ECC_KSIZE * 2);
+                    XSTRNCPY(S, resp + 6 + IOTSAFE_ECC_KSIZE * 2,
+                            IOTSAFE_ECC_KSIZE * 2);
+                    ret = wc_ecc_rs_to_sig(R, S, signature, sigLen);
+                }
             } else {
                 ret = WC_HW_E;
                 WOLFSSL_MSG("Invalid response from EC sign update");
@@ -931,7 +1085,24 @@ static int iotsafe_sign_hash(byte *privkey_idx, uint16_t id_size,
     return ret;
 }
 
-static int iotsafe_verify_hash(byte *pubkey_idx, uint16_t id_size,
+/* Serialized entry point: holds iotsafe_mutex across the APDU
+ * transaction. */
+static int iotsafe_sign_hash(byte *privkey_idx, uint16_t id_size,
+        uint16_t hash_algo, uint8_t sign_algo, const byte *hash, word32 hashLen,
+        byte *signature, word32 *sigLen)
+{
+    int ret;
+    if (iotsafe_lock() != 0)
+        return BAD_MUTEX_E;
+    ret = iotsafe_ensure_init_locked();
+    if (ret == 0)
+        ret = iotsafe_sign_hash_locked(privkey_idx, id_size, hash_algo,
+                sign_algo, hash, hashLen, signature, sigLen);
+    iotsafe_unlock();
+    return ret;
+}
+
+static int iotsafe_verify_hash_locked(byte *pubkey_idx, uint16_t id_size,
         uint16_t hash_algo, uint8_t sign_algo,
         const byte *hash, word32 hashLen,
         const byte *sig, word32 sigLen,
@@ -1025,6 +1196,25 @@ static int iotsafe_verify_hash(byte *pubkey_idx, uint16_t id_size,
     return ret;
 }
 
+/* Serialized entry point: holds iotsafe_mutex across the APDU
+ * transaction. */
+static int iotsafe_verify_hash(byte *pubkey_idx, uint16_t id_size,
+        uint16_t hash_algo, uint8_t sign_algo,
+        const byte *hash, word32 hashLen,
+        const byte *sig, word32 sigLen,
+        int *result)
+{
+    int ret;
+    if (iotsafe_lock() != 0)
+        return BAD_MUTEX_E;
+    ret = iotsafe_ensure_init_locked();
+    if (ret == 0)
+        ret = iotsafe_verify_hash_locked(pubkey_idx, id_size, hash_algo,
+                sign_algo, hash, hashLen, sig, sigLen, result);
+    iotsafe_unlock();
+    return ret;
+}
+
 
 /*
  * Callbacks for IoT-Safe ECC/ECDH functions
@@ -1054,15 +1244,27 @@ static int wolfIoT_ecc_keygen(WOLFSSL* ssl, struct ecc_key* key,
 #endif
 
     if (iotsafe->enabled) {
-        ret = iotsafe_gen_keypair((byte *)&iotsafe->ecdh_keypair_slot,
-                IOTSAFE_ID_SIZE, key);
+        /* GEN_KEYPAIR and READ_KEY must run as a single transaction: the
+         * keypair slot is applet state shared with every other session
+         * using the same slot id. A concurrent regeneration landing
+         * between the two steps would export a public key that no longer
+         * matches the private key held in the slot. */
+        if (iotsafe_lock() != 0)
+            return BAD_MUTEX_E;
+        ret = iotsafe_ensure_init_locked();
         if (ret == 0) {
-            ret = iotsafe_get_public_key((byte *)&iotsafe->ecdh_keypair_slot,
-                    IOTSAFE_ID_SIZE, key);
-        } else if (ret > 0) {
-            /* Key has been stored during generation */
-            ret = 0;
+            ret = iotsafe_gen_keypair_locked(
+                    (byte *)&iotsafe->ecdh_keypair_slot, IOTSAFE_ID_SIZE, key);
+            if (ret == 0) {
+                ret = iotsafe_get_public_key_locked(
+                        (byte *)&iotsafe->ecdh_keypair_slot, IOTSAFE_ID_SIZE,
+                        key);
+            } else if (ret > 0) {
+                /* Key has been stored during generation */
+                ret = 0;
+            }
         }
+        iotsafe_unlock();
     } else {
         WC_RNG *rng = wolfSSL_GetRNG(ssl);
         ret = wc_ecc_init(key);
@@ -1076,6 +1278,7 @@ static int wolfIoT_ecc_keygen(WOLFSSL* ssl, struct ecc_key* key,
 }
 
 #ifdef HAVE_HKDF
+/* ikm will not be NULL. */
 static int wolfIoT_hkdf_extract(byte* prk, const byte* salt, word32 saltLen,
        byte* ikm, word32 ikmLen, int digest, void* ctx)
 {
@@ -1097,11 +1300,11 @@ static int wolfIoT_hkdf_extract(byte* prk, const byte* salt, word32 saltLen,
                 localSalt = tmp;
             }
     }
-    
-    ret = iotsafe_hkdf_extract(prk, localSalt, saltLen, ikm, ikmLen, digest);    
+
+    ret = iotsafe_hkdf_extract(prk, localSalt, saltLen, ikm, ikmLen, digest);
     (void)ctx;
     return ret;
-}       
+}
 #endif
 
 static int wolfIoT_ecc_sign(WOLFSSL* ssl,
@@ -1152,9 +1355,7 @@ static int wolfIoT_ecc_sign(WOLFSSL* ssl,
     if (ret == 0)
         ret = wc_ecc_sign_hash(in, inSz, out, outSz, rng, myKey);
     wc_ecc_free(myKey);
-#ifdef WOLFSSL_SMALL_STACK
-    XFREE(myKey, NULL, DYNAMIC_TYPE_ECC);
-#endif
+    WC_FREE_VAR_EX(myKey, NULL, DYNAMIC_TYPE_ECC);
 
     (void)ctx;
     return ret;
@@ -1211,10 +1412,8 @@ static int wolfIoT_ecc_verify(WOLFSSL *ssl,
 #endif
     ret = wc_ecc_init(key);
     if (ret != 0) {
-    #ifdef WOLFSSL_SMALL_STACK
-        XFREE(key, NULL, DYNAMIC_TYPE_ECC);
-        XFREE(sig_raw, NULL, DYNAMIC_TYPE_SIGNATURE);
-    #endif
+        WC_FREE_VAR_EX(key, NULL, DYNAMIC_TYPE_ECC);
+        WC_FREE_VAR_EX(sig_raw, NULL, DYNAMIC_TYPE_SIGNATURE);
         return ret;
     }
 
@@ -1231,20 +1430,35 @@ static int wolfIoT_ecc_verify(WOLFSSL *ssl,
             ret = wc_EccPublicKeyDecode(keyDer, &inOutIdx, key, keySz);
         }
         if (ret == 0) {
-            /* Store public key in IoT-safe slot */
-            ret = iotsafe_put_public_key(pubkey_slot, id_size, key);
-            if (ret < 0) {
-            #ifdef DEBUG_IOTSAFE
-                printf("IOTSAFE: put public key failed\n");
-            #endif
+            /* PutPublic and VerifyHash must run as a single transaction:
+             * the peer key slot is applet state shared with every other
+             * session using the same slot id, so a concurrent store
+             * landing between the two steps would check this signature
+             * against another session's key. */
+            if (iotsafe_lock() != 0) {
+                ret = BAD_MUTEX_E;
             }
-        }
-        if (ret == 0) {
-            /* Call iotsafe_verify_hash with ECC256 + SHA256 */
-            ret = iotsafe_verify_hash(pubkey_slot, id_size,
-                    IOTSAFE_HASH_SHA256, IOTSAFE_SIGN_ECDSA,
-                    hash, hashSz, sig_raw, 2 * IOTSAFE_ECC_KSIZE,
-                    result);
+            else {
+                ret = iotsafe_ensure_init_locked();
+                if (ret == 0) {
+                    /* Store public key in IoT-safe slot */
+                    ret = iotsafe_put_public_key_locked(pubkey_slot, id_size,
+                            key);
+                    if (ret < 0) {
+                    #ifdef DEBUG_IOTSAFE
+                        printf("IOTSAFE: put public key failed\n");
+                    #endif
+                    }
+                }
+                if (ret == 0) {
+                    /* Call iotsafe_verify_hash with ECC256 + SHA256 */
+                    ret = iotsafe_verify_hash_locked(pubkey_slot, id_size,
+                            IOTSAFE_HASH_SHA256, IOTSAFE_SIGN_ECDSA,
+                            hash, hashSz, sig_raw, 2 * IOTSAFE_ECC_KSIZE,
+                            result);
+                }
+                iotsafe_unlock();
+            }
         }
     }
     else {
@@ -1254,10 +1468,8 @@ static int wolfIoT_ecc_verify(WOLFSSL *ssl,
         }
     }
     wc_ecc_free(key);
-#ifdef WOLFSSL_SMALL_STACK
-    XFREE(key, NULL, DYNAMIC_TYPE_ECC);
-    XFREE(sig_raw, NULL, DYNAMIC_TYPE_SIGNATURE);
-#endif
+    WC_FREE_VAR_EX(key, NULL, DYNAMIC_TYPE_ECC);
+    WC_FREE_VAR_EX(sig_raw, NULL, DYNAMIC_TYPE_SIGNATURE);
     (void)ctx;
     return ret;
 }
@@ -1290,16 +1502,11 @@ static int wolfIoT_ecc_shared_secret(WOLFSSL* ssl, struct ecc_key* otherKey,
         side == WOLFSSL_CLIENT_END ? "client" : "server", otherKey->dp->id);
 #endif
 
-#ifdef WOLFSSL_SMALL_STACK
-    tmpKey = (ecc_key*)XMALLOC(sizeof(ecc_key), NULL, DYNAMIC_TYPE_ECC);
-    if (tmpKey == NULL)
-        return MEMORY_E;
-#endif
+    WC_ALLOC_VAR_EX(tmpKey, ecc_key, 1, NULL, DYNAMIC_TYPE_ECC,
+        return MEMORY_E);
     ret = wc_ecc_init(tmpKey);
     if (ret != 0) {
-    #ifdef WOLFSSL_SMALL_STACK
-        XFREE(tmpKey, NULL, DYNAMIC_TYPE_ECC);
-    #endif
+        WC_FREE_VAR_EX(tmpKey, NULL, DYNAMIC_TYPE_ECC);
         return ret;
     }
 
@@ -1308,17 +1515,29 @@ static int wolfIoT_ecc_shared_secret(WOLFSSL* ssl, struct ecc_key* otherKey,
         keypair_slot = (byte *)(&iotsafe->ecdh_keypair_slot);
         pubkey_idx = (byte *)(&iotsafe->peer_pubkey_slot);
 
+        /* Serialize the APDU transactions of this ECDH operation */
+        if (iotsafe_lock() != 0) {
+            wc_ecc_free(tmpKey);
+            WC_FREE_VAR_EX(tmpKey, NULL, DYNAMIC_TYPE_ECC);
+            return BAD_MUTEX_E;
+        }
+
+        /* The applet load, if still needed, runs under the same lock */
+        ret = iotsafe_ensure_init_locked();
+
         /* TLS v1.3 calls key gen already, so don't do it here */
-        if (wolfSSL_GetVersion(ssl) < WOLFSSL_TLSV1_3) {
+        if ((ret == 0) && (wolfSSL_GetVersion(ssl) < WOLFSSL_TLSV1_3)) {
             WOLFSSL_MSG("Generating ECDH key pair");
-            ret = iotsafe_gen_keypair(keypair_slot, id_size, tmpKey);
+            /* iotsafe_mutex is already held: call the locked impls */
+            ret = iotsafe_gen_keypair_locked(keypair_slot, id_size, tmpKey);
             if (ret < 0) {
                 WOLFSSL_MSG("Error generating IoT-safe key pair");
             }
             if (ret == 0) {
                 WOLFSSL_MSG("Public key not yet retrieved, using GetPublic");
                 /* Importing generated public key */
-                ret = iotsafe_get_public_key(keypair_slot, id_size, tmpKey);
+                ret = iotsafe_get_public_key_locked(keypair_slot, id_size,
+                        tmpKey);
                 if (ret < 0) {
                     WOLFSSL_MSG("Error retrieving public key via GetPublic");
                     ret = WC_HW_E;
@@ -1340,7 +1559,7 @@ static int wolfIoT_ecc_shared_secret(WOLFSSL* ssl, struct ecc_key* otherKey,
 
         if (ret == 0) {
             /* Store received public key from other endpoint in applet */
-            ret = iotsafe_put_public_key(pubkey_idx, id_size, otherKey);
+            ret = iotsafe_put_public_key_locked(pubkey_idx, id_size, otherKey);
             if (ret < 0) {
                 WOLFSSL_MSG("IoT-SAFE: Error in PutPublic");
             }
@@ -1370,6 +1589,8 @@ static int wolfIoT_ecc_shared_secret(WOLFSSL* ssl, struct ecc_key* otherKey,
         if (ret <= 0) {
             WOLFSSL_MSG("Unexpected reply in ECDH command");
             ret = WC_HW_E;
+        } else if ((word32)(ret / 2) > *outlen) {
+            ret = BUFFER_E;
         } else {
             int out_len = hex_to_bytes(resp, out, ret / 2);
             if (out_len < 0) {
@@ -1379,6 +1600,7 @@ static int wolfIoT_ecc_shared_secret(WOLFSSL* ssl, struct ecc_key* otherKey,
                 ret = 0;
             }
         }
+        iotsafe_unlock();
     } else {
         ecc_key*  privKey = NULL;
         ecc_key*  pubKey = NULL;
@@ -1413,9 +1635,7 @@ static int wolfIoT_ecc_shared_secret(WOLFSSL* ssl, struct ecc_key* otherKey,
         }
     }
     wc_ecc_free(tmpKey);
-#ifdef WOLFSSL_SMALL_STACK
-    XFREE(tmpKey, NULL, DYNAMIC_TYPE_ECC);
-#endif
+    WC_FREE_VAR_EX(tmpKey, NULL, DYNAMIC_TYPE_ECC);
     (void)ctx;
     return ret;
 }
@@ -1561,10 +1781,14 @@ void wolfIoTSafe_SetCSIM_write_cb(wolfSSL_IOTSafe_CSIM_write_cb wf)
 /* API to equip target wolfSSL CTX to the IoT-Safe subsystem. */
 int wolfSSL_CTX_iotsafe_enable(WOLFSSL_CTX *ctx)
 {
-    if ( !wolfIoT_initialized) {
-        if (iotsafe_init() < 0)
-            return WC_HW_E;
-    }
+    int ret;
+
+    if (iotsafe_lock() != 0)
+        return BAD_MUTEX_E;
+    ret = iotsafe_ensure_init_locked();
+    iotsafe_unlock();
+    if (ret != 0)
+        return ret;
 
 #if defined(HAVE_PK_CALLBACKS)
     #ifdef HAVE_ECC
@@ -1581,7 +1805,7 @@ int wolfSSL_CTX_iotsafe_enable(WOLFSSL_CTX *ctx)
     WOLFSSL_MSG("ECC callbacks set to IoT_safe interface");
     #endif
     #ifndef NO_RSA
-    /* wolfSSL_CTX_SetRsaSignCb(wolfIoT_rsa_sign);  // TODO: RSA callbacks */
+    /* wolfSSL_CTX_SetRsaSignCb(wolfIoT_rsa_sign); */ /* TODO: RSA callbacks */
     #endif
 #else
     (void)ctx;

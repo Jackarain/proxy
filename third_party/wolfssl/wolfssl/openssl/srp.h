@@ -1,12 +1,12 @@
 /* srp.h
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -24,6 +24,10 @@
 
 #include <wolfssl/wolfcrypt/srp.h>
 
+#ifndef OPENSSL_COEXIST
+
 #define SRP_MINIMAL_N SRP_MODULUS_MIN_BITS
+
+#endif /* !OPENSSL_COEXIST */
 
 #endif /* WOLFSSL_SRP_H_ */

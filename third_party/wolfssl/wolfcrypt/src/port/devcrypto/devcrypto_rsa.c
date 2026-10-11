@@ -1,12 +1,12 @@
 /* devcrypto_rsa.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -19,18 +19,11 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1335, USA
  */
 
-
-#ifdef HAVE_CONFIG_H
-    #include <config.h>
-#endif
-
-#include <wolfssl/wolfcrypt/settings.h>
+#include <wolfssl/wolfcrypt/libwolfssl_sources.h>
 
 #if defined(WOLFSSL_DEVCRYPTO_RSA)
 
-#include <wolfssl/wolfcrypt/error-crypt.h>
 #include <wolfssl/wolfcrypt/rsa.h>
-#include <wolfssl/wolfcrypt/logging.h>
 #include <wolfssl/wolfcrypt/port/devcrypto/wc_devcrypto.h>
 
 static void wc_SetupRsaPublic(struct crypt_kop* kop, WC_CRYPTODEV* dev,
@@ -96,11 +89,11 @@ static void wc_SetupRsaPrivate(struct crypt_kop* kop, WC_CRYPTODEV* dev,
 
     if (dpSz == 0 || dqSz == 0) {
         kop->crk_param[inIdx].crp_p     = n;
-        kop->crk_param[inIdx].crp_nbits = dSz * WOLFSSL_BIT_SIZE;
+        kop->crk_param[inIdx].crp_nbits = nSz * WOLFSSL_BIT_SIZE;
         inIdx++;
 
         kop->crk_param[inIdx].crp_p     = d;
-        kop->crk_param[inIdx].crp_nbits = nSz * WOLFSSL_BIT_SIZE;
+        kop->crk_param[inIdx].crp_nbits = dSz * WOLFSSL_BIT_SIZE;
         inIdx++;
     }
     else {
@@ -163,9 +156,10 @@ static int _PrivateOperation(const byte* in, word32 inlen, byte* out,
     byte* u    = NULL;
     byte* n    = NULL;
     word32 dSz, pSz, qSz, dpSz = 0, dqSz = 0, uSz = 0, nSz;
+    word32 dAllocSz;
 
     dev = &key->ctx;
-    dSz = nSz = wc_RsaEncryptSize(key);
+    dAllocSz = dSz = nSz = wc_RsaEncryptSize(key);
     pSz = qSz = nSz / 2;
     if (outlen < dSz) {
         WOLFSSL_MSG("Output buffer is too small");
@@ -181,7 +175,7 @@ static int _PrivateOperation(const byte* in, word32 inlen, byte* out,
     p = (byte*)XMALLOC(pSz, NULL, DYNAMIC_TYPE_TMP_BUFFER);
     q = (byte*)XMALLOC(qSz, NULL, DYNAMIC_TYPE_TMP_BUFFER);
     n = (byte*)XMALLOC(dSz, NULL, DYNAMIC_TYPE_TMP_BUFFER);
-    if (d == NULL || p == NULL || q == NULL) {
+    if (d == NULL || p == NULL || q == NULL || n == NULL) {
         ret = MEMORY_E;
     }
 
@@ -203,7 +197,7 @@ static int _PrivateOperation(const byte* in, word32 inlen, byte* out,
     if (!key->blackKey) { /* @TODO unexpected results with black key CRT form */
         if (ret == 0 && dpSz > 0) {
             dSz = 0; nSz = 0;
-            dq = (byte*)XMALLOC(dpSz, NULL, DYNAMIC_TYPE_TMP_BUFFER);
+            dq = (byte*)XMALLOC(dqSz, NULL, DYNAMIC_TYPE_TMP_BUFFER);
             dp = (byte*)XMALLOC(dpSz, NULL, DYNAMIC_TYPE_TMP_BUFFER);
             u  = (byte*)XMALLOC(uSz, NULL, DYNAMIC_TYPE_TMP_BUFFER);
             if (dq == NULL || dp == NULL || u == NULL) {
@@ -244,20 +238,13 @@ static int _PrivateOperation(const byte* in, word32 inlen, byte* out,
         }
     }
 
-    if (d != NULL)
-        XFREE(d, NULL, DYNAMIC_TYPE_TMP_BUFFER);
-    if (p != NULL)
-        XFREE(p, NULL, DYNAMIC_TYPE_TMP_BUFFER);
-    if (q != NULL)
-        XFREE(q, NULL, DYNAMIC_TYPE_TMP_BUFFER);
-    if (dp != NULL)
-        XFREE(dp, NULL, DYNAMIC_TYPE_TMP_BUFFER);
-    if (dq != NULL)
-        XFREE(dq, NULL, DYNAMIC_TYPE_TMP_BUFFER);
-    if (u != NULL)
-        XFREE(u,  NULL, DYNAMIC_TYPE_TMP_BUFFER);
-    if (n != NULL)
-        XFREE(n,  NULL, DYNAMIC_TYPE_TMP_BUFFER);
+    if (d)  { ForceZero(d, dAllocSz); XFREE(d, NULL, DYNAMIC_TYPE_TMP_BUFFER);  }
+    if (p)  { ForceZero(p, pSz);    XFREE(p, NULL, DYNAMIC_TYPE_TMP_BUFFER);  }
+    if (q)  { ForceZero(q, qSz);    XFREE(q, NULL, DYNAMIC_TYPE_TMP_BUFFER);  }
+    if (dp) { ForceZero(dp, dpSz);  XFREE(dp, NULL, DYNAMIC_TYPE_TMP_BUFFER); }
+    if (dq) { ForceZero(dq, dqSz);  XFREE(dq, NULL, DYNAMIC_TYPE_TMP_BUFFER); }
+    if (u)  { ForceZero(u, uSz);    XFREE(u, NULL, DYNAMIC_TYPE_TMP_BUFFER);  }
+    XFREE(n, NULL, DYNAMIC_TYPE_TMP_BUFFER);
 
     wc_DevCryptoFree(dev);
     return ret;
@@ -277,7 +264,6 @@ static int _PublicOperation(const byte* in, word32 inlen, byte* out,
 
     dev = &key->ctx;
 
-    key->ctx.cfd = -1;
     if (wc_DevCryptoCreate(dev, CRYPTO_ASYM_RSA_PUBLIC, NULL, 0) != 0) {
         WOLFSSL_MSG("Error getting RSA public session");
         return WC_DEVCRYPTO_E;
@@ -311,10 +297,8 @@ static int _PublicOperation(const byte* in, word32 inlen, byte* out,
     }
     wc_DevCryptoFree(&key->ctx);
 
-    if (m != NULL)
-        XFREE(m, NULL, DYNAMIC_TYPE_TMP_BUFFER);
-    if (e != NULL)
-        XFREE(e, NULL, DYNAMIC_TYPE_TMP_BUFFER);
+    XFREE(m, NULL, DYNAMIC_TYPE_TMP_BUFFER);
+    XFREE(e, NULL, DYNAMIC_TYPE_TMP_BUFFER);
     return ret;
 }
 
@@ -322,7 +306,7 @@ static int _PublicOperation(const byte* in, word32 inlen, byte* out,
 int wc_DevCrypto_RsaDecrypt(const byte* in, word32 inlen,
         byte* out, word32 outlen, RsaKey* key, int type)
 {
-    int ret = BAD_FUNC_ARG;
+    int ret = WC_NO_ERR_TRACE(BAD_FUNC_ARG);
 
     switch (type) {
         case RSA_PUBLIC_DECRYPT:
@@ -331,6 +315,9 @@ int wc_DevCrypto_RsaDecrypt(const byte* in, word32 inlen,
 
         case RSA_PRIVATE_DECRYPT:
             ret = _PrivateOperation(in, inlen, out, outlen, key);
+            break;
+        default:
+            ret = BAD_FUNC_ARG;
             break;
     }
 
@@ -341,7 +328,7 @@ int wc_DevCrypto_RsaDecrypt(const byte* in, word32 inlen,
 int wc_DevCrypto_RsaEncrypt(const byte* in, word32 inlen, byte* out,
         word32* outlen, RsaKey *key, int type)
 {
-    int ret = BAD_FUNC_ARG;
+    int ret = WC_NO_ERR_TRACE(BAD_FUNC_ARG);
 
     switch (type) {
         case RSA_PUBLIC_ENCRYPT:
@@ -350,6 +337,9 @@ int wc_DevCrypto_RsaEncrypt(const byte* in, word32 inlen, byte* out,
 
         case RSA_PRIVATE_ENCRYPT:
             ret = _PrivateOperation(in, inlen, out, *outlen, key);
+            break;
+        default:
+            ret = BAD_FUNC_ARG;
             break;
     }
     if (ret == 0) {
@@ -448,7 +438,6 @@ int wc_DevCrypto_MakeRsaKey(RsaKey* key, int size, long e, WC_RNG* rng)
     byte eBuf[8];
     int  eBufSz;
 
-    key->ctx.cfd = -1;
     nSz = dSz = bSz;
     cSz = pSz = qSz = dpSz = dqSz = bSz/2;
 
@@ -550,21 +539,13 @@ int wc_DevCrypto_MakeRsaKey(RsaKey* key, int size, long e, WC_RNG* rng)
     #endif
     }
 
-    if (p != NULL)
-        XFREE(p, key->heap, DYNAMIC_TYPE_TMP_BUFFER);
-    if (q != NULL)
-        XFREE(q, key->heap, DYNAMIC_TYPE_TMP_BUFFER);
-    if (dp != NULL)
-        XFREE(dp, key->heap, DYNAMIC_TYPE_TMP_BUFFER);
-    if (dq != NULL)
-        XFREE(dq, key->heap, DYNAMIC_TYPE_TMP_BUFFER);
-    if (c != NULL)
-        XFREE(c, key->heap, DYNAMIC_TYPE_TMP_BUFFER);
-    if (n != NULL)
-        XFREE(n, key->heap, DYNAMIC_TYPE_TMP_BUFFER);
-    if (d != NULL) {
-        XFREE(d, key->heap, DYNAMIC_TYPE_TMP_BUFFER);
-    }
+    if (p)  { ForceZero(p, pSz);   XFREE(p, key->heap, DYNAMIC_TYPE_TMP_BUFFER);  }
+    if (q)  { ForceZero(q, qSz);   XFREE(q, key->heap, DYNAMIC_TYPE_TMP_BUFFER);  }
+    if (dp) { ForceZero(dp, dpSz); XFREE(dp, key->heap, DYNAMIC_TYPE_TMP_BUFFER); }
+    if (dq) { ForceZero(dq, dqSz); XFREE(dq, key->heap, DYNAMIC_TYPE_TMP_BUFFER); }
+    if (c)  { ForceZero(c, cSz);   XFREE(c, key->heap, DYNAMIC_TYPE_TMP_BUFFER);  }
+    XFREE(n, key->heap, DYNAMIC_TYPE_TMP_BUFFER);
+    if (d)  { ForceZero(d, dSz);   XFREE(d, key->heap, DYNAMIC_TYPE_TMP_BUFFER);  }
 
     (void)rng;
     return ret;

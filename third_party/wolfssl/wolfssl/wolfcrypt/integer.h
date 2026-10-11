@@ -1,12 +1,12 @@
 /* integer.h
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -42,14 +42,12 @@
 
 #else
 
+#include <wolfssl/wolfcrypt/types.h>
+#include <wolfssl/wolfcrypt/error-crypt.h>
 #include <wolfssl/wolfcrypt/random.h>
 
-#ifndef CHAR_BIT
-    #if defined(WOLFSSL_LINUXKM)
-        #include <linux/limits.h>
-    #else
-        #include <limits.h>
-    #endif
+#if !defined(CHAR_BIT) && !defined(NO_LIMITS_H)
+    #include <limits.h>
 #endif
 
 #include <wolfssl/wolfcrypt/mpi_class.h>
@@ -162,9 +160,6 @@ extern "C" {
 #define MP_NEG        1   /* negative */
 
 #define MP_OKAY       0   /* ok result */
-#define MP_MEM       (-2) /* out of mem */
-#define MP_VAL       (-3) /* invalid input */
-#define MP_NOT_INF   (-4) /* point not at infinity */
 #define MP_RANGE      MP_NOT_INF
 
 #define MP_YES        1   /* yes response */
@@ -206,12 +201,21 @@ typedef int           mp_err;
 #define NEW_MP_INT_SIZE(name, bits, heap, type) \
     XMEMSET(name, 0, sizeof(mp_int))
 /* Dispose of static mp_int. */
-#define FREE_MP_INT_SIZE(name, heap, type) WC_DO_NOTHING
+#define FREE_MP_INT_SIZE(name, heap, type) \
+    do {                                   \
+        if ((name) != NULL) {              \
+            mp_free(name);                 \
+        }                                  \
+    } while (0)
 /* Initialize an mp_int. */
 #define INIT_MP_INT_SIZE(name, bits) \
     mp_init(name)
 /* Type to cast to when using size marcos. */
 #define MP_INT_SIZE     mp_int
+
+/* integer.h allocates full-sized mp_int buffers, so DECL_MP_INT_SIZE_DYN
+ * cannot be undersized for any 'bits' value -- no check is needed. */
+#define MP_BITS_OVER_MAX(bits, max) 0
 
 #ifdef HAVE_WOLF_BIGINT
     /* raw big integer */
@@ -222,6 +226,9 @@ typedef int           mp_err;
     } WC_BIGINT;
     #define WOLF_BIGINT_DEFINED
 #endif
+
+#define wc_mp_size_t int
+#define wc_mp_sign_t int
 
 /* the mp_int structure */
 typedef struct mp_int {
@@ -304,7 +311,7 @@ typedef int ltm_prime_callback(unsigned char *dst, int len, void *dat);
 extern const char *mp_s_rmap;
 #endif
 
-/* 6 functions needed by Rsa */
+/* functions needed by Rsa */
 MP_API int  mp_init (mp_int * a);
 MP_API void mp_clear (mp_int * a);
 MP_API void mp_free (mp_int * a);
@@ -312,7 +319,7 @@ MP_API void mp_forcezero(mp_int * a);
 MP_API int  mp_unsigned_bin_size(const mp_int * a);
 MP_API int  mp_read_unsigned_bin (mp_int * a, const unsigned char *b, int c);
 MP_API int  mp_to_unsigned_bin_at_pos(int x, mp_int *t, unsigned char *b);
-MP_API int  mp_to_unsigned_bin (mp_int * a, unsigned char *b);
+MP_API int  mp_to_unsigned_bin(const mp_int * a, unsigned char *b);
 #define mp_to_unsigned_bin_len_ct mp_to_unsigned_bin_len
 MP_API int  mp_to_unsigned_bin_len(mp_int * a, unsigned char *b, int c);
 MP_API int  mp_exptmod (mp_int * G, mp_int * X, mp_int * P, mp_int * Y);
@@ -323,7 +330,7 @@ MP_API int  mp_exptmod_ex (mp_int * G, mp_int * X, int digits, mp_int * P,
 /* functions added to support above needed, removed TOOM and KARATSUBA */
 MP_API int  mp_count_bits (const mp_int * a);
 MP_API int  mp_leading_bit (mp_int * a);
-MP_API int  mp_init_copy (mp_int * a, mp_int * b);
+MP_API int  mp_init_copy (mp_int * a, const mp_int * b);
 MP_API int  mp_copy (const mp_int * a, mp_int * b);
 MP_API int  mp_grow (mp_int * a, int size);
 MP_API int  mp_div_2d (mp_int * a, int b, mp_int * c, mp_int * d);
@@ -342,8 +349,9 @@ MP_API int  mp_abs (mp_int * a, mp_int * b);
 MP_API int  mp_invmod (mp_int * a, mp_int * b, mp_int * c);
 int  fast_mp_invmod (mp_int * a, mp_int * b, mp_int * c);
 MP_API int  mp_invmod_slow (mp_int * a, mp_int * b, mp_int * c);
-MP_API int  mp_cmp_mag (mp_int * a, mp_int * b);
-MP_API int  mp_cmp (mp_int * a, mp_int * b);
+MP_API int  mp_cmp_mag (const mp_int * a, const mp_int * b);
+MP_API int  mp_cmp (const mp_int * a, const mp_int * b);
+#define mp_cmp_ct(a, b, n) mp_cmp(a, b)
 MP_API int  mp_cmp_d(mp_int * a, mp_digit b);
 MP_API int  mp_set (mp_int * a, mp_digit b);
 MP_API int  mp_is_bit_set (mp_int * a, mp_digit b);

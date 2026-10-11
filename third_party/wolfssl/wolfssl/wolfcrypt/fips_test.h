@@ -1,12 +1,12 @@
 /* fips_test.h
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -31,8 +31,21 @@
     extern "C" {
 #endif
 
+/* Added for FIPS v7.0.0 or later */
+#if defined(FIPS_VERSION_GE) && FIPS_VERSION_GE(7,0)
+    /* The v7 integrity test is HMAC-SHA-512 keyed with a full SHA-512
+     * block-size (128-byte) key, so the key is used as-is rather than being
+     * hashed down by HMAC. This makes FIPS_CAST_HMAC_SHA2_512 boot-critical;
+     * it was FIPS_CAST_HMAC_SHA2_256 through v6.0.0. */
+    #ifndef WOLFSSL_SHA512
+        #error FIPS v7 in core integrity check requires SHA2-512
+    #endif
+    #define FIPS_IN_CORE_DIGEST_SIZE 64
+    #define FIPS_IN_CORE_HASH_TYPE   WC_SHA512
+    #define FIPS_IN_CORE_KEY_SZ      128
+    #define FIPS_IN_CORE_VERIFY_SZ   FIPS_IN_CORE_KEY_SZ
 /* Added for FIPS v5.3 or later */
-#if defined(FIPS_VERSION_GE) && FIPS_VERSION_GE(5,3)
+#elif defined(FIPS_VERSION_GE) && FIPS_VERSION_GE(5,3)
     /* Determine FIPS in core hash type and size */
     #ifndef NO_SHA256
         #define FIPS_IN_CORE_DIGEST_SIZE 32
@@ -51,41 +64,73 @@
 
 
 enum FipsCastId {
-    FIPS_CAST_AES_CBC,
-    FIPS_CAST_AES_GCM,
-    FIPS_CAST_HMAC_SHA1,
-    FIPS_CAST_HMAC_SHA2_256,
-    FIPS_CAST_HMAC_SHA2_512,
-    FIPS_CAST_HMAC_SHA3_256,
-    FIPS_CAST_DRBG,
-    FIPS_CAST_RSA_SIGN_PKCS1v15,
-    FIPS_CAST_ECC_CDH,
-    FIPS_CAST_ECC_PRIMITIVE_Z,
-    FIPS_CAST_DH_PRIMITIVE_Z,
-    FIPS_CAST_ECDSA,
-    FIPS_CAST_KDF_TLS12,
-    FIPS_CAST_KDF_TLS13,
-    FIPS_CAST_KDF_SSH,
-    FIPS_CAST_COUNT
+    /* v5.2.0 & v5.2.1 + */
+    FIPS_CAST_AES_CBC           =  0,
+    FIPS_CAST_AES_GCM           =  1,
+    FIPS_CAST_HMAC_SHA1         =  2,
+    FIPS_CAST_HMAC_SHA2_256     =  3,
+    FIPS_CAST_HMAC_SHA2_512     =  4,
+    FIPS_CAST_HMAC_SHA3_256     =  5,
+    FIPS_CAST_DRBG              =  6,
+    FIPS_CAST_RSA_SIGN_PKCS1v15 =  7,
+    FIPS_CAST_ECC_CDH           =  8,
+    FIPS_CAST_ECC_PRIMITIVE_Z   =  9,
+    FIPS_CAST_DH_PRIMITIVE_Z    = 10,
+    FIPS_CAST_ECDSA             = 11,
+    FIPS_CAST_KDF_TLS12         = 12,
+    FIPS_CAST_KDF_TLS13         = 13,
+    FIPS_CAST_KDF_SSH           = 14,
+    /* v6.0.0 + */
+    FIPS_CAST_KDF_SRTP          = 15,
+    FIPS_CAST_ED25519           = 16,
+    FIPS_CAST_ED448             = 17,
+    FIPS_CAST_PBKDF2            = 18,
+    /* v7.0.0 + */
+    FIPS_CAST_AES_ECB           = 19,
+    FIPS_CAST_ML_KEM            = 20,
+    FIPS_CAST_ML_DSA            = 21,
+    FIPS_CAST_LMS               = 22,
+    FIPS_CAST_XMSS              = 23,
+    FIPS_CAST_DRBG_SHA512       = 24,
+    FIPS_CAST_SLH_DSA           = 25,
+    /* Vendor-elected enhanced self-tests, appended so the ids above keep
+     * their v7.0.0 values. */
+    FIPS_CAST_AES_CMAC          = 26,
+    FIPS_CAST_SHAKE             = 27,
+    FIPS_CAST_AES_KW            = 28,
+    FIPS_CAST_COUNT             = 29
 };
+#define WC_FIPS_ENUM_CAST_ID_DEFINED
 
 enum FipsCastStateId {
-    FIPS_CAST_STATE_INIT,
-    FIPS_CAST_STATE_PROCESSING,
-    FIPS_CAST_STATE_SUCCESS,
-    FIPS_CAST_STATE_FAILURE
+    FIPS_CAST_STATE_INIT        = 0,
+    FIPS_CAST_STATE_PROCESSING  = 1,
+    FIPS_CAST_STATE_SUCCESS     = 2,
+    FIPS_CAST_STATE_FAILURE     = 3
 };
 
 enum FipsModeId {
-    FIPS_MODE_INIT = 0,
-    FIPS_MODE_NORMAL = 1,
-    FIPS_MODE_DEGRADED = 2,
-    FIPS_MODE_FAILED = 3
+    FIPS_MODE_INIT              = 0,
+    FIPS_MODE_NORMAL            = 1,
+    FIPS_MODE_DEGRADED          = 2,
+    FIPS_MODE_FAILED            = 3
 };
-
 
 /* FIPS failure callback */
 typedef void(*wolfCrypt_fips_cb)(int ok, int err, const char* hash);
+
+#ifdef WOLFSSL_FIPS_DEV_NO_POST
+    #define wc_RunAllCast_fips() 0
+    static WC_INLINE int wolfCrypt_SetCb_fips(wolfCrypt_fips_cb cbf) {
+        (void)cbf;
+        return 0;
+    }
+    #define wolfCrypt_GetVersion_fips() "wolfCrypt DEV_NO_POST"
+    #define wolfCrypt_GetStatus_fips() 0
+    #define wolfCrypt_GetCoreHash_fips() ""
+    #define wolfCrypt_IntegrityTest_fips() 0
+    #define fipsEntry() WC_DO_NOTHING
+#else /* !WOLFSSL_FIPS_DEV_NO_POST */
 
 /* Public set function */
 WOLFSSL_API int wolfCrypt_SetCb_fips(wolfCrypt_fips_cb cbf);
@@ -94,6 +139,7 @@ WOLFSSL_API int wolfCrypt_SetCb_fips(wolfCrypt_fips_cb cbf);
 WOLFSSL_API int wolfCrypt_GetStatus_fips(void);
 WOLFSSL_API int wolfCrypt_GetMode_fips(void);
 WOLFSSL_API const char* wolfCrypt_GetCoreHash_fips(void);
+WOLFSSL_API const char* wolfCrypt_GetRawComputedHash_fips(void);
 
 #ifdef HAVE_FORCE_FIPS_FAILURE
     /* Public function to force failure mode for operational testing */
@@ -107,6 +153,15 @@ WOLFSSL_LOCAL int DoKnownAnswerTests(char* base16_hash, int base16_hashSz); /* F
 WOLFSSL_API int wc_RunCast_fips(int type);
 WOLFSSL_API int wc_GetCastStatus_fips(int type);
 WOLFSSL_API int wc_RunAllCast_fips(void);
+
+#ifdef NO_ATTRIBUTE_CONSTRUCTOR
+    /* NOTE: Must be called in OS initialization section outside user control
+     * and must prove during operational testing/code review with the lab that
+     * this is outside user-control if called by the OS */
+    void fipsEntry(void);
+#endif
+
+#endif /* !WOLFSSL_FIPS_DEV_NO_POST */
 
 #ifdef __cplusplus
     } /* extern "C" */

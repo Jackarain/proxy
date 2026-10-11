@@ -2,18 +2,18 @@
  *
  * Contributed by Johnson Controls Tyco IP Holdings LLP.
  *
- * Use of this Software is subject to the GPLv2 License
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
@@ -159,10 +159,8 @@ static void RX64_HashFree(wolfssl_RX64_HW_Hash* hash)
     if (hash == NULL)
         return;
 
-    if (hash->msg != NULL) {
-        XFREE(hash->msg, hash->heap, DYNAMIC_TYPE_TMP_BUFFER);
-        hash->msg = NULL;
-    }
+    XFREE(hash->msg, hash->heap, DYNAMIC_TYPE_TMP_BUFFER);
+    hash->msg = NULL;
 }
 
 /**
@@ -318,6 +316,23 @@ static int RX64_HashGet(wolfssl_RX64_HW_Hash* hash, byte* out)
         hash->sha_type != RX64_SHA256)
     {
         return BAD_FUNC_ARG;
+    }
+
+    /* RX64 HW SHA rejects empty input; return the documented empty-message
+     * digest instead. This matches the special case in RX64_HashFinal so
+     * callers like wc_Sha256GetHash on a freshly-initialised state succeed. */
+    if ((hash->msg == NULL) && (hash->len == 0) && (hash->used == 0))
+    {
+        if (hash->sha_type == RX64_SHA1) {
+            XMEMCPY(out, DefaultShaHashData, sizeof(DefaultShaHashData));
+        }
+        else if (hash->sha_type == RX64_SHA224) {
+            XMEMCPY(out, DefaultSha224HashData, sizeof(DefaultSha224HashData));
+        }
+        else if (hash->sha_type == RX64_SHA256) {
+            XMEMCPY(out, DefaultSha256HashData, sizeof(DefaultSha256HashData));
+        }
+        return 0;
     }
 
     ret = RX64_ShaCalc(hash->msg, hash->len, out, hash->sha_type);

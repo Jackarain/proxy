@@ -1,12 +1,12 @@
 /* wolfcaam_fsl_nxp.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -151,6 +151,9 @@ static int wc_CAAM_CommonHash(caam_handle_t* hndl, caam_hash_ctx_t *ctx,
             /* input not aligned */
             tmpIn = (byte*)XMALLOC(inSz + CAAM_BUFFER_ALIGN, NULL,
                 DYNAMIC_TYPE_TMP_BUFFER);
+            if (tmpIn == NULL) {
+                return MEMORY_E;
+            }
             alignedIn = tmpIn + (CAAM_BUFFER_ALIGN -
                 ((wc_ptr_t)tmpIn % CAAM_BUFFER_ALIGN));
             XMEMCPY(alignedIn, in, inSz);
@@ -160,9 +163,7 @@ static int wc_CAAM_CommonHash(caam_handle_t* hndl, caam_hash_ctx_t *ctx,
         }
 
         status = CAAM_HASH_Update(ctx, alignedIn, inSz);
-        if (tmpIn != NULL) {
-            XFREE(tmpIn, NULL, DYNAMIC_TYPE_TMP_BUFFER);
-        }
+        XFREE(tmpIn, NULL, DYNAMIC_TYPE_TMP_BUFFER);
         if (status != kStatus_Success) {
             return WC_HW_E;
         }
@@ -178,6 +179,9 @@ static int wc_CAAM_CommonHash(caam_handle_t* hndl, caam_hash_ctx_t *ctx,
             /* input not aligned */
             tmpOut = (byte*)XMALLOC(sz + CAAM_BUFFER_ALIGN, NULL,
                 DYNAMIC_TYPE_TMP_BUFFER);
+            if (tmpOut == NULL) {
+                return MEMORY_E;
+            }
             alignedOut = tmpOut + (CAAM_BUFFER_ALIGN -
                 ((wc_ptr_t)tmpOut % CAAM_BUFFER_ALIGN));
         }
@@ -273,8 +277,8 @@ static int DoAesCBC(unsigned int args[4], CAAM_BUFFER *buf, int sz)
 
         /* store updated CBC state */
         XMEMCPY((byte*)buf[4].TheAddress,
-                (byte*)buf[2].TheAddress + buf[2].Length - AES_BLOCK_SIZE,
-                AES_BLOCK_SIZE);
+                (byte*)buf[2].TheAddress + buf[2].Length - WC_AES_BLOCK_SIZE,
+                WC_AES_BLOCK_SIZE);
     }
     else {
         status = CAAM_AES_EncryptCbc(CAAM, &hndl,
@@ -284,8 +288,8 @@ static int DoAesCBC(unsigned int args[4], CAAM_BUFFER *buf, int sz)
 
         /* store updated CBC state */
         XMEMCPY((byte*)buf[4].TheAddress,
-            (byte*)buf[3].TheAddress + buf[3].Length - AES_BLOCK_SIZE,
-            AES_BLOCK_SIZE);
+            (byte*)buf[3].TheAddress + buf[3].Length - WC_AES_BLOCK_SIZE,
+            WC_AES_BLOCK_SIZE);
     }
 
     if (status != kStatus_Success) {
@@ -310,6 +314,9 @@ static int DoAesCTR(unsigned int args[4], CAAM_BUFFER *buf, int sz)
         /* input not aligned */
         tmpIn = (byte*)XMALLOC(buf[2].Length + CAAM_BUFFER_ALIGN, NULL,
             DYNAMIC_TYPE_TMP_BUFFER);
+        if (tmpIn == NULL) {
+            return MEMORY_E;
+        }
         alignedIn = tmpIn + (CAAM_BUFFER_ALIGN -
             ((wc_ptr_t)tmpIn % CAAM_BUFFER_ALIGN));
         XMEMCPY(alignedIn, (byte*)buf[2].TheAddress, buf[2].Length);
@@ -322,6 +329,10 @@ static int DoAesCTR(unsigned int args[4], CAAM_BUFFER *buf, int sz)
         /* output not aligned */
         tmpOut = (byte*)XMALLOC(buf[3].Length + CAAM_BUFFER_ALIGN, NULL,
             DYNAMIC_TYPE_TMP_BUFFER);
+        if (tmpOut == NULL) {
+            XFREE(tmpIn, NULL, DYNAMIC_TYPE_TMP_BUFFER);
+            return MEMORY_E;
+        }
         alignedOut = tmpOut + (CAAM_BUFFER_ALIGN -
             ((wc_ptr_t)tmpOut % CAAM_BUFFER_ALIGN));
     }
@@ -339,9 +350,7 @@ static int DoAesCTR(unsigned int args[4], CAAM_BUFFER *buf, int sz)
         XMEMCPY((byte*)buf[3].TheAddress, alignedOut, buf[3].Length);
         XFREE(tmpOut, NULL, DYNAMIC_TYPE_TMP_BUFFER);
     }
-    if (tmpIn != NULL) {
-        XFREE(tmpIn, NULL, DYNAMIC_TYPE_TMP_BUFFER);
-    }
+    XFREE(tmpIn, NULL, DYNAMIC_TYPE_TMP_BUFFER);
     if (status != kStatus_Success) {
         return -1;
     }
@@ -447,12 +456,14 @@ int wc_CAAM_EccSign(const byte* in, int inlen, byte* out, word32* outlen,
         if (key->blackKey == CAAM_BLACK_KEY_CCM) {
             if (mp_to_unsigned_bin_len(wc_ecc_key_get_priv(key), k,
                     kSz + WC_CAAM_MAC_SZ) != MP_OKAY) {
+                ForceZero(k, sizeof(k));
                 return MP_TO_E;
             }
         }
         else {
             if (mp_to_unsigned_bin_len(wc_ecc_key_get_priv(key), k, kSz) !=
                     MP_OKAY) {
+                ForceZero(k, sizeof(k));
                 return MP_TO_E;
             }
         }
@@ -461,6 +472,7 @@ int wc_CAAM_EccSign(const byte* in, int inlen, byte* out, word32* outlen,
     ecdsel = GetECDSEL(dp->id);
     if (ecdsel == 0) {
         WOLFSSL_MSG("unknown key type or size");
+        ForceZero(k, sizeof(k));
         return CRYPTOCB_UNAVAILABLE;
     }
 
@@ -473,6 +485,7 @@ int wc_CAAM_EccSign(const byte* in, int inlen, byte* out, word32* outlen,
             break;
         default:
             WOLFSSL_MSG("unknown/unsupported key type");
+            ForceZero(k, sizeof(k));
             return BAD_FUNC_ARG;
     }
 
@@ -480,6 +493,10 @@ int wc_CAAM_EccSign(const byte* in, int inlen, byte* out, word32* outlen,
         /* input not aligned */
         tmpIn = (byte*)XMALLOC(inlen + CAAM_BUFFER_ALIGN, NULL,
             DYNAMIC_TYPE_TMP_BUFFER);
+        if (tmpIn == NULL) {
+            ForceZero(k, sizeof(k));
+            return MEMORY_E;
+        }
         alignedIn = tmpIn + (CAAM_BUFFER_ALIGN -
             ((wc_ptr_t)tmpIn % CAAM_BUFFER_ALIGN));
         XMEMCPY(alignedIn, in, inlen);
@@ -491,9 +508,7 @@ int wc_CAAM_EccSign(const byte* in, int inlen, byte* out, word32* outlen,
 
     status = CAAM_ECC_Sign(CAAM, &hndl, k, kSz, alignedIn, inlen, r, rSz, s,
         sSz, ecdsel, enc);
-    if (tmpIn != NULL) {
-        XFREE(tmpIn, NULL, DYNAMIC_TYPE_TMP_BUFFER);
-    }
+    XFREE(tmpIn, NULL, DYNAMIC_TYPE_TMP_BUFFER);
 
     if (status != kStatus_Success) {
         ret = -1;
@@ -514,10 +529,12 @@ int wc_CAAM_EccSign(const byte* in, int inlen, byte* out, word32* outlen,
         mp_free(&mps);
         if (ret != 0) {
             WOLFSSL_MSG("Issue converting to signature");
+            ForceZero(k, sizeof(k));
             return -1;
         }
     }
 
+    ForceZero(k, sizeof(k));
     return ret;
 }
 
@@ -594,6 +611,9 @@ static int wc_CAAM_EccVerify_ex(mp_int* r, mp_int *s, const byte* hash,
         /* input not aligned */
         tmpIn = (byte*)XMALLOC(hashlen + CAAM_BUFFER_ALIGN, NULL,
             DYNAMIC_TYPE_TMP_BUFFER);
+        if (tmpIn == NULL) {
+            return MEMORY_E;
+        }
         alignedIn = tmpIn + (CAAM_BUFFER_ALIGN -
             ((wc_ptr_t)tmpIn % CAAM_BUFFER_ALIGN));
         XMEMCPY(alignedIn, hash, hashlen);
@@ -604,9 +624,7 @@ static int wc_CAAM_EccVerify_ex(mp_int* r, mp_int *s, const byte* hash,
 
     status = CAAM_ECC_Verify(CAAM, &hndl, qxy, qxLen+qyLen, rbuf,
         keySz, sbuf, keySz, alignedIn, hashlen, ecdsel);
-    if (tmpIn != NULL) {
-        XFREE(tmpIn, NULL, DYNAMIC_TYPE_TMP_BUFFER);
-    }
+    XFREE(tmpIn, NULL, DYNAMIC_TYPE_TMP_BUFFER);
     *res = 0;
     if (status == kStatus_Success) {
         *res = 1;
@@ -705,22 +723,26 @@ int wc_CAAM_Ecdh(ecc_key* private_key, ecc_key* public_key, byte* out,
     if (private_key->blackKey == CAAM_BLACK_KEY_CCM) {
         if (mp_to_unsigned_bin_len(wc_ecc_key_get_priv(private_key), k,
                 keySz + WC_CAAM_MAC_SZ) != MP_OKAY) {
+            ForceZero(k, sizeof(k));
             return MP_TO_E;
         }
     }
     else {
         if (mp_to_unsigned_bin_len(wc_ecc_key_get_priv(private_key), k, keySz)
                 != MP_OKAY) {
+            ForceZero(k, sizeof(k));
             return MP_TO_E;
         }
     }
 
     if (*outlen < (word32)keySz) {
+        ForceZero(k, sizeof(k));
         return -1;
     }
 
     status = CAAM_ECC_ECDH(CAAM, &hndl, k, keySz, qxy, keySz*2, out, keySz,
         ecdsel, enc);
+    ForceZero(k, sizeof(k));
     if (status == kStatus_Success) {
         *outlen = keySz;
         return MP_OKAY;
@@ -770,17 +792,22 @@ int wc_CAAM_MakeEccKey(WC_RNG* rng, int keySize, ecc_key* key, int curveId,
         return CRYPTOCB_UNAVAILABLE;
     }
 
-    if (key->blackKey == CAAM_BLACK_KEY_ECB) {
+    switch (key->blackKey) {
+    case CAAM_BLACK_KEY_ECB:
         enc = CAAM_PKHA_ENC_PRI_AESECB;
-    }
-
-    if (key->blackKey == 0) {
+        break;
+    case 0:
     #ifdef WOLFSSL_CAAM_NO_BLACK_KEY
         enc = 0;
     #else
         key->blackKey = CAAM_BLACK_KEY_ECB;
         enc = CAAM_PKHA_ENC_PRI_AESECB;
     #endif
+        break;
+    default:
+        WOLFSSL_MSG("unknown/unsupported key type");
+        ForceZero(k, sizeof(k));
+        return BAD_FUNC_ARG;
     }
 
     status = CAAM_ECC_Keygen(CAAM, &hndl, k, &kSz, xy, &xySz, ecdsel,
@@ -795,6 +822,7 @@ int wc_CAAM_MakeEccKey(WC_RNG* rng, int keySize, ecc_key* key, int curveId,
         ret = -1;
     }
 
+    ForceZero(k, sizeof(k));
     return ret;
 }
 #endif /* WOLFSSL_KEY_GEN */
@@ -857,8 +885,8 @@ int SynchronousSendRequest(int type, unsigned int args[4], CAAM_BUFFER *buf,
 #endif
 
     default:
-        WOLFSSL_MSG("Unknown/unsupported type");
-        return -1;
+        WOLFSSL_MSG("Unknown/unsupported type. Returning unavailable");
+        return CRYPTOCB_UNAVAILABLE;
     }
 
     if (ret != 0) {

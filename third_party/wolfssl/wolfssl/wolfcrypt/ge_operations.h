@@ -1,12 +1,12 @@
 /* ge_operations.h
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -27,9 +27,9 @@
 
 #include <wolfssl/wolfcrypt/settings.h>
 
-#ifdef HAVE_ED25519
-
 #include <wolfssl/wolfcrypt/fe_operations.h>
+
+#if defined(HAVE_ED25519) || defined(WOLFSSL_CURVE25519_USE_ED25519)
 
 /*
 ge means group element.
@@ -85,6 +85,13 @@ WOLFSSL_LOCAL void sc_reduce(byte* s);
 WOLFSSL_LOCAL void sc_muladd(byte* s, const byte* a, const byte* b,
                              const byte* c);
 WOLFSSL_LOCAL void ge_tobytes(unsigned char *s,const ge_p2 *h);
+#ifdef HAVE_ED25519_VERIFY
+#if !defined(ED25519_SMALL) && defined(CURVED25519_ASM_64BIT)
+WOLFSSL_LOCAL void ge_tobytes_nct(unsigned char *s,const ge_p2 *h);
+#else
+#define ge_tobytes_nct ge_tobytes
+#endif
+#endif /* HAVE_ED25519_VERIFY */
 #ifndef GE_P3_TOBYTES_IMPL
 #define ge_p3_tobytes(s, h) ge_tobytes((s), (const ge_p2 *)(h))
 #else
@@ -112,18 +119,47 @@ typedef struct {
   ge Z;
   ge T2d;
 } ge_cached;
-#endif /* !ED25519_SMALL */
 
 #ifdef CURVED25519_ASM
-void ge_p1p1_to_p2(ge_p2 *r, const ge_p1p1 *p);
-void ge_p1p1_to_p3(ge_p3 *r, const ge_p1p1 *p);
-void ge_p2_dbl(ge_p1p1 *r, const ge_p2 *p);
-#define ge_p3_dbl(r, p)     ge_p2_dbl((ge_p1p1 *)(r), (ge_p2 *)(p))
-void ge_madd(ge_p1p1 *r, const ge_p3 *p, const ge_precomp *q);
-void ge_msub(ge_p1p1 *r, const ge_p3 *p, const ge_precomp *q);
-void ge_add(ge_p1p1 *r, const ge_p3 *p, const ge_cached *q);
-void ge_sub(ge_p1p1 *r, const ge_p3 *p, const ge_cached *q);
+WOLFSSL_LOCAL void ge_p1p1_to_p2(ge_p2 *r, const ge_p1p1 *p);
+WOLFSSL_LOCAL void ge_p1p1_to_p3(ge_p3 *r, const ge_p1p1 *p);
+WOLFSSL_LOCAL void ge_p2_dbl(ge_p1p1 *r, const ge_p2 *p);
+#define ge_p3_dbl(r, p)     ge_p2_dbl((ge_p1p1 *)(r), (const ge_p2 *)(p))
+WOLFSSL_LOCAL void ge_madd(ge_p1p1 *r, const ge_p3 *p, const ge_precomp *q);
+WOLFSSL_LOCAL void ge_msub(ge_p1p1 *r, const ge_p3 *p, const ge_precomp *q);
+WOLFSSL_LOCAL void ge_add(ge_p1p1 *r, const ge_p3 *p, const ge_cached *q);
+WOLFSSL_LOCAL void ge_sub(ge_p1p1 *r, const ge_p3 *p, const ge_cached *q);
+
+/* AVX512-IFMA double scalar multiplication.  The guards mirror the ones the
+ * assembly self-enables with in fe_x25519_asm.S, so that the C dispatch and
+ * the assembly agree on whether the function exists.  Runtime CPUID decides
+ * whether it is called.
+ *
+ * HAVE_ED25519 is one of them: the assembly only emits these two inside it.
+ * A curve25519-only build still compiles ge_double_scalarmult_vartime -
+ * WOLFSSL_CURVE25519_USE_ED25519 brings the file in - but nothing calls it
+ * there, so it just uses the C implementation.
+ *
+ * NO_AVX2_SUPPORT is another: the assembly nests all of the AVX512 code
+ * inside the block it self-enables HAVE_INTEL_AVX2 with. */
+#if defined(CURVED25519_X64) && defined(HAVE_ED25519) && \
+    !defined(NO_AVX2_SUPPORT) && !defined(NO_AVX512_SUPPORT) && \
+    !defined(NO_AVX512_IFMA_SUPPORT)
+    #define WOLFSSL_GE_HAVE_INTEL_AVX512_IFMA
+/* Works out the window digits and the table of odd multiples of A itself -
+ * both are cheaper in limb form than converted from the C representation.
+ * Everything it works on lives in the caller's buffer, so that the caller
+ * decides between the stack and the heap; see GE_DSM_IFMA_TMP_SIZE. */
+WOLFSSL_LOCAL int ge_double_scalarmult_vartime_avx512_ifma(ge_p2 *r,
+    const unsigned char *a, const ge_p3 *A,
+    const unsigned char *b, const ge_precomp *Bi, byte *buf);
+/* Folds the reduction with VPMULLQ - one uop on AMD, several on Intel. */
+WOLFSSL_LOCAL int ge_double_scalarmult_vartime_avx512_ifma_dq(ge_p2 *r,
+    const unsigned char *a, const ge_p3 *A,
+    const unsigned char *b, const ge_precomp *Bi, byte *buf);
 #endif
+#endif
+#endif /* !ED25519_SMALL */
 
 #ifdef __cplusplus
     }    /* extern "C" */

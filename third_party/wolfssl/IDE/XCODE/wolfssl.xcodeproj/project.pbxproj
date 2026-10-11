@@ -253,18 +253,19 @@
 		700F0C0A2A2FBC5100755BA7 /* curve448.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 700F0BE32A2FBC1500755BA7 /* curve448.h */; };
 		700F0C0B2A2FBC5100755BA7 /* curve25519.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 700F0BE52A2FBC1500755BA7 /* curve25519.h */; };
 		700F0C0C2A2FBC5100755BA7 /* dilithium.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 700F0BEF2A2FBC1500755BA7 /* dilithium.h */; };
+		700F0BEF2A2FBC1500755BC0 /* wc_mldsa.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 700F0BEF2A2FBC1500755BC1 /* wc_mldsa.h */; };
 		700F0C0D2A2FBC5100755BA7 /* eccsi.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 700F0BF72A2FBC1600755BA7 /* eccsi.h */; };
 		700F0C0E2A2FBC5100755BA7 /* ed448.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 700F0BF82A2FBC1600755BA7 /* ed448.h */; };
 		700F0C0F2A2FBC5100755BA7 /* ed25519.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 700F0BF42A2FBC1600755BA7 /* ed25519.h */; };
-		700F0C102A2FBC5100755BA7 /* ext_kyber.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 700F0BF92A2FBC1600755BA7 /* ext_kyber.h */; };
 		700F0C112A2FBC5100755BA7 /* falcon.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 700F0C022A2FBC1600755BA7 /* falcon.h */; };
+		700F0C9A2A2FBC5100755BA7 /* wc_slhdsa.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 700F0C992A2FBC1600755BA7 /* wc_slhdsa.h */; };
 		700F0C122A2FBC5100755BA7 /* fe_448.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 700F0BEB2A2FBC1500755BA7 /* fe_448.h */; };
 		700F0C132A2FBC5100755BA7 /* fe_operations.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 700F0BF62A2FBC1600755BA7 /* fe_operations.h */; };
 		700F0C142A2FBC5100755BA7 /* fips.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 700F0C002A2FBC1600755BA7 /* fips.h */; };
 		700F0C152A2FBC5100755BA7 /* ge_448.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 700F0BE72A2FBC1500755BA7 /* ge_448.h */; };
 		700F0C162A2FBC5100755BA7 /* ge_operations.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 700F0C012A2FBC1600755BA7 /* ge_operations.h */; };
 		700F0C172A2FBC5100755BA7 /* hpke.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 700F0BE12A2FBC1500755BA7 /* hpke.h */; };
-		700F0C182A2FBC5100755BA7 /* kyber.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 700F0BEA2A2FBC1500755BA7 /* kyber.h */; };
+		700F0C182A2FBC5100755BA7 /* mlkem.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 700F0BEA2A2FBC1500755BA7 /* mlkem.h */; };
 		700F0C192A2FBC5100755BA7 /* pkcs11.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 700F0BFD2A2FBC1600755BA7 /* pkcs11.h */; };
 		700F0C1A2A2FBC5100755BA7 /* pkcs12.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 700F0BEC2A2FBC1500755BA7 /* pkcs12.h */; };
 		700F0C1B2A2FBC5100755BA7 /* rc2.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 700F0BE02A2FBC1500755BA7 /* rc2.h */; };
@@ -275,9 +276,7 @@
 		700F0C202A2FBC5100755BA7 /* siphash.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 700F0BFE2A2FBC1600755BA7 /* siphash.h */; };
 		700F0C212A2FBC5100755BA7 /* sp_int.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 700F0BE82A2FBC1500755BA7 /* sp_int.h */; };
 		700F0C222A2FBC5100755BA7 /* sp.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 700F0BE92A2FBC1500755BA7 /* sp.h */; };
-		700F0C232A2FBC5100755BA7 /* sphincs.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 700F0BE22A2FBC1500755BA7 /* sphincs.h */; };
 		700F0C242A2FBC5100755BA7 /* srp.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 700F0BF32A2FBC1600755BA7 /* srp.h */; };
-		700F0C252A2FBC5100755BA7 /* wc_kyber.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 700F0BFF2A2FBC1600755BA7 /* wc_kyber.h */; };
 		700F0C262A2FBC5100755BA7 /* wc_pkcs11.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 700F0BF52A2FBC1600755BA7 /* wc_pkcs11.h */; };
 		700F0C272A2FBC5100755BA7 /* wolfevent.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 700F0BE62A2FBC1500755BA7 /* wolfevent.h */; };
 		700F0C282A2FBC5100755BA7 /* kdf.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 6AC8513B272CB04F00F2B32A /* kdf.h */; };
@@ -341,27 +340,24 @@
 		700F0CC32A2FBEF100755BA7 /* x509_vfy.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 700F0C7A2A2FBE8200755BA7 /* x509_vfy.h */; };
 		700F0CC42A2FBEF100755BA7 /* x509.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 700F0C682A2FBE8100755BA7 /* x509.h */; };
 		700F0CC52A2FBEF100755BA7 /* x509v3.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 700F0C622A2FBE8100755BA7 /* x509v3.h */; };
-		9D01059E291CEA5000A854D3 /* armv8-sha512.c in Sources */ = {isa = PBXBuildFile; fileRef = 9D01058C291CEA4F00A854D3 /* armv8-sha512.c */; };
-		9D01059F291CEA5000A854D3 /* armv8-sha512.c in Sources */ = {isa = PBXBuildFile; fileRef = 9D01058C291CEA4F00A854D3 /* armv8-sha512.c */; };
-		9D0105A0291CEA5000A854D3 /* armv8-sha512.c in Sources */ = {isa = PBXBuildFile; fileRef = 9D01058C291CEA4F00A854D3 /* armv8-sha512.c */; };
 		9D0105A7291CEA5000A854D3 /* armv8-sha512-asm.S in Sources */ = {isa = PBXBuildFile; fileRef = 9D01058F291CEA4F00A854D3 /* armv8-sha512-asm.S */; };
 		9D0105A8291CEA5000A854D3 /* armv8-sha512-asm.S in Sources */ = {isa = PBXBuildFile; fileRef = 9D01058F291CEA4F00A854D3 /* armv8-sha512-asm.S */; };
 		9D0105A9291CEA5000A854D3 /* armv8-sha512-asm.S in Sources */ = {isa = PBXBuildFile; fileRef = 9D01058F291CEA4F00A854D3 /* armv8-sha512-asm.S */; };
-		9D0105AD291CEA5000A854D3 /* armv8-sha256.c in Sources */ = {isa = PBXBuildFile; fileRef = 9D010591291CEA4F00A854D3 /* armv8-sha256.c */; };
-		9D0105AE291CEA5000A854D3 /* armv8-sha256.c in Sources */ = {isa = PBXBuildFile; fileRef = 9D010591291CEA4F00A854D3 /* armv8-sha256.c */; };
-		9D0105AF291CEA5000A854D3 /* armv8-sha256.c in Sources */ = {isa = PBXBuildFile; fileRef = 9D010591291CEA4F00A854D3 /* armv8-sha256.c */; };
-		9D0105B3291CEA5000A854D3 /* armv8-poly1305.c in Sources */ = {isa = PBXBuildFile; fileRef = 9D010593291CEA4F00A854D3 /* armv8-poly1305.c */; };
-		9D0105B4291CEA5000A854D3 /* armv8-poly1305.c in Sources */ = {isa = PBXBuildFile; fileRef = 9D010593291CEA4F00A854D3 /* armv8-poly1305.c */; };
-		9D0105B5291CEA5000A854D3 /* armv8-poly1305.c in Sources */ = {isa = PBXBuildFile; fileRef = 9D010593291CEA4F00A854D3 /* armv8-poly1305.c */; };
+		9D0105AD291CEA5000A854D3 /* armv8-sha256-asm.S in Sources */ = {isa = PBXBuildFile; fileRef = 9D010591291CEA4F00A854D3 /* armv8-sha256.c */; };
+		9D0105AE291CEA5000A854D3 /* armv8-sha256-asm.S in Sources */ = {isa = PBXBuildFile; fileRef = 9D010591291CEA4F00A854D3 /* armv8-sha256.c */; };
+		9D0105AF291CEA5000A854D3 /* armv8-sha256-asm.S in Sources */ = {isa = PBXBuildFile; fileRef = 9D010591291CEA4F00A854D3 /* armv8-sha256.c */; };
+		9D0105B3291CEA5000A854D3 /* armv8-poly1305-asm.S in Sources */ = {isa = PBXBuildFile; fileRef = 9D010593291CEA4F00A854D3 /* armv8-poly1305.c */; };
+		9D0105B4291CEA5000A854D3 /* armv8-poly1305-asm.S in Sources */ = {isa = PBXBuildFile; fileRef = 9D010593291CEA4F00A854D3 /* armv8-poly1305.c */; };
+		9D0105B5291CEA5000A854D3 /* armv8-poly1305-asm.S in Sources */ = {isa = PBXBuildFile; fileRef = 9D010593291CEA4F00A854D3 /* armv8-poly1305.c */; };
 		9D0105B9291CEA5000A854D3 /* armv8-sha3-asm.S in Sources */ = {isa = PBXBuildFile; fileRef = 9D010595291CEA4F00A854D3 /* armv8-sha3-asm.S */; };
 		9D0105BA291CEA5000A854D3 /* armv8-sha3-asm.S in Sources */ = {isa = PBXBuildFile; fileRef = 9D010595291CEA4F00A854D3 /* armv8-sha3-asm.S */; };
 		9D0105BB291CEA5000A854D3 /* armv8-sha3-asm.S in Sources */ = {isa = PBXBuildFile; fileRef = 9D010595291CEA4F00A854D3 /* armv8-sha3-asm.S */; };
-		9D0105BC291CEA5000A854D3 /* armv8-chacha.c in Sources */ = {isa = PBXBuildFile; fileRef = 9D010596291CEA4F00A854D3 /* armv8-chacha.c */; };
-		9D0105BD291CEA5000A854D3 /* armv8-chacha.c in Sources */ = {isa = PBXBuildFile; fileRef = 9D010596291CEA4F00A854D3 /* armv8-chacha.c */; };
-		9D0105BE291CEA5000A854D3 /* armv8-chacha.c in Sources */ = {isa = PBXBuildFile; fileRef = 9D010596291CEA4F00A854D3 /* armv8-chacha.c */; };
-		9D0105C2291CEA5000A854D3 /* armv8-aes.c in Sources */ = {isa = PBXBuildFile; fileRef = 9D010598291CEA4F00A854D3 /* armv8-aes.c */; };
-		9D0105C3291CEA5000A854D3 /* armv8-aes.c in Sources */ = {isa = PBXBuildFile; fileRef = 9D010598291CEA4F00A854D3 /* armv8-aes.c */; };
-		9D0105C4291CEA5000A854D3 /* armv8-aes.c in Sources */ = {isa = PBXBuildFile; fileRef = 9D010598291CEA4F00A854D3 /* armv8-aes.c */; };
+		9D0105BC291CEA5000A854D3 /* armv8-chacha-asm.S in Sources */ = {isa = PBXBuildFile; fileRef = 9D010596291CEA4F00A854D3 /* armv8-chacha.c */; };
+		9D0105BD291CEA5000A854D3 /* armv8-chacha-asm.S in Sources */ = {isa = PBXBuildFile; fileRef = 9D010596291CEA4F00A854D3 /* armv8-chacha.c */; };
+		9D0105BE291CEA5000A854D3 /* armv8-chacha-asm.S in Sources */ = {isa = PBXBuildFile; fileRef = 9D010596291CEA4F00A854D3 /* armv8-chacha.c */; };
+		9D0105C2291CEA5000A854D3 /* armv8-aes-asm.S in Sources */ = {isa = PBXBuildFile; fileRef = 9D010598291CEA4F00A854D3 /* armv8-aes-asm.S */; };
+		9D0105C3291CEA5000A854D3 /* armv8-aes-asm.S in Sources */ = {isa = PBXBuildFile; fileRef = 9D010598291CEA4F00A854D3 /* armv8-aes-asm.S */; };
+		9D0105C4291CEA5000A854D3 /* armv8-aes-asm.S in Sources */ = {isa = PBXBuildFile; fileRef = 9D010598291CEA4F00A854D3 /* armv8-aes-asm.S */; };
 		9D0105C5291CEA5000A854D3 /* armv8-curve25519.S in Sources */ = {isa = PBXBuildFile; fileRef = 9D010599291CEA4F00A854D3 /* armv8-curve25519.S */; };
 		9D0105C6291CEA5000A854D3 /* armv8-curve25519.S in Sources */ = {isa = PBXBuildFile; fileRef = 9D010599291CEA4F00A854D3 /* armv8-curve25519.S */; };
 		9D0105C7291CEA5000A854D3 /* armv8-curve25519.S in Sources */ = {isa = PBXBuildFile; fileRef = 9D010599291CEA4F00A854D3 /* armv8-curve25519.S */; };
@@ -622,18 +618,19 @@
 				700F0C0A2A2FBC5100755BA7 /* curve448.h in CopyFiles */,
 				700F0C0B2A2FBC5100755BA7 /* curve25519.h in CopyFiles */,
 				700F0C0C2A2FBC5100755BA7 /* dilithium.h in CopyFiles */,
+				700F0BEF2A2FBC1500755BC0 /* wc_mldsa.h in CopyFiles */,
 				700F0C0D2A2FBC5100755BA7 /* eccsi.h in CopyFiles */,
 				700F0C0E2A2FBC5100755BA7 /* ed448.h in CopyFiles */,
 				700F0C0F2A2FBC5100755BA7 /* ed25519.h in CopyFiles */,
-				700F0C102A2FBC5100755BA7 /* ext_kyber.h in CopyFiles */,
 				700F0C112A2FBC5100755BA7 /* falcon.h in CopyFiles */,
+				700F0C9A2A2FBC5100755BA7 /* wc_slhdsa.h in CopyFiles */,
 				700F0C122A2FBC5100755BA7 /* fe_448.h in CopyFiles */,
 				700F0C132A2FBC5100755BA7 /* fe_operations.h in CopyFiles */,
 				700F0C142A2FBC5100755BA7 /* fips.h in CopyFiles */,
 				700F0C152A2FBC5100755BA7 /* ge_448.h in CopyFiles */,
 				700F0C162A2FBC5100755BA7 /* ge_operations.h in CopyFiles */,
 				700F0C172A2FBC5100755BA7 /* hpke.h in CopyFiles */,
-				700F0C182A2FBC5100755BA7 /* kyber.h in CopyFiles */,
+				700F0C182A2FBC5100755BA7 /* mlkem.h in CopyFiles */,
 				700F0C192A2FBC5100755BA7 /* pkcs11.h in CopyFiles */,
 				700F0C1A2A2FBC5100755BA7 /* pkcs12.h in CopyFiles */,
 				700F0C1B2A2FBC5100755BA7 /* rc2.h in CopyFiles */,
@@ -644,9 +641,7 @@
 				700F0C202A2FBC5100755BA7 /* siphash.h in CopyFiles */,
 				700F0C212A2FBC5100755BA7 /* sp_int.h in CopyFiles */,
 				700F0C222A2FBC5100755BA7 /* sp.h in CopyFiles */,
-				700F0C232A2FBC5100755BA7 /* sphincs.h in CopyFiles */,
 				700F0C242A2FBC5100755BA7 /* srp.h in CopyFiles */,
-				700F0C252A2FBC5100755BA7 /* wc_kyber.h in CopyFiles */,
 				700F0C262A2FBC5100755BA7 /* wc_pkcs11.h in CopyFiles */,
 				700F0C272A2FBC5100755BA7 /* wolfevent.h in CopyFiles */,
 				700F0C282A2FBC5100755BA7 /* kdf.h in CopyFiles */,
@@ -978,19 +973,19 @@
 		6AC8513B272CB04F00F2B32A /* kdf.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = kdf.h; path = ../../wolfssl/wolfcrypt/kdf.h; sourceTree = "<group>"; };
 		700F0BE02A2FBC1500755BA7 /* rc2.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = rc2.h; path = ../../wolfssl/wolfcrypt/rc2.h; sourceTree = "<group>"; };
 		700F0BE12A2FBC1500755BA7 /* hpke.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = hpke.h; path = ../../wolfssl/wolfcrypt/hpke.h; sourceTree = "<group>"; };
-		700F0BE22A2FBC1500755BA7 /* sphincs.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sphincs.h; path = ../../wolfssl/wolfcrypt/sphincs.h; sourceTree = "<group>"; };
 		700F0BE32A2FBC1500755BA7 /* curve448.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = curve448.h; path = ../../wolfssl/wolfcrypt/curve448.h; sourceTree = "<group>"; };
 		700F0BE52A2FBC1500755BA7 /* curve25519.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = curve25519.h; path = ../../wolfssl/wolfcrypt/curve25519.h; sourceTree = "<group>"; };
 		700F0BE62A2FBC1500755BA7 /* wolfevent.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = wolfevent.h; path = ../../wolfssl/wolfcrypt/wolfevent.h; sourceTree = "<group>"; };
 		700F0BE72A2FBC1500755BA7 /* ge_448.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ge_448.h; path = ../../wolfssl/wolfcrypt/ge_448.h; sourceTree = "<group>"; };
 		700F0BE82A2FBC1500755BA7 /* sp_int.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sp_int.h; path = ../../wolfssl/wolfcrypt/sp_int.h; sourceTree = "<group>"; };
 		700F0BE92A2FBC1500755BA7 /* sp.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sp.h; path = ../../wolfssl/wolfcrypt/sp.h; sourceTree = "<group>"; };
-		700F0BEA2A2FBC1500755BA7 /* kyber.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = kyber.h; path = ../../wolfssl/wolfcrypt/kyber.h; sourceTree = "<group>"; };
+		700F0BEA2A2FBC1500755BA7 /* mlkem.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = mlkem.h; path = ../../wolfssl/wolfcrypt/wc_mlkem.h; sourceTree = "<group>"; };
 		700F0BEB2A2FBC1500755BA7 /* fe_448.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = fe_448.h; path = ../../wolfssl/wolfcrypt/fe_448.h; sourceTree = "<group>"; };
 		700F0BEC2A2FBC1500755BA7 /* pkcs12.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = pkcs12.h; path = ../../wolfssl/wolfcrypt/pkcs12.h; sourceTree = "<group>"; };
 		700F0BED2A2FBC1500755BA7 /* chacha20_poly1305.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = chacha20_poly1305.h; path = ../../wolfssl/wolfcrypt/chacha20_poly1305.h; sourceTree = "<group>"; };
 		700F0BEE2A2FBC1500755BA7 /* cryptocb.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = cryptocb.h; path = ../../wolfssl/wolfcrypt/cryptocb.h; sourceTree = "<group>"; };
 		700F0BEF2A2FBC1500755BA7 /* dilithium.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = dilithium.h; path = ../../wolfssl/wolfcrypt/dilithium.h; sourceTree = "<group>"; };
+		700F0BEF2A2FBC1500755BC1 /* wc_mldsa.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = wc_mldsa.h; path = ../../wolfssl/wolfcrypt/wc_mldsa.h; sourceTree = "<group>"; };
 		700F0BF02A2FBC1500755BA7 /* sakke.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sakke.h; path = ../../wolfssl/wolfcrypt/sakke.h; sourceTree = "<group>"; };
 		700F0BF12A2FBC1600755BA7 /* cpuid.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = cpuid.h; path = ../../wolfssl/wolfcrypt/cpuid.h; sourceTree = "<group>"; };
 		700F0BF22A2FBC1600755BA7 /* selftest.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = selftest.h; path = ../../wolfssl/wolfcrypt/selftest.h; sourceTree = "<group>"; };
@@ -1000,16 +995,15 @@
 		700F0BF62A2FBC1600755BA7 /* fe_operations.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = fe_operations.h; path = ../../wolfssl/wolfcrypt/fe_operations.h; sourceTree = "<group>"; };
 		700F0BF72A2FBC1600755BA7 /* eccsi.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = eccsi.h; path = ../../wolfssl/wolfcrypt/eccsi.h; sourceTree = "<group>"; };
 		700F0BF82A2FBC1600755BA7 /* ed448.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ed448.h; path = ../../wolfssl/wolfcrypt/ed448.h; sourceTree = "<group>"; };
-		700F0BF92A2FBC1600755BA7 /* ext_kyber.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ext_kyber.h; path = ../../wolfssl/wolfcrypt/ext_kyber.h; sourceTree = "<group>"; };
 		700F0BFA2A2FBC1600755BA7 /* sha3.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sha3.h; path = ../../wolfssl/wolfcrypt/sha3.h; sourceTree = "<group>"; };
 		700F0BFB2A2FBC1600755BA7 /* signature.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = signature.h; path = ../../wolfssl/wolfcrypt/signature.h; sourceTree = "<group>"; };
 		700F0BFC2A2FBC1600755BA7 /* cmac.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = cmac.h; path = ../../wolfssl/wolfcrypt/cmac.h; sourceTree = "<group>"; };
 		700F0BFD2A2FBC1600755BA7 /* pkcs11.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = pkcs11.h; path = ../../wolfssl/wolfcrypt/pkcs11.h; sourceTree = "<group>"; };
 		700F0BFE2A2FBC1600755BA7 /* siphash.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = siphash.h; path = ../../wolfssl/wolfcrypt/siphash.h; sourceTree = "<group>"; };
-		700F0BFF2A2FBC1600755BA7 /* wc_kyber.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = wc_kyber.h; path = ../../wolfssl/wolfcrypt/wc_kyber.h; sourceTree = "<group>"; };
 		700F0C002A2FBC1600755BA7 /* fips.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = fips.h; path = ../../wolfssl/wolfcrypt/fips.h; sourceTree = "<group>"; };
 		700F0C012A2FBC1600755BA7 /* ge_operations.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ge_operations.h; path = ../../wolfssl/wolfcrypt/ge_operations.h; sourceTree = "<group>"; };
 		700F0C022A2FBC1600755BA7 /* falcon.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = falcon.h; path = ../../wolfssl/wolfcrypt/falcon.h; sourceTree = "<group>"; };
+		700F0C992A2FBC1600755BA7 /* wc_slhdsa.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = wc_slhdsa.h; path = ../../wolfssl/wolfcrypt/wc_slhdsa.h; sourceTree = "<group>"; };
 		700F0C032A2FBC1600755BA7 /* async.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = async.h; path = ../../wolfssl/wolfcrypt/async.h; sourceTree = "<group>"; };
 		700F0C292A2FBCAD00755BA7 /* quic.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = quic.h; path = ../../wolfssl/quic.h; sourceTree = "<group>"; };
 		700F0C2A2A2FBCAD00755BA7 /* sniffer_error.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sniffer_error.h; path = ../../wolfssl/sniffer_error.h; sourceTree = "<group>"; };
@@ -1071,13 +1065,12 @@
 		700F0C882A2FBE8200755BA7 /* dsa.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = dsa.h; path = ../../wolfssl/openssl/dsa.h; sourceTree = "<group>"; };
 		700F0C892A2FBE8200755BA7 /* ssl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ssl.h; path = ../../wolfssl/openssl/ssl.h; sourceTree = "<group>"; };
 		700F0C8A2A2FBE8200755BA7 /* rsa.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = rsa.h; path = ../../wolfssl/openssl/rsa.h; sourceTree = "<group>"; };
-		9D01058C291CEA4F00A854D3 /* armv8-sha512.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = "armv8-sha512.c"; path = "../../wolfcrypt/src/port/arm/armv8-sha512.c"; sourceTree = "<group>"; };
 		9D01058F291CEA4F00A854D3 /* armv8-sha512-asm.S */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.asm; name = "armv8-sha512-asm.S"; path = "../../wolfcrypt/src/port/arm/armv8-sha512-asm.S"; sourceTree = "<group>"; };
-		9D010591291CEA4F00A854D3 /* armv8-sha256.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = "armv8-sha256.c"; path = "../../wolfcrypt/src/port/arm/armv8-sha256.c"; sourceTree = "<group>"; };
-		9D010593291CEA4F00A854D3 /* armv8-poly1305.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = "armv8-poly1305.c"; path = "../../wolfcrypt/src/port/arm/armv8-poly1305.c"; sourceTree = "<group>"; };
+		9D010591291CEA4F00A854D3 /* armv8-sha256-asm.S */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.asm; name = "armv8-sha256-asm.S"; path = "../../wolfcrypt/src/port/arm/armv8-sha256-asm.S"; sourceTree = "<group>"; };
+		9D010593291CEA4F00A854D3 /* armv8-poly1305-asm.S */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.asm; name = "armv8-poly1305-asm.S"; path = "../../wolfcrypt/src/port/arm/armv8-poly1305-asm.S"; sourceTree = "<group>"; };
 		9D010595291CEA4F00A854D3 /* armv8-sha3-asm.S */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.asm; name = "armv8-sha3-asm.S"; path = "../../wolfcrypt/src/port/arm/armv8-sha3-asm.S"; sourceTree = "<group>"; };
-		9D010596291CEA4F00A854D3 /* armv8-chacha.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = "armv8-chacha.c"; path = "../../wolfcrypt/src/port/arm/armv8-chacha.c"; sourceTree = "<group>"; };
-		9D010598291CEA4F00A854D3 /* armv8-aes.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = "armv8-aes.c"; path = "../../wolfcrypt/src/port/arm/armv8-aes.c"; sourceTree = "<group>"; };
+		9D010596291CEA4F00A854D3 /* armv8-chacha-asm.S */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.asm; name = "armv8-chacha-asm.S"; path = "../../wolfcrypt/src/port/arm/armv8-chacha-asm.S"; sourceTree = "<group>"; };
+		9D010598291CEA4F00A854D3 /* armv8-aes-asm.S */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.asm; name = "armv8-aes-asm.S"; path = "../../wolfcrypt/src/port/arm/armv8-aes-asm.S"; sourceTree = "<group>"; };
 		9D010599291CEA4F00A854D3 /* armv8-curve25519.S */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.asm; name = "armv8-curve25519.S"; path = "../../wolfcrypt/src/port/arm/armv8-curve25519.S"; sourceTree = "<group>"; };
 		9D2E31CA291CDF120082B941 /* quic.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = quic.c; path = ../../src/quic.c; sourceTree = "<group>"; };
 		9D2E31CB291CDF120082B941 /* dtls.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = dtls.c; path = ../../src/dtls.c; sourceTree = "<group>"; };
@@ -1154,18 +1147,19 @@
 				700F0BE32A2FBC1500755BA7 /* curve448.h */,
 				700F0BE52A2FBC1500755BA7 /* curve25519.h */,
 				700F0BEF2A2FBC1500755BA7 /* dilithium.h */,
+				700F0BEF2A2FBC1500755BC1 /* wc_mldsa.h */,
 				700F0BF72A2FBC1600755BA7 /* eccsi.h */,
 				700F0BF82A2FBC1600755BA7 /* ed448.h */,
 				700F0BF42A2FBC1600755BA7 /* ed25519.h */,
-				700F0BF92A2FBC1600755BA7 /* ext_kyber.h */,
 				700F0C022A2FBC1600755BA7 /* falcon.h */,
+				700F0C992A2FBC1600755BA7 /* wc_slhdsa.h */,
 				700F0BEB2A2FBC1500755BA7 /* fe_448.h */,
 				700F0BF62A2FBC1600755BA7 /* fe_operations.h */,
 				700F0C002A2FBC1600755BA7 /* fips.h */,
 				700F0BE72A2FBC1500755BA7 /* ge_448.h */,
 				700F0C012A2FBC1600755BA7 /* ge_operations.h */,
 				700F0BE12A2FBC1500755BA7 /* hpke.h */,
-				700F0BEA2A2FBC1500755BA7 /* kyber.h */,
+				700F0BEA2A2FBC1500755BA7 /* mlkem.h */,
 				700F0BFD2A2FBC1600755BA7 /* pkcs11.h */,
 				700F0BEC2A2FBC1500755BA7 /* pkcs12.h */,
 				700F0BE02A2FBC1500755BA7 /* rc2.h */,
@@ -1176,9 +1170,7 @@
 				700F0BFE2A2FBC1600755BA7 /* siphash.h */,
 				700F0BE82A2FBC1500755BA7 /* sp_int.h */,
 				700F0BE92A2FBC1500755BA7 /* sp.h */,
-				700F0BE22A2FBC1500755BA7 /* sphincs.h */,
 				700F0BF32A2FBC1600755BA7 /* srp.h */,
-				700F0BFF2A2FBC1600755BA7 /* wc_kyber.h */,
 				700F0BF52A2FBC1600755BA7 /* wc_pkcs11.h */,
 				700F0BE62A2FBC1500755BA7 /* wolfevent.h */,
 				5216465E1A8993770062516A /* aes.h */,
@@ -1266,14 +1258,13 @@
 			children = (
 				521646111A8992CC0062516A /* aes.c */,
 				521646121A8992CC0062516A /* arc4.c */,
-				9D010598291CEA4F00A854D3 /* armv8-aes.c */,
-				9D010596291CEA4F00A854D3 /* armv8-chacha.c */,
+				9D010598291CEA4F00A854D3 /* armv8-aes-asm.S */,
+				9D010596291CEA4F00A854D3 /* armv8-chacha-asm.S */,
 				9D010599291CEA4F00A854D3 /* armv8-curve25519.S */,
-				9D010593291CEA4F00A854D3 /* armv8-poly1305.c */,
+				9D010593291CEA4F00A854D3 /* armv8-poly1305-asm.S */,
 				9D010595291CEA4F00A854D3 /* armv8-sha3-asm.S */,
-				9D010591291CEA4F00A854D3 /* armv8-sha256.c */,
+				9D010591291CEA4F00A854D3 /* armv8-sha256-asm.S */,
 				9D01058F291CEA4F00A854D3 /* armv8-sha512-asm.S */,
-				9D01058C291CEA4F00A854D3 /* armv8-sha512.c */,
 				A4DAE30C2493F21800CEF51F /* asm.c */,
 				521646131A8992CC0062516A /* asn.c */,
 				521646141A8992CC0062516A /* blake2b.c */,
@@ -1548,7 +1539,7 @@
 				520775B42239AC3700087711 /* curve25519.c in Sources */,
 				30B060541C6DDB2B00D46008 /* crl.c in Sources */,
 				520775BA2239AC4600087711 /* ge_operations.c in Sources */,
-				9D0105C4291CEA5000A854D3 /* armv8-aes.c in Sources */,
+				9D0105C4291CEA5000A854D3 /* armv8-aes-asm.S in Sources */,
 				30B060551C6DDB2B00D46008 /* internal.c in Sources */,
 				A4DAE3432493F21900CEF51F /* wc_dsp.c in Sources */,
 				30B060561C6DDB2B00D46008 /* wolfio.c in Sources */,
@@ -1570,13 +1561,12 @@
 				520775AE2239AC2100087711 /* signature.c in Sources */,
 				30B060601C6DDB2B00D46008 /* camellia.c in Sources */,
 				A4DAE31F2493F21900CEF51F /* ed448.c in Sources */,
-				9D0105AF291CEA5000A854D3 /* armv8-sha256.c in Sources */,
+				9D0105AF291CEA5000A854D3 /* armv8-sha256-asm.S in Sources */,
 				30B060611C6DDB2B00D46008 /* chacha.c in Sources */,
 				30B060621C6DDB2B00D46008 /* coding.c in Sources */,
 				A4DAE31C2493F21900CEF51F /* srp.c in Sources */,
 				30B060631C6DDB2B00D46008 /* des3.c in Sources */,
 				A4DAE33D2493F21900CEF51F /* curve448.c in Sources */,
-				9D0105A0291CEA5000A854D3 /* armv8-sha512.c in Sources */,
 				30B060641C6DDB2B00D46008 /* dh.c in Sources */,
 				30B060651C6DDB2B00D46008 /* dsa.c in Sources */,
 				520775BC2239AC4600087711 /* fe_low_mem.c in Sources */,
@@ -1588,12 +1578,12 @@
 				A4DAE3372493F21900CEF51F /* wolfevent.c in Sources */,
 				30B060671C6DDB2B00D46008 /* error.c in Sources */,
 				9D2E31CE291CDF120082B941 /* quic.c in Sources */,
-				9D0105BE291CEA5000A854D3 /* armv8-chacha.c in Sources */,
+				9D0105BE291CEA5000A854D3 /* armv8-chacha-asm.S in Sources */,
 				520775AA2239ABBE00087711 /* sp_int.c in Sources */,
 				30B060681C6DDB2B00D46008 /* hash.c in Sources */,
 				6AC8512B272CAF2E00F2B32A /* kdf.c in Sources */,
 				30B0606A1C6DDB2B00D46008 /* hmac.c in Sources */,
-				9D0105B5291CEA5000A854D3 /* armv8-poly1305.c in Sources */,
+				9D0105B5291CEA5000A854D3 /* armv8-poly1305-asm.S in Sources */,
 				A4DAE3572493F29E00CEF51F /* sp_dsp32.c in Sources */,
 				A4DAE3282493F21900CEF51F /* fe_448.c in Sources */,
 				30B0606B1C6DDB2B00D46008 /* integer.c in Sources */,
@@ -1643,7 +1633,7 @@
 				A4DAE31D2493F21900CEF51F /* ed448.c in Sources */,
 				520775B52239AC3700087711 /* curve25519.c in Sources */,
 				A4DAE3442493F21900CEF51F /* wc_pkcs11.c in Sources */,
-				9D0105C2291CEA5000A854D3 /* armv8-aes.c in Sources */,
+				9D0105C2291CEA5000A854D3 /* armv8-aes-asm.S in Sources */,
 				5216463B1A8992CC0062516A /* dsa.c in Sources */,
 				520775BB2239AC4600087711 /* ge_operations.c in Sources */,
 				521646411A8992CC0062516A /* logging.c in Sources */,
@@ -1665,13 +1655,12 @@
 				A4DAE31A2493F21900CEF51F /* srp.c in Sources */,
 				521646341A8992CC0062516A /* asn.c in Sources */,
 				521646501A8992CC0062516A /* sha512.c in Sources */,
-				9D0105AD291CEA5000A854D3 /* armv8-sha256.c in Sources */,
+				9D0105AD291CEA5000A854D3 /* armv8-sha256-asm.S in Sources */,
 				520775AF2239AC2100087711 /* signature.c in Sources */,
 				525BE5341B3869110054BBCD /* hash.c in Sources */,
 				A4DAE33E2493F21900CEF51F /* ge_448.c in Sources */,
 				521646441A8992CC0062516A /* md5.c in Sources */,
 				5216460F1A89928E0062516A /* ssl.c in Sources */,
-				9D01059E291CEA5000A854D3 /* armv8-sha512.c in Sources */,
 				5216464D1A8992CC0062516A /* rsa.c in Sources */,
 				5216464B1A8992CC0062516A /* random.c in Sources */,
 				A4DAE3062493F1C700CEF51F /* tls13.c in Sources */,
@@ -1683,12 +1672,12 @@
 				A4DAE3262493F21900CEF51F /* fe_448.c in Sources */,
 				520775AB2239ABBE00087711 /* sp_int.c in Sources */,
 				9D2E31CC291CDF120082B941 /* quic.c in Sources */,
-				9D0105BC291CEA5000A854D3 /* armv8-chacha.c in Sources */,
+				9D0105BC291CEA5000A854D3 /* armv8-chacha-asm.S in Sources */,
 				521646431A8992CC0062516A /* md4.c in Sources */,
 				521646321A8992CC0062516A /* aes.c in Sources */,
 				6AC85129272CAF2E00F2B32A /* kdf.c in Sources */,
 				521646391A8992CC0062516A /* des3.c in Sources */,
-				9D0105B3291CEA5000A854D3 /* armv8-poly1305.c in Sources */,
+				9D0105B3291CEA5000A854D3 /* armv8-poly1305-asm.S in Sources */,
 				521646351A8992CC0062516A /* blake2b.c in Sources */,
 				520775AD2239ABCD00087711 /* chacha20_poly1305.c in Sources */,
 				A4E7E5992493E20500725359 /* sp_armthumb.c in Sources */,
@@ -1738,7 +1727,7 @@
 				A4F318661BC58B1700FDF2BB /* aes.c in Sources */,
 				A4F318741BC58B1700FDF2BB /* arc4.c in Sources */,
 				A4F3185A1BC58B1700FDF2BB /* asn.c in Sources */,
-				9D0105C3291CEA5000A854D3 /* armv8-aes.c in Sources */,
+				9D0105C3291CEA5000A854D3 /* armv8-aes-asm.S in Sources */,
 				A4F318681BC58B1700FDF2BB /* blake2b.c in Sources */,
 				A4DAE3422493F21900CEF51F /* wc_dsp.c in Sources */,
 				A4F318551BC58B1700FDF2BB /* camellia.c in Sources */,
@@ -1760,13 +1749,12 @@
 				1E8BEB87212F4F010063DCC1 /* fe_low_mem.c in Sources */,
 				1E8BEB86212F4F010063DCC1 /* fe_operations.c in Sources */,
 				A4DAE31E2493F21900CEF51F /* ed448.c in Sources */,
-				9D0105AE291CEA5000A854D3 /* armv8-sha256.c in Sources */,
+				9D0105AE291CEA5000A854D3 /* armv8-sha256-asm.S in Sources */,
 				1E8BEB83212F4E330063DCC1 /* ge_low_mem.c in Sources */,
 				1E8BEB82212F4E330063DCC1 /* ge_operations.c in Sources */,
 				A4DAE31B2493F21900CEF51F /* srp.c in Sources */,
 				A4F3185D1BC58B1700FDF2BB /* hash.c in Sources */,
 				A4DAE33C2493F21900CEF51F /* curve448.c in Sources */,
-				9D01059F291CEA5000A854D3 /* armv8-sha512.c in Sources */,
 				A4F318731BC58B1700FDF2BB /* hmac.c in Sources */,
 				A4F318751BC58B1700FDF2BB /* integer.c in Sources */,
 				A4F318761BC58B1700FDF2BB /* internal.c in Sources */,
@@ -1778,12 +1766,12 @@
 				A4F3187A1BC58B1700FDF2BB /* keys.c in Sources */,
 				A4F318511BC58B1700FDF2BB /* logging.c in Sources */,
 				9D2E31CD291CDF120082B941 /* quic.c in Sources */,
-				9D0105BD291CEA5000A854D3 /* armv8-chacha.c in Sources */,
+				9D0105BD291CEA5000A854D3 /* armv8-chacha-asm.S in Sources */,
 				A4F318701BC58B1700FDF2BB /* md2.c in Sources */,
 				A4F318651BC58B1700FDF2BB /* md4.c in Sources */,
 				6AC8512A272CAF2E00F2B32A /* kdf.c in Sources */,
 				A4F3185E1BC58B1700FDF2BB /* md5.c in Sources */,
-				9D0105B4291CEA5000A854D3 /* armv8-poly1305.c in Sources */,
+				9D0105B4291CEA5000A854D3 /* armv8-poly1305-asm.S in Sources */,
 				A4DAE3562493F29E00CEF51F /* sp_dsp32.c in Sources */,
 				A4DAE3272493F21900CEF51F /* fe_448.c in Sources */,
 				A4F3186A1BC58B1700FDF2BB /* memory.c in Sources */,

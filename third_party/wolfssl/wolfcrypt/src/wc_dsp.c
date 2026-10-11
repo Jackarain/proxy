@@ -1,12 +1,12 @@
 /* wc_dsp.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -19,13 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1335, USA
  */
 
-#ifdef HAVE_CONFIG_H
-    #include <config.h>
-#endif
+#include <wolfssl/wolfcrypt/libwolfssl_sources.h>
 
-#include <wolfssl/wolfcrypt/settings.h>
-#include <wolfssl/wolfcrypt/error-crypt.h>
-#include <wolfssl/wolfcrypt/logging.h>
 #ifdef NO_INLINE
     #include <wolfssl/wolfcrypt/misc.h>
 #else
@@ -38,7 +33,7 @@
 #include "rpcmem.h"
 static wolfSSL_DSP_Handle_cb handle_function = NULL;
 static remote_handle64 defaultHandle;
-static wolfSSL_Mutex handle_mutex; /* mutex for access to single default handle */
+static wolfSSL_Mutex handle_mutex WOLFSSL_MUTEX_INITIALIZER_CLAUSE(handle_mutex); /* mutex for access to single default handle */
 
 #define WOLFSSL_HANDLE_DONE 1
 #define WOLFSSL_HANDLE_GET 0
@@ -95,11 +90,13 @@ int wolfSSL_InitHandle()
         return -1;
     }
     wolfSSL_SetHandleCb(default_handle_cb);
+#ifndef WOLFSSL_MUTEX_INITIALIZER
     ret = wc_InitMutex(&handle_mutex);
     if (ret != 0) {
         WOLFSSL_MSG("Unable to init handle mutex");
         return -1;
     }
+#endif
     return 0;
 }
 
@@ -108,7 +105,9 @@ int wolfSSL_InitHandle()
 void wolfSSL_CleanupHandle()
 {
     wolfSSL_close(defaultHandle);
+#ifndef WOLFSSL_MUTEX_INITIALIZER
     wc_FreeMutex(&handle_mutex);
+#endif
 }
 #if defined(WOLFSSL_HAVE_SP_ECC)
 

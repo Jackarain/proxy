@@ -1,12 +1,12 @@
 /* wolfcaam.h
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -32,11 +32,13 @@
     #include <wolfssl/wolfcrypt/port/caam/wolfcaam_seco.h>
 #elif defined(WOLFSSL_IMXRT1170_CAAM)
     #include <wolfssl/wolfcrypt/port/caam/wolfcaam_fsl_nxp.h>
+#elif defined(WOLFSSL_CAAM_LINUX)
+    #include <wolfssl/wolfcrypt/port/caam/wolfcaam_linux.h>
 #endif
 
 #if defined(WOLFSSL_IMX6_CAAM) || defined(WOLFSSL_IMX6_CAAM_RNG) || \
     defined(WOLFSSL_QNX_CAAM) || defined(WOLFSSL_SECO_CAAM) || \
-	defined(WOLFSSL_IMXRT1170_CAAM)
+        defined(WOLFSSL_IMXRT1170_CAAM) || defined(WOLFSSL_CAAM_LINUX)
 
 
 /* unique devId for CAAM use on crypto callbacks */
@@ -69,15 +71,17 @@ WOLFSSL_LOCAL int  wc_caamAddAndWait(CAAM_BUFFER* buf, int sz, word32 arg[4],
         word32 type);
 
 WOLFSSL_LOCAL int caamFindUnusedPartition(void);
+#ifndef WOLFSSL_CAAM_NO_SM
 WOLFSSL_LOCAL CAAM_ADDRESS caamGetPartition(int part, int sz);
 WOLFSSL_LOCAL int caamFreePart(int partNum);
+#endif
 WOLFSSL_LOCAL int caamWriteToPartition(CAAM_ADDRESS addr, const unsigned char* in, int inSz);
 WOLFSSL_LOCAL int caamReadPartition(CAAM_ADDRESS addr, unsigned char* out, int outSz);
 
 WOLFSSL_API int wc_caamOpenBlob(byte* data, word32 dataSz, byte* out,
-	word32* outSz);
+        word32* outSz);
 WOLFSSL_API int wc_caamCreateBlob(byte* data, word32 dataSz, byte* out,
-	word32* outSz);
+        word32* outSz);
 
 WOLFSSL_API int wc_caamOpenBlob_ex(byte* data, word32 dataSz, byte* out,
         word32* outSz, int type, byte* mod, word32 modSz);
@@ -97,7 +101,7 @@ WOLFSSL_API int wc_caamCoverKey(byte* in, word32 inSz, byte* out, word32* outSz,
 #define WC_CAAM_MAX_ENTROPY 44
 
 #if !defined(WOLFSSL_QNX_CAAM) && !defined(WOLFSSL_SECO_CAAM) && \
-	!defined(WOLFSSL_IMXRT1170_CAAM)
+        !defined(WOLFSSL_IMXRT1170_CAAM) && !defined(WOLFSSL_CAAM_LINUX)
     WOLFSSL_API int wc_caamSetResource(IODevice ioDev);
     #ifndef WC_CAAM_READ
         #define WC_CAAM_READ(reg)      wc_caamReadRegister((reg))

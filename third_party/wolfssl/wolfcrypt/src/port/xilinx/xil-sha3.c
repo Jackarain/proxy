@@ -1,12 +1,12 @@
 /* xil-sha3.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -71,11 +71,16 @@ int wc_InitSha3_384(wc_Sha3* sha, void* heap, int devId)
  */
 int wc_Sha3_384_Update(wc_Sha3* sha, const byte* data, word32 len)
 {
+    int status;
     if (sha == NULL ||  (data == NULL && len > 0)) {
         return BAD_FUNC_ARG;
     }
     WOLFSSL_XIL_DCACHE_FLUSH_RANGE((UINTPTR)data, len);
-    XSecure_Sha3Update(&(sha->xSec.cinst), XIL_CAST_U64(data), len);
+    status = XSecure_Sha3Update(&(sha->xSec.cinst), XIL_CAST_U64(data), len);
+    if (status != XST_SUCCESS) {
+        WOLFSSL_MSG("XSecure_Sha3Update failed");
+        return WC_HW_E;
+    }
 
     return 0;
 }
@@ -88,11 +93,16 @@ int wc_Sha3_384_Update(wc_Sha3* sha, const byte* data, word32 len)
  */
 int wc_Sha3_384_Final(wc_Sha3* sha, byte* out)
 {
+    int status;
     if (sha == NULL || out == NULL) {
         return BAD_FUNC_ARG;
     }
     WOLFSSL_XIL_DCACHE_FLUSH_RANGE((UINTPTR)out, WC_SHA3_384_DIGEST_SIZE);
-    XSecure_Sha3Finish(&(sha->xSec.cinst), XIL_CAST_U64(out));
+    status = XSecure_Sha3Finish(&(sha->xSec.cinst), XIL_CAST_U64(out));
+    if (status != XST_SUCCESS) {
+        WOLFSSL_MSG("XSecure_Sha3Finish failed");
+        return WC_HW_E;
+    }
 
     return wc_InitSha3_384(sha, NULL, INVALID_DEVID);
 }
@@ -159,10 +169,15 @@ int wc_InitSha3_384(wc_Sha3* sha, void* heap, int devId)
  */
 int wc_Sha3_384_Update(wc_Sha3* sha, const byte* data, word32 len)
 {
+    int status;
     if (sha == NULL ||  (data == NULL && len > 0)) {
         return BAD_FUNC_ARG;
     }
-    XSecure_Sha3Update(&(sha->hw), (byte*)data, len);
+    status = XSecure_Sha3Update(&(sha->hw), (byte*)data, len);
+    if (status != XST_SUCCESS) {
+        WOLFSSL_MSG("XSecure_Sha3Update failed");
+        return WC_HW_E;
+    }
 
     return 0;
 }
@@ -175,10 +190,15 @@ int wc_Sha3_384_Update(wc_Sha3* sha, const byte* data, word32 len)
  */
 int wc_Sha3_384_Final(wc_Sha3* sha, byte* out)
 {
+    int status;
     if (sha == NULL || out == NULL) {
         return BAD_FUNC_ARG;
     }
-    XSecure_Sha3Finish(&(sha->hw), out);
+    status = XSecure_Sha3Finish(&(sha->hw), out);
+    if (status != XST_SUCCESS) {
+        WOLFSSL_MSG("XSecure_Sha3Finish failed");
+        return WC_HW_E;
+    }
 
     return wc_InitSha3_384(sha, NULL, INVALID_DEVID);
 }
@@ -204,6 +224,8 @@ int wc_Sha3_384_GetHash(wc_Sha3* sha, byte* out)
 {
 #ifdef WOLFSSL_XILINX_CRYPTO_OLD
     wc_Sha3 s;
+#else
+    int status;
 #endif
 
     if (sha == NULL || out == NULL) {
@@ -217,7 +239,11 @@ int wc_Sha3_384_GetHash(wc_Sha3* sha, byte* out)
 
         return wc_Sha3_384_Final(&s, out);
 #else
-    XSecure_Sha3_ReadHash(&(sha->hw), out);
+    status = XSecure_Sha3_ReadHash(&(sha->hw), out);
+    if (status != XST_SUCCESS) {
+        WOLFSSL_MSG("XSecure_Sha3_ReadHash failed");
+        return WC_HW_E;
+    }
     return 0;
 #endif
 }
@@ -239,7 +265,7 @@ int wc_Sha3_384_Copy(wc_Sha3* src, wc_Sha3* dst)
     return 0;
 #else
     WOLFSSL_MSG("Copy of SHA3 struct not supported with this build");
-    return -1;
+    return NOT_COMPILED_IN;
 #endif
 }
 #endif

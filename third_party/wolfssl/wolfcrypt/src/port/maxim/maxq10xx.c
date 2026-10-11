@@ -1,12 +1,12 @@
 /* maxq10xx.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -41,7 +41,11 @@
 #include <wolfssl/wolfcrypt/cryptocb.h>
 #include <wolfssl/wolfcrypt/error-crypt.h>
 #include <wolfssl/wolfcrypt/logging.h>
+#ifdef USS_API
+#include <MXQ_API.h>
+#else
 #include <wolfssl/wolfcrypt/port/maxim/MXQ_API.h>
+#endif
 
 #ifndef WOLFSSL_HAVE_ECC_KEY_GET_PRIV
     /* FIPS build has replaced ecc.h. */
@@ -56,7 +60,7 @@ void dbg_dumphex(const char *identifier, const uint8_t* pdata, uint32_t plen);
 #endif /* MAXQ_DEBUG */
 
 #if defined(USE_WINDOWS_API)
-# define maxq_CryptHwMutexTryLock()	(0)
+# define maxq_CryptHwMutexTryLock() 0
 #endif
 
 #define AES_KEY_ID_START      (0x2000)
@@ -72,9 +76,17 @@ void dbg_dumphex(const char *identifier, const uint8_t* pdata, uint32_t plen);
 #endif
 
 #define PUBKEY_IMPORT_OBJID    0x1000
+
+#if defined (TEST_SETUP)
+#define ROOT_CA_CERT_OBJ_ID    0x1006
+#define DEVICE_CERT_OBJ_ID     0x1005
+#define DEVICE_KEY_PAIR_OBJ_ID 0x1007
+#else
 #define ROOT_CA_CERT_OBJ_ID    0x1003
 #define DEVICE_CERT_OBJ_ID     0x1002
 #define DEVICE_KEY_PAIR_OBJ_ID 0x1004
+#endif
+
 #define PSK_OBJ_ID             0x1236
 #define K_CHUNKSIZE            2032
 #define K_CIPHER_BLOCKSIZE     16
@@ -85,7 +97,9 @@ void dbg_dumphex(const char *identifier, const uint8_t* pdata, uint32_t plen);
 #define MAX_SIGNKEY_DATASIZE   96
 #define MAX_SIG_DATASIZE       64
 #define ECC_KEYCOMPLEN         32
-
+#define ESTABLISH_OUT_MAX      128
+#define FIXED_INFO_LEN         32
+#define FIXED_INFO_VALUE       0xaa
 #ifdef WOLFSSL_MAXQ108X
 
 #define PSK_KID (0x1235)
@@ -120,7 +134,7 @@ static int tls13_server_key_len           = -1;
 
 /* Please define MAXQ10XX_PRODUCTION_KEY in your build scripts once you have a
  * production key. */
-#if defined(MAXQ10XX_PRODUCTION_KEY) || !defined(DEBUG_WOLFSSL)
+#if defined(MAXQ10XX_PRODUCTION_KEY)
 #include "maxq10xx_key.h"
 #else
 /* TEST KEY. This must be changed for production environments!! */
@@ -158,7 +172,6 @@ static int is_hs_key = 0;
 static int aes_key_id_arr[AES_KEY_ID_MAX_NUM];
 static int ecc_key_id_arr[ECC_KEY_ID_MAX_NUM];
 
-static int init_pk_callbacks = 0;
 static int device_key_len = 32;
 
 #if defined(WOLFSSL_MAXQ108X)
@@ -568,12 +581,14 @@ static int aes_set_key(Aes* aes, const byte* userKey, word32 keylen)
         return BAD_FUNC_ARG;
     }
 
+    #if defined(MAXQ10XX_MUTEX)
     rc = maxq_CryptHwMutexTryLock();
     if (rc != 0) {
         WOLFSSL_ERROR_MSG("MAXQ: aes_set_key() lock could not be acquired");
         rc = NOT_COMPILED_IN;
         return rc;
     }
+    #endif
 
     if (aes->maxq_ctx.key_obj_id) {
         wc_MAXQ10XX_AesFree(aes);
@@ -586,6 +601,9 @@ static int aes_set_key(Aes* aes, const byte* userKey, word32 keylen)
         goto end_AesSetKey;
     }
 
+    /* Delete object if one already exists. Ignore error in case it doesn't
+     * exist. */
+    (void)MXQ_DeleteObject(obj_id);
     mxq_rc = MXQ_CreateObject(obj_id, keylen, MXQ_OBJTYPE_SECRETKEY,
                               OBJPROP_PERSISTENT,
                               (char *)"ahs=rwdgx:ahs=rwdgx:ahs=rwdgx");
@@ -612,13 +630,26 @@ static int aes_set_key(Aes* aes, const byte* userKey, word32 keylen)
     LoadDefaultImportKey(sign_key, &sign_key_len, &sign_key_curve,
                          &sign_key_type);
 
+    /* Unlock because signing operation will need to use the RNG. */
+    #if defined(MAXQ10XX_MUTEX)
+    wolfSSL_CryptHwMutexUnLock();
+    #endif
+
     rc = ECDSA_sign(signature, &signature_len, sign_key, key_buff, key_buff_len,
                     sign_key_curve);
     if (rc) {
         WOLFSSL_ERROR_MSG("MAXQ: ECDSA_sign() failed");
-        goto end_AesSetKey;
+        goto end_AesSetKey_noUnlock;
     }
 
+    #if defined(MAXQ10XX_MUTEX)
+    rc = maxq_CryptHwMutexTryLock();
+    if (rc != 0) {
+        WOLFSSL_ERROR_MSG("MAXQ: aes_set_key() lock could not be acquired");
+        rc = NOT_COMPILED_IN;
+        goto end_AesSetKey_noUnlock;
+    }
+    #endif
     mxq_rc = MXQ_ImportKey(obj_id, getSignAlgoFromCurve(sign_key_curve),
                            PUBKEY_IMPORT_OBJID, key_buff, key_buff_len,
                            signature, signature_len);
@@ -633,6 +664,7 @@ static int aes_set_key(Aes* aes, const byte* userKey, word32 keylen)
 
 end_AesSetKey:
     wolfSSL_CryptHwMutexUnLock();
+end_AesSetKey_noUnlock:
     return rc;
 }
 #endif /* MAXQ_AESGCM */
@@ -666,12 +698,14 @@ void wc_MAXQ10XX_AesFree(Aes* aes)
 }
 
 #ifdef MAXQ_ECC
-static int ecc_set_key(ecc_key* key, const byte* userKey, word32 keycomplen)
+static int ecc_set_key(ecc_key* key, const byte* userKey, word32 keycomplen,
+                       int for_ecdh)
 {
     mxq_err_t mxq_rc;
     int rc;
     word32 keylen;
     int objtype;
+    mxq_keyuse_t key_use;
     mxq_u1 key_buff[MAX_KEY_DATASIZE];
     mxq_length key_buff_len = sizeof(key_buff);
     unsigned char sign_key[MAX_SIGNKEY_DATASIZE];
@@ -694,12 +728,21 @@ static int ecc_set_key(ecc_key* key, const byte* userKey, word32 keycomplen)
         objtype = MXQ_OBJTYPE_KEYPAIR;
     }
 
+    if (for_ecdh) {
+        key_use = MXQ_KEYUSE_KEY_EXCHAGE;
+    }
+    else {
+        key_use = MXQ_KEYUSE_DATASIGNATURE;
+    }
+
+    #if defined(MAXQ10XX_MUTEX)
     rc = maxq_CryptHwMutexTryLock();
     if (rc != 0) {
         WOLFSSL_ERROR_MSG("MAXQ: ecc_set_key() lock could not be acquired");
         rc = NOT_COMPILED_IN;
         return rc;
     }
+    #endif
 
     if (key->maxq_ctx.key_obj_id) {
         wc_MAXQ10XX_EccFree(key);
@@ -712,6 +755,9 @@ static int ecc_set_key(ecc_key* key, const byte* userKey, word32 keycomplen)
         goto end_EccSetKey;
     }
 
+    /* Delete object if one already exists. Ignore error in case it doesn't
+     * exist. */
+    (void)MXQ_DeleteObject(obj_id);
     mxq_rc = MXQ_CreateObject(obj_id, keylen, objtype, OBJPROP_PERSISTENT,
                               (char *)"ahs=rwdgx:ahs=rwdgx:ahs=rwdgx");
     if (mxq_rc) {
@@ -725,7 +771,7 @@ static int ecc_set_key(ecc_key* key, const byte* userKey, word32 keycomplen)
 
     mxq_rc = MXQ_BuildKey(key_buff, &key_buff_len, MXQ_KEYTYPE_ECC,
                           MXQ_KEYPARAM_EC_P256R1, keycomplen, keylen,
-                          MXQ_KEYUSE_DATASIGNATURE, ALGO_ECDSA_SHA_256,
+                          key_use, ALGO_ECDSA_SHA_256,
                           MXQ_KEYUSE_NONE, ALGO_NONE, (mxq_u1 *)userKey);
     if (mxq_rc) {
         WOLFSSL_ERROR_MSG("MAXQ: MXQ_BuildKey() failed");
@@ -736,12 +782,26 @@ static int ecc_set_key(ecc_key* key, const byte* userKey, word32 keycomplen)
     LoadDefaultImportKey(sign_key, &sign_key_len, &sign_key_curve,
                          &sign_key_type);
 
+    /* Unlock because signing operation will need to use the RNG. */
+    #if defined(MAXQ10XX_MUTEX)
+    wolfSSL_CryptHwMutexUnLock();
+    #endif
+
     rc = ECDSA_sign(signature, &signature_len, sign_key, key_buff, key_buff_len,
                     sign_key_curve);
     if (rc) {
         WOLFSSL_ERROR_MSG("MAXQ: ECDSA_sign() failed");
-        goto end_EccSetKey;
+        goto end_EccSetKey_noUnlock;
     }
+
+    #if defined(MAXQ10XX_MUTEX)
+    rc = maxq_CryptHwMutexTryLock();
+    if (rc != 0) {
+        WOLFSSL_ERROR_MSG("MAXQ: ecc_set_key() lock could not be acquired");
+        rc = NOT_COMPILED_IN;
+        goto end_EccSetKey_noUnlock;
+    }
+    #endif
 
     mxq_rc = MXQ_ImportKey(obj_id, getSignAlgoFromCurve(sign_key_curve),
                            PUBKEY_IMPORT_OBJID, key_buff, key_buff_len,
@@ -756,9 +816,213 @@ static int ecc_set_key(ecc_key* key, const byte* userKey, word32 keycomplen)
     key->maxq_ctx.key_pending = 0;
 
 end_EccSetKey:
+    #if defined(MAXQ10XX_MUTEX)
     wolfSSL_CryptHwMutexUnLock();
+    #endif
+end_EccSetKey_noUnlock:
     return rc;
 }
+
+static int ecc_gen_key(ecc_key* key, word32 keycomplen)
+{
+    mxq_err_t mxq_rc;
+    int rc;
+    word32 keylen;
+    int objtype;
+    mxq_u1 key_buff[MAX_KEY_DATASIZE];
+    mxq_length key_buff_len = sizeof(key_buff);
+    unsigned char sign_key[MAX_SIGNKEY_DATASIZE];
+    int sign_key_len, sign_key_curve, sign_key_type;
+    mxq_u1 signature[MAX_SIG_DATASIZE];
+    int signature_len = (int)sizeof(signature);
+
+
+    if ((key->type != 0) && (key->type != ECC_PRIVATEKEY)
+        && (key->type != ECC_PRIVATEKEY_ONLY)) {
+        return BAD_FUNC_ARG;
+    }
+
+    key->type = ECC_PRIVATEKEY;
+    keylen = keycomplen * 3;
+    objtype = MXQ_OBJTYPE_KEYPAIR;
+
+    #if defined(MAXQ10XX_MUTEX)
+    rc = maxq_CryptHwMutexTryLock();
+    if (rc != 0) {
+        WOLFSSL_ERROR_MSG("MAXQ: ecc_set_key() lock could not be acquired");
+        rc = NOT_COMPILED_IN;
+        return rc;
+    }
+    #endif
+
+    if (key->maxq_ctx.key_obj_id) {
+        wc_MAXQ10XX_EccFree(key);
+    }
+
+    int obj_id = alloc_ecc_key_id();
+    if (!obj_id) {
+        WOLFSSL_ERROR_MSG("MAXQ: alloc_ecc_key_id() failed");
+        rc = NOT_COMPILED_IN;
+        goto end_EccGenKey;
+    }
+
+    /* Delete object if one already exists. Ignore error in case it doesn't
+     * exist. */
+    (void)MXQ_DeleteObject(obj_id);
+    mxq_rc = MXQ_CreateObject(obj_id, keylen, objtype, OBJPROP_PERSISTENT,
+                              (char *)"ahs=rwdgx:ahs=rwdgx:ahs=rwdgx");
+    if (mxq_rc) {
+        WOLFSSL_ERROR_MSG("MAXQ: MXQ_CreateObject() failed");
+        rc = NOT_COMPILED_IN;
+        goto end_EccGenKey;
+    }
+
+    /* store the object id in the context */
+    key->maxq_ctx.key_obj_id = obj_id;
+
+    /* Note that total_keylen is 0 and psrc is NULL. This ensures that when
+     * MXQ_ImportKey() is called, it does a keygen; not import. */
+    mxq_rc = MXQ_BuildKey(key_buff, &key_buff_len, MXQ_KEYTYPE_ECC,
+                          MXQ_KEYPARAM_EC_P256R1, keycomplen, 0,
+                          MXQ_KEYUSE_KEY_EXCHAGE, ALGO_ECDSA_SHA_256,
+                          MXQ_KEYUSE_NONE, ALGO_NONE, NULL);
+    if (mxq_rc) {
+        WOLFSSL_ERROR_MSG("MAXQ: MXQ_BuildKey() failed");
+        rc = WC_HW_E;
+        goto end_EccGenKey;
+    }
+
+    LoadDefaultImportKey(sign_key, &sign_key_len, &sign_key_curve,
+                         &sign_key_type);
+
+    /* Unlock because signing operation will need to use the RNG. */
+    #if defined(MAXQ10XX_MUTEX)
+    wolfSSL_CryptHwMutexUnLock();
+    #endif
+
+    rc = ECDSA_sign(signature, &signature_len, sign_key, key_buff, key_buff_len,
+                    sign_key_curve);
+    if (rc) {
+        WOLFSSL_ERROR_MSG("MAXQ: ECDSA_sign() failed");
+        goto end_EccGenKey_noUnlock;
+    }
+
+    #if defined(MAXQ10XX_MUTEX)
+    rc = maxq_CryptHwMutexTryLock();
+    if (rc != 0) {
+        WOLFSSL_ERROR_MSG("MAXQ: ecc_set_key() lock could not be acquired");
+        rc = NOT_COMPILED_IN;
+        goto end_EccGenKey_noUnlock;
+    }
+    #endif
+
+    mxq_rc = MXQ_ImportKey(obj_id, getSignAlgoFromCurve(sign_key_curve),
+                           PUBKEY_IMPORT_OBJID, key_buff, key_buff_len,
+                           signature, signature_len);
+    if (mxq_rc) {
+        WOLFSSL_ERROR_MSG("MAXQ: MXQ_ImportKey() failed");
+        rc = WC_HW_E;
+        goto end_EccGenKey;
+    }
+
+    key->maxq_ctx.hw_ecc = 1;
+
+end_EccGenKey:
+    #if defined(MAXQ10XX_MUTEX)
+    wolfSSL_CryptHwMutexUnLock();
+    #endif
+end_EccGenKey_noUnlock:
+    return rc;
+}
+
+static int ecc_establish(ecc_key* key, ecc_key* peer, byte *ss, word32 *ss_len)
+{
+    mxq_err_t mxq_rc;
+    int rc = 0;
+    byte fixed_info_len = FIXED_INFO_LEN;
+    byte fixed_info[FIXED_INFO_LEN];
+    mxq_length output_len = ESTABLISH_OUT_MAX;
+    byte output[ESTABLISH_OUT_MAX];
+
+    word32 peerKeySz;
+    uint8_t  peerKeyBuf[MAX_EC_KEY_SIZE];
+    uint8_t* peerKey = peerKeyBuf;
+    uint8_t* qx;
+    uint8_t* qy;
+    word32 qxLen;
+    word32 qyLen;
+
+    /* ECC P256 shared secret is 32 bytes. */
+    if (*ss_len != 32) {
+        return BAD_FUNC_ARG;
+    }
+
+    if (peer == NULL) {
+        return BAD_FUNC_ARG;
+    }
+
+    if (key == NULL) {
+        return BAD_FUNC_ARG;
+    }
+
+    peerKeySz = peer->dp->size;
+    qx = peerKey;
+    qy = &peerKey[peerKeySz];
+    qxLen = peerKeySz;
+    qyLen = peerKeySz;
+
+    if (key->maxq_ctx.hw_ecc != 1) {
+        /* The key was not generated. Lets import it. */
+        if (key->maxq_ctx.hw_ecc == 0) {
+            rc = wc_MAXQ10XX_EccSetKey(key, key->dp->size);
+            if (rc != 0) {
+                return rc;
+            }
+        }
+
+        if (key->maxq_ctx.hw_ecc == -1) {
+            return CRYPTOCB_UNAVAILABLE;
+        }
+
+        rc = ecc_set_key(key, key->maxq_ctx.ecc_key, key->dp->size, 1);
+    }
+
+    if (rc != 0) {
+        return rc;
+    }
+
+    if (key->maxq_ctx.key_obj_id == 0) {
+        return WC_HW_E;
+    }
+
+    rc = wc_ecc_export_public_raw(peer, qx, &qxLen, qy, &qyLen);
+    if (rc != 0) {
+        return rc;
+    }
+
+    /* This follows what is done in other MAXQ10xx examples. */
+    XMEMSET(fixed_info, FIXED_INFO_VALUE, fixed_info_len);
+
+    /* 0xFFFF indicates that the peer's public key will be in the buffer; not
+     * referenced via key ID. */
+    mxq_rc = MXQ_EstablishKey(SHARE_SECRET, MXQ_KEYPARAM_EC_P256R1,
+                              key->maxq_ctx.key_obj_id, 0xFFFF, peerKey,
+                              0, NULL, 0, 0, 0, 0, fixed_info_len, fixed_info,
+                              0, 0, NULL, output, &output_len);
+
+    if (mxq_rc) {
+        WOLFSSL_ERROR_MSG("MAXQ: MXQ_EstablishKey() failed");
+        rc = WC_HW_E;
+    }
+
+    /* Output contains the public key and shared secret concatenated. The public
+     * key is (0x04 || X || Y) which means its 65 bytes. The shared secret is
+     * in the 32 bytes after that. */
+    XMEMCPY(ss, &output[1 + ECC256_KEYSIZE + ECC256_KEYSIZE], *ss_len);
+
+    return rc;
+}
+
 #endif /* MAXQ_ECC */
 
 void wc_MAXQ10XX_EccFree(ecc_key* key)
@@ -878,12 +1142,14 @@ static int maxq10xx_cipher_do(mxq_algo_id_t algo_id, mxq_u1 encrypt,
     cparams.p_aad        = p_aad;
     cparams.aad_length   = aad_len;
 
-    if (encrypt) {
-        cparams.aead_tag_len = tag_len;
-    }
-    else {
-        XMEMCPY(cparams.aead_tag, p_tag, tag_len);
-        cparams.aead_tag_len = tag_len;
+    if ((algo_id == ALGO_CIPHER_AES_GCM) || (algo_id == ALGO_CIPHER_AES_CCM)) {
+        if (encrypt) {
+            cparams.aead_tag_len = tag_len;
+        }
+        else {
+            XMEMCPY(cparams.aead_tag, p_tag, tag_len);
+            cparams.aead_tag_len = tag_len;
+        }
     }
 
     mxq_rc = MXQ_Cipher_Init(encrypt, algo_id, key_id, &cparams, 0);
@@ -1074,24 +1340,20 @@ static int maxq10xx_ecc_verify_local(
 #endif /* MAXQ_ECC */
 
 #ifdef MAXQ_RNG
-static int maxq10xx_random(byte* output, unsigned short sz)
+int maxq10xx_random(byte* output, unsigned short sz)
 {
-#if defined(WOLFSSL_MAXQ108X)
-    if (!tls13active) {
-        return NOT_COMPILED_IN;
-    }
-#endif
-
     if (output == NULL) {
         return BUFFER_E;
     }
 
+    #if defined(MAXQ10XX_MUTEX)
     int ret = maxq_CryptHwMutexTryLock();
     if (ret != 0) {
         WOLFSSL_ERROR_MSG("MAXQ: maxq10xx_random() lock could not be acquired");
         ret = NOT_COMPILED_IN;
         return ret;
     }
+    #endif
 
     if (MXQ_Get_Random_Ext(output, sz, 0)) {
         WOLFSSL_ERROR_MSG("MAXQ: MXQ_Get_Random_Ext() failed");
@@ -1210,6 +1472,173 @@ static int do_aesgcm(wc_CryptoInfo* info)
 }
 #endif /* !NO_AES && HAVE_AESGCM && MAXQ_AESGCM */
 
+static int do_aescbc(wc_CryptoInfo* info)
+{
+    int rc;
+    byte *out = info->cipher.aescbc.out;
+    const byte *in = info->cipher.aescbc.in;
+
+    if (info->cipher.aescbc.sz == 0) {
+        return CRYPTOCB_UNAVAILABLE;
+     }
+
+    if (info->cipher.aescbc.aes->reg == NULL) {
+        return CRYPTOCB_UNAVAILABLE;
+    }
+
+    /* Cannot do in place decryption because we get the incoming IV and that
+     * would already get over written. */
+    if (in == out) {
+        return CRYPTOCB_UNAVAILABLE;
+    }
+
+    if (info->cipher.aescbc.aes->maxq_ctx.key_pending) {
+        rc = aes_set_key(
+            info->cipher.aescbc.aes,
+            (const byte *)info->cipher.aescbc.aes->maxq_ctx.key,
+            info->cipher.aescbc.aes->keylen);
+        if (rc != 0) {
+            return rc;
+        }
+    }
+
+    rc = wolfSSL_CryptHwMutexLock();
+    if (rc != 0) {
+        return rc;
+    }
+
+    rc = maxq10xx_cipher_do(
+        ALGO_CIPHER_AES_CBC,
+        info->cipher.enc,
+        info->cipher.aescbc.aes->maxq_ctx.key_obj_id,
+        (byte *)info->cipher.aescbc.in,
+        (byte *)info->cipher.aescbc.out,
+        info->cipher.aescbc.sz,
+        (byte *)info->cipher.aescbc.aes->reg, WC_AES_BLOCK_SIZE,
+        NULL, 0,
+        NULL, 0);
+
+    wolfSSL_CryptHwMutexUnLock();
+
+    /* Take the last 16 bytes and throw them into reg. Then it will be ready in
+     * case Update() is called. For both encryption and decryption, we get it
+     * from the ciphertext. (Note in and out usage) */
+    if (info->cipher.enc) {
+        XMEMCPY(info->cipher.aescbc.aes->reg,
+               &out[info->cipher.aescbc.sz - WC_AES_BLOCK_SIZE],
+               WC_AES_BLOCK_SIZE);
+    }
+    else {
+        XMEMCPY(info->cipher.aescbc.aes->reg,
+               &in[info->cipher.aescbc.sz - WC_AES_BLOCK_SIZE],
+               WC_AES_BLOCK_SIZE);
+    }
+    /* done */
+    return rc;
+}
+
+#ifdef HAVE_AES_ECB
+static int do_aesecb(wc_CryptoInfo* info)
+{
+    int rc;
+
+    if (info->cipher.aesecb.sz == 0) {
+        return CRYPTOCB_UNAVAILABLE;
+     }
+
+    if (info->cipher.aesecb.aes->reg == NULL) {
+        return CRYPTOCB_UNAVAILABLE;
+    }
+
+    if (info->cipher.aesecb.aes->maxq_ctx.key_pending) {
+        rc = aes_set_key(
+            info->cipher.aesecb.aes,
+            (const byte *)info->cipher.aesecb.aes->maxq_ctx.key,
+            info->cipher.aesecb.aes->keylen);
+        if (rc != 0) {
+            return rc;
+        }
+    }
+
+    rc = wolfSSL_CryptHwMutexLock();
+    if (rc != 0) {
+        return rc;
+    }
+
+    rc = maxq10xx_cipher_do(
+        ALGO_CIPHER_AES_ECB,
+        info->cipher.enc,
+        info->cipher.aesecb.aes->maxq_ctx.key_obj_id,
+        (byte *)info->cipher.aesecb.in,
+        (byte *)info->cipher.aesecb.out,
+        info->cipher.aesecb.sz,
+        NULL, 0,
+        NULL, 0,
+        NULL, 0);
+
+    wolfSSL_CryptHwMutexUnLock();
+
+    /* done */
+    return rc;
+}
+#endif /* HAVE_AES_ECB */
+
+#ifdef HAVE_AESCCM
+static int do_aesccm(wc_CryptoInfo* info)
+{
+    int rc;
+    wc_CryptoCb_AesAuthEnc *aesccm = (info->cipher.enc) ?
+        (wc_CryptoCb_AesAuthEnc*)&info->cipher.aesccm_enc :
+        /* dec->enc cast is okay */
+        (wc_CryptoCb_AesAuthEnc*)&info->cipher.aesccm_dec;
+
+    if (aesccm->sz == 0) {
+        return CRYPTOCB_UNAVAILABLE;
+     }
+
+    if (aesccm->aes->reg == NULL) {
+        return CRYPTOCB_UNAVAILABLE;
+    }
+
+    /* Cannot do in place decryption because we get the incoming IV and that
+     * would already get over written. */
+    if (aesccm->in == aesccm->out) {
+        return CRYPTOCB_UNAVAILABLE;
+    }
+
+    if (aesccm->aes->maxq_ctx.key_pending) {
+        rc = aes_set_key(
+            aesccm->aes,
+            (const byte *)aesccm->aes->maxq_ctx.key,
+            aesccm->aes->keylen);
+        if (rc != 0) {
+            return rc;
+        }
+    }
+
+    rc = wolfSSL_CryptHwMutexLock();
+    if (rc != 0) {
+        return rc;
+    }
+
+    rc = maxq10xx_cipher_do(
+        ALGO_CIPHER_AES_CCM,
+        info->cipher.enc,
+        aesccm->aes->maxq_ctx.key_obj_id,
+        (byte *)aesccm->in,
+        (byte *)aesccm->out,
+        aesccm->sz,
+        (byte *)aesccm->nonce, aesccm->nonceSz,
+        (byte *)aesccm->authIn, aesccm->authInSz,
+        (byte *)aesccm->authTag, aesccm->authTagSz);
+
+    wolfSSL_CryptHwMutexUnLock();
+
+    /* done */
+    return rc;
+}
+#endif /* HAVE_AESCCM */
+
 #if !defined(NO_SHA) && !defined(NO_SHA256) && defined(MAXQ_SHA256)
 static int do_sha256(wc_CryptoInfo* info)
 {
@@ -1222,6 +1651,7 @@ static int do_sha256(wc_CryptoInfo* info)
         return WC_HW_E;
     }
 
+    #if defined(MAXQ10XX_MUTEX)
     if (info->hash.sha256->maxq_ctx.hash_running == 0) {
         rc = maxq_CryptHwMutexTryLock();
         if (rc != 0) {
@@ -1229,6 +1659,7 @@ static int do_sha256(wc_CryptoInfo* info)
             return CRYPTOCB_UNAVAILABLE;
         }
     }
+    #endif
 
     if (info->hash.in != NULL) {
         /* wc_Sha256Update */
@@ -1282,10 +1713,11 @@ int wolfSSL_MAXQ10XX_CryptoDevCb(int devId, wc_CryptoInfo* info, void* ctx)
     (void)devId;
     (void)ctx;
 
+    /* In the case of MAXQ1065, this callback is always enabled. */
 #if defined(WOLFSSL_MAXQ108X)
     if (!tls13active)
-#endif
         return CRYPTOCB_UNAVAILABLE;
+#endif
 
     if (info->algo_type == WC_ALGO_TYPE_CIPHER) {
 #if !defined(NO_AES) || !defined(NO_DES3)
@@ -1296,10 +1728,19 @@ int wolfSSL_MAXQ10XX_CryptoDevCb(int devId, wc_CryptoInfo* info, void* ctx)
     #endif /* HAVE_AESGCM && MAXQ_AESGCM */
     #ifdef HAVE_AES_CBC
         if (info->cipher.type == WC_CIPHER_AES_CBC) {
-            /* TODO */
-            return CRYPTOCB_UNAVAILABLE;
+            rc = do_aescbc(info);
         }
     #endif /* HAVE_AES_CBC */
+    #ifdef HAVE_AESCCM
+        if (info->cipher.type == WC_CIPHER_AES_CCM) {
+            rc = do_aesccm(info);
+        }
+    #endif /* HAVE_AESCCM */
+    #ifdef HAVE_AES_ECB
+        if (info->cipher.type == WC_CIPHER_AES_ECB) {
+            rc = do_aesecb(info);
+        }
+    #endif /* HAVE_AES_ECB */
 #endif /* !NO_AES || !NO_DES3 */
     }
 #if !defined(NO_SHA) || !defined(NO_SHA256)
@@ -1329,12 +1770,22 @@ int wolfSSL_MAXQ10XX_CryptoDevCb(int devId, wc_CryptoInfo* info, void* ctx)
     else if (info->algo_type == WC_ALGO_TYPE_PK) {
     #if defined(HAVE_ECC) && defined(MAXQ_ECC)
         if (info->pk.type == WC_PK_TYPE_EC_KEYGEN) {
-            /* TODO */
-            return CRYPTOCB_UNAVAILABLE;
+            if (info->pk.eckg.key->maxq_ctx.hw_ecc == -1) {
+                return CRYPTOCB_UNAVAILABLE;
+            }
+
+            rc = ecc_gen_key(info->pk.eckg.key, info->pk.eckg.key->dp->size);
+            if (rc != 0) {
+                return rc;
+            }
         }
         else if (info->pk.type == WC_PK_TYPE_ECDH) {
-            /* TODO */
-            return CRYPTOCB_UNAVAILABLE;
+            rc = ecc_establish(info->pk.ecdh.private_key,
+                               info->pk.ecdh.public_key,
+                               info->pk.ecdh.out, info->pk.ecdh.outlen);
+            if (rc != 0) {
+                return rc;
+            }
         }
         else if (info->pk.type == WC_PK_TYPE_ECDSA_SIGN) {
             if (info->pk.eccsign.key->maxq_ctx.hw_ecc == 0) {
@@ -1349,22 +1800,32 @@ int wolfSSL_MAXQ10XX_CryptoDevCb(int devId, wc_CryptoInfo* info, void* ctx)
                 return CRYPTOCB_UNAVAILABLE;
             }
 
+#if defined(WOLFSSL_MAXQ108X)
+            /* This is not done for MAXQ1065 because we want to use the pre-
+             * provisioned key in the case of PKCS11. */
             if (info->pk.eccsign.key->maxq_ctx.key_pending) {
                 rc = ecc_set_key(info->pk.eccsign.key,
                                  info->pk.eccsign.key->maxq_ctx.ecc_key,
-                                 info->pk.eccsign.key->dp->size);
+                                 info->pk.eccsign.key->dp->size, 0);
                 if (rc != 0) {
                     return rc;
                 }
             }
+#endif
 
             rc = wolfSSL_CryptHwMutexLock();
             if (rc != 0) {
                 return rc;
             }
 
+            /* Note that we are using the DEVICE_KEY_PAIR_OBJ_ID; its the pre-
+             * provisioned key in the case of MAXQ1065. */
             rc = maxq10xx_ecc_sign_local(
+#if defined(WOLFSSL_MAXQ108X)
                      info->pk.eccsign.key->maxq_ctx.key_obj_id,
+#else
+                     DEVICE_KEY_PAIR_OBJ_ID,
+#endif
                      (byte *)info->pk.eccsign.in, info->pk.eccsign.inlen,
                      info->pk.eccsign.out, info->pk.eccsign.outlen,
                      info->pk.eccsign.key->dp->size);
@@ -1398,7 +1859,7 @@ int wolfSSL_MAXQ10XX_CryptoDevCb(int devId, wc_CryptoInfo* info, void* ctx)
             if (info->pk.eccverify.key->maxq_ctx.key_pending) {
                 rc = ecc_set_key(info->pk.eccverify.key,
                                  info->pk.eccverify.key->maxq_ctx.ecc_key,
-                                 info->pk.eccverify.key->dp->size);
+                                 info->pk.eccverify.key->dp->size, 0);
                 if (rc != 0) {
                     return rc;
                 }
@@ -1450,7 +1911,7 @@ int wolfSSL_MAXQ10XX_CryptoDevCb(int devId, wc_CryptoInfo* info, void* ctx)
     }
 #endif /* WOLFSSL_MAXQ108X */
 
-    if (rc != 0 && rc != CRYPTOCB_UNAVAILABLE) {
+    if (rc != 0 && rc != WC_NO_ERR_TRACE(CRYPTOCB_UNAVAILABLE)) {
         rc = WC_HW_E;
     }
 
@@ -1981,12 +2442,14 @@ int maxq10xx_port_init(void)
     }
     #endif
 
+    #if defined(MAXQ10XX_MUTEX)
     ret = maxq_CryptHwMutexTryLock();
     if (ret) {
         WOLFSSL_ERROR_MSG("MAXQ: maxq10xx_port_init() -> device is busy "
                     "(switching to soft mode)");
         return 0;
     }
+    #endif
 
     mxq_rc = MXQ_Module_Init();
     if (mxq_rc) {
@@ -2131,8 +2594,10 @@ static int wc_MAXQ10XX_HmacSetKey(int type)
     }
 
     if (tls13_server_finish_obj_id != -1) {
-        free_temp_key_id(*tls13_server_key_id);
-        *tls13_server_key_id = -1;
+        if (tls13_server_key_id != NULL) {
+            free_temp_key_id(*tls13_server_key_id);
+            *tls13_server_key_id = -1;
+        }
         mac_key_obj_id = &tls13_server_finish_obj_id;
     }
     else if (tls13_client_finish_obj_id != -1) {
@@ -2208,9 +2673,11 @@ static int wc_MAXQ10XX_HmacFinal(byte* hash)
         rc = WC_HW_E;
     }
 
-    free_temp_key_id(*mac_key_obj_id);
-    *mac_key_obj_id = -1;
-    mac_key_obj_id = NULL;
+    if (mac_key_obj_id != NULL) {
+        free_temp_key_id(*mac_key_obj_id);
+        *mac_key_obj_id = -1;
+        mac_key_obj_id = NULL;
+    }
     mac_comp_active = 0;
 
     return rc;
@@ -2428,6 +2895,9 @@ static int maxq10xx_tls13_ecc_shared_secret(WOLFSSL* ssl, ecc_key* otherKey,
     WOLFSSL_ENTER("maxq10xx_ecc_shared_secret");
 
     rc = wc_ecc_export_public_raw(otherKey, qx, &qxLen, qy, &qyLen);
+    if (rc != 0) {
+        return rc;
+    }
 
     if (tls13_ecc_obj_id == -1) {
         WOLFSSL_ERROR_MSG("MAXQ: ECDHE key is not created before");
@@ -3030,14 +3500,14 @@ static int maxq10xx_HkdfExpand(int digest, const byte* inKey, word32 inKeySz,
             int tls13_client_iv_obj_id = -1;
             if (is_hs_key) {
                 if (tls13_client_hs_key_obj_id == -1) {
-                    WOLFSSL_ERROR_MSG("MAXQ: alloc_temp_key_id() failed");
+                    WOLFSSL_ERROR_MSG("MAXQ: client hs key not set");
                     return NOT_COMPILED_IN;
                 }
                 tls13_client_iv_obj_id = tls13_client_hs_key_obj_id;
             }
             else {
                 if (tls13_client_app_key_obj_id == -1) {
-                    WOLFSSL_ERROR_MSG("MAXQ: alloc_temp_key_id() failed");
+                    WOLFSSL_ERROR_MSG("MAXQ: client app key not set");
                     return NOT_COMPILED_IN;
                 }
                 tls13_client_iv_obj_id = tls13_client_app_key_obj_id;
@@ -3056,14 +3526,14 @@ static int maxq10xx_HkdfExpand(int digest, const byte* inKey, word32 inKeySz,
             int tls13_server_iv_obj_id = -1;
             if (is_hs_key) {
                 if (tls13_server_hs_key_obj_id == -1) {
-                    WOLFSSL_ERROR_MSG("MAXQ: alloc_temp_key_id() failed");
+                    WOLFSSL_ERROR_MSG("MAXQ: server hs key not set");
                     return NOT_COMPILED_IN;
                 }
                 tls13_server_iv_obj_id = tls13_server_hs_key_obj_id;
             }
             else {
                 if (tls13_server_app_key_obj_id == -1) {
-                    WOLFSSL_ERROR_MSG("MAXQ: alloc_temp_key_id() failed");
+                    WOLFSSL_ERROR_MSG("MAXQ: server app key not set");
                     return NOT_COMPILED_IN;
                 }
                 tls13_server_iv_obj_id = tls13_server_app_key_obj_id;
@@ -3178,8 +3648,10 @@ static int maxq10xx_HkdfExpand(int digest, const byte* inKey, word32 inKeySz,
         ret_kid = tls13_res_master_obj_id;
         ret_keytype = MXQ_KEYTYPE_IKM;
         ret_isiv = 0;
-        free_temp_key_id(*tls13_client_key_id);
-        *tls13_client_key_id = -1;
+        if (tls13_client_key_id != NULL) {
+            free_temp_key_id(*tls13_client_key_id);
+            *tls13_client_key_id = -1;
+        }
     }
     else if (strstr_with_size((char *)info, appTrafUpdLabel, infoSz) != NULL) {
         if (side == WOLFSSL_CLIENT_END) {
@@ -3198,7 +3670,7 @@ static int maxq10xx_HkdfExpand(int digest, const byte* inKey, word32 inKeySz,
             /* updated_server_secret = HKDF-Expand-Label(key: server_secret,
              *                             label: "traffic upd", ctx: "") */
             if (tls13_server_app_key_obj_id == -1) {
-                WOLFSSL_ERROR_MSG("MAXQ: Client Application Key was not set");
+                WOLFSSL_ERROR_MSG("MAXQ: Server Application Key was not set");
                 return NOT_COMPILED_IN;
             }
             prk_kid = tls13_server_secret_obj_id;
@@ -3290,7 +3762,7 @@ static int maxq10xx_perform_tls13_record_processing(WOLFSSL* ssl,
 {
     int rc;
     mxq_err_t mxq_rc;
-    mxq_u2 key_id;
+    mxq_u2 key_id = 0xFFFF;
 
     if (!tls13active) {
         return NOT_COMPILED_IN;
@@ -3370,9 +3842,6 @@ void maxq10xx_SetupPkCallbacks(struct WOLFSSL_CTX* ctx, ProtocolVersion *pv)
     }
 
     WOLFSSL_ENTER("maxq10xx_SetupPkCallbacks");
-    if (init_pk_callbacks) {
-        return;
-    }
 
 #ifdef WOLFSSL_MAXQ108X
     #ifdef HAVE_HKDF
@@ -3408,8 +3877,6 @@ void maxq10xx_SetupPkCallbacks(struct WOLFSSL_CTX* ctx, ProtocolVersion *pv)
     wolfSSL_CTX_SetTlsFinishedCb(ctx, maxq10xx_perform_client_finished);
 
     wolfSSL_CTX_SetEccSignCb(ctx, maxq10xx_ecc_sign);
-
-    init_pk_callbacks = 1;
 }
 
 #endif /* WOLFSSL_MAXQ1065 || WOLFSSL_MAXQ108X */

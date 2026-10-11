@@ -1,12 +1,12 @@
 /* xil-versal-trng.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -134,7 +134,7 @@ int wc_VersalTrngInit(byte* nonce, word32 nonceSz)
             .PersStrPresent = XTRNGPSV_FALSE
     };
 #endif
-    int ret = WC_HW_E;
+    int ret = WC_NO_ERR_TRACE(WC_HW_E);
     XTrngpsv_Config *cfg;
     sword32 xret = 0;
     if (trng.State == XTRNGPSV_HEALTHY) {
@@ -142,22 +142,29 @@ int wc_VersalTrngInit(byte* nonce, word32 nonceSz)
     }
     cfg = XTrngpsv_LookupConfig(WOLFSSL_PSV_TRNG_DEV_ID);
     if (!cfg) {
+        ret = WC_HW_E;
         WOLFSSL_MSG("Could not lookup TRNG config");
         goto out;
     }
     xret = XTrngpsv_CfgInitialize(&trng, cfg, cfg->BaseAddress);
-    if (xret)
+    if (xret) {
+        ret = WC_HW_E;
         goto out;
+    }
     xret = versal_trng_selftest();
-    if (xret)
+    if (xret) {
+        ret = WC_HW_E;
         goto out;
+    }
 #if !defined(HAVE_HASHDRBG)
     if (nonce)
         usercfg_add_nonce(&user_cfg, nonce, nonceSz);
 #endif
     xret = XTrngpsv_Instantiate(&trng, &user_cfg);
-    if (xret)
+    if (xret) {
+        ret = WC_HW_E;
         goto out;
+    }
 
     ret = 0;
 
@@ -190,7 +197,7 @@ int wc_VersalTrngReset(void)
  */
 int wc_VersalTrngSelftest(void)
 {
-    return versal_trng_selftest() == XTRNGPSV_SUCCESS ? 0 : -1;
+    return versal_trng_selftest() == XTRNGPSV_SUCCESS ? 0 : WC_HW_E;
 }
 
 /**
@@ -206,6 +213,10 @@ int wc_VersalTrngGenerate(byte* output, word32 sz)
     /* The TRNG always generates exactly 32bytes of output */
     byte buf[XTRNGPSV_SEC_STRENGTH_BYTES];
     word32 bytes_generated = 0;
+
+    if (output == NULL)
+        return BAD_FUNC_ARG;
+
     do {
         word32 bytes_left = sz - bytes_generated;
         word32 bytes_required =
@@ -216,11 +227,13 @@ int wc_VersalTrngGenerate(byte* output, word32 sz)
                                          XTRNGPSV_FALSE);
         if (xret) {
             WOLFSSL_MSG_EX("XTrngpsv_Generate() returned 0x%08x", xret);
+            ForceZero(buf, sizeof(buf));
             return WC_HW_E;
         }
         XMEMCPY(&output[bytes_generated], buf, bytes_required);
         bytes_generated += bytes_required;
     } while (bytes_generated < sz);
+    ForceZero(buf, sizeof(buf));
     return 0;
 }
 

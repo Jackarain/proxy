@@ -1,12 +1,12 @@
 /* md5.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -19,13 +19,18 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1335, USA
  */
 
+/*
+ * MD5 Build Options:
+ *
+ * NO_MD5:                   Disable MD5 support entirely          default: off
+ * HAVE_MD5_CUST_API:        Enable custom MD5 API                 default: off
+ * STM32_NOMD5:              Disable STM32 hardware MD5            default: off
+ *
+ * Hardware Acceleration (MD5-specific):
+ * WC_ASYNC_ENABLE_MD5:      Enable async MD5 operations           default: off
+ */
 
-
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
-
-#include <wolfssl/wolfcrypt/settings.h>
+#include <wolfssl/wolfcrypt/libwolfssl_sources.h>
 
 #if !defined(NO_MD5)
 
@@ -35,8 +40,6 @@
 #else
 
 #include <wolfssl/wolfcrypt/md5.h>
-#include <wolfssl/wolfcrypt/error-crypt.h>
-#include <wolfssl/wolfcrypt/logging.h>
 #include <wolfssl/wolfcrypt/hash.h>
 
 #ifdef NO_INLINE
@@ -48,7 +51,7 @@
 
 
 /* Hardware Acceleration */
-#if defined(STM32_HASH)
+#if defined(STM32_HASH) && !defined(STM32_NOMD5)
 
 /* Supports CubeMX HAL or Standard Peripheral Library */
 #define HAVE_MD5_CUST_API
@@ -191,8 +194,10 @@ static int Transform_Len(wc_Md5* md5, const byte* data, word32 len)
 #define F3(x, y, z) ((x) ^ (y) ^ (z))
 #define F4(x, y, z) ((y) ^ ((x) | ~(z)))
 
-#define MD5STEP(f, w, x, y, z, data, s) \
-    (w) = (rotlFixed((w) + f(x, y, z) + (data), s) + (x))
+#define MD5STEP(f, w, x, y, z, data, addend, s) \
+    (w) = (rotlFixed((w) + f(x, y, z) + \
+                     readUnalignedWord32((const byte *)&(data)) + (addend), \
+                     s) + (x))
 
 static int Transform(wc_Md5* md5, const byte* data)
 {
@@ -203,73 +208,73 @@ static int Transform(wc_Md5* md5, const byte* data)
     word32 c = md5->digest[2];
     word32 d = md5->digest[3];
 
-    MD5STEP(F1, a, b, c, d, buffer[0]  + 0xd76aa478,  7);
-    MD5STEP(F1, d, a, b, c, buffer[1]  + 0xe8c7b756, 12);
-    MD5STEP(F1, c, d, a, b, buffer[2]  + 0x242070db, 17);
-    MD5STEP(F1, b, c, d, a, buffer[3]  + 0xc1bdceee, 22);
-    MD5STEP(F1, a, b, c, d, buffer[4]  + 0xf57c0faf,  7);
-    MD5STEP(F1, d, a, b, c, buffer[5]  + 0x4787c62a, 12);
-    MD5STEP(F1, c, d, a, b, buffer[6]  + 0xa8304613, 17);
-    MD5STEP(F1, b, c, d, a, buffer[7]  + 0xfd469501, 22);
-    MD5STEP(F1, a, b, c, d, buffer[8]  + 0x698098d8,  7);
-    MD5STEP(F1, d, a, b, c, buffer[9]  + 0x8b44f7af, 12);
-    MD5STEP(F1, c, d, a, b, buffer[10] + 0xffff5bb1, 17);
-    MD5STEP(F1, b, c, d, a, buffer[11] + 0x895cd7be, 22);
-    MD5STEP(F1, a, b, c, d, buffer[12] + 0x6b901122,  7);
-    MD5STEP(F1, d, a, b, c, buffer[13] + 0xfd987193, 12);
-    MD5STEP(F1, c, d, a, b, buffer[14] + 0xa679438e, 17);
-    MD5STEP(F1, b, c, d, a, buffer[15] + 0x49b40821, 22);
+    MD5STEP(F1, a, b, c, d, buffer[0]  , 0xd76aa478,  7);
+    MD5STEP(F1, d, a, b, c, buffer[1]  , 0xe8c7b756, 12);
+    MD5STEP(F1, c, d, a, b, buffer[2]  , 0x242070db, 17);
+    MD5STEP(F1, b, c, d, a, buffer[3]  , 0xc1bdceee, 22);
+    MD5STEP(F1, a, b, c, d, buffer[4]  , 0xf57c0faf,  7);
+    MD5STEP(F1, d, a, b, c, buffer[5]  , 0x4787c62a, 12);
+    MD5STEP(F1, c, d, a, b, buffer[6]  , 0xa8304613, 17);
+    MD5STEP(F1, b, c, d, a, buffer[7]  , 0xfd469501, 22);
+    MD5STEP(F1, a, b, c, d, buffer[8]  , 0x698098d8,  7);
+    MD5STEP(F1, d, a, b, c, buffer[9]  , 0x8b44f7af, 12);
+    MD5STEP(F1, c, d, a, b, buffer[10] , 0xffff5bb1, 17);
+    MD5STEP(F1, b, c, d, a, buffer[11] , 0x895cd7be, 22);
+    MD5STEP(F1, a, b, c, d, buffer[12] , 0x6b901122,  7);
+    MD5STEP(F1, d, a, b, c, buffer[13] , 0xfd987193, 12);
+    MD5STEP(F1, c, d, a, b, buffer[14] , 0xa679438e, 17);
+    MD5STEP(F1, b, c, d, a, buffer[15] , 0x49b40821, 22);
 
-    MD5STEP(F2, a, b, c, d, buffer[1]  + 0xf61e2562,  5);
-    MD5STEP(F2, d, a, b, c, buffer[6]  + 0xc040b340,  9);
-    MD5STEP(F2, c, d, a, b, buffer[11] + 0x265e5a51, 14);
-    MD5STEP(F2, b, c, d, a, buffer[0]  + 0xe9b6c7aa, 20);
-    MD5STEP(F2, a, b, c, d, buffer[5]  + 0xd62f105d,  5);
-    MD5STEP(F2, d, a, b, c, buffer[10] + 0x02441453,  9);
-    MD5STEP(F2, c, d, a, b, buffer[15] + 0xd8a1e681, 14);
-    MD5STEP(F2, b, c, d, a, buffer[4]  + 0xe7d3fbc8, 20);
-    MD5STEP(F2, a, b, c, d, buffer[9]  + 0x21e1cde6,  5);
-    MD5STEP(F2, d, a, b, c, buffer[14] + 0xc33707d6,  9);
-    MD5STEP(F2, c, d, a, b, buffer[3]  + 0xf4d50d87, 14);
-    MD5STEP(F2, b, c, d, a, buffer[8]  + 0x455a14ed, 20);
-    MD5STEP(F2, a, b, c, d, buffer[13] + 0xa9e3e905,  5);
-    MD5STEP(F2, d, a, b, c, buffer[2]  + 0xfcefa3f8,  9);
-    MD5STEP(F2, c, d, a, b, buffer[7]  + 0x676f02d9, 14);
-    MD5STEP(F2, b, c, d, a, buffer[12] + 0x8d2a4c8a, 20);
+    MD5STEP(F2, a, b, c, d, buffer[1]  , 0xf61e2562,  5);
+    MD5STEP(F2, d, a, b, c, buffer[6]  , 0xc040b340,  9);
+    MD5STEP(F2, c, d, a, b, buffer[11] , 0x265e5a51, 14);
+    MD5STEP(F2, b, c, d, a, buffer[0]  , 0xe9b6c7aa, 20);
+    MD5STEP(F2, a, b, c, d, buffer[5]  , 0xd62f105d,  5);
+    MD5STEP(F2, d, a, b, c, buffer[10] , 0x02441453,  9);
+    MD5STEP(F2, c, d, a, b, buffer[15] , 0xd8a1e681, 14);
+    MD5STEP(F2, b, c, d, a, buffer[4]  , 0xe7d3fbc8, 20);
+    MD5STEP(F2, a, b, c, d, buffer[9]  , 0x21e1cde6,  5);
+    MD5STEP(F2, d, a, b, c, buffer[14] , 0xc33707d6,  9);
+    MD5STEP(F2, c, d, a, b, buffer[3]  , 0xf4d50d87, 14);
+    MD5STEP(F2, b, c, d, a, buffer[8]  , 0x455a14ed, 20);
+    MD5STEP(F2, a, b, c, d, buffer[13] , 0xa9e3e905,  5);
+    MD5STEP(F2, d, a, b, c, buffer[2]  , 0xfcefa3f8,  9);
+    MD5STEP(F2, c, d, a, b, buffer[7]  , 0x676f02d9, 14);
+    MD5STEP(F2, b, c, d, a, buffer[12] , 0x8d2a4c8a, 20);
 
-    MD5STEP(F3, a, b, c, d, buffer[5]  + 0xfffa3942,  4);
-    MD5STEP(F3, d, a, b, c, buffer[8]  + 0x8771f681, 11);
-    MD5STEP(F3, c, d, a, b, buffer[11] + 0x6d9d6122, 16);
-    MD5STEP(F3, b, c, d, a, buffer[14] + 0xfde5380c, 23);
-    MD5STEP(F3, a, b, c, d, buffer[1]  + 0xa4beea44,  4);
-    MD5STEP(F3, d, a, b, c, buffer[4]  + 0x4bdecfa9, 11);
-    MD5STEP(F3, c, d, a, b, buffer[7]  + 0xf6bb4b60, 16);
-    MD5STEP(F3, b, c, d, a, buffer[10] + 0xbebfbc70, 23);
-    MD5STEP(F3, a, b, c, d, buffer[13] + 0x289b7ec6,  4);
-    MD5STEP(F3, d, a, b, c, buffer[0]  + 0xeaa127fa, 11);
-    MD5STEP(F3, c, d, a, b, buffer[3]  + 0xd4ef3085, 16);
-    MD5STEP(F3, b, c, d, a, buffer[6]  + 0x04881d05, 23);
-    MD5STEP(F3, a, b, c, d, buffer[9]  + 0xd9d4d039,  4);
-    MD5STEP(F3, d, a, b, c, buffer[12] + 0xe6db99e5, 11);
-    MD5STEP(F3, c, d, a, b, buffer[15] + 0x1fa27cf8, 16);
-    MD5STEP(F3, b, c, d, a, buffer[2]  + 0xc4ac5665, 23);
+    MD5STEP(F3, a, b, c, d, buffer[5]  , 0xfffa3942,  4);
+    MD5STEP(F3, d, a, b, c, buffer[8]  , 0x8771f681, 11);
+    MD5STEP(F3, c, d, a, b, buffer[11] , 0x6d9d6122, 16);
+    MD5STEP(F3, b, c, d, a, buffer[14] , 0xfde5380c, 23);
+    MD5STEP(F3, a, b, c, d, buffer[1]  , 0xa4beea44,  4);
+    MD5STEP(F3, d, a, b, c, buffer[4]  , 0x4bdecfa9, 11);
+    MD5STEP(F3, c, d, a, b, buffer[7]  , 0xf6bb4b60, 16);
+    MD5STEP(F3, b, c, d, a, buffer[10] , 0xbebfbc70, 23);
+    MD5STEP(F3, a, b, c, d, buffer[13] , 0x289b7ec6,  4);
+    MD5STEP(F3, d, a, b, c, buffer[0]  , 0xeaa127fa, 11);
+    MD5STEP(F3, c, d, a, b, buffer[3]  , 0xd4ef3085, 16);
+    MD5STEP(F3, b, c, d, a, buffer[6]  , 0x04881d05, 23);
+    MD5STEP(F3, a, b, c, d, buffer[9]  , 0xd9d4d039,  4);
+    MD5STEP(F3, d, a, b, c, buffer[12] , 0xe6db99e5, 11);
+    MD5STEP(F3, c, d, a, b, buffer[15] , 0x1fa27cf8, 16);
+    MD5STEP(F3, b, c, d, a, buffer[2]  , 0xc4ac5665, 23);
 
-    MD5STEP(F4, a, b, c, d, buffer[0]  + 0xf4292244,  6);
-    MD5STEP(F4, d, a, b, c, buffer[7]  + 0x432aff97, 10);
-    MD5STEP(F4, c, d, a, b, buffer[14] + 0xab9423a7, 15);
-    MD5STEP(F4, b, c, d, a, buffer[5]  + 0xfc93a039, 21);
-    MD5STEP(F4, a, b, c, d, buffer[12] + 0x655b59c3,  6);
-    MD5STEP(F4, d, a, b, c, buffer[3]  + 0x8f0ccc92, 10);
-    MD5STEP(F4, c, d, a, b, buffer[10] + 0xffeff47d, 15);
-    MD5STEP(F4, b, c, d, a, buffer[1]  + 0x85845dd1, 21);
-    MD5STEP(F4, a, b, c, d, buffer[8]  + 0x6fa87e4f,  6);
-    MD5STEP(F4, d, a, b, c, buffer[15] + 0xfe2ce6e0, 10);
-    MD5STEP(F4, c, d, a, b, buffer[6]  + 0xa3014314, 15);
-    MD5STEP(F4, b, c, d, a, buffer[13] + 0x4e0811a1, 21);
-    MD5STEP(F4, a, b, c, d, buffer[4]  + 0xf7537e82,  6);
-    MD5STEP(F4, d, a, b, c, buffer[11] + 0xbd3af235, 10);
-    MD5STEP(F4, c, d, a, b, buffer[2]  + 0x2ad7d2bb, 15);
-    MD5STEP(F4, b, c, d, a, buffer[9]  + 0xeb86d391, 21);
+    MD5STEP(F4, a, b, c, d, buffer[0]  , 0xf4292244,  6);
+    MD5STEP(F4, d, a, b, c, buffer[7]  , 0x432aff97, 10);
+    MD5STEP(F4, c, d, a, b, buffer[14] , 0xab9423a7, 15);
+    MD5STEP(F4, b, c, d, a, buffer[5]  , 0xfc93a039, 21);
+    MD5STEP(F4, a, b, c, d, buffer[12] , 0x655b59c3,  6);
+    MD5STEP(F4, d, a, b, c, buffer[3]  , 0x8f0ccc92, 10);
+    MD5STEP(F4, c, d, a, b, buffer[10] , 0xffeff47d, 15);
+    MD5STEP(F4, b, c, d, a, buffer[1]  , 0x85845dd1, 21);
+    MD5STEP(F4, a, b, c, d, buffer[8]  , 0x6fa87e4f,  6);
+    MD5STEP(F4, d, a, b, c, buffer[15] , 0xfe2ce6e0, 10);
+    MD5STEP(F4, c, d, a, b, buffer[6]  , 0xa3014314, 15);
+    MD5STEP(F4, b, c, d, a, buffer[13] , 0x4e0811a1, 21);
+    MD5STEP(F4, a, b, c, d, buffer[4]  , 0xf7537e82,  6);
+    MD5STEP(F4, d, a, b, c, buffer[11] , 0xbd3af235, 10);
+    MD5STEP(F4, c, d, a, b, buffer[2]  , 0x2ad7d2bb, 15);
+    MD5STEP(F4, b, c, d, a, buffer[9]  , 0xeb86d391, 21);
 
     /* Add the working vars back into digest state[]  */
     md5->digest[0] += a;
@@ -355,8 +360,8 @@ int wc_Md5Update(wc_Md5* md5, const byte* data, word32 len)
     if (md5->buffLen >= WC_MD5_BLOCK_SIZE)
         return BUFFER_E;
 
-    if (data == NULL && len == 0) {
-        /* valid, but do nothing */
+    if (data == NULL) {
+        /* len is 0 here: valid, but do nothing */
         return 0;
     }
 
@@ -454,6 +459,7 @@ int wc_Md5Final(wc_Md5* md5, byte* hash)
 
     /* ensure we have a valid buffer length; (-1 to append a byte to length) */
     if (md5->buffLen > WC_MD5_BLOCK_SIZE - 1) {
+        /* some places consider this BAD_STATE_E */
         return BUFFER_E;
     }
 
@@ -461,7 +467,9 @@ int wc_Md5Final(wc_Md5* md5, byte* hash)
 
     /* pad with zeros */
     if (md5->buffLen > WC_MD5_PAD_SIZE) {
-        XMEMSET(&local[md5->buffLen], 0, WC_MD5_BLOCK_SIZE - md5->buffLen);
+        if (md5->buffLen < WC_MD5_BLOCK_SIZE) {
+            XMEMSET(&local[md5->buffLen], 0, WC_MD5_BLOCK_SIZE - md5->buffLen);
+        }
         md5->buffLen += WC_MD5_BLOCK_SIZE - md5->buffLen;
 
 #if defined(BIG_ENDIAN_ORDER) && !defined(FREESCALE_MMCAU_SHA)
@@ -527,6 +535,7 @@ int wc_Md5GetHash(wc_Md5* md5, byte* hash)
     if (md5 == NULL || hash == NULL)
         return BAD_FUNC_ARG;
 
+    XMEMSET(&tmpMd5, 0, sizeof(tmpMd5));
     ret = wc_Md5Copy(md5, &tmpMd5);
     if (ret == 0) {
         ret = wc_Md5Final(&tmpMd5, hash);
@@ -542,13 +551,17 @@ int wc_Md5Copy(wc_Md5* src, wc_Md5* dst)
     if (src == NULL || dst == NULL)
         return BAD_FUNC_ARG;
 
+    /* Free dst resources before copy to prevent memory leaks (e.g.,
+     * hardware contexts). XMEMCPY overwrites dst. */
+    wc_Md5Free(dst);
     XMEMCPY(dst, src, sizeof(wc_Md5));
 
 #if defined(WOLFSSL_ASYNC_CRYPT) && defined(WC_ASYNC_ENABLE_MD5)
     ret = wolfAsync_DevCopy(&src->asyncDev, &dst->asyncDev);
 #endif
 #ifdef WOLFSSL_PIC32MZ_HASH
-    ret = wc_Pic32HashCopy(&src->cache, &dst->cache);
+    ret = wc_Pic32HashCopy(&src->cache, &dst->cache, (byte*)src->buffer,
+        (byte*)dst->buffer, dst->heap);
 #endif
 #ifdef WOLFSSL_HASH_FLAGS
     dst->flags |= WC_HASH_FLAG_ISCOPY;

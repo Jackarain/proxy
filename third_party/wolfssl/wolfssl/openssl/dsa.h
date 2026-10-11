@@ -1,12 +1,12 @@
 /* dsa.h
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -26,6 +26,7 @@
 #define WOLFSSL_DSA_H_
 
 #include <wolfssl/openssl/bn.h>
+#include <wolfssl/openssl/compat_types.h>
 
 #ifdef __cplusplus
     extern "C" {
@@ -117,10 +118,14 @@ WOLFSSL_API WOLFSSL_DSA* wolfSSL_d2i_DSAparams(
 
 #if defined(OPENSSL_EXTRA) || defined(OPENSSL_EXTRA_X509_SMALL)
 
-typedef WOLFSSL_DSA                   DSA;
-
 #define WOLFSSL_DSA_LOAD_PRIVATE 1
 #define WOLFSSL_DSA_LOAD_PUBLIC  2
+
+#ifndef OPENSSL_COEXIST
+
+typedef WOLFSSL_DSA                   DSA;
+
+#define OPENSSL_DSA_MAX_MODULUS_BITS 3072
 
 #define DSA_new wolfSSL_DSA_new
 #define DSA_free wolfSSL_DSA_free
@@ -147,6 +152,8 @@ typedef WOLFSSL_DSA                   DSA;
 #define d2i_DSAparams              wolfSSL_d2i_DSAparams
 
 #define DSA_SIG                    WOLFSSL_DSA_SIG
+
+#endif /* !OPENSSL_COEXIST */
 
 #endif /* OPENSSL_EXTRA || OPENSSL_EXTRA_X509_SMALL */
 

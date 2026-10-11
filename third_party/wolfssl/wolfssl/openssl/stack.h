@@ -1,12 +1,12 @@
 /* stack.h
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -47,6 +47,7 @@ WOLFSSL_API WOLFSSL_STACK* wolfSSL_sk_new_cipher(void);
 #define OPENSSL_sk_pop_free   wolfSSL_sk_pop_free
 #define OPENSSL_sk_new_null   wolfSSL_sk_new_null
 #define OPENSSL_sk_push       wolfSSL_sk_push
+#define OPENSSL_sk_delete     wolfSSL_sk_delete
 
 /* provides older OpenSSL API compatibility  */
 #define sk_free         OPENSSL_sk_free

@@ -1,12 +1,12 @@
 /* user_settings.h
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -23,125 +23,726 @@
 #define USER_SETTINGS_H
 
 #ifdef CONFIG_WOLFSSL
-#ifdef CONFIG_WOLFSSL_SETTINGS_FILE
 
-#include CONFIG_WOLFSSL_SETTINGS_FILE
-
+/* The wolfCrypt feature configuration comes from the user's own settings file
+ * if one was supplied (CONFIG_WOLFSSL_SETTINGS_FILE), otherwise from the module
+ * default below. CONFIG_WOLFSSL_SETTINGS_FILE is always defined; when it is not
+ * set in prj.conf it is auto-defined to "", so WOLFSSL_SETTINGS_FILE is only
+ * defined (in CMakeLists.txt) when a real path was given. A user-supplied
+ * settings file is authoritative: the build-profile Kconfig knobs
+ * (WOLFSSL_CRYPTO_ONLY, WOLFSSL_SINGLE_THREADED) shape ONLY the module default
+ * below and are NOT applied on top of a settings file, so the two config
+ * interfaces never mix. A consumer like wolfPSA that needs specific wolfCrypt
+ * options checks for them itself and fails the build if a settings file omits
+ * them, rather than injecting them here. */
+#ifdef WOLFSSL_SETTINGS_FILE
+#include WOLFSSL_SETTINGS_FILE
 #else
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#if 0
-#undef  SINGLE_THREADED
-#define SINGLE_THREADED
-#endif
 
-#undef  TFM_TIMING_RESISTANT
-#define TFM_TIMING_RESISTANT
+/* ------------------------------------------------------------------------- */
+/* Platform */
+/* ------------------------------------------------------------------------- */
+#define WOLFSSL_GENERAL_ALIGNMENT 4 /* platform requires 32-bit alignment on uint32_t */
+#define SIZEOF_LONG_LONG 8          /* long long is 8 bytes / 64-bit */
+//#define WOLFSSL_NO_ASM /* optionally disable inline assembly support */
+#define WOLFSSL_IGNORE_FILE_WARN /* ignore file includes not required */
+//#define WOLFSSL_SMALL_STACK /* option to reduce stack size, offload to heap */
+#define BENCH_EMBEDDED /* use smaller buffers in benchmark / tests */
 
-#undef  ECC_TIMING_RESISTANT
-#define ECC_TIMING_RESISTANT
+/* Network stack */
+/* Default is POSIX sockets */
+//#define WOLFSSL_USER_IO /* Use the SetIO callbacks, not the internal wolfio.c socket code */
+//#define WOLFSSL_LWIP
+//#define WOLFSSL_LWIP_NATIVE
+//#define FREERTOS_TCP
 
-#undef  WC_RSA_BLINDING
-#define WC_RSA_BLINDING
-
-#undef  HAVE_AESGCM
-#define HAVE_AESGCM
-
-#undef  WOLFSSL_SHA512
-#define WOLFSSL_SHA512
-
-#undef  WOLFSSL_SHA384
-#define WOLFSSL_SHA384
-
-#undef  NO_DSA
-#define NO_DSA
-
-#undef  HAVE_ECC
-#define HAVE_ECC
-
-#undef  TFM_ECC256
-#define TFM_ECC256
-
-#undef  WOLFSSL_BASE64_ENCODE
-#define WOLFSSL_BASE64_ENCODE
-
-#undef  NO_RC4
-#define NO_RC4
-
-#undef  WOLFSSL_SHA224
-#define WOLFSSL_SHA224
-
-#undef  WOLFSSL_SHA3
-#define WOLFSSL_SHA3
-
-#undef  HAVE_POLY1305
-#define HAVE_POLY1305
-
-#undef  HAVE_ONE_TIME_AUTH
-#define HAVE_ONE_TIME_AUTH
-
-#undef  HAVE_CHACHA
-#define HAVE_CHACHA
-
-#undef  HAVE_HASHDRBG
-#define HAVE_HASHDRBG
-
-#undef  NO_FILESYSTEM
+/* RTOS */
+/* Default is POSIX mutex and pthreads*/
+//#define SINGLE_THREADED
+//#define FREERTOS
 #define NO_FILESYSTEM
+#define NO_WRITEV
 
-#undef  HAVE_TLS_EXTENSIONS
-#define HAVE_TLS_EXTENSIONS
-
-#undef  HAVE_SUPPORTED_CURVES
-#define HAVE_SUPPORTED_CURVES
-
-#undef  HAVE_EXTENDED_MASTER
-#define HAVE_EXTENDED_MASTER
-
-#undef  NO_PSK
-#define NO_PSK
-
-#undef  NO_MD4
-#define NO_MD4
-
-#undef  NO_PWDBASED
-#define NO_PWDBASED
-
-#undef  USE_FAST_MATH
-#define USE_FAST_MATH
-
-#undef  WOLFSSL_NO_ASM
-#define WOLFSSL_NO_ASM
-
-#undef  WOLFSSL_X86_BUILD
-#define WOLFSSL_X86_BUILD
-
-#undef  WC_NO_ASYNC_THREADING
-#define WC_NO_ASYNC_THREADING
-
-#undef  NO_DES3
-#define NO_DES3
-
-#undef  WOLFSSL_STATIC_MEMORY
-#define WOLFSSL_STATIC_MEMORY
-
+/* ------------------------------------------------------------------------- */
+/* Hardware */
+/* ------------------------------------------------------------------------- */
+/* CryptoCell support */
 #if 0
-#undef  WOLFSSL_HAVE_SP_RSA
-#define WOLFSSL_HAVE_SP_RSA
-#undef  WOLFSSL_HAVE_SP_DH
-#define WOLFSSL_HAVE_SP_DH
-#undef  WOLFSSL_HAVE_SP_ECC
-#define WOLFSSL_HAVE_SP_ECC
+    //#define WOLFSSL_CRYPTOCELL
+    //#define WOLFSSL_CRYPTOCELL_AES
 #endif
+/* PSA support */
+#ifdef CONFIG_MBEDTLS_PSA_CRYPTO_C
+    #define WOLFSSL_HAVE_PSA
+    #ifndef SINGLE_THREADED
+        #define WOLFSSL_PSA_GLOBAL_LOCK
+    #endif
+    #define WC_NO_HASHDRBG /* use PSA RNG directly via wc_psa_get_random */
+#endif
+
+/* ------------------------------------------------------------------------- */
+/* FIPS */
+/* ------------------------------------------------------------------------- */
+#ifdef CONFIG_WOLFCRYPT_FIPS
+    /* HAVE_FIPS is the master switch that routes the wolfCrypt algorithms
+     * through the FIPS module boundary. The version macros below must match the
+     * dropped-in FIPS bundle (see the CMake FIPS-boundary block); settings.h
+     * folds them into WOLFSSL_FIPS_VERSION_CODE for the in-boundary gating. */
+    #define HAVE_FIPS
+    /* Version triples mirror configure.ac's --enable-fips=VERSION mapping, and
+     * each is only a default: define it on the compile line or in a project
+     * header to pin a bundle the Kconfig choice does not cover. */
+    #if defined(CONFIG_WOLFCRYPT_FIPS_READY)
+        /* Matches --enable-fips=ready: FIPS_DEVREADY_MAJOR plus
+         * WOLFSSL_FIPS_READY. */
+        #define WOLFSSL_FIPS_READY
+        #ifndef HAVE_FIPS_VERSION
+            #define HAVE_FIPS_VERSION       7
+        #endif
+        #ifndef HAVE_FIPS_VERSION_MINOR
+            #define HAVE_FIPS_VERSION_MINOR 0
+        #endif
+        #ifndef HAVE_FIPS_VERSION_PATCH
+            #define HAVE_FIPS_VERSION_PATCH 0
+        #endif
+    #elif defined(CONFIG_WOLFCRYPT_FIPS_V7)
+        /* FIPS 140-3 v7 full submission. The validated module defines
+         * WOLFSSL_FIPS_READY and so FIPS 186-4, as IDE/WIN-PQ-FIPSv7 does. */
+        #define WOLFSSL_FIPS_READY
+        #ifndef HAVE_FIPS_VERSION
+            #define HAVE_FIPS_VERSION       7
+        #endif
+        #ifndef HAVE_FIPS_VERSION_MINOR
+            #define HAVE_FIPS_VERSION_MINOR 0
+        #endif
+        #ifndef HAVE_FIPS_VERSION_PATCH
+            #define HAVE_FIPS_VERSION_PATCH 0
+        #endif
+    #elif defined(CONFIG_WOLFCRYPT_FIPS_V6)
+        /* FIPS 140-3 SRTP-KDF full submission. */
+        #ifndef HAVE_FIPS_VERSION
+            #define HAVE_FIPS_VERSION       6
+        #endif
+        #ifndef HAVE_FIPS_VERSION_MINOR
+            #define HAVE_FIPS_VERSION_MINOR 0
+        #endif
+        #ifndef HAVE_FIPS_VERSION_PATCH
+            #define HAVE_FIPS_VERSION_PATCH 0
+        #endif
+    #elif defined(CONFIG_WOLFCRYPT_FIPS_V5)
+        /* FIPS 140-3 Cert #4718 (wolfCrypt 5.2.1). */
+        #ifndef HAVE_FIPS_VERSION
+            #define HAVE_FIPS_VERSION       5
+        #endif
+        #ifndef HAVE_FIPS_VERSION_MINOR
+            #define HAVE_FIPS_VERSION_MINOR 2
+        #endif
+        #ifndef HAVE_FIPS_VERSION_PATCH
+            #define HAVE_FIPS_VERSION_PATCH 1
+        #endif
+    #elif defined(CONFIG_WOLFCRYPT_FIPS_V2)
+        /* FIPS 140-2 Cert #3389. */
+        #ifndef HAVE_FIPS_VERSION
+            #define HAVE_FIPS_VERSION       2
+        #endif
+        #ifndef HAVE_FIPS_VERSION_MINOR
+            #define HAVE_FIPS_VERSION_MINOR 0
+        #endif
+        #ifndef HAVE_FIPS_VERSION_PATCH
+            #define HAVE_FIPS_VERSION_PATCH 0
+        #endif
+    #endif
+    /* configure.ac always defines the major alongside the version. */
+    #if defined(HAVE_FIPS_VERSION) && !defined(HAVE_FIPS_VERSION_MAJOR)
+        #define HAVE_FIPS_VERSION_MAJOR HAVE_FIPS_VERSION
+    #endif
+#endif
+
+
+/* ------------------------------------------------------------------------- */
+/* TLS */
+/* ------------------------------------------------------------------------- */
+/* TLS v1.2 (on by default) */
+#ifdef CONFIG_WOLFSSL_TLS_VERSION_1_2
+    #undef  WOLFSSL_NO_TLS12
+#else
+    #define WOLFSSL_NO_TLS12
+#endif
+//#define NO_WOLFSSL_SERVER /* Optionally disable TLS server code */
+//#define NO_WOLFSSL_CLIENT /* Optionally disable TLS client code */
+
+/* TLS v1.3 */
+#ifdef CONFIG_WOLFSSL_TLS_VERSION_1_3
+    #define WOLFSSL_TLS13
+#endif
+
+/* Disable older TLS version prior to 1.2 */
+#define NO_OLD_TLS
+
+/* Enable default TLS extensions */
+#define HAVE_TLS_EXTENSIONS
+#define HAVE_SUPPORTED_CURVES
+#define HAVE_EXTENDED_MASTER
+#define HAVE_ENCRYPT_THEN_MAC
+#define HAVE_SERVER_RENEGOTIATION_INFO
+#if defined(CONFIG_WOLFSSL_SNI)
+    #define HAVE_SNI /* optional Server Name Indication (SNI) */
+#endif
+
+/* ASN */
+#define WOLFSSL_ASN_TEMPLATE /* use newer ASN template asn.c code (default) */
+#if 0 /* optional space reductions */
+    #define WOLFSSL_NO_ASN_STRICT
+    #define IGNORE_NAME_CONSTRAINTS
+#endif
+
+/* OCSP */
+#if defined(CONFIG_WOLFSSL_OCSP)
+    #define HAVE_OCSP
+#endif
+#if defined(CONFIG_WOLFSSL_OCSP_STAPLING)
+    #define HAVE_CERTIFICATE_STATUS_REQUEST
+#endif
+
+/* Session Cache */
+#if defined(CONFIG_WOLFSSL_SESSION_CACHE)
+    #define SMALL_SESSION_CACHE
+#else
+    #define NO_SESSION_CACHE /* disable session resumption */
+#endif
+/* TLS 1.3 stateless session tickets -- independent of the internal cache. */
+#if defined(CONFIG_WOLFSSL_SESSION_TICKET) && defined(WOLFSSL_TLS13)
+    #define HAVE_SESSION_TICKET
+#endif
+
+/* Session export (external session cache) */
+#if defined(CONFIG_WOLFSSL_SESSION_EXPORT)
+    #define HAVE_EXT_CACHE
+#endif
+
+/* Keep peer certificate after handshake */
+#if defined(CONFIG_WOLFSSL_KEEP_PEER_CERT)
+    #define KEEP_PEER_CERT
+#endif
+
+/* Always invoke verify callback (on success as well as failure) */
+#if defined(CONFIG_WOLFSSL_ALWAYS_VERIFY_CB)
+    #define WOLFSSL_ALWAYS_VERIFY_CB
+#endif
+
+/* Lightweight X509 helpers (wolfSSL_X509_free, wolfSSL_get_verify_result,
+ * wolfSSL_X509_load_certificate_buffer) without pulling in the full
+ * OPENSSL_EXTRA surface. Apps needing full OpenSSL compat can override
+ * user_settings.h via CONFIG_WOLFSSL_SETTINGS_FILE.
+ */
+#if defined(CONFIG_WOLFSSL_OPENSSL_EXTRA_X509_SMALL)
+    #define OPENSSL_EXTRA_X509_SMALL
+#endif
+
+/* DTLS */
+#if defined(CONFIG_WOLFSSL_DTLS)
+    #define WOLFSSL_DTLS
+    #define HAVE_SOCKADDR
+#endif
+
+/* PSK */
+#if defined(CONFIG_WOLFSSL_PSK)
+    #undef NO_PSK
+    #define WOLFSSL_STATIC_PSK
+#else
+    #define NO_PSK /* disable pre-shared-key support */
+#endif
+
+/* ALPN */
+#if defined(CONFIG_WOLFSSL_ALPN)
+    #define HAVE_ALPN
+#endif
+
+#if defined(CONFIG_WOLFSSL_MAX_FRAGMENT)
+    #define HAVE_MAX_FRAGMENT
+#endif
+
+#if defined(CONFIG_NET_SOCKETS_SOCKOPT_TLS)
+    #define WOLFSSL_SET_CIPHER_BYTES
+#endif
+
+#if defined(CONFIG_WOLFSSL_CRYPTO_CB)
+    #define WOLF_CRYPTO_CB
+#endif
+
+/* wolfTPM Zephyr */
+#if defined(CONFIG_WOLFTPM)
+    #ifndef WOLF_CRYPTO_CB
+        #define WOLF_CRYPTO_CB
+    #endif
+    #define WOLFSSL_AES_CFB
+#endif
+
+/* ------------------------------------------------------------------------- */
+/* Algorithms */
+/* ------------------------------------------------------------------------- */
+/* RNG */
+/* wolfCrypt Hash-DRBG (SHA2-256). On Zephyr its seed comes from wc_GenerateSeed()
+ * (wolfcrypt/src/random.c), which draws from the hardware entropy driver when one
+ * is present and falls back to sys_rand_get() otherwise -- so no seed callback is
+ * registered. Guarded by WC_NO_HASHDRBG so a PSA-RNG build
+ * (CONFIG_MBEDTLS_PSA_CRYPTO_C above) can still disable the internal DRBG and
+ * route randomness through the PSA provider. */
+#ifndef WC_NO_HASHDRBG
+    #define HAVE_HASHDRBG
+#endif
+
+/* Build-profile knobs for the module-default config only (a user-supplied
+ * settings file sets these itself). */
+#ifdef CONFIG_WOLFSSL_CRYPTO_ONLY
+    #define WOLFCRYPT_ONLY
+#endif
+#ifdef CONFIG_WOLFSSL_SINGLE_THREADED
+    #define SINGLE_THREADED
+#endif
+
+/* ECC */
+#if defined(CONFIG_WOLFSSL_ECC)
+    #define HAVE_ECC
+    #define ECC_USER_CURVES      /* only the curves selected below */
+    #define ECC_TIMING_RESISTANT /* Enable Timing Resistance */
+    #if defined(CONFIG_WOLFSSL_ECC_ALLOW_ZERO_HASH)
+        #define WC_ALLOW_ECC_ZERO_HASH
+    #endif
+
+    #if defined(CONFIG_WOLFSSL_ECC_256)
+        #undef  NO_ECC256
+    #else
+        #define NO_ECC256
+    #endif
+    #if defined(CONFIG_WOLFSSL_ECC_384)
+        #define HAVE_ECC384
+    #endif
+    #if defined(CONFIG_WOLFSSL_ECC_512)
+        #define HAVE_ECC512
+    #endif
+    #if defined(CONFIG_WOLFSSL_ECC_521)
+        #define HAVE_ECC521
+    #endif
+    /* Brainpool curves are not prime-field NIST curves, and wolfCrypt refuses
+     * to build them without custom-curve support - a hard #error in ecc.c. */
+    #if defined(CONFIG_WOLFSSL_ECC_BRAINPOOL)
+        #define WOLFSSL_CUSTOM_CURVES
+        #define HAVE_ECC_BRAINPOOL
+    #endif
+
+    #if defined(NO_ECC256) && !defined(HAVE_ECC384) && \
+        !defined(HAVE_ECC512) && !defined(HAVE_ECC521)
+        /* Otherwise MAX_ECC_BITS_NEEDED never gets defined and the failure
+         * surfaces as an undeclared identifier inside ecc.h, pointing nowhere
+         * near the configuration choice that caused it. */
+        #error "CONFIG_WOLFSSL_ECC requires at least one curve to be selected"
+    #endif
+
+    //#define ECC_SHAMIR         /* Optional ECC calculation speed improvement if not using SP implementation */
+    //#define HAVE_ECC_SECPR2
+    //#define HAVE_ECC_SECPR3
+    //#define HAVE_ECC_KOBLITZ
+    //#define HAVE_ECC_CDH /* Co-factor */
+    //#define HAVE_COMP_KEY /* Compressed key support */
+    //#define FP_ECC /* Fixed point caching - speed repeated operations against same key */
+    //#define HAVE_ECC_ENCRYPT
+    //#define WOLFCRYPT_HAVE_ECCSI
+    //#define WOLFSSL_ECDSA_DETERMINISTIC_K_VARIANT
+#endif
+
+#define WOLFSSL_OLD_PRIME_CHECK /* Use faster DH prime checking */
+
+/* RSA */
+#if defined(CONFIG_WOLFSSL_RSA)
+    #undef NO_RSA
+    #define WC_RSA_BLINDING
+    //#define WC_RSA_NO_PADDING
+    //#define RSA_LOW_MEM
+
+    #if 0
+        #define WOLFSSL_KEY_GEN /* For RSA Key gen only */
+    #endif
+    #if defined(WOLFSSL_TLS13) || defined(CONFIG_WOLFSSL_RSA_PSS)
+        /* TLS v1.3 requires RSA PSS padding */
+        #define WC_RSA_PSS
+        //#define WOLFSSL_PSS_LONG_SALT
+    #endif
+#else
+    #define NO_RSA
+#endif
+
+/* DH */
+#if 0
+    #undef NO_DH /* on by default */
+    #define WOLFSSL_DH_CONST /* don't rely on pow/log */
+    #define HAVE_FFDHE_2048
+    #define HAVE_FFDHE_3072
+    #define HAVE_DH_DEFAULT_PARAMS
+    //#define WOLFSSL_DH_EXTRA /* Enable additional DH key import/export */
+#else
+    #define NO_DH
+#endif
+
+/* ChaCha20 / Poly1305 */
+#if defined(CONFIG_WOLFSSL_CHACHA_POLY)
+    #define HAVE_CHACHA
+    #define HAVE_POLY1305
+
+    /* Needed for Poly1305 */
+    #define HAVE_ONE_TIME_AUTH
+#endif
+
+/* Ed25519 / Curve25519 */
+#if defined(CONFIG_WOLFSSL_CURVE25519)
+    #define HAVE_CURVE25519
+    #define HAVE_ED25519 /* ED25519 Requires SHA512 */
+
+    /* Optionally use small math (less flash usage, but much slower) */
+    //#define CURVED25519_SMALL
+#endif
+
+/* SHA-1 */
+#if 0
+    #undef  NO_SHA /* on by default */
+    //#define USE_SLOW_SHA /* 1k smaller, but 25% slower */
+#else
+    // #define NO_SHA /* Necessary for pkcs12 tests */
+#endif
+
+/* SHA2-256 */
+#if 1
+    #undef NO_SHA256 /* on by default */
+    //#define USE_SLOW_SHA256 /* ~2k smaller and about 25% slower */
+    #define WOLFSSL_SHA224
+#else
+    #define NO_SHA256
+#endif
+
+/* SHA2-384/512 */
+#if 1
+    #define WOLFSSL_SHA384
+    #define WOLFSSL_SHA512
+    //#define USE_SLOW_SHA512 /* Over twice as small, but 50% slower */
+#endif
+
+/* SHA-3 */
+#if 1
+    #define WOLFSSL_SHA3
+#endif
+
+/* AES */
+#define HAVE_AES_ECB
+/* AES-CBC */
+#if 1
+    #define HAVE_AES_CBC
+#else
+    #define NO_AES_CBC
+#endif
+/* AES-GCM */
+#if 1
+    #define HAVE_AESGCM
+    #if defined(CONFIG_WOLFSSL_GHASH_TABLE_4BIT)
+        #define GCM_TABLE_4BIT
+    #elif defined(CONFIG_WOLFSSL_GHASH_TABLE_8BIT)
+        #define GCM_TABLE
+    #elif defined(CONFIG_WOLFSSL_GHASH_SMALL)
+        #define GCM_SMALL
+    #elif defined(CONFIG_WOLFCRYPT_FIPS_V5)
+        #define AES_GCM_GMULT_CT
+    #endif
+    //#define WOLFSSL_AESGCM_STREAM
+#endif
+//#define HAVE_AES_DECRYPT
+//#define WOLFSSL_AES_COUNTER
+//#define WOLFSSL_AES_CFB
+//#define WOLFSSL_AES_OFB
+//#define HAVE_AESCCM
+//#define WOLFSSL_AES_XTS
+
+//#define NO_AES_128
+//#define NO_AES_192
+//#define NO_AES_256
+//#define WOLFSSL_AES_SMALL_TABLES
+//#define WOLFSSL_AES_NO_UNROLL
+
+/* Constant-time AES backend */
+#if defined(CONFIG_WOLFSSL_AES_TOUCH_LINES)
+    #define WOLFSSL_AES_TOUCH_LINES
+#elif defined(CONFIG_WOLFSSL_AES_BITSLICED)
+    #define WC_AES_BITSLICED
+    #define WC_AES_BS_WORD_SIZE CONFIG_WOLFSSL_AES_BS_WORD_SIZE
+#endif
+
+
+/* HKDF */
+#if defined(WOLFSSL_TLS13) || defined(CONFIG_WOLFSSL_HKDF)
+    #define HAVE_HKDF
+#endif
+
+/* CMAC - Zephyr nRF BTLE needs CMAC */
+#if 1
+    #define WOLFSSL_AES_DIRECT
+    #define WOLFSSL_CMAC
+#endif
+
+
+/* Optional Features */
+#define WOLFSSL_BASE64_ENCODE /* Enable Base64 encoding */
+//#define WC_NO_CACHE_RESISTANT /* systems with cache should enable this for AES, ECC, RSA and DH */
+//#define WOLFSSL_CERT_GEN
+//#define WOLFSSL_CERT_REQ
+//#define WOLFSSL_CERT_EXT
+//#define NO_PWDBASED
+
+
+/* Disable Algorithms */
+#define NO_DSA
+#define NO_RC4
+#define NO_MD4
+#define NO_MD5
+//#define NO_DES3 /* Necessary for pkcs12 tests */
+
+/* PQC families -- each independently selectable so a Kconfig-driven build (no
+ * user-provided settings file) can include only what a consumer needs and keep
+ * the flash footprint down. All default off. */
+#if defined(CONFIG_WOLFSSL_MLKEM)
+    #define WOLFSSL_HAVE_MLKEM
+    #define WOLFSSL_MLKEM_NO_LARGE_CODE
+    #define WOLFSSL_MLKEM_SMALL
+    /* The Intel and AArch64 ML-KEM assembly has no small-memory variant of
+     * key generation or encapsulation, and wc_mlkem.c rejects the pair with an
+     * #error rather than falling back. */
+    #if !defined(CONFIG_WOLFCRYPT_ASM) || \
+        !(defined(CONFIG_X86_64) || defined(CONFIG_ARM64))
+        #define WOLFSSL_MLKEM_MAKEKEY_SMALL_MEM
+        #define WOLFSSL_MLKEM_ENCAPSULATE_SMALL_MEM
+    #endif
+    #define WOLFSSL_MLKEM_DYNAMIC_KEYS
+#endif
+
+#if defined(CONFIG_WOLFSSL_MLDSA)
+    #define WOLFSSL_HAVE_MLDSA
+    #define WOLFSSL_MLDSA_NO_LARGE_CODE
+    #define WOLFSSL_MLDSA_SMALL
+    #define WOLFSSL_MLDSA_VERIFY_SMALL_MEM
+    #define WOLFSSL_MLDSA_DYNAMIC_KEYS
+    #define WOLFSSL_MLDSA_SIGN_SMALL_MEM
+    #define WOLFSSL_MLDSA_MAKE_KEY_SMALL_MEM
+#endif
+
+#if defined(CONFIG_WOLFSSL_LMS)
+    #define WOLFSSL_HAVE_LMS
+    #define WOLFSSL_LMS_VERIFY_ONLY
+#endif
+
+#if defined(CONFIG_WOLFSSL_XMSS)
+    #define WOLFSSL_HAVE_XMSS
+    #define WOLFSSL_XMSS_VERIFY_ONLY
+#endif
+
+#if defined(CONFIG_WOLFSSL_FALCON)
+    #define WOLFSSL_EXPERIMENTAL_SETTINGS /* HAVE_FALCON is gated experimental */
+    #define HAVE_FALCON
+    /* Small-memory dynamic signer instead of the fast tree-signer (keeps full
+     * sign+verify); the default portable integer FPR backend needs no ASM. */
+    #define WOLFSSL_FALCON_SIGN_SMALL_MEM
+#endif
+
+/* SHA-3 / SHAKE are required by ML-KEM, ML-DSA, and Falcon, and XMSS derives
+ * its SHAKE parameter sets from WOLFSSL_SHAKE128/256 (see wc_xmss.h); enable
+ * them (small variant) when any is on, and explicitly disable SHAKE otherwise
+ * to keep a non-PQC build lean. LMS is deliberately absent: its SHAKE-256
+ * support is opt-in via WOLFSSL_LMS_SHAKE256 and is never derived from
+ * WOLFSSL_SHAKE256. */
+#if defined(CONFIG_WOLFSSL_MLKEM) || defined(CONFIG_WOLFSSL_MLDSA) || \
+    defined(CONFIG_WOLFSSL_XMSS) || defined(CONFIG_WOLFSSL_FALCON)
+    #define WOLFSSL_SHA3_SMALL
+    #define WOLFSSL_SHAKE128
+    #define WOLFSSL_SHAKE256
+#else
+    #define WOLFSSL_NO_SHAKE128
+    #define WOLFSSL_NO_SHAKE256
+#endif
+
+
+/* ------------------------------------------------------------------------- */
+/* Math */
+/* ------------------------------------------------------------------------- */
+/* Math Options */
+/* Multi-precision - generic math for all keys sizes and curves */
+#if 1
+    /* SP has no implementation for the 512-bit size and no path for an
+     * arbitrary curve. Neither is a build failure - every operation fails at
+     * runtime with WC_KEY_SIZE_E - so move to the generic variant instead. */
+    #if defined(WOLFSSL_CUSTOM_CURVES) || defined(HAVE_ECC512)
+        #define WOLFSSL_SP_MATH_ALL
+    #else
+        #define WOLFSSL_SP_MATH /* no multi-precision math, only single */
+    #endif
+#elif 1
+    /* wolf mp math (sp_int.c) */
+    #define WOLFSSL_SP_MATH_ALL /* use SP math for all key sizes and curves */
+    //#define WOLFSSL_SP_NO_MALLOC
+
+    /* use smaller version of code */
+    #define WOLFSSL_SP_SMALL
+
+    /* Define the maximum math bits used */
+    #if !defined(NO_RSA) || !defined(NO_DH)
+        #define SP_INT_BITS 2048
+    #elif defined(HAVE_ECC)
+        #define SP_INT_BITS 256
+    #endif
+
+#elif 1
+    /* Fast Math (tfm.c) (stack based and timing resistant) */
+    #define USE_FAST_MATH
+    #define TFM_TIMING_RESISTANT
+
+    /* Define the maximum math bits used (2 * max) */
+    #if !defined(NO_RSA) || !defined(NO_DH)
+        #define FP_MAX_BITS (2*2048)
+        #ifdef HAVE_ECC
+            #define ALT_ECC_SIZE /* use heap allocation for ECC point */
+        #endif
+    #elif defined(HAVE_ECC)
+        #define FP_MAX_BITS (2*256)
+    #endif
+    #ifdef HAVE_ECC
+        //#define TFM_ECC256 /* optional speedup for ECC-256 bit */
+    #endif
+#else
+    /* Normal (integer.c) (heap based, not timing resistant) - not recommended */
+    #define USE_INTEGER_HEAP_MATH
+#endif
+
+/* Single Precision (optional) */
+/* Math written for specific curves and key sizes */
+#if 1
+    #ifdef HAVE_ECC
+        #define WOLFSSL_HAVE_SP_ECC
+        /* Selecting a curve without its SP switch leaves it in wolfCrypt's
+         * table with no math behind it and no build diagnostic. */
+        #if defined(NO_ECC256)
+            #define WOLFSSL_SP_NO_256
+        #endif
+        #if defined(HAVE_ECC384)
+            #define WOLFSSL_SP_384
+        #endif
+        #if defined(HAVE_ECC521)
+            #define WOLFSSL_SP_521
+        #endif
+    #endif
+    #ifndef NO_RSA
+        #define WOLFSSL_HAVE_SP_RSA
+        //#define WOLFSSL_SP_NO_2048
+        //#define WOLFSSL_SP_NO_3072
+        //#define WOLFSSL_SP_4096
+    #endif
+    #ifndef NO_DH
+        #define WOLFSSL_HAVE_SP_DH
+    #endif
+
+    #ifdef CONFIG_WOLFCRYPT_SP_SMALL
+        #define WOLFSSL_SP_SMALL  /* use smaller version of code */
+    #endif
+    //#define WOLFSSL_SP_NO_MALLOC /* disable heap in wolf/SP math */
+    //#define SP_DIV_WORD_USE_DIV /* no div64 */
+
+    /* Assembly speedup, keyed on the CPU Zephyr reports. Anything not named
+     * here keeps the C backend. Each pair is two separate backends: the _ASM
+     * macro compiles sp_<cpu>.c for the RSA, DH and ECC sizes it covers, the
+     * other the word primitives sp_int.c uses for everything else. */
+    #ifdef CONFIG_WOLFCRYPT_ASM
+        #if defined(CONFIG_ARMV6_M_ARMV8_M_BASELINE)
+            #define WOLFSSL_SP_ARM_THUMB_ASM
+            #define WOLFSSL_SP_ARM_THUMB
+        #elif defined(CONFIG_ARMV7_M_ARMV8_M_MAINLINE)
+            #define WOLFSSL_SP_ARM_CORTEX_M_ASM
+            #define WOLFSSL_SP_ARM_CORTEX_M
+        #elif defined(CONFIG_ARM64)
+            #define WOLFSSL_SP_ARM64_ASM
+            #define WOLFSSL_SP_ARM64
+        #elif defined(CONFIG_CPU_AARCH32_CORTEX_R) || \
+              defined(CONFIG_CPU_AARCH32_CORTEX_A)
+            #define WOLFSSL_SP_ARM32_ASM
+            #define WOLFSSL_SP_ARM32
+        #endif
+    #endif
+#endif
+
+/* ------------------------------------------------------------------------- */
+/* Assembly Speedups for Symmetric Algorithms */
+/* ------------------------------------------------------------------------- */
+
+#ifdef CONFIG_WOLFCRYPT_ASM
+#if defined(CONFIG_WOLFCRYPT_ARM_SYMMETRIC_ASM)
+    #define WOLFSSL_ARMASM
+    #define WOLFSSL_NO_HASH_RAW
+    #define WOLFSSL_ARMASM_INLINE /* use inline .c versions */
+    #define WOLFSSL_ARMASM_NO_NEON
+
+    /* Without this the Thumb2 sources compile but every caller still takes
+     * the ARMv8 path, so the port selects files and nothing else. */
+    #ifdef CONFIG_CPU_CORTEX_M
+        #define WOLFSSL_ARMASM_THUMB2
+    #endif
+
+    /* AArch32 assembles its hardware crypto blocks only when the -mcpu Zephyr
+     * derives from the board already has the extension; AArch64 carries its
+     * own .arch_extension and always assembles them, and cpuid.c then claims
+     * AES, PMULL and SHA-256 unless this is set, so aese traps on a core
+     * without them. */
+    #ifndef __ARM_FEATURE_CRYPTO
+        #define WOLFSSL_ARMASM_NO_HW_CRYPTO
+    #endif
+
+    /* Nothing probes the CPU on bare metal, so cpuid.c claims RDMA whenever
+     * this is not set and mlkem_keygen() runs sqrdmlsh on a core without it. */
+    #if defined(CONFIG_ARM64) && !defined(__ARM_FEATURE_QRDMX)
+        #define WOLFSSL_AARCH64_NO_SQRDMLSH
+    #endif
+#elif defined(CONFIG_X86_64)
+    #define USE_INTEL_SPEEDUP
+    #define WOLFSSL_X86_64_BUILD
+#endif
+
+/* Every 64-bit single-precision backend works in 128-bit intermediates. An
+ * autoconf build learns the type is available from a configure probe; with
+ * user settings nobody sets HAVE___UINT128_T, and sp_int.c then fails on an
+ * undeclared sp_int_word. */
+#if defined(__SIZEOF_INT128__) && !defined(HAVE___UINT128_T)
+    #define HAVE___UINT128_T 1
+#endif
+#endif
+
+
+/* ------------------------------------------------------------------------- */
+/* Debugging */
+/* ------------------------------------------------------------------------- */
+#undef DEBUG_WOLFSSL
+#undef NO_ERROR_STRINGS
+#ifdef CONFIG_WOLFSSL_DEBUG
+    #define DEBUG_WOLFSSL
+#else
+    #if 1
+        #define NO_ERROR_STRINGS
+    #endif
+#endif
+
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* CONFIG_WOLFSSL_SETTINGS_FILE */
+#endif /* WOLFSSL_SETTINGS_FILE */
+
 #endif /* CONFIG_WOLFSSL */
 
 #endif /* USER_SETTINGS_H */

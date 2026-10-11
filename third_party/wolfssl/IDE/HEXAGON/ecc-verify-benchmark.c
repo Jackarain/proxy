@@ -1,12 +1,12 @@
 /* ecc-verify-benchmark.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -32,14 +32,14 @@
 #define MAX_TIMES 5000
 #define MAX_BLOCK_SIZE 1024
 
-#include <sys/time.h>                                                       
+#include <sys/time.h>
 
-static double get_time()                                              
-{                                                                           
-    struct timeval tv;                                                      
-    gettimeofday(&tv, 0);                                                   
-    return (double)tv.tv_sec + (double)tv.tv_usec / 1000000;                
-} 
+static double get_time()
+{
+    struct timeval tv;
+    gettimeofday(&tv, 0);
+    return (double)tv.tv_sec + (double)tv.tv_usec / 1000000;
+}
 
 
 /* software version */

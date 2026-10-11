@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # renewcerts.sh
 #
 # renews the following certs:
@@ -15,12 +15,19 @@
 #                       server-cert.pem
 #                       server-cert.der
 #                       server-cert-chain.der
+#                       server-cert-sha1.pem
+#                       server-cert-sha1-root.pem
+#                       client-cert-sha1.pem
 #                       server-ecc-rsa.pem
 #                       server-ecc.pem
 #                       1024/client-cert.der
 #                       1024/client-cert.pem
 #                       server-ecc-comp.pem
 #                       client-ca.pem
+#                       client-ca-cert.der
+#                       client-ca-cert.pem
+#                       client-ecc-ca-cert.der
+#                       client-ecc-ca-cert.pem
 #                       test/digsigku.pem
 #                       ecc-privOnlyCert.pem
 #                       client-uri-cert.pem
@@ -29,11 +36,28 @@
 #                       client-crl-dist.pem
 #                       entity-no-ca-bool-cert.pem
 #                       fpki-cert.der
+#                       fpki-certpol-cert.der
 #                       rid-cert.der
+#                       aia/ca-issuers-cert.pem
+#                       aia/multi-aia-cert.pem
+#                       aia/overflow-aia-cert.pem
+#                       sia/timestamping-sia-cert.pem
+#                       tsa-cert.pem
+#                       tsa-cert.der
+#                       tsa-ecc-cert.pem
+#                       tsa-ecc-cert.der
+#                       tsa-bad-ku-cert.pem
+#                       tsa-bad-ku-cert.der
+#                       tsa-extra-eku-cert.pem
+#                       tsa-extra-eku-cert.der
+#                       tsa-chain-cert.pem
+#                       tsa-chain-cert.der
+#                       intermediate/ca-int-cert.der
 # updates the following crls:
 #                       crl/cliCrl.pem
 #                       crl/crl.pem
 #                       crl/crl.revoked
+#                       crl/crl_reason.pem
 #                       crl/eccCliCRL.pem
 #                       crl/eccSrvCRL.pem
 #
@@ -74,7 +98,7 @@ run_renewcerts(){
     echo "Updating 2048-bit client-uri-cert.pem"
     echo ""
     #pipe the following arguments to openssl req...
-    echo -e "US\\nMontana\\nBozeman\\nwolfSSL_2048\\nURI\\nwww.wolfssl.com\\ninfo@wolfssl.com\\n.\\n.\\n" | openssl req -new -key client-key.pem -config ./wolfssl.cnf -nodes -out client-cert.csr
+    echo -e "US\\nMontana\\nBozeman\\nwolfSSL_2048\\nURI\\nwww.wolfssl.com\\nfacts@wolfssl.com\\n.\\n.\\n" | openssl req -new -key client-key.pem -config ./wolfssl.cnf -nodes -out client-cert.csr
     check_result $? "Step 1"
 
     openssl x509 -req -in client-cert.csr -days 1000 -extfile wolfssl.cnf -extensions uri -signkey client-key.pem -out client-uri-cert.pem
@@ -111,7 +135,7 @@ run_renewcerts(){
     echo "Updating 2048-bit client-absolute-urn.pem"
     echo ""
     #pipe the following arguments to openssl req...
-    echo -e "US\\nMontana\\nBozeman\\nwolfSSL_2048\\nABSOLUTE_URN\\nwww.wolfssl.com\\ninfo@wolfssl.com\\n.\\n.\\n" | openssl req -new -key client-key.pem -config ./wolfssl.cnf -nodes -out client-cert.csr
+    echo -e "US\\nMontana\\nBozeman\\nwolfSSL_2048\\nABSOLUTE_URN\\nwww.wolfssl.com\\nfacts@wolfssl.com\\n.\\n.\\n" | openssl req -new -key client-key.pem -config ./wolfssl.cnf -nodes -out client-cert.csr
     check_result $? "Step 1"
 
 
@@ -131,7 +155,7 @@ run_renewcerts(){
     echo "Updating 2048-bit client-relative-uri.pem"
     echo ""
     #pipe the following arguments to openssl req...
-    echo -e "US\\nMontana\\nBozeman\\nwolfSSL_2048\\nRELATIVE_URI\\nwww.wolfssl.com\\ninfo@wolfssl.com\\n.\\n.\\n" | openssl req -new -key client-key.pem -config ./wolfssl.cnf -nodes -out client-cert.csr
+    echo -e "US\\nMontana\\nBozeman\\nwolfSSL_2048\\nRELATIVE_URI\\nwww.wolfssl.com\\nfacts@wolfssl.com\\n.\\n.\\n" | openssl req -new -key client-key.pem -config ./wolfssl.cnf -nodes -out client-cert.csr
     check_result $? "Step 1"
 
 
@@ -150,7 +174,7 @@ run_renewcerts(){
     echo "Updating 2048-bit client-cert-ext.pem"
     echo ""
     #pipe the following arguments to openssl req...
-    echo -e "US\\nMontana\\nBozeman\\nwolfSSL_2048\\nProgramming-2048\\nwww.wolfssl.com\\ninfo@wolfssl.com\\n.\\n.\\n" | openssl req -new -key client-key.pem -config ./wolfssl.cnf -nodes -out client-cert.csr
+    echo -e "US\\nMontana\\nBozeman\\nwolfSSL_2048\\nProgramming-2048\\nwww.wolfssl.com\\nfacts@wolfssl.com\\n.\\n.\\n" | openssl req -new -key client-key.pem -config ./wolfssl.cnf -nodes -out client-cert.csr
     check_result $? "Step 1"
 
 
@@ -171,7 +195,7 @@ run_renewcerts(){
     echo "Updating 2048-bit client-crl-dist.pem"
     echo ""
     #pipe the following arguments to openssl req...
-    echo -e "US\\nMontana\\nBozeman\\nwolfSSL_2048\\nCRL_DIST\\nwww.wolfssl.com\\ninfo@wolfssl.com\\n.\\n.\\n" | openssl req -new -key client-key.pem -config ./wolfssl.cnf -nodes -out client-cert.csr
+    echo -e "US\\nMontana\\nBozeman\\nwolfSSL_2048\\nCRL_DIST\\nwww.wolfssl.com\\nfacts@wolfssl.com\\n.\\n.\\n" | openssl req -new -key client-key.pem -config ./wolfssl.cnf -nodes -out client-cert.csr
     check_result $? "Step 1"
 
 
@@ -192,7 +216,7 @@ run_renewcerts(){
     echo "Updating 2048-bit client-cert.pem"
     echo ""
     #pipe the following arguments to openssl req...
-    echo -e "US\\nMontana\\nBozeman\\nwolfSSL_2048\\nProgramming-2048\\nwww.wolfssl.com\\ninfo@wolfssl.com\\n.\\n.\\n" | openssl req -new -key client-key.pem -config ./wolfssl.cnf -nodes -out client-cert.csr
+    echo -e "US\\nMontana\\nBozeman\\nwolfSSL_2048\\nProgramming-2048\\nwww.wolfssl.com\\nfacts@wolfssl.com\\n.\\n.\\n" | openssl req -new -key client-key.pem -config ./wolfssl.cnf -nodes -out client-cert.csr
     check_result $? "Step 1"
 
 
@@ -207,12 +231,124 @@ run_renewcerts(){
     echo "---------------------------------------------------------------------"
 
     ############################################################
+    ######## update the self-signed (2048-bit) tsa-cert.pem ###
+    ############################################################
+    echo "Updating 2048-bit tsa-cert.pem"
+    echo ""
+    openssl req -new -key tsa-key.pem -config ./renewcerts/wolfssl.cnf -nodes -subj "/C=US/ST=Montana/L=Bozeman/O=wolfSSL/OU=TSA-2048/CN=www.wolfssl.com/emailAddress=info@wolfssl.com" -out tsa-cert.csr
+    check_result $? "Step 1"
+
+    openssl x509 -req -in tsa-cert.csr -days 1000 -extfile ./renewcerts/wolfssl.cnf -extensions tsa_cert -signkey tsa-key.pem -out tsa-cert.pem
+    check_result $? "Step 2"
+    rm tsa-cert.csr
+
+    openssl x509 -in tsa-cert.pem -text > tmp.pem
+    check_result $? "Step 3"
+    mv tmp.pem tsa-cert.pem
+
+    openssl x509 -in tsa-cert.pem -outform der -out tsa-cert.der
+    check_result $? "Step 4"
+    echo "End of section"
+    echo "---------------------------------------------------------------------"
+
+    ############################################################
+    ## update the intermediate-issued tsa-chain-cert.pem ######
+    ############################################################
+    echo "Updating 2048-bit tsa-chain-cert.pem"
+    echo ""
+    openssl req -new -key tsa-chain-key.pem -config ./renewcerts/wolfssl.cnf -nodes -subj "/C=US/ST=Montana/L=Bozeman/O=wolfSSL/OU=TSA-chain-2048/CN=www.wolfssl.com/emailAddress=info@wolfssl.com" -out tsa-chain-cert.csr
+    check_result $? "Step 1"
+
+    openssl x509 -req -in tsa-chain-cert.csr -days 1000 -extfile ./renewcerts/wolfssl.cnf -extensions tsa_cert -CA intermediate/ca-int-cert.pem -CAkey intermediate/ca-int-key.pem -CAcreateserial -out tsa-chain-cert.pem
+    check_result $? "Step 2"
+    rm tsa-chain-cert.csr
+    rm -f intermediate/ca-int-cert.srl
+
+    openssl x509 -in tsa-chain-cert.pem -text > tmp.pem
+    check_result $? "Step 3"
+    mv tmp.pem tsa-chain-cert.pem
+
+    openssl x509 -in tsa-chain-cert.pem -outform der -out tsa-chain-cert.der
+    check_result $? "Step 4"
+
+    # DER of the issuing intermediate CA - consumed as a cert buffer
+    # (certs_test.h) for the TSA chain verification test. Derived from the
+    # existing PEM; not removed.
+    openssl x509 -in intermediate/ca-int-cert.pem -outform der -out intermediate/ca-int-cert.der
+    check_result $? "Step 5"
+    echo "End of section"
+    echo "---------------------------------------------------------------------"
+
+    ############################################################
+    ########## update the self-signed tsa-ecc-cert.pem ########
+    ############################################################
+    echo "Updating tsa-ecc-cert.pem"
+    echo ""
+    openssl req -new -key tsa-ecc-key.pem -config ./renewcerts/wolfssl.cnf -nodes -subj "/C=US/ST=Montana/L=Bozeman/O=wolfSSL/OU=TSA-ECC/CN=www.wolfssl.com/emailAddress=info@wolfssl.com" -out tsa-ecc-cert.csr
+    check_result $? "Step 1"
+
+    openssl x509 -req -in tsa-ecc-cert.csr -days 1000 -extfile ./renewcerts/wolfssl.cnf -extensions tsa_cert -signkey tsa-ecc-key.pem -out tsa-ecc-cert.pem
+    check_result $? "Step 2"
+    rm tsa-ecc-cert.csr
+
+    openssl x509 -in tsa-ecc-cert.pem -text > tmp.pem
+    check_result $? "Step 3"
+    mv tmp.pem tsa-ecc-cert.pem
+
+    openssl x509 -in tsa-ecc-cert.pem -outform der -out tsa-ecc-cert.der
+    check_result $? "Step 4"
+    echo "End of section"
+    echo "---------------------------------------------------------------------"
+
+    ############################################################
+    ## update the self-signed (2048-bit) tsa-bad-ku-cert.pem ##
+    ############################################################
+    echo "Updating 2048-bit tsa-bad-ku-cert.pem"
+    echo ""
+    openssl req -new -key tsa-key.pem -config ./renewcerts/wolfssl.cnf -nodes -subj "/C=US/ST=Montana/L=Bozeman/O=wolfSSL/OU=TSA-bad-ku-2048/CN=www.wolfssl.com/emailAddress=info@wolfssl.com" -out tsa-bad-ku-cert.csr
+    check_result $? "Step 1"
+
+    openssl x509 -req -in tsa-bad-ku-cert.csr -days 1000 -extfile ./renewcerts/wolfssl.cnf -extensions tsa_bad_ku_cert -signkey tsa-key.pem -out tsa-bad-ku-cert.pem
+    check_result $? "Step 2"
+    rm tsa-bad-ku-cert.csr
+
+    openssl x509 -in tsa-bad-ku-cert.pem -text > tmp.pem
+    check_result $? "Step 3"
+    mv tmp.pem tsa-bad-ku-cert.pem
+
+    openssl x509 -in tsa-bad-ku-cert.pem -outform der -out tsa-bad-ku-cert.der
+    check_result $? "Step 4"
+    echo "End of section"
+    echo "---------------------------------------------------------------------"
+
+    ###############################################################
+    ## update the self-signed (2048-bit) tsa-extra-eku-cert.pem ##
+    ###############################################################
+    echo "Updating 2048-bit tsa-extra-eku-cert.pem"
+    echo ""
+    openssl req -new -key tsa-key.pem -config ./renewcerts/wolfssl.cnf -nodes -subj "/C=US/ST=Montana/L=Bozeman/O=wolfSSL/OU=TSA-extra-eku-2048/CN=www.wolfssl.com/emailAddress=info@wolfssl.com" -out tsa-extra-eku-cert.csr
+    check_result $? "Step 1"
+
+    openssl x509 -req -in tsa-extra-eku-cert.csr -days 1000 -extfile ./renewcerts/wolfssl.cnf -extensions tsa_extra_eku_cert -signkey tsa-key.pem -out tsa-extra-eku-cert.pem
+    check_result $? "Step 2"
+    rm tsa-extra-eku-cert.csr
+
+    openssl x509 -in tsa-extra-eku-cert.pem -text > tmp.pem
+    check_result $? "Step 3"
+    mv tmp.pem tsa-extra-eku-cert.pem
+
+    openssl x509 -in tsa-extra-eku-cert.pem -outform der -out tsa-extra-eku-cert.der
+    check_result $? "Step 4"
+    echo "End of section"
+    echo "---------------------------------------------------------------------"
+
+    ############################################################
     #### update the self-signed (1024-bit) client-cert.pem #####
     ############################################################
     echo "Updating 1024-bit client-cert.pem"
     echo ""
     #pipe the following arguments to openssl req...
-    echo -e "US\\nMontana\\nBozeman\\nwolfSSL_1024\\nProgramming-1024\\nwww.wolfssl.com\\ninfo@wolfssl.com\\n.\\n.\\n" | openssl req -new -key ./1024/client-key.pem -config ./wolfssl.cnf -nodes -out ./1024/client-cert.csr
+    echo -e "US\\nMontana\\nBozeman\\nwolfSSL_1024\\nProgramming-1024\\nwww.wolfssl.com\\nfacts@wolfssl.com\\n.\\n.\\n" | openssl req -new -key ./1024/client-key.pem -config ./wolfssl.cnf -nodes -out ./1024/client-cert.csr
     check_result $? "Step 1"
 
 
@@ -231,7 +367,7 @@ run_renewcerts(){
     echo "Updating 3072-bit client-cert.pem"
     echo ""
     #pipe the following arguments to openssl req...
-    echo -e "US\\nMontana\\nBozeman\\nwolfSSL_3072\\nProgramming-3072\\nwww.wolfssl.com\\ninfo@wolfssl.com\\n.\\n.\\n" | openssl req -new -key ./3072/client-key.pem -config ./wolfssl.cnf -nodes -out ./3072/client-cert.csr
+    echo -e "US\\nMontana\\nBozeman\\nwolfSSL_3072\\nProgramming-3072\\nwww.wolfssl.com\\nfacts@wolfssl.com\\n.\\n.\\n" | openssl req -new -key ./3072/client-key.pem -config ./wolfssl.cnf -nodes -out ./3072/client-cert.csr
     check_result $? "Step 1"
 
     openssl x509 -req -in ./3072/client-cert.csr -days 1000 -extfile wolfssl.cnf -extensions wolfssl_opts -signkey ./3072/client-key.pem -out ./3072/client-cert.pem
@@ -255,7 +391,7 @@ run_renewcerts(){
     echo "Updating 4096-bit client-cert.pem"
     echo ""
     #pipe the following arguments to openssl req...
-    echo -e "US\\nMontana\\nBozeman\\nwolfSSL_4096\\nProgramming-4096\\nwww.wolfssl.com\\ninfo@wolfssl.com\\n.\\n.\\n" | openssl req -new -key ./4096/client-key.pem -config ./wolfssl.cnf -nodes -out ./4096/client-cert.csr
+    echo -e "US\\nMontana\\nBozeman\\nwolfSSL_4096\\nProgramming-4096\\nwww.wolfssl.com\\nfacts@wolfssl.com\\n.\\n.\\n" | openssl req -new -key ./4096/client-key.pem -config ./wolfssl.cnf -nodes -out ./4096/client-cert.csr
     check_result $? "Step 1"
 
     openssl x509 -req -in ./4096/client-cert.csr -days 1000 -extfile wolfssl.cnf -extensions wolfssl_opts -signkey ./4096/client-key.pem -out ./4096/client-cert.pem
@@ -278,7 +414,7 @@ run_renewcerts(){
     echo "Updating ca-cert.pem"
     echo ""
     #pipe the following arguments to openssl req...
-    echo -e  "US\\nMontana\\nBozeman\\nSawtooth\\nConsulting\\nwww.wolfssl.com\\ninfo@wolfssl.com\\n.\\n.\\n" | openssl req -new -key ca-key.pem -config ./wolfssl.cnf -nodes -out ca-cert.csr
+    echo -e  "US\\nMontana\\nBozeman\\nSawtooth\\nConsulting\\nwww.wolfssl.com\\nfacts@wolfssl.com\\n.\\n.\\n" | openssl req -new -key ca-key.pem -config ./wolfssl.cnf -nodes -out ca-cert.csr
     check_result $? "Step 1"
 
     openssl x509 -req -in ca-cert.csr -days 1000 -extfile wolfssl.cnf -extensions wolfssl_opts -signkey ca-key.pem -out ca-cert.pem
@@ -291,12 +427,91 @@ run_renewcerts(){
     echo "End of section"
     echo "---------------------------------------------------------------------"
     ############################################################
+    ########## update AIA test certs ###########################
+    ############################################################
+    echo "Updating AIA test certs"
+    echo ""
+    mkdir -p aia
+
+    echo "Updating aia/ca-issuers-cert.pem"
+    echo ""
+    openssl req -new -newkey rsa:2048 -nodes -keyout aia/ca-issuers-key.pem -subj "/CN=wolfssl-aia-test" -out aia/ca-issuers-cert.csr
+    check_result $? "Step AIA-1"
+
+    openssl x509 -req -in aia/ca-issuers-cert.csr -days 365 -extfile wolfssl.cnf -extensions aia_ca_issuers -signkey aia/ca-issuers-key.pem -out aia/ca-issuers-cert.pem
+    check_result $? "Step AIA-2"
+    rm aia/ca-issuers-cert.csr
+
+    openssl x509 -in aia/ca-issuers-cert.pem -text > tmp.pem
+    check_result $? "Step AIA-3"
+    mv tmp.pem aia/ca-issuers-cert.pem
+    rm aia/ca-issuers-key.pem
+    echo "End of section"
+    echo "---------------------------------------------------------------------"
+
+    echo "Updating aia/multi-aia-cert.pem"
+    echo ""
+    openssl req -new -newkey rsa:2048 -nodes -keyout aia/multi-aia-key.pem -subj "/CN=wolfssl-aia-multi-test" -out aia/multi-aia-cert.csr
+    check_result $? "Step AIA-4"
+
+    openssl x509 -req -in aia/multi-aia-cert.csr -days 365 -extfile wolfssl.cnf -extensions aia_multi -signkey aia/multi-aia-key.pem -out aia/multi-aia-cert.pem
+    check_result $? "Step AIA-5"
+    rm aia/multi-aia-cert.csr
+
+    openssl x509 -in aia/multi-aia-cert.pem -text > tmp.pem
+    check_result $? "Step AIA-6"
+    mv tmp.pem aia/multi-aia-cert.pem
+    rm aia/multi-aia-key.pem
+    echo "End of section"
+    echo "---------------------------------------------------------------------"
+
+    echo "Updating aia/overflow-aia-cert.pem"
+    echo ""
+    openssl req -new -newkey rsa:2048 -nodes -keyout aia/overflow-aia-key.pem -subj "/CN=wolfssl-aia-overflow-test" -out aia/overflow-aia-cert.csr
+    check_result $? "Step AIA-7"
+
+    openssl x509 -req -in aia/overflow-aia-cert.csr -days 365 -extfile wolfssl.cnf -extensions aia_overflow -signkey aia/overflow-aia-key.pem -out aia/overflow-aia-cert.pem
+    check_result $? "Step AIA-8"
+    rm aia/overflow-aia-cert.csr
+
+    openssl x509 -in aia/overflow-aia-cert.pem -text > tmp.pem
+    check_result $? "Step AIA-9"
+    mv tmp.pem aia/overflow-aia-cert.pem
+    rm aia/overflow-aia-key.pem
+    echo "End of section"
+    echo "---------------------------------------------------------------------"
+    ############################################################
+    ########## update SIA test certs ###########################
+    ############################################################
+    echo "Updating SIA test certs"
+    echo ""
+    mkdir -p sia
+
+    # Cert with a subjectInfoAccess extension that does not contain an
+    # id-ad-caRepository entry. RFC 5280 4.2.2.2 only requires the SIA
+    # sequence be non-empty; it does not mandate any specific access method.
+    echo "Updating sia/timestamping-sia-cert.pem"
+    echo ""
+    openssl req -new -newkey rsa:2048 -nodes -keyout sia/timestamping-sia-key.pem -subj "/CN=wolfssl-sia-timestamping-test" -out sia/timestamping-sia-cert.csr
+    check_result $? "Step SIA-1"
+
+    openssl x509 -req -in sia/timestamping-sia-cert.csr -days 3650 -extfile wolfssl.cnf -extensions sia_timestamping -signkey sia/timestamping-sia-key.pem -out sia/timestamping-sia-cert.pem
+    check_result $? "Step SIA-2"
+    rm sia/timestamping-sia-cert.csr
+
+    openssl x509 -in sia/timestamping-sia-cert.pem -text > tmp.pem
+    check_result $? "Step SIA-3"
+    mv tmp.pem sia/timestamping-sia-cert.pem
+    rm sia/timestamping-sia-key.pem
+    echo "End of section"
+    echo "---------------------------------------------------------------------"
+    ############################################################
     ########## update the self-signed ca-cert-chain.der ########
     ############################################################
     echo "Updating ca-cert-chain.der"
     echo ""
     #pipe the following arguments to openssl req...
-    echo -e  "US\\nMontana\\nBozeman\\nSawtooth\\nConsulting\\nwww.wolfssl.com\\ninfo@wolfssl.com\\n.\\n.\\n" | openssl req -new -key 1024/ca-key.pem -config ./wolfssl.cnf -nodes -out ca-cert.csr
+    echo -e  "US\\nMontana\\nBozeman\\nSawtooth\\nConsulting\\nwww.wolfssl.com\\nfacts@wolfssl.com\\n.\\n.\\n" | openssl req -new -key 1024/ca-key.pem -config ./wolfssl.cnf -nodes -out ca-cert.csr
     check_result $? "Step 1"
 
     openssl x509 -req -in ca-cert.csr -days 1000 -extfile wolfssl.cnf -extensions wolfssl_opts -signkey 1024/ca-key.pem -outform DER -out ca-cert-chain.der
@@ -310,7 +525,7 @@ run_renewcerts(){
     echo "Updating ca-ecc-cert.pem"
     echo ""
     #pipe the following arguments to openssl req...
-    echo -e  "US\\nWashington\\nSeattle\\nwolfSSL\\nDevelopment\\nwww.wolfssl.com\\ninfo@wolfssl.com\\n.\\n.\\n" | openssl req -new -key ca-ecc-key.pem -config ./wolfssl.cnf -nodes -out ca-ecc-cert.csr
+    echo -e  "US\\nWashington\\nSeattle\\nwolfSSL\\nDevelopment\\nwww.wolfssl.com\\nfacts@wolfssl.com\\n.\\n.\\n" | openssl req -new -key ca-ecc-key.pem -config ./wolfssl.cnf -nodes -out ca-ecc-cert.csr
     check_result $? "Step 1"
 
     openssl x509 -req -in ca-ecc-cert.csr -days 1000 -extfile wolfssl.cnf -extensions ca_ecc_cert -signkey ca-ecc-key.pem -out ca-ecc-cert.pem
@@ -328,7 +543,7 @@ run_renewcerts(){
     echo "Updating ca-ecc384-cert.pem"
     echo ""
     #pipe the following arguments to openssl req...
-    echo -e  "US\\nWashington\\nSeattle\\nwolfSSL\\nDevelopment\\nwww.wolfssl.com\\ninfo@wolfssl.com\\n.\\n.\\n" | openssl req -new -key ca-ecc384-key.pem -config ./wolfssl.cnf -nodes -sha384 -out ca-ecc384-cert.csr
+    echo -e  "US\\nWashington\\nSeattle\\nwolfSSL\\nDevelopment\\nwww.wolfssl.com\\nfacts@wolfssl.com\\n.\\n.\\n" | openssl req -new -key ca-ecc384-key.pem -config ./wolfssl.cnf -nodes -sha384 -out ca-ecc384-cert.csr
     check_result $? "Step 1"
 
     openssl x509 -req -in ca-ecc384-cert.csr -days 1000 -extfile wolfssl.cnf -extensions ca_ecc_cert -signkey ca-ecc384-key.pem -sha384 -out ca-ecc384-cert.pem
@@ -346,7 +561,7 @@ run_renewcerts(){
     echo "Updating 1024-bit ca-cert.pem"
     echo ""
     #pipe the following arguments to openssl req...
-    echo -e  "US\\nMontana\\nBozeman\\nSawtooth\\nConsulting_1024\\nwww.wolfssl.com\\ninfo@wolfssl.com\\n.\\n.\\n" | openssl req -new -key ./1024/ca-key.pem -config ./wolfssl.cnf -nodes -sha1 -out ./1024/ca-cert.csr
+    echo -e  "US\\nMontana\\nBozeman\\nSawtooth\\nConsulting_1024\\nwww.wolfssl.com\\nfacts@wolfssl.com\\n.\\n.\\n" | openssl req -new -key ./1024/ca-key.pem -config ./wolfssl.cnf -nodes -sha1 -out ./1024/ca-cert.csr
     check_result $? "Step 1"
 
     openssl x509 -req -in ./1024/ca-cert.csr -days 1000 -extfile wolfssl.cnf -extensions wolfssl_opts -signkey ./1024/ca-key.pem -out ./1024/ca-cert.pem
@@ -364,7 +579,7 @@ run_renewcerts(){
     echo "Updating fpki-cert.der"
     echo ""
     #pipe the following arguments to openssl req...
-    echo -e "US\\nMontana\\nBozeman\\nwolfSSL\\nFPKI\\nwww.wolfssl.com\\ninfo@wolfssl.com\\n.\\n.\\n" | openssl req -new -key server-key.pem -config ./wolfssl.cnf -nodes > fpki-req.pem
+    echo -e "US\\nMontana\\nBozeman\\nwolfSSL\\nFPKI\\nwww.wolfssl.com\\nfacts@wolfssl.com\\n.\\n.\\n" | openssl req -new -key server-key.pem -config ./wolfssl.cnf -nodes > fpki-req.pem
     check_result $? "Step 1"
 
     openssl x509 -req -in fpki-req.pem -extfile wolfssl.cnf -extensions fpki_ext -days 1000 -CA ca-cert.pem -CAkey ca-key.pem -set_serial 01 -out fpki-cert.der -outform DER
@@ -373,12 +588,26 @@ run_renewcerts(){
     echo "End of section"
     echo "---------------------------------------------------------------------"
     ###########################################################
+    ########## update and sign fpki-certpol-cert.der ################
+    ###########################################################
+    echo "Updating fpki-certpol-cert.der"
+    echo ""
+    #pipe the following arguments to openssl req...
+    echo -e "US\\nMontana\\nBozeman\\nwolfSSL\\nFPKI\\nwww.wolfssl.com\\nfacts@wolfssl.com\\n.\\n.\\n" | openssl req -new -key server-key.pem -config ./wolfssl.cnf -nodes > fpki-certpol-req.pem
+    check_result $? "Step 1"
+
+    openssl x509 -req -in fpki-certpol-req.pem -extfile wolfssl.cnf -extensions fpki_ext_certpol -days 1000 -CA ca-cert.pem -CAkey ca-key.pem -set_serial 01 -out fpki-certpol-cert.der -outform DER
+    check_result $? "Step 2"
+    rm fpki-certpol-req.pem
+    echo "End of section"
+    echo "---------------------------------------------------------------------"
+    ###########################################################
     ########## update and sign rid-cert.der ################
     ###########################################################
     echo "Updating rid-cert.der"
     echo ""
     #pipe the following arguments to openssl req...
-    echo -e "US\\nMontana\\nBozeman\\nwolfSSL\\nRID\\nwww.wolfssl.com\\ninfo@wolfssl.com\\n.\\n.\\n" | openssl req -new -key server-key.pem -config ./wolfssl.cnf -nodes > rid-req.pem
+    echo -e "US\\nMontana\\nBozeman\\nwolfSSL\\nRID\\nwww.wolfssl.com\\nfacts@wolfssl.com\\n.\\n.\\n" | openssl req -new -key server-key.pem -config ./wolfssl.cnf -nodes > rid-req.pem
     check_result $? "Step 1"
 
     openssl x509 -req -in rid-req.pem -extfile wolfssl.cnf -extensions rid_ext -days 1000 -CA ca-cert.pem -CAkey ca-key.pem -set_serial 7 -out rid-cert.der -outform DER
@@ -392,7 +621,7 @@ run_renewcerts(){
     echo "Updating server-cert.pem"
     echo ""
     #pipe the following arguments to openssl req...
-    echo -e "US\\nMontana\\nBozeman\\nwolfSSL\\nSupport\\nwww.wolfssl.com\\ninfo@wolfssl.com\\n.\\n.\\n" | openssl req -new -key server-key.pem -config ./wolfssl.cnf -nodes > server-req.pem
+    echo -e "US\\nMontana\\nBozeman\\nwolfSSL\\nSupport\\nwww.wolfssl.com\\nfacts@wolfssl.com\\n.\\n.\\n" | openssl req -new -key server-key.pem -config ./wolfssl.cnf -nodes > server-req.pem
     check_result $? "Step 1"
 
     openssl x509 -req -in server-req.pem -extfile wolfssl.cnf -extensions wolfssl_opts -days 1000 -CA ca-cert.pem -CAkey ca-key.pem -set_serial 01 > server-cert.pem
@@ -410,12 +639,76 @@ run_renewcerts(){
     echo "End of section"
     echo "---------------------------------------------------------------------"
     ###########################################################
+    ########## update and sign server-cert-sha1.pem ###########
+    ###########################################################
+    # SHA-1 signed leaf. Used by the TLS 1.3 tests that check a server does
+    # not send a SHA-1 signed chain to a peer that did not advertise SHA-1.
+    echo "Updating server-cert-sha1.pem"
+    echo ""
+    echo -e "US\\nMontana\\nBozeman\\nwolfSSL\\nSupport\\nwww.wolfssl.com\\nfacts@wolfssl.com\\n.\\n.\\n" | openssl req -new -key server-key.pem -config ./wolfssl.cnf -nodes > server-sha1-req.pem
+    check_result $? "Step 1"
+
+    openssl x509 -req -in server-sha1-req.pem -sha1 -extfile wolfssl.cnf -extensions wolfssl_opts -days 1000 -CA ca-cert.pem -CAkey ca-key.pem -set_serial 51 > server-sha1-tmp.pem
+    check_result $? "Step 2"
+
+    rm server-sha1-req.pem
+
+    openssl x509 -in server-sha1-tmp.pem -text > server-cert-sha1.pem
+    check_result $? "Step 3"
+    rm server-sha1-tmp.pem
+    echo "End of section"
+    echo "---------------------------------------------------------------------"
+    ###########################################################
+    ####### update and sign server-cert-sha1-root.pem #########
+    ###########################################################
+    # SHA-256 leaf with a self signed SHA-1 root appended. RFC 8446 4.4.2.2
+    # lets the trust anchor be omitted, so its SHA-1 signature must not stop
+    # the chain from being sent.
+    echo "Updating server-cert-sha1-root.pem"
+    echo ""
+    echo -e "US\\nMontana\\nBozeman\\nSawtooth\\nConsulting\\nwww.wolfssl.com\\nfacts@wolfssl.com\\n.\\n.\\n" | openssl req -new -key ca-key.pem -config ./wolfssl.cnf -nodes -out ca-sha1-req.pem
+    check_result $? "Step 1"
+
+    openssl x509 -req -in ca-sha1-req.pem -sha1 -days 1000 -extfile wolfssl.cnf -extensions wolfssl_opts -signkey ca-key.pem -set_serial 52 -out ca-sha1-tmp.pem
+    check_result $? "Step 2"
+
+    rm ca-sha1-req.pem
+
+    openssl x509 -in server-cert.pem -text > server-cert-sha1-root.pem
+    check_result $? "Step 3"
+    openssl x509 -in ca-sha1-tmp.pem -text >> server-cert-sha1-root.pem
+    check_result $? "Step 4"
+    rm ca-sha1-tmp.pem
+    echo "End of section"
+    echo "---------------------------------------------------------------------"
+    ###########################################################
+    ########## update and sign client-cert-sha1.pem ###########
+    ###########################################################
+    # SHA-1 signed client leaf, issued by ca-cert.pem rather than self signed
+    # so it is not exempt from the RFC 8446 4.4.2.2 trust anchor rule. Used to
+    # check the client falls back to an empty certificate_list.
+    echo "Updating client-cert-sha1.pem"
+    echo ""
+    echo -e "US\\nMontana\\nBozeman\\nwolfSSL_2048\\nProgramming-2048\\nwww.wolfssl.com\\nfacts@wolfssl.com\\n.\\n.\\n" | openssl req -new -key client-key.pem -config ./wolfssl.cnf -nodes > client-sha1-req.pem
+    check_result $? "Step 1"
+
+    openssl x509 -req -in client-sha1-req.pem -sha1 -extfile wolfssl.cnf -extensions wolfssl_opts -days 1000 -CA ca-cert.pem -CAkey ca-key.pem -set_serial 53 > client-sha1-tmp.pem
+    check_result $? "Step 2"
+
+    rm client-sha1-req.pem
+
+    openssl x509 -in client-sha1-tmp.pem -text > client-cert-sha1.pem
+    check_result $? "Step 3"
+    rm client-sha1-tmp.pem
+    echo "End of section"
+    echo "---------------------------------------------------------------------"
+    ###########################################################
     ########## update and sign server-revoked-key.pem #########
     ###########################################################
     echo "Updating server-revoked-cert.pem"
     echo ""
     #pipe the following arguments to openssl req...
-    echo -e "US\\nMontana\\nBozeman\\nwolfSSL_revoked\\nSupport_revoked\\nwww.wolfssl.com\\ninfo@wolfssl.com\\n.\\n.\\n" | openssl req -new -key server-revoked-key.pem -config ./wolfssl.cnf -nodes > server-revoked-req.pem
+    echo -e "US\\nMontana\\nBozeman\\nwolfSSL_revoked\\nSupport_revoked\\nwww.wolfssl.com\\nfacts@wolfssl.com\\n.\\n.\\n" | openssl req -new -key server-revoked-key.pem -config ./wolfssl.cnf -nodes > server-revoked-req.pem
     check_result $? "Step 1"
 
     openssl x509 -req -in server-revoked-req.pem -extfile wolfssl.cnf -extensions wolfssl_opts -days 1000 -CA ca-cert.pem -CAkey ca-key.pem -set_serial 02 > server-revoked-cert.pem
@@ -437,7 +730,7 @@ run_renewcerts(){
     echo "Updating server-duplicate-policy.pem"
     echo ""
     #pipe the following arguments to openssl req...
-    echo -e "US\\nMontana\\nBozeman\\nwolfSSL\\ntesting duplicate policy\\nwww.wolfssl.com\\ninfo@wolfssl.com\\n.\\n.\\n" | openssl req -new -key server-key.pem -config ./wolfssl.cnf -nodes > ./test/server-duplicate-policy-req.pem
+    echo -e "US\\nMontana\\nBozeman\\nwolfSSL\\ntesting duplicate policy\\nwww.wolfssl.com\\nfacts@wolfssl.com\\n.\\n.\\n" | openssl req -new -key server-key.pem -config ./wolfssl.cnf -nodes > ./test/server-duplicate-policy-req.pem
     check_result $? "Step 1"
 
     openssl x509 -req -in ./test/server-duplicate-policy-req.pem -extfile wolfssl.cnf -extensions policy_test -days 1000 -CA ca-cert.pem -CAkey ca-key.pem -set_serial 02 > ./test/server-duplicate-policy.pem
@@ -459,7 +752,7 @@ run_renewcerts(){
     echo "Updating 1024-bit server-cert.pem"
     echo ""
     #pipe the following arguments to openssl req...
-    echo -e "US\\nMontana\\nBozeman\\nwolfSSL\\nSupport_1024\\nwww.wolfssl.com\\ninfo@wolfssl.com\\n.\\n.\\n" | openssl req -new -key ./1024/server-key.pem -config ./wolfssl.cnf -nodes -sha1 > ./1024/server-req.pem
+    echo -e "US\\nMontana\\nBozeman\\nwolfSSL\\nSupport_1024\\nwww.wolfssl.com\\nfacts@wolfssl.com\\n.\\n.\\n" | openssl req -new -key ./1024/server-key.pem -config ./wolfssl.cnf -nodes -sha1 > ./1024/server-req.pem
     check_result $? "Step 1"
 
     openssl x509 -req -in ./1024/server-req.pem -extfile wolfssl.cnf -extensions wolfssl_opts -days 1000 -CA ./1024/ca-cert.pem -CAkey ./1024/ca-key.pem -set_serial 01 > ./1024/server-cert.pem
@@ -480,7 +773,7 @@ run_renewcerts(){
     ############################################################
     echo "Updating server-ecc-rsa.pem"
     echo ""
-    echo -e "US\\nMontana\\nBozeman\\nElliptic - RSAsig\\nECC-RSAsig\\nwww.wolfssl.com\\ninfo@wolfssl.com\\n.\\n.\\n" | openssl req -new -key ecc-key.pem -config ./wolfssl.cnf -nodes > server-ecc-req.pem
+    echo -e "US\\nMontana\\nBozeman\\nElliptic - RSAsig\\nECC-RSAsig\\nwww.wolfssl.com\\nfacts@wolfssl.com\\n.\\n.\\n" | openssl req -new -key ecc-key.pem -config ./wolfssl.cnf -nodes > server-ecc-req.pem
     check_result $? "Step 1"
 
     openssl x509 -req -in server-ecc-req.pem -extfile wolfssl.cnf -extensions wolfssl_opts -days 1000 -CA ca-cert.pem -CAkey ca-key.pem -set_serial 01 > server-ecc-rsa.pem
@@ -498,7 +791,7 @@ run_renewcerts(){
     echo "Updating client-ecc-cert.pem"
     echo ""
     #pipe the following arguments to openssl req...
-    echo -e "US\\nOregon\\nSalem\\nClient ECC\\nFast\\nwww.wolfssl.com\\ninfo@wolfssl.com\\n.\\n.\\n" | openssl req -new -key ecc-client-key.pem -config ./wolfssl.cnf -nodes -out client-ecc-cert.csr
+    echo -e "US\\nOregon\\nSalem\\nClient ECC\\nFast\\nwww.wolfssl.com\\nfacts@wolfssl.com\\n.\\n.\\n" | openssl req -new -key ecc-client-key.pem -config ./wolfssl.cnf -nodes -out client-ecc-cert.csr
     check_result $? "Step 1"
 
     openssl x509 -req -in client-ecc-cert.csr -days 1000 -extfile wolfssl.cnf -extensions wolfssl_opts -signkey ecc-client-key.pem -out client-ecc-cert.pem
@@ -508,6 +801,11 @@ run_renewcerts(){
     openssl x509 -in client-ecc-cert.pem -text > tmp.pem
     check_result $? "Step 3"
     mv tmp.pem client-ecc-cert.pem
+
+    # Extract the Subject Key Identifier from the generated certificate
+    # for unit test use.
+    openssl x509 -in client-ecc-cert.pem -noout -text | grep -A1 'Subject Key Identifier' | tail -n +2 | sed -e 's/[ :]//g' > test/client-ecc-cert-ski.hex
+    check_result $? "Step 4"
     echo "End of section"
     echo "---------------------------------------------------------------------"
     ############################################################
@@ -516,7 +814,7 @@ run_renewcerts(){
     echo "Updating server-ecc.pem"
     echo ""
     #pipe the following arguments to openssl req...
-    echo -e "US\\nWashington\\nSeattle\\nElliptic\\nECC\\nwww.wolfssl.com\\ninfo@wolfssl.com\\n.\\n.\\n" | openssl req -new -key ecc-key.pem -config ./wolfssl.cnf -nodes -out server-ecc.csr
+    echo -e "US\\nWashington\\nSeattle\\nElliptic\\nECC\\nwww.wolfssl.com\\nfacts@wolfssl.com\\n.\\n.\\n" | openssl req -new -key ecc-key.pem -config ./wolfssl.cnf -nodes -out server-ecc.csr
     check_result $? "Step 1"
 
     openssl x509 -req -in server-ecc.csr -days 1000 -extfile wolfssl.cnf -extensions server_ecc -CA ca-ecc-cert.pem -CAkey ca-ecc-key.pem -set_serial 03 -out server-ecc.pem
@@ -534,7 +832,7 @@ run_renewcerts(){
     echo "Updating server-ecc-comp.pem"
     echo ""
     #pipe the following arguments to openssl req...
-    echo -e "US\\nMontana\\nBozeman\\nElliptic - comp\\nServer ECC-comp\\nwww.wolfssl.com\\ninfo@wolfssl.com\\n.\\n.\\n" | openssl req -new -key ecc-key-comp.pem -config ./wolfssl.cnf -nodes -out server-ecc-comp.csr
+    echo -e "US\\nMontana\\nBozeman\\nElliptic - comp\\nServer ECC-comp\\nwww.wolfssl.com\\nfacts@wolfssl.com\\n.\\n.\\n" | openssl req -new -key ecc-key-comp.pem -config ./wolfssl.cnf -nodes -out server-ecc-comp.csr
     check_result $? "Step 1"
 
     openssl x509 -req -in server-ecc-comp.csr -days 1000 -extfile wolfssl.cnf -extensions wolfssl_opts -signkey ecc-key-comp.pem -out server-ecc-comp.pem
@@ -595,7 +893,7 @@ run_renewcerts(){
     echo "Updating entity-no-ca-bool-cert.pem"
     echo ""
     #pipe the following arguments to openssl req...
-    echo -e "US\\nMontana\\nBozeman\\nwolfSSL\\nNoCaBool\\nwww.wolfssl.com\\ninfo@wolfssl.com\\n.\\n.\\n" | openssl req -new -key entity-no-ca-bool-key.pem -config ./wolfssl.cnf  -nodes > entity-no-ca-bool-req.pem
+    echo -e "US\\nMontana\\nBozeman\\nwolfSSL\\nNoCaBool\\nwww.wolfssl.com\\nfacts@wolfssl.com\\n.\\n.\\n" | openssl req -new -key entity-no-ca-bool-key.pem -config ./wolfssl.cnf  -nodes > entity-no-ca-bool-req.pem
     check_result $? "Step 1"
 
     openssl x509 -req -in entity-no-ca-bool-req.pem -extfile ./wolfssl.cnf -extensions "entity_no_CA_BOOL" -days 1000 -CA ca-cert.pem -CAkey ca-key.pem -set_serial 01 > entity-no-ca-bool-cert.pem
@@ -688,6 +986,16 @@ run_renewcerts(){
     echo "---------------------------------------------------------------------"
 
     ############################################################
+    ########## generate SM2 certificates #######################
+    ############################################################
+    echo "Renewing SM2 certificates"
+    cd sm2
+    ./gen-sm2-certs.sh
+    cd ..
+    echo "End of section"
+    echo "---------------------------------------------------------------------"
+
+    ############################################################
     ########## update Raw Public Key certificates ##############
     ############################################################
     echo "Updating  certificates"
@@ -696,7 +1004,7 @@ run_renewcerts(){
     check_result $? "Step 1"
 
     echo "Updating client-ecc-cert-rpk.der"
-    cp ecc-client-keyPub.der ./rpk/ecc-client-cert-rpk.der
+    cp ecc-client-keyPub.der ./rpk/client-ecc-cert-rpk.der
     check_result $? "Step 2"
 
     echo "Updating server-cert-rpk.der"
@@ -775,8 +1083,13 @@ run_renewcerts(){
     echo "Generating CMS bundle"
     echo ""
     cd ./test || { echo "Failed to switch to dir ./test"; exit 1; }
-    echo "test" | openssl cms -encrypt -binary -keyid -out ktri-keyid-cms.msg -outform der -recip ../client-cert.pem -nocerts
+    echo "test" | openssl cms -encrypt -des3 -binary -keyid -out ktri-keyid-cms.msg -outform der -recip ../client-cert.pem -nocerts
     check_result $? "generate ktri-keyid-cms.msg"
+    # Generate an EnvelopedData with KARI recipient for testing.
+    echo "testkari" | openssl cms -encrypt -des3 -binary -keyid -out kari-keyid-cms.msg -outform der -recip ../client-ecc-cert.pem -nocerts
+    check_result $? "generate kari-keyid-cms.msg"
+    echo "testencrypt" | openssl cms -EncryptedData_encrypt -binary -keyid -aes-128-cbc -secretkey 0123456789ABCDEF0011223344556677 -out encrypteddata.msg -outform der -recip ../client-cert.pem -nocerts
+    check_result $? "generate encrypteddata.msg"
     cd ../ || exit 1
     echo "End of section"
     echo "---------------------------------------------------------------------"
@@ -838,6 +1151,7 @@ run_renewcerts(){
     cd ./crl || { echo "Failed to switch to dir ./crl"; exit 1; }
     echo "changed directory: cd/crl"
     echo ""
+    # has dependency on rsapss generation (rsapss should be ran first)
     ./gencrls.sh
     check_result $? "gencrls.sh"
     echo "ran ./gencrls.sh"
@@ -853,14 +1167,365 @@ run_renewcerts(){
     echo ""
     openssl crl2pkcs7 -nocrl -certfile ./client-cert.pem -out test-degenerate.p7b -outform DER
     check_result $? ""
+
+    openssl smime -sign -in ./ca-cert.pem -out test-stream-sign.p7b -signer ./ca-cert.pem -nodetach -nocerts -binary -outform DER -stream -inkey ./ca-key.pem
+    check_result $? ""
+
+    echo "Creating test-stream-dec.p7b..."
+    echo ""
+    openssl cms -encrypt -des3 -in ca-cert.pem -recip client-cert.pem -out test-stream-dec.p7b -outform DER -stream
+    check_result $? ""
+
+    echo "Creating test-stream-dec-aes256.p7b..."
+    echo ""
+    openssl cms -encrypt -aes256 -binary -in ca-cert.pem -recip client-cert.pem -out test-stream-dec-aes256.p7b -outform DER -stream
+    check_result $? ""
+
+    echo "Creating test-stream-dec-aes256gcm.p7b..."
+    echo ""
+    openssl cms -encrypt -aes-256-gcm -binary -in ca-cert.pem -recip client-cert.pem -out test-stream-dec-aes256gcm.p7b -outform DER -stream
+    check_result $? ""
+
+    echo "Creating test-multiple-recipients.p7b..."
+    echo ""
+    openssl smime -encrypt -binary -aes-256-cbc -in ./client-key.pem  -out ./test-multiple-recipients.p7b -outform DER ./client-cert.pem ./server-cert.pem
+    check_result $? ""
+
     echo "End of section"
+    echo "---------------------------------------------------------------------"
+
+    ############################################################
+    ########## update and sign client-ca-cert.pem ##############
+    ############################################################
+    echo "Updating client-ca-cert.pem"
+    echo ""
+    cat > client-ca-ext.cnf <<'EOF'
+[ client_ca ]
+subjectKeyIdentifier=hash
+authorityKeyIdentifier=keyid:always,issuer:always
+basicConstraints=critical, CA:FALSE
+keyUsage=critical, digitalSignature, keyEncipherment
+extendedKeyUsage=clientAuth
+EOF
+    check_result $? "Step 1"
+
+    #pipe the following arguments to openssl req...
+    echo -e "US\\nMontana\\nBozeman\\nwolfSSL_2048\\nProgramming-2048\\n" \
+        "www.wolfssl.com\\nfacts@wolfssl.com\\n.\\n.\\n" | \
+        openssl req -new -key client-key.pem -config ./wolfssl.cnf -nodes \
+        > client-ca-cert-req.pem
+    check_result $? "Step 2"
+
+    openssl x509 -req -in client-ca-cert-req.pem -extfile client-ca-ext.cnf \
+        -extensions client_ca -days 1000 -CA ca-cert.pem -CAkey ca-key.pem \
+        -set_serial 0x1235 > client-ca-cert.pem
+    check_result $? "Step 3"
+    rm client-ca-cert-req.pem
+
+    openssl x509 -in client-ca-cert.pem -text > tmp.pem
+    check_result $? "Step 4"
+    mv tmp.pem client-ca-cert.pem
+
+    openssl x509 -inform PEM -in client-ca-cert.pem -outform DER \
+        -out client-ca-cert.der
+    check_result $? "Step 5"
+    rm client-ca-ext.cnf
+    echo "End of section"
+    echo "---------------------------------------------------------------------"
+
+    ############################################################
+    ####### update and sign client-ecc-ca-cert.pem #############
+    ############################################################
+    echo "Updating client-ecc-ca-cert.pem"
+    echo ""
+    #pipe the following arguments to openssl req...
+    echo -e "US\\nOregon\\nSalem\\nClient ECC\\nFast\\nwww.wolfssl.com\\n" \
+        "facts@wolfssl.com\\n.\\n.\\n" | \
+        openssl req -new -key ecc-client-key.pem -config ./wolfssl.cnf -nodes \
+        > client-ecc-ca-cert-req.pem
+    check_result $? "Step 1"
+
+    openssl x509 -req -in client-ecc-ca-cert-req.pem -extfile wolfssl.cnf \
+        -extensions client_ecc -days 1000 -CA ca-ecc-cert.pem \
+        -CAkey ca-ecc-key.pem -set_serial 0x1234 > client-ecc-ca-cert.pem
+    check_result $? "Step 2"
+    rm client-ecc-ca-cert-req.pem
+
+    openssl x509 -in client-ecc-ca-cert.pem -text > tmp.pem
+    check_result $? "Step 3"
+    mv tmp.pem client-ecc-ca-cert.pem
+
+    openssl x509 -inform PEM -in client-ecc-ca-cert.pem -outform DER \
+        -out client-ecc-ca-cert.der
+    check_result $? "Step 4"
+    echo "End of section"
+    echo "---------------------------------------------------------------------"
+
+    ############################################################
+    #### ML-DSA (FIPS 204) self-signed certificates          ###
+    ############################################################
+    # ML-DSA requires an OpenSSL 3.5+ binary with the built-in ML-DSA provider.
+    # Besides key/cert generation the block also produces the expanded-only
+    # PKCS#8 key.der (-provparam ml-dsa.output_formats=priv-only, a 3.5+
+    # built-in construct) that the PKCS#7 tests decode without keygen-from-seed.
+    # The probe below requires both keygen and that conversion, so the common
+    # unsuitable binaries (oqsprovider or pre-3.5, which lack the expanded-only
+    # conversion) are rejected here and the block is skipped cleanly rather
+    # than aborting after writing a cert.der but no matching key.der.
+    OPENSSL3=""
+    for candidate in \
+        "/usr/local/opt/openssl@3.5/bin/openssl" \
+        "/usr/local/opt/openssl@3/bin/openssl" \
+        "/opt/homebrew/opt/openssl@3.5/bin/openssl" \
+        "/opt/homebrew/opt/openssl@3/bin/openssl" \
+        "openssl"; do
+        if [ "$candidate" = "openssl" ]; then
+            # Skip if 'openssl' is not available on PATH.
+            command -v openssl >/dev/null 2>&1 || continue
+        else
+            # Skip non-existent or non-executable absolute paths.
+            [ -x "$candidate" ] || continue
+        fi
+        probe_key="$(mktemp)" || continue
+        # Probe every level the loop below generates (44/65/87), for both
+        # keygen and the expanded-only conversion, so a partially-capable
+        # binary is rejected up front rather than aborting mid-loop.
+        probe_ok=1
+        for probe_level in 44 65 87; do
+            if ! "$candidate" genpkey -algorithm "mldsa${probe_level}" \
+                    -out "$probe_key" 2>/dev/null || \
+               ! "$candidate" pkey -in "$probe_key" \
+                    -provparam ml-dsa.output_formats=priv-only -outform DER \
+                    -out /dev/null 2>/dev/null; then
+                probe_ok=0
+                break
+            fi
+        done
+        rm -f "$probe_key"
+        if [ "$probe_ok" -eq 1 ]; then
+            OPENSSL3="$candidate"
+            break
+        fi
+    done
+
+    if [ -n "$OPENSSL3" ]; then
+        echo "Generating ML-DSA certificates using: $OPENSSL3"
+        echo ""
+        mkdir -p mldsa
+
+        for level in 44 65 87; do
+            echo "Generating ML-DSA-${level} key and self-signed certificate..."
+
+            "$OPENSSL3" genpkey -algorithm "mldsa${level}" \
+                -out "mldsa/mldsa${level}-key.pem"
+            check_result $? "ML-DSA-${level} key generation"
+
+            "$OPENSSL3" req -new -x509 -key "mldsa/mldsa${level}-key.pem" \
+                -out "mldsa/mldsa${level}-cert.pem" -days 3650 \
+                -subj "/C=US/ST=Montana/L=Bozeman/O=wolfSSL/CN=ML-DSA-${level}"
+            check_result $? "ML-DSA-${level} certificate generation"
+
+            "$OPENSSL3" x509 -inform PEM -in "mldsa/mldsa${level}-cert.pem" \
+                -outform DER -out "mldsa/mldsa${level}-cert.der"
+            check_result $? "ML-DSA-${level} DER conversion"
+
+            # Matching private key in the portable expanded-only PKCS#8 DER
+            # shape, used by the PKCS#7/CMS SignedData tests. Derived from the
+            # same mldsa${level}-key.pem so it corresponds to the public key in
+            # mldsa${level}-cert.der. The expanded-only form (no seed) decodes
+            # via ImportPrivRaw without keygen-from-seed or the ASN template,
+            # so the tests pass in WOLFSSL_MLDSA_NO_MAKE_KEY and non-template
+            # builds too; the seed-and-expanded default would not. The probe
+            # above already verified this binary supports the conversion.
+            "$OPENSSL3" pkey -in "mldsa/mldsa${level}-key.pem" \
+                -provparam ml-dsa.output_formats=priv-only -outform DER \
+                -out "mldsa/mldsa${level}-key.der"
+            check_result $? "ML-DSA-${level} key DER conversion"
+
+            echo "End of ML-DSA-${level} section"
+        done
+
+        # ECC P-256 leaf signed by the ML-DSA-44 CA; used by
+        # examples/tls13/tls13_memio.c to drive ML-DSA cert verify.
+        echo "Generating ecc-leaf-mldsa44.pem (P-256 leaf signed by ML-DSA-44 CA)..."
+        cat > mldsa/ecc-leaf.ext <<EOF
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid:always
+EOF
+        "$OPENSSL3" req -new -key ecc-key.pem -subj "/CN=localhost" \
+            -out mldsa/ecc-leaf-mldsa44.csr
+        check_result $? "ecc-leaf-mldsa44 request"
+
+        "$OPENSSL3" x509 -req -in mldsa/ecc-leaf-mldsa44.csr \
+            -CA mldsa/mldsa44-cert.pem -CAkey mldsa/mldsa44-key.pem \
+            -CAcreateserial -days 3650 -extfile mldsa/ecc-leaf.ext \
+            -out mldsa/ecc-leaf-mldsa44.pem
+        check_result $? "ecc-leaf-mldsa44 certificate"
+
+        rm -f mldsa/ecc-leaf-mldsa44.csr mldsa/ecc-leaf.ext mldsa/mldsa44-cert.srl
+        echo "End of ecc-leaf-mldsa44 section"
+
+        # Cross-level chain (ML-DSA-65 leaf signed by an ML-DSA-87 CA); tests
+        # that verification uses the verifying key's own ML-DSA level, not
+        # the leaf's.
+        echo "Generating mldsa87-ca / mldsa65-leaf87ca cross-level chain..."
+
+        "$OPENSSL3" genpkey -algorithm ML-DSA-87 -out mldsa/mldsa87-ca-key.pem
+        check_result $? "mldsa87-ca key generation"
+
+        "$OPENSSL3" req -x509 -new -key mldsa/mldsa87-ca-key.pem -days 3650 \
+            -subj "/C=US/ST=Montana/L=Bozeman/O=wolfSSL/CN=ML-DSA-87 CA" \
+            -out mldsa/mldsa87-ca-cert.pem
+        check_result $? "mldsa87-ca certificate generation"
+
+        "$OPENSSL3" genpkey -algorithm ML-DSA-65 \
+            -out mldsa/mldsa65-leaf87ca-key.pem
+        check_result $? "mldsa65-leaf87ca key generation"
+
+        "$OPENSSL3" req -new -key mldsa/mldsa65-leaf87ca-key.pem \
+            -subj "/C=US/ST=Montana/L=Bozeman/O=wolfSSL/CN=ML-DSA-65 leaf signed by ML-DSA-87" \
+            -out mldsa/leaf87ca.csr
+        check_result $? "mldsa65-leaf87ca request"
+
+        "$OPENSSL3" x509 -req -in mldsa/leaf87ca.csr \
+            -CA mldsa/mldsa87-ca-cert.pem -CAkey mldsa/mldsa87-ca-key.pem \
+            -CAcreateserial -days 3650 \
+            -out mldsa/mldsa65-leaf87ca-cert.pem
+        check_result $? "mldsa65-leaf87ca certificate generation"
+
+        "$OPENSSL3" x509 -in mldsa/mldsa87-ca-cert.pem -outform DER \
+            -out mldsa/mldsa87-ca-cert.der
+        check_result $? "mldsa87-ca DER conversion"
+
+        "$OPENSSL3" x509 -in mldsa/mldsa65-leaf87ca-cert.pem -outform DER \
+            -out mldsa/mldsa65-leaf87ca-cert.der
+        check_result $? "mldsa65-leaf87ca DER conversion"
+
+        rm -f mldsa/leaf87ca.csr mldsa/mldsa87-ca-cert.srl
+        echo "End of cross-level chain section"
+        echo "---------------------------------------------------------------------"
+    else
+        echo "Skipping ML-DSA cert generation (no OpenSSL 3.5+ built-in ML-DSA provider found)"
+        echo "---------------------------------------------------------------------"
+    fi
+
+    ############################################################
+    #### ML-KEM (FIPS 203) key establishment certificates    ###
+    ############################################################
+    # ML-KEM is a KEM, so it cannot sign anything, including a certificate
+    # request or its own certificate. Each end-entity certificate here is
+    # issued by the ML-DSA-87 certificate produced above, per RFC 9935 and the
+    # CNSA 2.0 PKIX profile, using a throwaway request that only carries the
+    # subject name - "x509 -req -force_pubkey" replaces its public key with the
+    # ML-KEM one before signing. That request is signed by the ML-DSA-87 CA key
+    # itself, so no extra key material is needed.
+    #
+    # The private keys are written in the priv-only PKCS#8 shape (RFC 9935
+    # section 6 expandedKey), which decodes without keygen-from-seed and so
+    # works in WOLFSSL_MLKEM_NO_MAKE_KEY builds too. The seed-priv default
+    # would not.
+    #
+    # This needs the same OpenSSL 3.5+ binary as the ML-DSA block, plus its
+    # built-in ML-KEM provider, so it is probed separately: a binary with
+    # ML-DSA but no ML-KEM still produces the ML-DSA material above.
+    if [ -n "$OPENSSL3" ] && [ -f mldsa/mldsa87-cert.pem ]; then
+        mlkem_probe_key="$(mktemp)"
+        mlkem_ok=1
+        for probe_level in 512 768 1024; do
+            if ! "$OPENSSL3" genpkey -algorithm "ML-KEM-${probe_level}" \
+                    -out "$mlkem_probe_key" 2>/dev/null || \
+               ! "$OPENSSL3" pkey -in "$mlkem_probe_key" \
+                    -provparam ml-kem.output_formats=priv-only -outform DER \
+                    -out /dev/null 2>/dev/null; then
+                mlkem_ok=0
+                break
+            fi
+        done
+        rm -f "$mlkem_probe_key"
+    else
+        mlkem_ok=0
+    fi
+
+    if [ "$mlkem_ok" -eq 1 ]; then
+        echo "Generating ML-KEM certificates using: $OPENSSL3"
+        echo ""
+        mkdir -p mlkem
+
+        # CNSA 2.0 key establishment certificate: keyUsage critical, asserting
+        # keyEncipherment and nothing else (RFC 9935 section 5).
+        cat > mlkem/mlkem.ext <<EOF
+subjectKeyIdentifier = hash
+keyUsage = critical, keyEncipherment
+EOF
+
+        for level in 512 768 1024; do
+            echo "Generating ML-KEM-${level} key and certificate..."
+
+            "$OPENSSL3" genpkey -algorithm "ML-KEM-${level}" \
+                -out "mlkem/mlkem${level}-key.pem"
+            check_result $? "ML-KEM-${level} key generation"
+
+            "$OPENSSL3" pkey -in "mlkem/mlkem${level}-key.pem" -pubout \
+                -out "mlkem/mlkem${level}-pub.pem"
+            check_result $? "ML-KEM-${level} public key extraction"
+
+            # Carrier request. Its own public key is discarded below; only the
+            # subject name is kept.
+            "$OPENSSL3" req -new -key mldsa/mldsa87-key.pem \
+                -subj "/C=US/ST=Montana/L=Bozeman/O=wolfSSL/CN=ML-KEM-${level}" \
+                -out "mlkem/mlkem${level}.csr"
+            check_result $? "ML-KEM-${level} request"
+
+            "$OPENSSL3" x509 -req -in "mlkem/mlkem${level}.csr" \
+                -force_pubkey "mlkem/mlkem${level}-pub.pem" \
+                -CA mldsa/mldsa87-cert.pem -CAkey mldsa/mldsa87-key.pem \
+                -CAcreateserial -days 3650 -extfile mlkem/mlkem.ext \
+                -out "mlkem/mlkem${level}-cert.pem"
+            check_result $? "ML-KEM-${level} certificate generation"
+
+            "$OPENSSL3" x509 -in "mlkem/mlkem${level}-cert.pem" -outform DER \
+                -out "mlkem/mlkem${level}-cert.der"
+            check_result $? "ML-KEM-${level} DER conversion"
+
+            "$OPENSSL3" pkey -in "mlkem/mlkem${level}-key.pem" \
+                -provparam ml-kem.output_formats=priv-only -outform DER \
+                -out "mlkem/mlkem${level}-key.der"
+            check_result $? "ML-KEM-${level} key DER conversion"
+
+            # Only the DER files are kept under certs/mlkem; the PEM forms are
+            # intermediates.
+            rm -f "mlkem/mlkem${level}.csr" "mlkem/mlkem${level}-key.pem" \
+                  "mlkem/mlkem${level}-pub.pem" "mlkem/mlkem${level}-cert.pem"
+
+            echo "End of ML-KEM-${level} section"
+        done
+
+        rm -f mlkem/mlkem.ext mldsa/mldsa87-cert.srl
+        echo "---------------------------------------------------------------------"
+    else
+        echo "Skipping ML-KEM cert generation (no OpenSSL 3.5+ built-in ML-KEM provider found)"
+        echo "---------------------------------------------------------------------"
+    fi
+
+    ############################################################
+    #### FrodoKEM certificates (generated by wolfSSL)        ###
+    ############################################################
+    # FrodoKEM is a KEM, not a signature algorithm, and neither OpenSSL nor the
+    # liboqs oqs-provider expose it with the ISO/IEC 18033-2 certificate/key
+    # OIDs that wolfSSL uses - their FrodoKEM support is KEM-only, for TLS key
+    # exchange, and the liboqs certificate integration is not going to be
+    # present. So the FrodoKEM test key material cannot be produced here with
+    # OpenSSL the way the ML-DSA material above is; it is generated by wolfSSL
+    # itself and shipped pre-built under certs/frodokem/. See
+    # certs/frodokem/README.txt and certs/frodokem/gen_frodokem.c to regenerate.
+    echo "Skipping FrodoKEM cert generation (OpenSSL cannot create FrodoKEM"
+    echo "certificates; they are generated by wolfSSL - see certs/frodokem/)"
     echo "---------------------------------------------------------------------"
 
     #cleanup the file system now that we're done
     echo "Performing final steps, cleaning up the file system..."
     echo ""
 
-    rm ../wolfssl.cnf
     echo "End of Updates. Everything was successfully updated!"
     echo "---------------------------------------------------------------------"
 }
@@ -869,8 +1534,8 @@ run_renewcerts(){
 ##################### THE EXECUTABLE BODY #####################################
 ###############################################################################
 
-#start in root.
-cd ../ || exit 1
+#start in root, regardless of the caller's working directory.
+cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 1
 
 if [ ! -z "$1" ]; then
     echo "No arguments expected"
@@ -886,6 +1551,12 @@ touch certs/.rnd || exit 1
 
 run_renewcerts
 cd ../ || exit 1
-rm ./certs/wolfssl.cnf
+rm -f ./certs/wolfssl.cnf
+rm -f certs/.rnd
+
+# Confirm every pinned leaf still chains to its (possibly re-issued) CA before
+# the refreshed certs are committed.
+./certs/check_cert_chains.sh
+check_result $? "check_cert_chains"
 
 exit 0

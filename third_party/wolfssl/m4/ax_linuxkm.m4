@@ -1,12 +1,12 @@
 # ax_linuxkm.m4 -- macros for getting attributes of default configured kernel
 #
-# Copyright (C) 2006-2023 wolfSSL Inc.
+# Copyright (C) 2006-2026 wolfSSL Inc.
 #
 # This file is part of wolfSSL.
 #
 # wolfSSL is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
+# the Free Software Foundation; either version 3 of the License, or
 # (at your option) any later version.
 #
 # wolfSSL is distributed in the hope that it will be useful,
@@ -77,8 +77,9 @@ AC_DEFUN([AX_SIMD_CC_COMPILER_FLAGS], [
         AX_APPEND_COMPILE_FLAGS([-mmmx],[CFLAGS_SIMD_ENABLE])
         AX_APPEND_COMPILE_FLAGS([-msse2],[CFLAGS_SIMD_ENABLE])
         AX_APPEND_COMPILE_FLAGS([-msse4],[CFLAGS_SIMD_ENABLE])
-        AX_APPEND_COMPILE_FLAGS([-mavx],[CFLAGS_SIMD_ENABLE])
-        AX_APPEND_COMPILE_FLAGS([-mavx2],[CFLAGS_SIMD_ENABLE])
+        # Don't add -mavx or -mavx2 -- gcc will emit AVX instructions unbidden,
+        # e.g. for 128 bit types, that can't be runtime-dispatched based on cpuid, leading
+        # to crashes (unknown opcodes) on CPUs lacking AVX.
         AX_APPEND_COMPILE_FLAGS([-mno-general-regs-only],[CFLAGS_SIMD_ENABLE])
     fi
 

@@ -1,13 +1,27 @@
 name: stunnel Tests
 
+# START OF COMMON SECTION
 on:
-  workflow_call:
+  push:
+    branches: [ 'release/**' ]
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches: [ '*' ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+# END OF COMMON SECTION
 
 jobs:
   build_wolfssl:
     name: Build wolfSSL
+    if: ${{ (github.repository_owner == 'wolfssl') && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
     # Just to keep it the same as the testing target
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # This should be a safe limit for the tests to run.
     timeout-minutes: 4
     steps:
@@ -18,12 +32,15 @@ jobs:
           configure: --enable-stunnel
           install: true
 
+      - name: tar build-dir
+        run: tar -zcf build-dir.tgz build-dir
+
       - name: Upload built lib
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v6
         with:
           name: wolf-install-stunnel
-          path: build-dir
-          retention-days: 1
+          path: build-dir.tgz
+          retention-days: 5
 
   stunnel_check:
     strategy:
@@ -32,22 +49,26 @@ jobs:
         # List of releases to test
         ref: [ 5.67 ]
     name: ${{ matrix.ref }}
-    runs-on: ubuntu-latest
+    if: ${{ (github.repository_owner == 'wolfssl') && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
+    runs-on: ubuntu-24.04
     # This should be a safe limit for the tests to run.
     timeout-minutes: 4
     needs: build_wolfssl
     steps:
       - name: Download lib
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v7
         with:
           name: wolf-install-stunnel
-          path: build-dir
-    
+
+      - name: untar build-dir
+        run: tar -xf build-dir.tgz
+
       - name: Checkout OSP
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
         with:
           repository: wolfssl/osp
           path: osp
+          fetch-depth: 1
 
       - name: Build and test stunnel
         uses: wolfSSL/actions-build-autotools-project@v1

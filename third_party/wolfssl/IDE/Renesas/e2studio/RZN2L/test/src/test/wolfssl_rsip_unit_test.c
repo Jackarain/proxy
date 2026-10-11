@@ -1,12 +1,12 @@
 /* wolfssl_sce_unit_test.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -37,7 +37,6 @@
 #include "FreeRTOS.h"
 
 extern FSPSM_INSTANCE   gFSPSM_ctrl;
-int devId1 = INVALID_DEVID;
 
 #ifndef NO_SHA
  int sha_test();
@@ -74,14 +73,14 @@ static byte Aes256_Cbc_multTst_rslt = 0;
 static byte Aes128_Gcm_multTst_rslt = 0;
 static byte Aes256_Gcm_multTst_rslt = 0;
 
-int rsip_crypt_AesCbc_multitest();
-int rsip_crypt_AesGcm_multitest();
-int rsip_crypt_Sha_AesCbcGcm_multitest();
+int rsip_crypt_AesCbc_multitest(int devId);
+int rsip_crypt_AesGcm_multitest(int devId);
+int rsip_crypt_Sha_AesCbcGcm_multitest(int devId);
 int rsip_crypt_sha_multitest();
 int rsip_crypt_test();
 
 void Clr_CallbackCtx(FSPSM_ST *g);
-
+void RSIP_KeyGeneration(FSPSM_ST *g);
 FSPSM_ST gCbInfo;
 FSPSM_ST gCbInfo_a; /* for multi testing */
 
@@ -112,7 +111,7 @@ FSPSM_ST gCbInfo_a; /* for multi testing */
     uint8_t rsa1024_wrapped_key2[RSIP_BYTE_SIZE_WRAPPED_KEY_RSA_1024_PRIVATE ];
     uint8_t rsa2048_wrapped_key1[RSIP_BYTE_SIZE_WRAPPED_KEY_RSA_2048_PUBLIC];
     uint8_t rsa2048_wrapped_key2[RSIP_BYTE_SIZE_WRAPPED_KEY_RSA_2048_PRIVATE ];
-    
+
     FSPSM_RSA1024_WPB_KEY* g_user_rsa1024_public_key =
                     (FSPSM_RSA1024_WPB_KEY*)rsa1024_wrapped_key1;
     FSPSM_RSA1024_WPI_KEY* g_user_rsa1024_private_key =
@@ -124,22 +123,23 @@ FSPSM_ST gCbInfo_a; /* for multi testing */
 #endif
 typedef struct tagInfo
 {
+    int devId;
     FSPSM_AES_PWKEY aes_key;
 } Info;
 
 #if defined(HAVE_AES_CBC) && defined(WOLFSSL_AES_128)
 
-static int rsip_aes128_cbc_test(int prnt, FSPSM_AES_PWKEY aes_key)
+static int rsip_aes128_cbc_test(int prnt, FSPSM_AES_PWKEY aes_key, int devId)
 {
 
     Aes  aes[1];
 
-    byte cipher[AES_BLOCK_SIZE];
-    byte plain[AES_BLOCK_SIZE];
+    byte cipher[WC_AES_BLOCK_SIZE];
+    byte plain[WC_AES_BLOCK_SIZE];
     word32 keySz = (word32)(128/8);
     int  ret = 0;
 
-    WOLFSSL_SMALL_STACK_STATIC const byte msg[] = { 
+    WOLFSSL_SMALL_STACK_STATIC const byte msg[] = {
        /* "Now is the time for all " w/o trailing 0 */
         0x6e,0x6f,0x77,0x20,0x69,0x73,0x20,0x74,
         0x68,0x65,0x20,0x74,0x69,0x6d,0x65,0x20,
@@ -147,19 +147,19 @@ static int rsip_aes128_cbc_test(int prnt, FSPSM_AES_PWKEY aes_key)
     };
     byte iv[]  = "1234567890abcdef   ";  /* align */
 
-    XMEMSET(cipher, 0, AES_BLOCK_SIZE);
-    XMEMSET(plain, 0, AES_BLOCK_SIZE);
+    XMEMSET(cipher, 0, WC_AES_BLOCK_SIZE);
+    XMEMSET(plain, 0, WC_AES_BLOCK_SIZE);
 
     if (prnt) {
         printf(" rsip_aes_cbc_test() ");
     }
-    
-    ret = wc_AesInit(aes, NULL, devId1);
+
+    ret = wc_AesInit(aes, NULL, devId);
     if (ret == 0) {
         ret = wc_AesSetKey(aes, (byte*)aes_key, keySz,
                                iv, AES_ENCRYPTION);
         if (ret == 0) {
-            ret = wc_AesCbcEncrypt(aes, cipher, msg, AES_BLOCK_SIZE);
+            ret = wc_AesCbcEncrypt(aes, cipher, msg, WC_AES_BLOCK_SIZE);
         }
 
         wc_AesFree(aes);
@@ -169,18 +169,18 @@ static int rsip_aes128_cbc_test(int prnt, FSPSM_AES_PWKEY aes_key)
         ret = -1;
 
 #ifdef HAVE_AES_DECRYPT
-    ret = wc_AesInit(aes, NULL, devId1);
+    ret = wc_AesInit(aes, NULL, devId);
     if (ret == 0) {
         ret = wc_AesSetKey(aes, (byte*)aes_key, keySz,
                                iv, AES_DECRYPTION);
         if (ret == 0)
-            ret = wc_AesCbcDecrypt(aes, plain, cipher, AES_BLOCK_SIZE);
+            ret = wc_AesCbcDecrypt(aes, plain, cipher, WC_AES_BLOCK_SIZE);
 
         wc_AesFree(aes);
     }
     if (ret != 0)
         ret = -2;
-    if (XMEMCMP(plain, msg, AES_BLOCK_SIZE) != 0)
+    if (XMEMCMP(plain, msg, WC_AES_BLOCK_SIZE) != 0)
         ret = -3;
 #endif /* HAVE_AES_DECRYPT */
 
@@ -189,7 +189,7 @@ static int rsip_aes128_cbc_test(int prnt, FSPSM_AES_PWKEY aes_key)
     if (prnt) {
         RESULT_STR(ret)
     }
-    
+
     return ret;
 }
 
@@ -197,9 +197,9 @@ static void tskAes128_Cbc_Test(void *pvParam)
 {
     int ret = 0;
     Info *p = (Info*)pvParam;
-    
+
     while (exit_loop == 0) {
-        ret = rsip_aes128_cbc_test(0, p->aes_key);
+        ret = rsip_aes128_cbc_test(0, p->aes_key, p->devId);
         vTaskDelay(10/portTICK_PERIOD_MS);
         if (ret != 0) {
             printf(" result was not good(%d). rsip_aes_cbc_test\n", ret);
@@ -214,11 +214,11 @@ static void tskAes128_Cbc_Test(void *pvParam)
 #endif
 
 #ifdef WOLFSSL_AES_256
-static int rsip_aes256_cbc_test(int prnt, FSPSM_AES_PWKEY aes_key)
+static int rsip_aes256_cbc_test(int prnt, FSPSM_AES_PWKEY aes_key, int devId)
 {
     Aes enc[1];
-    byte cipher[AES_BLOCK_SIZE];
-    byte plain[AES_BLOCK_SIZE];
+    byte cipher[WC_AES_BLOCK_SIZE];
+    byte plain[WC_AES_BLOCK_SIZE];
     Aes dec[1];
     const word32 keySz = (word32)(256/8);
     int  ret = 0;
@@ -236,13 +236,13 @@ static int rsip_aes256_cbc_test(int prnt, FSPSM_AES_PWKEY aes_key)
 
     if (prnt)
         printf(" rsip_aes256_test() ");
-    
-    if (wc_AesInit(enc, NULL, devId1) != 0) {
+
+    if (wc_AesInit(enc, NULL, devId) != 0) {
         ret = -1;
         goto out;
     }
 
-    if (wc_AesInit(dec, NULL, devId1) != 0){
+    if (wc_AesInit(dec, NULL, devId) != 0){
         ret = -2;
         goto out;
     }
@@ -261,7 +261,7 @@ static int rsip_aes256_cbc_test(int prnt, FSPSM_AES_PWKEY aes_key)
         goto out;
     }
 
-    XMEMSET(cipher, 0, AES_BLOCK_SIZE);
+    XMEMSET(cipher, 0, WC_AES_BLOCK_SIZE);
     ret = wc_AesCbcEncrypt(enc, cipher, msg, (int) sizeof(msg));
 
     if (ret != 0) {
@@ -269,7 +269,7 @@ static int rsip_aes256_cbc_test(int prnt, FSPSM_AES_PWKEY aes_key)
         goto out;
     }
 
-    XMEMSET(plain, 0, AES_BLOCK_SIZE);
+    XMEMSET(plain, 0, WC_AES_BLOCK_SIZE);
     ret = wc_AesCbcDecrypt(dec, plain, cipher, (int) sizeof(cipher));
 
     if (ret != 0){
@@ -288,7 +288,7 @@ out:
     if (prnt) {
         RESULT_STR(ret)
     }
-    
+
     return ret;
 }
 
@@ -296,9 +296,9 @@ static void tskAes256_Cbc_Test(void *pvParam)
 {
     int ret = 0;
     Info *p = (Info*)pvParam;
-    
+
     while (exit_loop == 0) {
-        ret = rsip_aes256_cbc_test(0, p->aes_key);
+        ret = rsip_aes256_cbc_test(0, p->aes_key, p->devId);
         vTaskDelay(10/portTICK_PERIOD_MS);
         if (ret != 0) {
             printf(" result was not good(%d). rsip_aes256_test\n", ret);
@@ -313,7 +313,7 @@ static void tskAes256_Cbc_Test(void *pvParam)
 #endif /* WOLFSSL_AES_256 */
 
 #if defined(WOLFSSL_AES_256)
-static int rsip_aesgcm256_test(int prnt, FSPSM_AES_PWKEY aes256_key)
+static int rsip_aesgcm256_test(int prnt, FSPSM_AES_PWKEY aes256_key, int devId)
 {
     Aes enc[1];
     Aes dec[1];
@@ -368,8 +368,8 @@ static int rsip_aesgcm256_test(int prnt, FSPSM_AES_PWKEY aes256_key)
     };
 
     byte resultT[sizeof(t1)];
-    byte resultP[sizeof(p) + AES_BLOCK_SIZE];
-    byte resultC[sizeof(p) + AES_BLOCK_SIZE];
+    byte resultP[sizeof(p) + WC_AES_BLOCK_SIZE];
+    byte resultC[sizeof(p) + WC_AES_BLOCK_SIZE];
     int  result = 0;
     int  ret;
 
@@ -378,17 +378,17 @@ static int rsip_aesgcm256_test(int prnt, FSPSM_AES_PWKEY aes256_key)
     if (prnt) {
         printf(" rsip_aes256_gcm_test() ");
     }
-    
+
     XMEMSET(resultT, 0, sizeof(resultT));
     XMEMSET(resultC, 0, sizeof(resultC));
     XMEMSET(resultP, 0, sizeof(resultP));
     XMEMSET(&userContext, 0, sizeof(FSPSM_ST));
 
-    if (wc_AesInit(enc, NULL, devId1) != 0) {
+    if (wc_AesInit(enc, NULL, devId) != 0) {
         ret = -1;
         goto out;
     }
-    if (wc_AesInit(dec, NULL, devId1) != 0) {
+    if (wc_AesInit(dec, NULL, devId) != 0) {
         ret = -2;
         goto out;
     }
@@ -402,7 +402,7 @@ static int rsip_aesgcm256_test(int prnt, FSPSM_AES_PWKEY aes256_key)
 
     /* AES-GCM encrypt and decrypt both use AES encrypt internally */
     result = wc_AesGcmEncrypt(enc, resultC, p, sizeof(p),
-                                (byte*)iv1, sizeof(iv1), 
+                                (byte*)iv1, sizeof(iv1),
                                 resultT, sizeof(resultT),
                                  a, sizeof(a));
 
@@ -417,7 +417,7 @@ static int rsip_aesgcm256_test(int prnt, FSPSM_AES_PWKEY aes256_key)
         ret = -7;
         goto out;
     }
-    
+
     result = wc_AesGcmDecrypt(dec, resultP, resultC, sizeof(c1),
                 iv1, sizeof(iv1), resultT, sizeof(resultT),
                  a, sizeof(a));
@@ -447,7 +447,7 @@ static int rsip_aesgcm256_test(int prnt, FSPSM_AES_PWKEY aes256_key)
     }
 
     result = wc_AesGcmDecrypt(enc, resultP, resultC, sizeof(p),
-              iv1, sizeof(iv1), resultT + 1, sizeof(resultT) - 1, 
+              iv1, sizeof(iv1), resultT + 1, sizeof(resultT) - 1,
               a, sizeof(a));
 
     if (result != 0) {
@@ -464,11 +464,11 @@ static int rsip_aesgcm256_test(int prnt, FSPSM_AES_PWKEY aes256_key)
   out:
     wc_AesFree(enc);
     wc_AesFree(dec);
-    
+
     if (prnt) {
         RESULT_STR(ret)
     }
-    
+
     return ret;
 }
 
@@ -476,9 +476,9 @@ static void tskAes256_Gcm_Test(void *pvParam)
 {
     int ret = 0;
     Info *p = (Info*)pvParam;
-    
+
     while (exit_loop == 0) {
-        ret = rsip_aesgcm256_test(0, p->aes_key);
+        ret = rsip_aesgcm256_test(0, p->aes_key, p->devId);
         vTaskDelay(10/portTICK_PERIOD_MS);
         if (ret != 0) {
             printf(" result was not good(%d). rsip_aesgcm256_test\n", ret);
@@ -493,7 +493,7 @@ static void tskAes256_Gcm_Test(void *pvParam)
 
 #if defined(WOLFSSL_AES_128)
 
-static int rsip_aesgcm128_test(int prnt, FSPSM_AES_PWKEY aes128_key)
+static int rsip_aesgcm128_test(int prnt, FSPSM_AES_PWKEY aes128_key, int devId)
 {
     Aes enc[1];
     Aes dec[1];
@@ -554,8 +554,8 @@ static int rsip_aesgcm128_test(int prnt, FSPSM_AES_PWKEY aes128_key)
     };
 
     byte resultT[sizeof(t1)];
-    byte resultP[sizeof(p) + AES_BLOCK_SIZE];
-    byte resultC[sizeof(p) + AES_BLOCK_SIZE];
+    byte resultP[sizeof(p) + WC_AES_BLOCK_SIZE];
+    byte resultC[sizeof(p) + WC_AES_BLOCK_SIZE];
     int  result = 0;
     int ret;
 
@@ -570,12 +570,12 @@ static int rsip_aesgcm128_test(int prnt, FSPSM_AES_PWKEY aes128_key)
     XMEMSET(resultP, 0, sizeof(resultP));
     XMEMSET(&userContext, 0, sizeof(FSPSM_ST));
 
-    if (wc_AesInit(enc, NULL, devId1) != 0) {
+    if (wc_AesInit(enc, NULL, devId) != 0) {
         ret = -1;
         goto out;
     }
 
-    if (wc_AesInit(dec, NULL, devId1) != 0) {
+    if (wc_AesInit(dec, NULL, devId) != 0) {
         ret = -2;
         goto out;
     }
@@ -592,7 +592,7 @@ static int rsip_aesgcm128_test(int prnt, FSPSM_AES_PWKEY aes128_key)
         ret = -4;
         goto out;
     }
-    
+
 
     result = wc_AesGcmDecrypt(enc, resultP, resultC, sizeof(c3),
                       iv3, sizeof(iv3), resultT, sizeof(t3), a3, sizeof(a3));
@@ -610,11 +610,11 @@ static int rsip_aesgcm128_test(int prnt, FSPSM_AES_PWKEY aes128_key)
   out:
     wc_AesFree(enc);
     wc_AesFree(dec);
-    
+
     if (prnt) {
         RESULT_STR(ret)
     }
-    
+
     return ret;
 }
 
@@ -622,9 +622,9 @@ static void tskAes128_Gcm_Test(void *pvParam)
 {
     int ret = 0;
     Info *p = (Info*)pvParam;
-    
+
     while (exit_loop == 0) {
-        ret = rsip_aesgcm128_test(0, p->aes_key);
+        ret = rsip_aesgcm128_test(0, p->aes_key, p->devId);
         vTaskDelay(10/portTICK_PERIOD_MS);
         if (ret != 0) {
             printf(" result was not good(%d). rsip_aesgcm128_test\n", ret);
@@ -646,22 +646,21 @@ static void tskAes128_Gcm_Test(void *pvParam)
 #define TEST_STRING_SZ   25
 #define RSA_TEST_BYTES   256 /* up to 2048-bit key */
 
-static int rsip_rsa_test(int prnt, int keySize)
+static int rsip_rsa_test(int prnt, int keySize, int devId)
 {
     int ret = 0;
-    
+
     RsaKey *key = (RsaKey *)XMALLOC(sizeof *key, NULL, DYNAMIC_TYPE_TMP_BUFFER);
     WC_RNG rng;
     const char inStr [] = TEST_STRING;
     const char inStr2[] = TEST_STRING2;
     const word32 inLen = (word32)TEST_STRING_SZ;
     const word32 outSz = RSA_TEST_BYTES;
-    word32 out_actual_len = 0;
     byte *in = NULL;
     byte *in2 = NULL;
     byte *out= NULL;
     byte *out2 = NULL;
-    
+
     in = (byte*)XMALLOC(inLen, NULL, DYNAMIC_TYPE_TMP_BUFFER);
     in2 = (byte*)XMALLOC(inLen, NULL, DYNAMIC_TYPE_TMP_BUFFER);
     out= (byte*)XMALLOC(outSz, NULL, DYNAMIC_TYPE_TMP_BUFFER);
@@ -672,19 +671,19 @@ static int rsip_rsa_test(int prnt, int keySize)
         ret = -1;
         goto out;
     }
-    
+
     XMEMSET(&rng, 0, sizeof(rng));
     XMEMSET(key, 0, sizeof *key);
     XMEMCPY(in, inStr, inLen);
     XMEMCPY(in2, inStr2, inLen);
     XMEMSET(out,  0, outSz);
     XMEMSET(out2, 0, outSz);
-    
-    ret = wc_InitRsaKey_ex(key, NULL, 7890/* fixed devid for TSIP/SCE*/);
+
+    ret = wc_InitRsaKey_ex(key, NULL, devId);
     if (ret != 0) {
         goto out;
     }
-    
+
     if ((ret = wc_InitRng(&rng)) != 0)
         goto out;
 
@@ -695,7 +694,7 @@ static int rsip_rsa_test(int prnt, int keySize)
     if ((ret = wc_MakeRsaKey(key, keySize, 65537, &rng)) != 0) {
         goto out;
     }
-    
+
     ret = wc_RsaPublicEncrypt(in, inLen, out, outSz, key, &rng);
     if (ret < 0) {
         goto out;
@@ -718,30 +717,21 @@ out:
         wc_FreeRsaKey(key);
         XFREE(key, NULL, DYNAMIC_TYPE_TMP_BUFFER);
     }
-    if (in != NULL) {
-        XFREE(in, NULL, DYNAMIC_TYPE_TMP_BUFFER);
-    }
-    if (in2 != NULL) {
-        XFREE(in2, NULL, DYNAMIC_TYPE_TMP_BUFFER);
-    }
-    if (out != NULL) {
-        XFREE(out, NULL, DYNAMIC_TYPE_TMP_BUFFER);
-    }
-    if (out2 != NULL) {
-        XFREE(out2, NULL, DYNAMIC_TYPE_TMP_BUFFER);
-    }
-    
+    XFREE(in, NULL, DYNAMIC_TYPE_TMP_BUFFER);
+    XFREE(in2, NULL, DYNAMIC_TYPE_TMP_BUFFER);
+    XFREE(out, NULL, DYNAMIC_TYPE_TMP_BUFFER);
+    XFREE(out2, NULL, DYNAMIC_TYPE_TMP_BUFFER);
+
     (void) prnt;
     return ret;
 }
 
-static int rsip_rsa_SignVerify_test(int prnt, int keySize)
+static int rsip_rsa_SignVerify_test(int prnt, int keySize, int devId)
 {
     int ret = 0;
-    
+
     RsaKey *key = (RsaKey *)XMALLOC(sizeof *key, NULL, DYNAMIC_TYPE_TMP_BUFFER);
     WC_RNG rng;
-    word32 sigSz;
     const char inStr [] = TEST_STRING;
     const char inStr2[] = TEST_STRING2;
     const word32 inLen = (word32)TEST_STRING_SZ;
@@ -762,20 +752,20 @@ static int rsip_rsa_SignVerify_test(int prnt, int keySize)
         ret = -1;
         goto out;
     }
-    
+
     XMEMSET(&rng, 0, sizeof(rng));
     XMEMSET(key, 0, sizeof *key);
     XMEMCPY(in, inStr, inLen);
     XMEMCPY(in2, inStr2, inLen);
 
-    ret = wc_InitRsaKey_ex(key, NULL, 7890/* fixed devid for TSIP/SCE*/);
+    ret = wc_InitRsaKey_ex(key, NULL, devId);
     if (ret != 0) {
         goto out;
     }
-    
+
     if ((ret = wc_InitRng(&rng)) != 0)
         goto out;
-    
+
     if ((ret = wc_RsaSetRNG(key, &rng)) != 0)
         goto out;
 
@@ -783,13 +773,13 @@ static int rsip_rsa_SignVerify_test(int prnt, int keySize)
     if ((ret = wc_MakeRsaKey(key, keySize, 65537, &rng)) != 0) {
         goto out;
     }
-    
+
     gCbInfo.keyflgs_crypt.bits.message_type = 0;
     ret = wc_RsaSSL_Sign(in, inLen, out, outSz, key, &rng);
     if (ret < 0) {
         goto out;
     }
-    sigSz = (word32)ret;
+
     //* this should fail */
     ret = wc_RsaSSL_Verify(in2, inLen, out, (word32)(keySize/8), key);
     if (ret != FSP_ERR_CRYPTO_RSIP_FAIL) {
@@ -808,16 +798,10 @@ static int rsip_rsa_SignVerify_test(int prnt, int keySize)
         wc_FreeRsaKey(key);
         XFREE(key, NULL, DYNAMIC_TYPE_TMP_BUFFER);
     }
-    if (in != NULL) {
-        XFREE(in, NULL, DYNAMIC_TYPE_TMP_BUFFER);
-    }
-    if (in2 != NULL) {
-        XFREE(in2, NULL, DYNAMIC_TYPE_TMP_BUFFER);
-    }
-    if (out != NULL) {
-        XFREE(out, NULL, DYNAMIC_TYPE_TMP_BUFFER);
-    }
-    
+    XFREE(in, NULL, DYNAMIC_TYPE_TMP_BUFFER);
+    XFREE(in2, NULL, DYNAMIC_TYPE_TMP_BUFFER);
+    XFREE(out, NULL, DYNAMIC_TYPE_TMP_BUFFER);
+
     return ret;
 }
 #endif
@@ -869,7 +853,7 @@ int rsip_crypt_sha256_multitest()
     int num = 0;
     int i;
     BaseType_t xRet;
-    
+
 #ifndef NO_SHA256
     num+=2;
 #endif
@@ -879,7 +863,7 @@ int rsip_crypt_sha256_multitest()
 
     exit_semaph = xSemaphoreCreateCounting((UBaseType_t)num, 0);
     xRet = pdPASS;
-    
+
 #ifndef NO_SHA256
     xRet = xTaskCreate(tskSha256_Test1, "sha256_test1",
                                         STACK_SIZE, NULL, 2, NULL);
@@ -901,22 +885,22 @@ int rsip_crypt_sha256_multitest()
             }
         }
     }
-    
+
     vSemaphoreDelete(exit_semaph);
-    
+
     if ((xRet == pdPASS) &&
        (sha256_multTst_rslt1 == 0 && sha256_multTst_rslt2 == 0))
         ret = 0;
     else
         ret = -1;
-    
+
     RESULT_STR(ret)
 
     return ret;
 }
 
 
-int rsip_crypt_AesCbc_multitest()
+int rsip_crypt_AesCbc_multitest(int devId)
 {
     int ret = 0;
     int num = 0;
@@ -926,7 +910,7 @@ int rsip_crypt_AesCbc_multitest()
     Info info_aes256_1;
     Info info_aes256_2;
     BaseType_t xRet;
-    
+
 #if defined(HAVE_AES_CBC) && defined(WOLFSSL_AES_128)
     num+=2;
 #endif
@@ -939,7 +923,10 @@ int rsip_crypt_AesCbc_multitest()
 
     exit_semaph = xSemaphoreCreateCounting((UBaseType_t)num, 0);
     xRet = pdPASS;
-    
+    info_aes1.devId = devId;
+    info_aes2.devId = devId;
+    info_aes256_1.devId = devId;
+    info_aes256_2.devId = devId;
 #if defined(HAVE_AES_CBC) && defined(WOLFSSL_AES_128)
     XMEMCPY(&info_aes1.aes_key, &g_user_aes128_key_index1,
                                             sizeof(FSPSM_AES_PWKEY));
@@ -968,7 +955,7 @@ int rsip_crypt_AesCbc_multitest()
         xRet = xTaskCreate(tskAes256_Cbc_Test, "aes256_cbc_test2",
                                     STACK_SIZE, &info_aes256_2, 3, NULL);
 #endif
-    
+
     if (xRet == pdPASS) {
     printf(" Waiting for completing tasks ...   ");
         vTaskDelay(10000/portTICK_PERIOD_MS);
@@ -982,7 +969,7 @@ int rsip_crypt_AesCbc_multitest()
             }
         }
     }
-    
+
     vSemaphoreDelete(exit_semaph);
 
     if ((xRet == pdPASS) &&
@@ -997,7 +984,7 @@ int rsip_crypt_AesCbc_multitest()
 }
 
 
-int rsip_crypt_AesGcm_multitest()
+int rsip_crypt_AesGcm_multitest(int devId)
 {
     int ret = 0;
     int num = 0;
@@ -1007,7 +994,7 @@ int rsip_crypt_AesGcm_multitest()
     Info info_aes256_1;
     Info info_aes256_2;
     BaseType_t xRet;
-    
+
 #if defined(WOLFSSL_AES_128)
     num+=2;
 #endif
@@ -1021,7 +1008,10 @@ int rsip_crypt_AesGcm_multitest()
 
     exit_semaph = xSemaphoreCreateCounting((UBaseType_t)num, 0);
     xRet = pdPASS;
-    
+    info_aes1.devId = devId;
+    info_aes2.devId = devId;
+    info_aes256_1.devId = devId;
+    info_aes256_2.devId = devId;
 #if defined(WOLFSSL_AES_128)
     XMEMCPY(&info_aes1.aes_key, &g_user_aes128_key_index1,
                                     sizeof(FSPSM_AES_PWKEY));
@@ -1066,7 +1056,7 @@ int rsip_crypt_AesGcm_multitest()
             }
         }
     }
-    
+
     vSemaphoreDelete(exit_semaph);
 
     if ((xRet == pdPASS) &&
@@ -1080,7 +1070,7 @@ int rsip_crypt_AesGcm_multitest()
     return ret;
 }
 
-int rsip_crypt_Sha_AesCbcGcm_multitest()
+int rsip_crypt_Sha_AesCbcGcm_multitest(int devId)
 {
     int ret = 0;
     int num = 0;
@@ -1090,7 +1080,7 @@ int rsip_crypt_Sha_AesCbcGcm_multitest()
     Info info_aes256cbc;
     Info info_aes256gcm;
     BaseType_t xRet;
-    
+
 #ifndef NO_SHA256
     num+=2;
 #endif
@@ -1112,45 +1102,48 @@ int rsip_crypt_Sha_AesCbcGcm_multitest()
 
     exit_semaph = xSemaphoreCreateCounting((UBaseType_t)num, 0);
     xRet = pdPASS;
-    
+    info_aes128cbc.devId = devId;
+    info_aes128gcm.devId = devId;
+    info_aes256cbc.devId = devId;
+    info_aes256gcm.devId = devId;
 #ifndef NO_SHA256
-    xRet = xTaskCreate(tskSha256_Test1, "sha256_test1", 
+    xRet = xTaskCreate(tskSha256_Test1, "sha256_test1",
                                             STACK_SIZE, NULL, 3, NULL);
 
     if (xRet == pdPASS)
-        xRet = xTaskCreate(tskSha256_Test2, "sha256_test2", 
+        xRet = xTaskCreate(tskSha256_Test2, "sha256_test2",
                                             STACK_SIZE, NULL, 3, NULL);
 #endif
 
 #if defined(WOLFSSL_AES_128)
-    XMEMCPY(&info_aes128cbc.aes_key, &g_user_aes128_key_index1, 
+    XMEMCPY(&info_aes128cbc.aes_key, &g_user_aes128_key_index1,
                                                 sizeof(FSPSM_AES_PWKEY));
     if (xRet == pdPASS)
-        xRet = xTaskCreate(tskAes128_Cbc_Test, "aes128_cbc_test1", 
+        xRet = xTaskCreate(tskAes128_Cbc_Test, "aes128_cbc_test1",
                                     STACK_SIZE, &info_aes128cbc, 3, NULL);
 #endif
 
 #if defined(WOLFSSL_AES_128)
-    XMEMCPY(&info_aes128gcm.aes_key, &g_user_aes128_key_index2, 
+    XMEMCPY(&info_aes128gcm.aes_key, &g_user_aes128_key_index2,
                                                 sizeof(FSPSM_AES_PWKEY));
     if (xRet == pdPASS)
-        xRet = xTaskCreate(tskAes128_Gcm_Test, "aes128_gcm_test2", 
+        xRet = xTaskCreate(tskAes128_Gcm_Test, "aes128_gcm_test2",
                                     STACK_SIZE, &info_aes128gcm, 3, NULL);
 #endif
 
 #if defined(WOLFSSL_AES_256)
-    XMEMCPY(&info_aes256cbc.aes_key, &g_user_aes256_key_index1, 
+    XMEMCPY(&info_aes256cbc.aes_key, &g_user_aes256_key_index1,
                                                 sizeof(FSPSM_AES_PWKEY));
     if (xRet == pdPASS)
-        xRet = xTaskCreate(tskAes256_Cbc_Test, "aes256_cbc_test1", 
+        xRet = xTaskCreate(tskAes256_Cbc_Test, "aes256_cbc_test1",
                                     STACK_SIZE, &info_aes256cbc, 3, NULL);
 #endif
 
 #if defined(WOLFSSL_AES_256)
-    XMEMCPY(&info_aes256gcm.aes_key, &g_user_aes256_key_index2, 
+    XMEMCPY(&info_aes256gcm.aes_key, &g_user_aes256_key_index2,
                                                 sizeof(FSPSM_AES_PWKEY));
     if (xRet == pdPASS)
-        xRet = xTaskCreate(tskAes256_Gcm_Test, "aes256_gcm_test2", 
+        xRet = xTaskCreate(tskAes256_Gcm_Test, "aes256_gcm_test2",
                                     STACK_SIZE, &info_aes256gcm, 3, NULL);
 #endif
 
@@ -1167,19 +1160,19 @@ int rsip_crypt_Sha_AesCbcGcm_multitest()
             }
         }
     }
-    
+
     vSemaphoreDelete(exit_semaph);
-    
-    if ((xRet == pdPASS) && 
+
+    if ((xRet == pdPASS) &&
         (Aes128_Gcm_multTst_rslt == 0 && Aes256_Gcm_multTst_rslt == 0) &&
         (sha256_multTst_rslt1 == 0 && sha256_multTst_rslt2 == 0)) {
-        
+
         ret = 0;
     }
     else {
         ret = -1;
     }
-    
+
     RESULT_STR(ret)
 
     return ret;
@@ -1188,16 +1181,17 @@ int rsip_crypt_Sha_AesCbcGcm_multitest()
 int rsip_crypt_test()
 {
     int ret = 0;
+    int devId = INVALID_DEVID;
     fsp_err_t rsip_error_code = FSP_SUCCESS;
 
     /* Generate AES sce Key */
-    
+
     if (rsip_error_code == FSP_SUCCESS) {
-       #if defined(WOLFSSL_RENESAS_RSIP_CRYPTONLY)
+    #if defined(WOLFSSL_RENESAS_RSIP_CRYPTONLY)
         /* set up Crypt Call back */
         Clr_CallbackCtx(&gCbInfo);
         Clr_CallbackCtx(&gCbInfo_a);
-        
+
         /* sets wrapped aes key */
         gCbInfo.wrapped_key_aes128 = g_user_aes128_key_index1;
         gCbInfo.wrapped_key_aes256 = g_user_aes256_key_index1;
@@ -1206,55 +1200,66 @@ int rsip_crypt_test()
         gCbInfo.wrapped_key_rsapub1024 = g_user_rsa1024_public_key;
         gCbInfo.wrapped_key_rsapri2048 = g_user_rsa2048_private_key;
         gCbInfo.wrapped_key_rsapub2048 = g_user_rsa2048_public_key;
-        
+
         RSIP_KeyGeneration(&gCbInfo);
-        
+
         /* Key generation for multi testing */
         gCbInfo_a.wrapped_key_aes128 = g_user_aes128_key_index2;
         gCbInfo_a.wrapped_key_aes256 = g_user_aes256_key_index2;
         RSIP_KeyGeneration(&gCbInfo_a);
-        
+
         /* set callback ctx */
         ret = wc_CryptoCb_CryptInitRenesasCmn(NULL, &gCbInfo);
 
         if ( ret > 0) {
-            devId1 = ret;
+            devId = ret;
             ret = 0;
         }
-
+    #if RSA_MIN_SIZE < 1024
         if (ret == 0) {
             printf(" rsip_rsa_test(512)(this will be done"
             " by SW because RSIP doesn't support 512 bits key size.)");
-            ret = rsip_rsa_test(1, 512);
+            gCbInfo.keyflgs_crypt.bits.rsapri1024_installedkey_set = 0;
+            gCbInfo.keyflgs_crypt.bits.rsapub1024_installedkey_set = 0;
+            gCbInfo.keyflgs_crypt.bits.rsapri2048_installedkey_set = 0;
+            gCbInfo.keyflgs_crypt.bits.rsapub2048_installedkey_set = 0;
+            ret = rsip_rsa_test(1, 512, devId);
             RESULT_STR(ret)
         }
-
+    #endif
+    #if RSA_MIN_SIZE <= 1024
         if (ret == 0) {
             printf(" rsip_rsa_test(1024)");
-            ret = rsip_rsa_test(1, 1024);
+            gCbInfo.keyflgs_crypt.bits.rsapri1024_installedkey_set = 1;
+            gCbInfo.keyflgs_crypt.bits.rsapub1024_installedkey_set = 1;
+            gCbInfo.keyflgs_crypt.bits.rsapri2048_installedkey_set = 0;
+            gCbInfo.keyflgs_crypt.bits.rsapub2048_installedkey_set = 0;
+            ret = rsip_rsa_test(1, 1024, devId);
             RESULT_STR(ret)
         }
-
-        if (ret == 0) {
-            printf(" rsip_rsa_test(2048)");
-            ret = rsip_rsa_test(1, 2048);
-            RESULT_STR(ret)
-        }
-
         if (ret == 0) {
             gCbInfo.hash_type = RSIP_HASH_TYPE_SHA256 ;
             printf(" rsip_rsa_SignVerify_test(1024)");
-            ret = rsip_rsa_SignVerify_test(1, 1024);
+            ret = rsip_rsa_SignVerify_test(1, 1024, devId);
             RESULT_STR(ret)
         }
-
+    #endif
+        if (ret == 0) {
+            printf(" rsip_rsa_test(2048)");
+            gCbInfo.keyflgs_crypt.bits.rsapri1024_installedkey_set = 0;
+            gCbInfo.keyflgs_crypt.bits.rsapub1024_installedkey_set = 0;
+            gCbInfo.keyflgs_crypt.bits.rsapri2048_installedkey_set = 1;
+            gCbInfo.keyflgs_crypt.bits.rsapub2048_installedkey_set = 1;
+            ret = rsip_rsa_test(1, 2048, devId);
+            RESULT_STR(ret)
+        }
         if (ret == 0 && rsip_error_code == FSP_SUCCESS) {
             printf(" rsip_rsa_SignVerify_test(2048)");
-            ret = rsip_rsa_SignVerify_test(1, 2048);
+            ret = rsip_rsa_SignVerify_test(1, 2048, devId);
             RESULT_STR(ret)
         }
 
-       #endif /* WOLFSSL_RENESAS_RSIP_CRYPTONLY */
+   #endif /* WOLFSSL_RENESAS_RSIP_CRYPTONLY */
 
    #ifndef NO_SHA256
         printf(" sha256_test()");
@@ -1277,41 +1282,46 @@ int rsip_crypt_test()
         RESULT_STR(ret)
    #endif
 
-        ret = rsip_aes128_cbc_test(1, g_user_aes128_key_index1);
+        ret = rsip_aes128_cbc_test(1, g_user_aes128_key_index1, devId);
 
         if (ret == 0) {
-            ret = rsip_aes256_cbc_test(1, g_user_aes256_key_index1);
+            ret = rsip_aes256_cbc_test(1, g_user_aes256_key_index1, devId);
         }
 
         if (ret == 0) {
-            ret = rsip_aesgcm128_test(1, g_user_aes128_key_index1);
+            ret = rsip_aesgcm128_test(1, g_user_aes128_key_index1, devId);
         }
 
         if (ret == 0) {
-            ret = rsip_aesgcm256_test(1, g_user_aes256_key_index1);
+            ret = rsip_aesgcm256_test(1, g_user_aes256_key_index1, devId);
         }
-        
+
         if (ret == 0) {
             printf(" multi sha thread test\n");
             ret = rsip_crypt_sha256_multitest();
         }
-        
+
         if (ret == 0) {
             printf(" multi Aes cbc thread test\n");
-            ret = rsip_crypt_AesCbc_multitest();
+            ret = rsip_crypt_AesCbc_multitest(devId);
         }
-        
+
         if (ret == 0) {
             printf(" multi Aes Gcm thread test\n");
-            ret = rsip_crypt_AesGcm_multitest();
+            ret = rsip_crypt_AesGcm_multitest(devId);
         }
-        
+
         if (ret == 0) {
-            printf("rsip_crypt_Sha_AesCbcGcm_multitest\n");
-            ret = rsip_crypt_Sha_AesCbcGcm_multitest();
+            printf(" multi Sha AesCbcGcm thread test\n");
+            ret = rsip_crypt_Sha_AesCbcGcm_multitest(devId);
         }
-        
+
     #if defined(WOLFSSL_RENESAS_RSIP_CRYPTONLY)
+        /*
+         * Need to be cleaned up before context clear
+         * for internal instance
+         */
+        wc_CryptoCb_CleanupRenesasCmn(&devId);
         Clr_CallbackCtx(&gCbInfo);
         Clr_CallbackCtx(&gCbInfo_a);
     #endif

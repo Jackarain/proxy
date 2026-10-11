@@ -1,0 +1,189 @@
+name: OpenSSL ECH Interop Test
+
+# START OF COMMON SECTION
+on:
+  push:
+    branches: [ 'release/**' ]
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches: [ '*' ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+# END OF COMMON SECTION
+
+jobs:
+  build_wolfssl:
+    name: Build wolfSSL
+    if: ${{ (github.repository_owner == 'wolfssl') && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 4
+    steps:
+      - name: Build wolfSSL
+        uses: wolfSSL/actions-build-autotools-project@v1
+        with:
+          path: wolfssl
+          configure: >-
+            --enable-ech --enable-sha512 --enable-aes --enable-mlkem
+            CFLAGS='-DUSE_FLAT_TEST_H -DWOLFSSL_TEST_ECH'
+          check: true
+          install: true
+
+      - name: tar build-dir
+        run: |
+          # need server.h and client.h which are not installed normally
+          cp "$GITHUB_WORKSPACE/wolfssl/examples/server/server.h" \
+            build-dir/share/doc/wolfssl/example/server.h
+          cp "$GITHUB_WORKSPACE/wolfssl/examples/client/client.h" \
+            build-dir/share/doc/wolfssl/example/client.h
+
+          # need certs so 'wolfSSL error: wolf root not found' does not show up
+          cp -r "$GITHUB_WORKSPACE/wolfssl/certs" build-dir/certs
+
+          # need the ech script to run tests
+          cp "$GITHUB_WORKSPACE/wolfssl/.github/scripts/openssl-ech.sh" \
+            build-dir/openssl-ech.sh
+
+          tar -zcf build-dir.tgz build-dir
+
+      - name: Upload built wolfSSL
+        uses: actions/upload-artifact@v6
+        with:
+          name: wolf-install-openssl-ech
+          path: build-dir.tgz
+          retention-days: 5
+
+  build_openssl_ech:
+    name: Build OpenSSL (feature/ech)
+    if: ${{ (github.repository_owner == 'wolfssl') && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout OpenSSL feature/ech branch
+        uses: actions/checkout@v5
+        with:
+          repository: openssl/openssl
+          ref: feature/ech
+          path: openssl
+
+      - name: Build OpenSSL
+        working-directory: openssl
+        run: |
+          ./Configure --prefix=$GITHUB_WORKSPACE/openssl-install \
+            --openssldir=$GITHUB_WORKSPACE/openssl-install/ssl \
+            enable-ech no-docs
+          make -j$(nproc)
+          make install_sw
+
+      - name: tar openssl-install
+        run: tar -zcf openssl-install.tgz openssl-install
+
+      - name: Upload built OpenSSL
+        uses: actions/upload-artifact@v6
+        with:
+          name: openssl-ech-install
+          path: openssl-install.tgz
+          retention-days: 5
+
+  ech_interop_test:
+    name: ECH Interop Test
+    if: ${{ (github.repository_owner == 'wolfssl') && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
+    needs: [build_wolfssl, build_openssl_ech]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Download wolfSSL build
+        uses: actions/download-artifact@v7
+        with:
+          name: wolf-install-openssl-ech
+
+      - name: Download OpenSSL build
+        uses: actions/download-artifact@v7
+        with:
+          name: openssl-ech-install
+
+      - name: Extract builds
+        run: |
+          tar -xzf build-dir.tgz
+          tar -xzf openssl-install.tgz
+
+      - name: Build wolfssl client and server examples
+        run: |
+          export WOLFSSL_INSTALL_DIR="$GITHUB_WORKSPACE/build-dir"
+          export WOLFSSL_BIN_DIR="$WOLFSSL_INSTALL_DIR/bin"
+          export CFLAGS="-Wall -I$WOLFSSL_INSTALL_DIR/include"
+          export LIBS="-L$WOLFSSL_INSTALL_DIR/lib -lm -lwolfssl"
+          export LD_LIBRARY_PATH="$WOLFSSL_INSTALL_DIR/lib/:$LD_LIBRARY_PATH"
+
+          gcc -o "$WOLFSSL_BIN_DIR/client" \
+                "$WOLFSSL_INSTALL_DIR/share/doc/wolfssl/example/client.c" \
+                $CFLAGS $LIBS -I"$WOLFSSL_INSTALL_DIR/share/doc/wolfssl/example"
+
+          gcc -o "$WOLFSSL_BIN_DIR/server" \
+                "$WOLFSSL_INSTALL_DIR/share/doc/wolfssl/example/server.c" \
+                $CFLAGS $LIBS -I"$WOLFSSL_INSTALL_DIR/share/doc/wolfssl/example"
+
+      - name: Interop test
+        run: |
+          set -e
+
+          export LD_LIBRARY_PATH="$GITHUB_WORKSPACE/openssl-install/lib64:$GITHUB_WORKSPACE/openssl-install/lib:$GITHUB_WORKSPACE/build-dir/lib:$LD_LIBRARY_PATH"
+
+          export OPENSSL="$GITHUB_WORKSPACE/openssl-install/bin/openssl"
+          export WOLFSSL_CLIENT="$GITHUB_WORKSPACE/build-dir/bin/client"
+          export WOLFSSL_SERVER="$GITHUB_WORKSPACE/build-dir/bin/server"
+          export CERT_DIR="$GITHUB_WORKSPACE/build-dir/certs"
+          LOG_FILE="$GITHUB_WORKSPACE/log_file.log"
+
+          # need to cd into build-dir so the certs/ dir is available for server
+          cd build-dir
+
+          $OPENSSL version | tee "$LOG_FILE"
+
+          # default suite (DHKEM_X25519_HKDF_SHA256, HKDF_SHA256, HPKE_AES_128_GCM)
+          echo -e "\nTesting default suite with OpenSSL server and wolfSSL client\n" &>> "$LOG_FILE"
+          bash ./openssl-ech.sh server &>> "$LOG_FILE"
+
+          echo -e "\nTesting default suite with OpenSSL client and wolfSSL server\n" &>> "$LOG_FILE"
+          bash ./openssl-ech.sh client &>> "$LOG_FILE"
+
+          echo -e "\nTesting default suite with OpenSSL server and wolfSSL client (PQC)\n" &>> "$LOG_FILE"
+          bash ./openssl-ech.sh server --pqc SecP384r1MLKEM1024 &>> "$LOG_FILE"
+
+          echo -e "\nTesting default suite with OpenSSL client and wolfSSL server (PQC)\n" &>> "$LOG_FILE"
+          bash ./openssl-ech.sh client --pqc SecP384r1MLKEM1024 &>> "$LOG_FILE"
+
+          echo -e "\nTesting default suite with OpenSSL server and wolfSSL client (HRR)\n" &>> "$LOG_FILE"
+          bash ./openssl-ech.sh server --hrr &>> "$LOG_FILE"
+
+          echo -e "\nTesting default suite with OpenSSL client and wolfSSL server (HRR)\n" &>> "$LOG_FILE"
+          bash ./openssl-ech.sh client --hrr &>> "$LOG_FILE"
+
+          # weird suite (DHKEM_P521_HKDF_SHA512, HKDF_SHA256, HPKE_AES_256_GCM)
+          echo -e "\nTesting weird suite with OpenSSL server and wolfSSL client\n" &>> "$LOG_FILE"
+          bash ./openssl-ech.sh server --suite "18,1,2" &>> "$LOG_FILE"
+
+          echo -e "\nTesting weird suite with OpenSSL client and wolfSSL server\n" &>> "$LOG_FILE"
+          bash ./openssl-ech.sh client --suite "18,1,2" &>> "$LOG_FILE"
+
+          echo -e "\nTesting rejection with OpenSSL server and wolfSSL client\n" &>> "$LOG_FILE"
+          bash ./openssl-ech.sh server --reject &>> "$LOG_FILE"
+
+          echo -e "\nTesting rejection with OpenSSL client and wolfSSL server\n" &>> "$LOG_FILE"
+          bash ./openssl-ech.sh client --reject &>> "$LOG_FILE"
+
+          # cleanup
+          rm -f "$LOG_FILE"
+
+      - name: Print debug info on failure
+        if: ${{ failure() }}
+        run: |
+          if [ -s "$GITHUB_WORKSPACE/log_file.log" ]; then
+            cat "$GITHUB_WORKSPACE/log_file.log"
+          else
+            echo "No log file"
+          fi

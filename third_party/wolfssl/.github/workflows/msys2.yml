@@ -1,0 +1,45 @@
+name: MSYS2 Build Test
+
+# START OF COMMON SECTION
+on:
+  push:
+    branches: [ 'release/**' ]
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches: [ '*' ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+# END OF COMMON SECTION
+
+jobs:
+  msys2:
+    if: ${{ (github.repository_owner == 'wolfssl') && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
+    runs-on: windows-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: msys
+          update: true
+          install: git gcc autotools base-devel autoconf netcat
+          # Per-PR cache entries can't be shared across PRs; the action
+          # offers no master-only save, so disable caching entirely.
+          cache: false
+      - name: configure wolfSSL
+        run: ./autogen.sh && ./configure --disable-sys-ca-certs CFLAGS="-DUSE_CERT_BUFFERS_2048 -DUSE_CERT_BUFFERS_256 -DNO_WRITE_TEMP_FILES"
+      - name: build wolfSSL
+        run: make
+      - name: run tests
+        run: make check
+      - name: Display log
+        if: always()
+        run: cat test-suite.log

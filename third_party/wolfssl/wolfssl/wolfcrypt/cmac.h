@@ -1,12 +1,12 @@
 /* cmac.h
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -24,9 +24,17 @@
 #define WOLF_CRYPT_CMAC_H
 
 #include <wolfssl/wolfcrypt/types.h>
-#include <wolfssl/wolfcrypt/aes.h>
 
-#if !defined(NO_AES) && defined(WOLFSSL_CMAC)
+#ifdef WOLFSSL_CMAC
+
+#ifndef NO_AES
+    /* Inhibit definition of struct AesEax, with its circular dependency on the
+     * below definition of struct Cmac.
+     */
+    #define WC_AES_INCLUDE_FOR_CMAC_H
+    #include <wolfssl/wolfcrypt/aes.h>
+    #undef WC_AES_INCLUDE_FOR_CMAC_H
+#endif
 
 #if defined(HAVE_FIPS) && \
     defined(HAVE_FIPS_VERSION) && (HAVE_FIPS_VERSION >= 2)
@@ -38,19 +46,27 @@
 #endif
 
 /* avoid redefinition of structs */
-#if !defined(HAVE_FIPS) || \
-    (defined(HAVE_FIPS_VERSION) && (HAVE_FIPS_VERSION >= 2))
+#if !defined(HAVE_FIPS) || FIPS_VERSION3_GE(2,0,0)
+
+typedef enum CmacType {
+    WC_CMAC_NONE = 0,
+    WC_CMAC_AES = 1
+} CmacType;
 
 #ifndef WC_CMAC_TYPE_DEFINED
     typedef struct Cmac Cmac;
     #define WC_CMAC_TYPE_DEFINED
 #endif
 struct Cmac {
+#ifndef NO_AES
     Aes aes;
-    byte buffer[AES_BLOCK_SIZE]; /* partially stored block */
-    byte digest[AES_BLOCK_SIZE]; /* running digest */
-    byte k1[AES_BLOCK_SIZE];
-    byte k2[AES_BLOCK_SIZE];
+    byte buffer[WC_AES_BLOCK_SIZE]; /* partially stored block */
+    byte digest[WC_AES_BLOCK_SIZE]; /* running digest */
+    byte k1[WC_AES_BLOCK_SIZE];
+    byte k2[WC_AES_BLOCK_SIZE];
+#else
+    void* heap; /* fallback when no aes.heap is available */
+#endif
     word32 bufferSz;
     word32 totalSz;
 #ifdef WOLF_CRYPTO_CB
@@ -63,6 +79,13 @@ struct Cmac {
     byte   initialized;
     #endif
 #endif
+#ifdef WOLF_PRIVATE_KEY_ID
+    byte id[AES_MAX_ID_LEN];
+    int  idLen;
+    char label[AES_MAX_LABEL_LEN];
+    int  labelLen;
+    int  aesInitType;
+#endif
 #if defined(WOLFSSL_HASH_KEEP)
     byte*  msg;
     word32 used;
@@ -71,16 +94,32 @@ struct Cmac {
 #ifdef WOLFSSL_SE050
     byte   useSWCrypt; /* Use SW crypt instead of SE050, before SCP03 auth */
 #endif
+    CmacType type;
 };
 
 
 
-typedef enum CmacType {
-    WC_CMAC_AES = 1
-} CmacType;
+/* Reasonable defaults */
+#ifndef WC_CMAC_TAG_MAX_SZ
+    #define WC_CMAC_TAG_MAX_SZ 16
+#endif
 
-#define WC_CMAC_TAG_MAX_SZ AES_BLOCK_SIZE
-#define WC_CMAC_TAG_MIN_SZ (AES_BLOCK_SIZE/4)
+#if !defined(NO_AES) && (WC_CMAC_TAG_MAX_SZ > 16)
+    #error WC_CMAC_TAG_MAX_SZ cannot exceed WC_AES_BLOCK_SIZE
+#endif
+
+/* SP800-38b recommends a minimum tag length of 64-bits */
+#if FIPS_VERSION3_GE(7,0,0)
+    #undef WC_CMAC_TAG_MIN_SZ
+    #define WC_CMAC_TAG_MIN_SZ 8
+#elif !defined(WC_CMAC_TAG_MIN_SZ)
+    #define WC_CMAC_TAG_MIN_SZ 4
+#endif
+
+#if FIPS_VERSION3_GE(6,0,0)
+    extern const unsigned int wolfCrypt_FIPS_cmac_ro_sanity[2];
+    WOLFSSL_LOCAL int wolfCrypt_FIPS_CMAC_sanity(void);
+#endif
 
 #endif /* HAVE_FIPS */
 
@@ -89,30 +128,74 @@ int wc_InitCmac(Cmac* cmac,
                 const byte* key, word32 keySz,
                 int type, void* unused);
 
+/* the selftest build pins an older aes.h that has no tag length field */
+#if !defined(NO_AES) && !defined(HAVE_SELFTEST) && \
+    !defined(WOLFSSL_NO_AES_TAG_ASSOCIATION)
+    #define WOLFSSL_CMAC_TAG_ASSOCIATION
+#endif
+
+#ifdef WOLFSSL_CMAC_TAG_ASSOCIATION
+WOLFSSL_API
+int wc_CmacSetTagLen(Cmac* cmac, word32 tagLen);
+#endif
+
 WOLFSSL_API
 int wc_InitCmac_ex(Cmac* cmac,
                 const byte* key, word32 keySz,
                 int type, void* unused, void* heap, int devId);
 
+#ifdef WOLF_PRIVATE_KEY_ID
+WOLFSSL_API
+int wc_InitCmac_Id(Cmac* cmac, const byte* key, word32 keySz,
+                   int type, void* unused, unsigned char* id, int len,
+                   void* heap, int devId);
+WOLFSSL_API
+int wc_InitCmac_Label(Cmac* cmac, const byte* key, word32 keySz,
+                      int type, void* unused, const char* label,
+                      void* heap, int devId);
+#endif
+
 WOLFSSL_API
 int wc_CmacUpdate(Cmac* cmac,
                   const byte* in, word32 inSz);
+WOLFSSL_API
+int wc_CmacFinalNoFree(Cmac* cmac,
+                       byte* out, word32* outSz);
 WOLFSSL_API
 int wc_CmacFinal(Cmac* cmac,
                  byte* out, word32* outSz);
 
 WOLFSSL_API
+int wc_CmacFree(Cmac* cmac);
+
+#ifndef NO_AES
+WOLFSSL_API
 int wc_AesCmacGenerate(byte* out, word32* outSz,
                        const byte* in, word32 inSz,
                        const byte* key, word32 keySz);
+WOLFSSL_API
+int wc_AesCmacGenerate_ex(Cmac *cmac,
+                          byte* out, word32* outSz,
+                          const byte* in, word32 inSz,
+                          const byte* key, word32 keySz,
+                          void* heap,
+                          int devId);
 
 WOLFSSL_API
 int wc_AesCmacVerify(const byte* check, word32 checkSz,
                      const byte* in, word32 inSz,
                      const byte* key, word32 keySz);
-
+WOLFSSL_API
+int wc_AesCmacVerify_ex(Cmac* cmac,
+                        const byte* check, word32 checkSz,
+                        const byte* in, word32 inSz,
+                        const byte* key, word32 keySz,
+                        void* heap,
+                        int devId);
 WOLFSSL_LOCAL
 void ShiftAndXorRb(byte* out, byte* in);
+
+#endif /* !NO_AES */
 
 #ifdef WOLFSSL_HASH_KEEP
 WOLFSSL_API
@@ -124,6 +207,6 @@ int wc_CMAC_Grow(Cmac* cmac, const byte* in, int inSz);
 #endif
 
 
-#endif /* NO_AES && WOLFSSL_CMAC */
+#endif /* WOLFSSL_CMAC */
 #endif /* WOLF_CRYPT_CMAC_H */
 

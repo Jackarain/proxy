@@ -1,12 +1,12 @@
 /* eccsi.h
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -62,15 +62,15 @@ typedef struct EccsiKeyParams {
     ecc_point* base;
 
     /** Bit indicates order (q) is set as an MP integer in ECCSI key. */
-    byte haveOrder:1;
+    WC_BITFIELD haveOrder:1;
     /** Bit indicates A is set as an MP integer in ECCSI key. */
-    byte haveA:1;
+    WC_BITFIELD haveA:1;
     /** Bit indicates B is set as an MP integer in ECCSI key. */
-    byte haveB:1;
+    WC_BITFIELD haveB:1;
     /** Bit indicates prime is set as an MP integer in ECCSI key. */
-    byte havePrime:1;
+    WC_BITFIELD havePrime:1;
     /** Bit indicates base point is set as an MP integer in ECCSI key. */
-    byte haveBase:1;
+    WC_BITFIELD haveBase:1;
 } EccsiKeyParams;
 
 /**
@@ -104,7 +104,7 @@ typedef struct EccsiKey {
     /** Heap hint for dynamic memory allocation. */
     void* heap;
     /** Bit indicates KPAK (public key) is in montgomery form. */
-    word16 kpakMont:1;
+    WC_BITFIELD kpakMont:1;
 } EccsiKey;
 
 #ifdef __cplusplus

@@ -1,12 +1,12 @@
 /* compress.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -19,20 +19,12 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1335, USA
  */
 
-
-
-#ifdef HAVE_CONFIG_H
-    #include <config.h>
-#endif
-
-#include <wolfssl/wolfcrypt/settings.h>
+#include <wolfssl/wolfcrypt/libwolfssl_sources.h>
 
 #ifdef HAVE_LIBZ
 
 
 #include <wolfssl/wolfcrypt/compress.h>
-#include <wolfssl/wolfcrypt/error-crypt.h>
-#include <wolfssl/wolfcrypt/logging.h>
 #ifdef NO_INLINE
     #include <wolfssl/wolfcrypt/misc.h>
 #else
@@ -88,6 +80,9 @@ int wc_Compress_ex(byte* out, word32 outSz, const byte* in, word32 inSz,
 {
     z_stream stream;
     int result = 0;
+
+    if (out == NULL || in == NULL)
+        return BAD_FUNC_ARG;
 
     stream.next_in = (Bytef*)in;
     stream.avail_in = (uInt)inSz;
@@ -157,6 +152,9 @@ int wc_DeCompress_ex(byte* out, word32 outSz, const byte* in, word32 inSz,
     z_stream stream;
     int result = 0;
 
+    if (out == NULL || in == NULL)
+        return BAD_FUNC_ARG;
+
     stream.next_in = (Bytef*)in;
     stream.avail_in = (uInt)inSz;
     /* Check for source > 64K on 16-bit machine: */
@@ -215,6 +213,7 @@ int wc_DeCompressDynamic(byte** out, int maxSz, int memoryType,
     int result   = 0;
     int i;
     word32 tmpSz = 0;
+    word32 maxBufSz;
     byte*  tmp;
 
     (void)memoryType;
@@ -223,22 +222,43 @@ int wc_DeCompressDynamic(byte** out, int maxSz, int memoryType,
     if (out == NULL || in == NULL) {
         return BAD_FUNC_ARG;
     }
+    /* Cap input so the initial doubling and the growth in the loop cannot
+     * overflow word32 or the int return type. Zero input has no buffer to
+     * size against. */
+    if (inSz == 0 || inSz > (word32)(INT_MAX / 2)) {
+        return BAD_FUNC_ARG;
+    }
     i = (maxSz == 1)? 1 : 2; /* start with output buffer twice the size of input
                               * unless max was set to 1 */
+
+    /* Largest output buffer permitted: inSz * maxSz keeps the historic
+     * maxSz ratio, clamped to INT_MAX (and unbounded becomes INT_MAX). */
+    if (maxSz > 0) {
+        if ((word32)maxSz > (word32)INT_MAX / inSz)
+            maxBufSz = (word32)INT_MAX;
+        else
+            maxBufSz = inSz * (word32)maxSz;
+    }
+    else {
+        maxBufSz = (word32)INT_MAX;
+    }
 
     stream.next_in = (Bytef*)in;
     stream.avail_in = (uInt)inSz;
     /* Check for source > 64K on 16-bit machine: */
     if ((uLong)stream.avail_in != inSz) return DECOMPRESS_INIT_E;
 
-    tmpSz = inSz * i;
+    tmpSz = inSz * (word32)i;
     tmp = (byte*)XMALLOC(tmpSz, heap, memoryType);
     if (tmp == NULL)
         return MEMORY_E;
 
     stream.next_out  = tmp;
     stream.avail_out = (uInt)tmpSz;
-    if ((uLong)stream.avail_out != tmpSz) return DECOMPRESS_INIT_E;
+    if ((uLong)stream.avail_out != tmpSz) {
+        XFREE(tmp, heap, memoryType);
+        return DECOMPRESS_INIT_E;
+    }
 
     stream.zalloc = (alloc_func)myAlloc;
     stream.zfree  = (free_func)myFree;
@@ -271,13 +291,17 @@ int wc_DeCompressDynamic(byte** out, int maxSz, int memoryType,
             word32 newSz;
             byte*  newTmp;
 
-            if (maxSz > 0 && i >= maxSz) {
+            if (tmpSz >= maxBufSz) {
                 WOLFSSL_MSG("Hit max decompress size!");
                 break;
             }
-            i++;
 
-            newSz = tmpSz + inSz;
+            /* Double the buffer so cumulative copy work stays linear in the
+             * output size, clamped to the permitted maximum. */
+            if (tmpSz > maxBufSz / 2)
+                newSz = maxBufSz;
+            else
+                newSz = tmpSz * 2;
             newTmp = (byte*)XMALLOC(newSz, heap, memoryType);
             if (newTmp == NULL) {
                 WOLFSSL_MSG("Memory error with increasing buffer size");
@@ -287,20 +311,25 @@ int wc_DeCompressDynamic(byte** out, int maxSz, int memoryType,
             XFREE(tmp, heap, memoryType);
             tmp   = newTmp;
             stream.next_out  = tmp + stream.total_out;
-            stream.avail_out = stream.avail_out + (uInt)inSz;
+            stream.avail_out = (uInt)(newSz - stream.total_out);
             tmpSz  = newSz;
             result = inflate(&stream, Z_BLOCK);
         }
     } while (result == Z_OK);
 
     if (result == Z_STREAM_END) {
-        result = (int)stream.total_out;
-        *out   = (byte*)XMALLOC(result, heap, memoryType);
-        if (*out != NULL) {
-            XMEMCPY(*out, tmp, result);
+        if (stream.total_out >= (uLong)INT_MAX) {
+            result = DECOMPRESS_E;
         }
         else {
-            result = MEMORY_E;
+            result = (int)stream.total_out;
+            *out   = (byte*)XMALLOC(result, heap, memoryType);
+            if (*out != NULL) {
+                XMEMCPY(*out, tmp, result);
+            }
+            else {
+                result = MEMORY_E;
+            }
         }
     }
     else {
@@ -310,10 +339,8 @@ int wc_DeCompressDynamic(byte** out, int maxSz, int memoryType,
     if (inflateEnd(&stream) != Z_OK)
         result = DECOMPRESS_E;
 
-    if (tmp != NULL) {
-        XFREE(tmp, heap, memoryType);
-        tmp = NULL;
-    }
+    XFREE(tmp, heap, memoryType);
+    tmp = NULL;
 
     return result;
 }

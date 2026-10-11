@@ -23,6 +23,8 @@
     \sa wc_InitCmac_ex
     \sa wc_CmacUpdate
     \sa wc_CmacFinal
+    \sa wc_CmacFinalNoFree
+    \sa wc_CmacFree
 */
 int wc_InitCmac(Cmac* cmac,
                 const byte* key, word32 keySz,
@@ -38,7 +40,7 @@ int wc_InitCmac(Cmac* cmac,
     \param type Always WC_CMAC_AES = 1
     \param unused not used, exists for potential future use around compatibility
     \param heap pointer to the heap hint used for dynamic allocation. Typically used with our static memory option. Can be NULL.
-    \param devId ID to use with async hardware. Set to INVALID_DEVID if not using async hardware.
+    \param devId ID to use with crypto callbacks or async hardware. Set to INVALID_DEVID (-2) if not used
 
     _Example_
     \code
@@ -55,6 +57,8 @@ int wc_InitCmac(Cmac* cmac,
     \sa wc_InitCmac_ex
     \sa wc_CmacUpdate
     \sa wc_CmacFinal
+    \sa wc_CmacFinalNoFree
+    \sa wc_CmacFree
 */
 int wc_InitCmac_ex(Cmac* cmac,
                 const byte* key, word32 keySz,
@@ -75,13 +79,38 @@ int wc_InitCmac_ex(Cmac* cmac,
 
     \sa wc_InitCmac
     \sa wc_CmacFinal
+    \sa wc_CmacFinalNoFree
+    \sa wc_CmacFree
 */
 int wc_CmacUpdate(Cmac* cmac,
                   const byte* in, word32 inSz);
 
+
 /*!
     \ingroup CMAC
-    \brief Generate the final result using Cipher-based Message Authentication Code
+    \brief Generate the final result using Cipher-based Message Authentication Code, deferring context cleanup.
+    \return 0 on success
+    \param cmac pointer to the Cmac structure
+    \param out pointer to return the result
+    \param outSz pointer size of output (in/out)
+
+    _Example_
+    \code
+    ret = wc_CmacFinalNoFree(cmac, out, &outSz);
+    (void)wc_CmacFree(cmac);
+    \endcode
+
+    \sa wc_InitCmac
+    \sa wc_CmacFinal
+    \sa wc_CmacFinalNoFree
+    \sa wc_CmacFree
+*/
+int wc_CmacFinalNoFree(Cmac* cmac,
+                 byte* out, word32* outSz);
+
+/*!
+    \ingroup CMAC
+    \brief Generate the final result using Cipher-based Message Authentication Code, and clean up the context with wc_CmacFree().
     \return 0 on success
     \param cmac pointer to the Cmac structure
     \param out pointer to return the result
@@ -93,10 +122,31 @@ int wc_CmacUpdate(Cmac* cmac,
     \endcode
 
     \sa wc_InitCmac
-    \sa wc_CmacFinal
+    \sa wc_CmacFinalNoFree
+    \sa wc_CmacFinalNoFree
+    \sa wc_CmacFree
 */
 int wc_CmacFinal(Cmac* cmac,
                  byte* out, word32* outSz);
+
+/*!
+    \ingroup CMAC
+    \brief Clean up allocations in a CMAC context.
+    \return 0 on success
+    \param cmac pointer to the Cmac structure
+
+    _Example_
+    \code
+    ret = wc_CmacFinalNoFree(cmac, out, &outSz);
+    (void)wc_CmacFree(cmac);
+    \endcode
+
+    \sa wc_InitCmac
+    \sa wc_CmacFinalNoFree
+    \sa wc_CmacFinal
+    \sa wc_CmacFree
+*/
+int wc_CmacFree(Cmac* cmac);
 
 /*!
     \ingroup CMAC
@@ -124,8 +174,11 @@ int wc_AesCmacGenerate(byte* out, word32* outSz,
     \ingroup CMAC
     \brief Single shot function for validating a CMAC
     \return 0 on success
-    \param check pointer to return the result
-    \param checkSz size of checkout buffer
+    \return BAD_FUNC_ARG if parameters are invalid
+    \return MAC_CMP_FAILED_E if the supplied tag does not match
+    \param check Expected MAC value to verify
+    \param checkSz size of expected MAC value; must be in
+    [\c WC_CMAC_TAG_MIN_SZ, \c WC_AES_BLOCK_SIZE]
     \param in input data to process
     \param inSz size of input data
     \param key key pointer
@@ -156,3 +209,120 @@ int wc_AesCmacVerify(const byte* check, word32 checkSz,
     \endcode
 */
 int wc_CMAC_Grow(Cmac* cmac, const byte* in, int inSz);
+
+/*!
+    \ingroup CMAC
+    \brief Single shot AES-CMAC generation with extended parameters
+    including heap and device ID.
+    \return 0 on success
+    \return BAD_FUNC_ARG if parameters are invalid
+    \param cmac Pointer to Cmac structure (can be NULL for one-shot)
+    \param out Buffer to store MAC output
+    \param outSz Pointer to output size (in/out)
+    \param in Input data to authenticate
+    \param inSz Length of input data
+    \param key AES key
+    \param keySz Key size (16, 24, or 32 bytes)
+    \param heap Heap hint for memory allocation (can be NULL)
+    \param devId Device ID for hardware acceleration (use
+    INVALID_DEVID for software)
+
+    _Example_
+    \code
+    byte mac[AES_BLOCK_SIZE];
+    word32 macSz = sizeof(mac);
+    byte key[16], msg[64];
+
+    int ret = wc_AesCmacGenerate_ex(NULL, mac, &macSz, msg,
+                                    sizeof(msg), key, sizeof(key),
+                                    NULL, INVALID_DEVID);
+    \endcode
+
+    \sa wc_AesCmacGenerate
+    \sa wc_AesCmacVerify_ex
+*/
+int wc_AesCmacGenerate_ex(Cmac *cmac, byte* out, word32* outSz,
+                          const byte* in, word32 inSz,
+                          const byte* key, word32 keySz,
+                          void* heap, int devId);
+
+/*!
+    \ingroup CMAC
+    \brief Single shot AES-CMAC verification with extended parameters
+    including heap and device ID.
+    \return 0 on success
+    \return BAD_FUNC_ARG if parameters are invalid
+    \return MAC_CMP_FAILED_E if MAC verification fails
+    \param cmac Pointer to Cmac structure
+    \param check Expected MAC value to verify
+    \param checkSz Size of expected MAC; must be in
+    [\c WC_CMAC_TAG_MIN_SZ, \c WC_AES_BLOCK_SIZE]
+    \param in Input data to authenticate
+    \param inSz Length of input data
+    \param key AES key
+    \param keySz Key size (16, 24, or 32 bytes)
+    \param heap Heap hint for memory allocation (can be NULL)
+    \param devId Device ID for hardware acceleration (use
+    INVALID_DEVID for software)
+
+    _Example_
+    \code
+    Cmac cmac;
+    byte mac[WC_AES_BLOCK_SIZE];
+    byte key[16], msg[64];
+    int ret;
+
+    ret = wc_InitCmac_ex(&cmac, key, sizeof(key), WC_CMAC_AES, NULL,
+                         NULL, INVALID_DEVID);
+    if (ret == 0) {
+        ret = wc_AesCmacVerify_ex(&cmac, mac, sizeof(mac), msg,
+                                  sizeof(msg), key, sizeof(key),
+                                  NULL, INVALID_DEVID);
+    }
+    if (ret == MAC_CMP_FAILED_E) {
+        // MAC verification failed
+    }
+    \endcode
+
+    \sa wc_InitCmac_ex
+    \sa wc_AesCmacVerify
+    \sa wc_AesCmacGenerate_ex
+*/
+int wc_AesCmacVerify_ex(Cmac* cmac, const byte* check, word32 checkSz,
+                       const byte* in, word32 inSz,
+                       const byte* key, word32 keySz,
+                       void* heap, int devId);
+
+/*!
+    \ingroup CMAC
+    \brief This function associates one tag length with the key held by a
+    Cmac object, as SP 800-38B section 5.4 requires. Once set, the final and
+    verify calls for that key accept only that tag length, and this call
+    cannot change or clear it. Starting a new Cmac clears the association.
+    The length is kept on the AES object the Cmac already holds.
+
+    \return 0 On success.
+    \return BAD_FUNC_ARG Returned if cmac is NULL, the length is outside
+    WC_CMAC_TAG_MIN_SZ to WC_CMAC_TAG_MAX_SZ, or a different length is
+    already associated.
+
+    \param cmac pointer to the Cmac object holding the key
+    \param tagLen tag length to associate with the key
+
+    _Example_
+    \code
+    Cmac cmac;
+    byte key[] = { some 16, 24, 32 byte key };
+    if (wc_InitCmac(&cmac, key, sizeof(key), WC_CMAC_AES, NULL) != 0) {
+        // failed to set up cmac
+    }
+    if (wc_CmacSetTagLen(&cmac, 16) != 0) {
+        // failed to associate the tag length
+    }
+    \endcode
+
+    \sa wc_InitCmac
+    \sa wc_CmacFinal
+    \sa wc_AesSetTagLen
+*/
+int wc_CmacSetTagLen(Cmac* cmac, word32 tagLen);

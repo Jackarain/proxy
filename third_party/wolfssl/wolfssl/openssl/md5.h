@@ -1,12 +1,12 @@
 /* md5.h
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -43,9 +43,17 @@
 typedef struct WOLFSSL_MD5_CTX {
     /* big enough to hold wolfcrypt md5, but check on init */
 #ifdef STM32_HASH
+#  ifdef WC_NO_PTR_INT_CAST
+    void* holder[(128 + WC_ASYNC_DEV_SIZE + sizeof(STM32_HASH_Context)) / sizeof(void*)];
+#  else
     void* holder[(112 + WC_ASYNC_DEV_SIZE + sizeof(STM32_HASH_Context)) / sizeof(void*)];
+#  endif
 #else
+#  ifdef WC_NO_PTR_INT_CAST
+    void* holder[(128 + WC_ASYNC_DEV_SIZE) / sizeof(void*)];
+#  else
     void* holder[(112 + WC_ASYNC_DEV_SIZE) / sizeof(void*)];
+#  endif
 #endif
 } WOLFSSL_MD5_CTX;
 
@@ -57,6 +65,8 @@ WOLFSSL_API int wolfSSL_MD5_Transform(WOLFSSL_MD5_CTX* md5, const unsigned char*
 
 WOLFSSL_API unsigned char *wolfSSL_MD5(const unsigned char* data, size_t len,
             unsigned char* hash);
+
+#ifndef OPENSSL_COEXIST
 
 typedef WOLFSSL_MD5_CTX MD5_CTX;
 
@@ -94,6 +104,8 @@ typedef WOLFSSL_MD5_CTX MD5_CTX;
 #else
     #define MD5_DIGEST_LENGTH MD5_DIGEST_SIZE
 #endif
+
+#endif /* !OPENSSL_COEXIST */
 
 #ifdef __cplusplus
     }  /* extern "C" */

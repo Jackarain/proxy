@@ -1,12 +1,12 @@
 /* unit.c API unit tests driver
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -22,20 +22,31 @@
 
 /* Name change compatibility layer no longer need to be included here */
 
-#ifdef HAVE_CONFIG_H
-    #include <config.h>
+#include <tests/unit.h>
+
+#include <wolfssl/wolfcrypt/types.h>
+#ifdef HAVE_ECC
+    #include <wolfssl/wolfcrypt/ecc.h>
+#endif
+#ifndef NO_DH
+    #include <wolfssl/wolfcrypt/dh.h>
 #endif
 
-#include <wolfssl/wolfcrypt/settings.h>
-#include <wolfssl/wolfcrypt/types.h>
-
 #include <stdio.h>
-#include <tests/unit.h>
 #include <wolfssl/wolfcrypt/fips_test.h>
 
+#ifndef NO_CRYPT_TEST
+#include <wolfssl/test.h>
+#include "wolfcrypt/test/test.h"
+#endif
+
+#ifdef WOLFSSL_SWDEV
+#include "swdev/swdev_loader.h"
+#endif
 
 int allTesting = 1;
 int apiTesting = 1;
+int wolfCryptTesting = 1;
 int myoptind = 0;
 char* myoptarg = NULL;
 int unit_test(int argc, char** argv);
@@ -52,19 +63,28 @@ int main(int argc, char** argv)
 static void UnitTest_Usage(void)
 {
     printf("Usage: ./tests/unit.test <options>\n");
-    printf(" -?, --help     Display this usage information.\n");
-    printf(" --list         List the API tests.\n");
-    printf(" --api          Only perform API tests.\n");
-    printf(" -<number>      Run the API test identified by number.\n");
-    printf("                Can be specified multiple times.\n");
-    printf(" -<string>      Run the API test identified by name.\n");
-    printf("                Can be specified multiple times.\n");
-    printf(" <filename>     Name of cipher suite testing file.\n");
+    printf(" -?, --help        Display this usage information.\n");
+    printf(" --list            List the API tests.\n");
+    printf(" --api             Only perform API tests.\n");
+    printf(" --no-api          Do not perform API tests.\n");
+    printf(" --stopOnFail      Stops API testing on first failure.\n");
+    printf(" --groups          List known group names.\n");
+    printf(" --group <string>  Functions in this group are tested.\n");
+    printf(" -<number>         Run the API test identified by number.\n");
+    printf("                   Can be specified multiple times.\n");
+    printf(" -<string>         Run the API test identified by name.\n");
+    printf("                   Can be specified multiple times.\n");
+    printf(" -~<string>        Functions with this substring are tested.\n");
+    printf(" <filename>        Name of cipher suite testing file.\n");
 }
 
 int unit_test(int argc, char** argv)
 {
     int ret = 0;
+
+    #ifdef WC_DH_HAVE_RUNTIME_ENABLEMENT
+    int need_dh_disable = (wc_dh_enable() == 0);
+    #endif
 
     (void)argc;
     (void)argv;
@@ -85,7 +105,7 @@ int unit_test(int argc, char** argv)
 #endif
 
 #ifdef WC_RNG_SEED_CB
-    wc_SetSeed_Cb(wc_GenerateSeed);
+    wc_SetSeed_Cb(WC_GENERATE_SEED_DEFAULT);
 #endif
 #ifdef HAVE_WNR
     if (wc_InitNetRandom(wnrConfig, NULL, 5000) != 0)
@@ -161,7 +181,7 @@ int unit_test(int argc, char** argv)
         err_sys("KDF TLSv1.2 CAST failed");
     }
 #endif
-#if defined(WOLFSSL_HAVE_PRF) && defined(WOLFSSL_TLS13)
+#if defined(HAVE_HKDF) && !defined(NO_HMAC)
     if (wc_RunCast_fips(FIPS_CAST_KDF_TLS13) != 0) {
         err_sys("KDF TLSv1.3 CAST failed");
     }
@@ -172,6 +192,11 @@ int unit_test(int argc, char** argv)
     }
 #endif
 #endif /* HAVE_FIPS && HAVE_FIPS_VERSION == 5 */
+#if FIPS_VERSION3_GT(5,2,0)
+    if (wc_RunAllCast_fips() != 0) {
+        err_sys("wc_RunAllCast_fips() failed\n");
+    }
+#endif
 
     while (argc > 1) {
         if (argv[1][0] != '-') {
@@ -186,14 +211,45 @@ int unit_test(int argc, char** argv)
             ApiTest_PrintTestCases();
             goto exit;
         }
+        else if (XSTRCMP(argv[1], "--no-wc") == 0) {
+            wolfCryptTesting = 0;
+        }
         else if (XSTRCMP(argv[1], "--api") == 0) {
             allTesting = 0;
         }
         else if (XSTRCMP(argv[1], "--no-api") == 0) {
             apiTesting = 0;
         }
-        else if (argv[1][1] >= '0' && argv[1][1] <= '9') {
+        else if (XSTRCMP(argv[1], "--stopOnFail") == 0) {
+            ApiTest_StopOnFail();
+        }
+        else if (XSTRCMP(argv[1], "--groups") == 0) {
+            ApiTest_PrintGroups();
+            goto exit;
+        }
+        else if (XSTRCMP(argv[1], "--group") == 0) {
+            if (argc == 2) {
+                fprintf(stderr, "No group name supplied\n");
+                ret = -1;
+                goto exit;
+            }
+            ret = ApiTest_RunGroup(argv[2]);
+            if (ret != 0) {
+                goto exit;
+            }
+            allTesting = 0;
+            argc--;
+            argv++;
+        }
+        else if (argv[1][0] == '-' && argv[1][1] >= '0' && argv[1][1] <= '9') {
             ret = ApiTest_RunIdx(atoi(argv[1] + 1));
+            if (ret != 0) {
+                goto exit;
+            }
+            allTesting = 0;
+        }
+        else if (argv[1][0] == '-' && argv[1][1] == '~') {
+            ret = ApiTest_RunPartName(argv[1] + 2);
             if (ret != 0) {
                 goto exit;
             }
@@ -211,12 +267,53 @@ int unit_test(int argc, char** argv)
         argv++;
     }
 
+#ifndef NO_CRYPT_TEST
+    /* wc_ test */
+    if (allTesting && wolfCryptTesting) {
+        func_args wc_args;
+
+        printf("\nwolfCrypt unit test:\n");
+
+        if ((ret = wolfCrypt_Init()) != 0) {
+            fprintf(stderr, "wolfCrypt_Init failed: %d\n", (int)ret);
+            goto exit;
+        }
+
+    #ifdef WOLFSSL_SWDEV
+        if ((ret = wc_SwDev_Init()) != 0) {
+            fprintf(stderr, "wc_SwDev_Init failed: %d\n", (int)ret);
+            goto exit;
+        }
+    #endif
+
+        XMEMSET(&wc_args, 0, sizeof(wc_args));
+        wolfcrypt_test(&wc_args);
+        if (wc_args.return_code != 0) {
+            ret = 1;
+            goto exit;
+        }
+
+    #ifdef WOLFSSL_SWDEV
+        wc_SwDev_Cleanup();
+    #endif
+
+        if ((ret = wolfCrypt_Cleanup()) != 0) {
+            fprintf(stderr, "wolfCrypt_Cleanup failed: %d\n", (int)ret);
+            goto exit;
+        }
+
+        printf("wolfCrypt unit test completed successfully.\n\n");
+        fflush(stdout);
+    }
+#endif
+
 #ifdef WOLFSSL_ALLOW_SKIP_UNIT_TESTS
     if (argc == 1)
 #endif
     {
         if (apiTesting) {
             ret = ApiTest();
+            fflush(stdout);
             if (ret != 0)
                 goto exit;
         }
@@ -225,38 +322,54 @@ int unit_test(int argc, char** argv)
             goto exit;
         }
 
-        if ((ret = HashTest()) != 0) {
-            fprintf(stderr, "hash test failed with %d\n", ret);
-            goto exit;
-        }
-
     #ifdef WOLFSSL_W64_WRAPPER
-        if ((ret = w64wrapper_test()) != 0) {
+        ret = w64wrapper_test();
+        fflush(stdout);
+        if (ret != 0) {
             fprintf(stderr, "w64wrapper test failed with %d\n", ret);
             goto exit;
         }
     #endif /* WOLFSSL_W64_WRAPPER */
 
     #ifdef WOLFSSL_QUIC
-        if ((ret = QuicTest()) != 0) {
-            printf("quic test failed with %d\n", ret);
+        ret = QuicTest();
+        fflush(stdout);
+        if (ret != 0) {
+            fprintf(stderr, "quic test failed with %d\n", ret);
             goto exit;
         }
     #endif
 
         SrpTest();
+        fflush(stdout);
     }
 
-#ifndef NO_WOLFSSL_CIPHER_SUITE_TEST
-#if !defined(NO_WOLFSSL_CLIENT) && !defined(NO_WOLFSSL_SERVER)
-#ifndef SINGLE_THREADED
+#if !defined(NO_WOLFSSL_CIPHER_SUITE_TEST) && \
+    !defined(NO_WOLFSSL_CLIENT) && !defined(NO_WOLFSSL_SERVER) && \
+    !defined(NO_TLS) && \
+    !defined(SINGLE_THREADED) && \
+    defined(WOLFSSL_PEM_TO_DER)
+    #ifdef WOLFSSL_SWDEV
+    if (wolfCrypt_Init() != 0) {
+        fprintf(stderr, "wolfCrypt_Init before SuiteTest failed\n");
+        ret = 1;
+        goto exit;
+    }
+    if (wc_SwDev_Init() != 0) {
+        fprintf(stderr, "wc_SwDev_Init before SuiteTest failed\n");
+        ret = 1;
+        goto exit;
+    }
+    #endif
     if ((ret = SuiteTest(argc, argv)) != 0) {
         fprintf(stderr, "suite test failed with %d\n", ret);
         goto exit;
     }
+    #ifdef WOLFSSL_SWDEV
+    wc_SwDev_Cleanup();
+    wolfCrypt_Cleanup();
+    #endif
 #endif
-#endif
-#endif /* NO_WOLFSSL_CIPHER_SUITE_TEST */
 
 exit:
 #ifdef HAVE_WNR
@@ -264,10 +377,49 @@ exit:
         err_sys("Failed to free netRandom context");
 #endif /* HAVE_WNR */
 
+    /* Drop process-global ECC caches before exit. wolfCrypt_Cleanup() only
+     * runs its cleanup body when initRefCount transitions 2->1 (the body
+     * itself does the second decrement to 0); the unit driver's single
+     * init/cleanup pair never reaches that state, and individual API tests
+     * that create+free a CTX go 0->1->0 without triggering the body either.
+     * Without explicit calls here the ECC_CACHE_CURVE entries (and their
+     * HAVE_WOLF_BIGINT raw buffers) survive to exit and trip valgrind's
+     * --leak-check=full. */
+#if defined(HAVE_ECC) && defined(FP_ECC)
+    wc_ecc_fp_free();
+#endif
+#if defined(HAVE_ECC) && defined(ECC_CACHE_CURVE)
+    wc_ecc_curve_cache_free();
+#endif
+
+#ifdef WOLFSSL_TRACK_MEMORY
+    if (ret == 0) {
+        ret = wolfSSL_Cleanup(); /* no-op in a successful full run. */
+
+        if (ret == WOLFSSL_SUCCESS)
+            ret = 0;
+        else
+            fprintf(stderr, "wolfSSL_Cleanup() returned %d\n", ret);
+
+        if (wc_MemStats_Ptr->currentBytes > 0)
+        {
+            fprintf(stderr,
+                    "WOLFSSL_TRACK_MEMORY: currentBytes after cleanup is %ld\n",
+                    wc_MemStats_Ptr->currentBytes);
+            ret = MEMORY_E;
+        }
+    }
+#endif
+
     if (ret == 0) {
         puts("\nunit_test: Success for all configured tests.");
         fflush(stdout);
     }
+
+    #ifdef WC_DH_HAVE_RUNTIME_ENABLEMENT
+    if (need_dh_disable)
+        (void)wc_dh_disable();
+    #endif
 
     return ret;
 }

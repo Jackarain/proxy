@@ -1,12 +1,12 @@
 /* silabs_random.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -27,22 +27,31 @@
 
 #include <wolfssl/wolfcrypt/settings.h>
 
-#if defined(WOLFSSL_SILABS_SE_ACCEL)
+#if defined(WOLFSSL_SILABS_SE_TYPES)
 
-#include <sl_se_manager.h>
-#include <sl_se_manager_entropy.h>
+#ifdef WOLFSSL_SILABS_HOST_TEST
+    #include <wolfssl/wolfcrypt/port/silabs/silabs_shim.h>
+#else
+    #include <sl_se_manager.h>
+    #include <sl_se_manager_entropy.h>
+#endif
 
+#include <wolfssl/wolfcrypt/error-crypt.h>
 #include <wolfssl/wolfcrypt/port/silabs/silabs_random.h>
 
 int silabs_GenerateRand(byte* output, word32 sz)
 {
     sl_se_command_context_t cmd_ctx = SL_SE_COMMAND_CONTEXT_INIT;
-    sl_status_t status = sl_se_init();
+    sl_status_t status;
 
+    if (output == NULL)
+        return BAD_FUNC_ARG;
+
+    status  = sl_se_init();
     if (status == SL_STATUS_OK)
         status = sl_se_get_random(&cmd_ctx, output,  sz);
 
-    return (status != SL_STATUS_OK);
+    return (status != SL_STATUS_OK) ? WC_HW_E : 0;
 }
 
-#endif /* WOLFSSL_SILABS_SE_ACCEL */
+#endif /* WOLFSSL_SILABS_SE_TYPES */

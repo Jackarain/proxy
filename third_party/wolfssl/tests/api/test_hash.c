@@ -1,0 +1,1155 @@
+/* test_hash.c
+ *
+ * Copyright (C) 2006-2026 wolfSSL Inc.
+ *
+ * This file is part of wolfSSL.
+ *
+ * wolfSSL is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * wolfSSL is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1335, USA
+ */
+
+#include <tests/unit.h>
+
+#ifdef NO_INLINE
+    #include <wolfssl/wolfcrypt/misc.h>
+#else
+    #define WOLFSSL_MISC_INCLUDED
+    #include <wolfcrypt/src/misc.c>
+#endif
+
+#include <wolfssl/wolfcrypt/hash.h>
+#include <wolfssl/wolfcrypt/types.h>
+#include <tests/api/api.h>
+#include <tests/api/test_hash.h>
+#include <tests/api/test_digest.h>
+
+#ifndef NO_HASH_WRAPPER
+/* enum for holding supported algorithms, #ifndef's restrict if disabled */
+static const enum wc_HashType supportedHash[] = {
+#ifndef NO_MD5
+    WC_HASH_TYPE_MD5,
+#endif
+#ifndef NO_SHA
+    WC_HASH_TYPE_SHA,
+#endif
+#ifdef WOLFSSL_SHA224
+    WC_HASH_TYPE_SHA224,
+#endif
+#ifndef NO_SHA256
+    WC_HASH_TYPE_SHA256,
+#endif
+#ifdef WOLFSSL_SHA384
+    WC_HASH_TYPE_SHA384,
+#endif
+#ifdef WOLFSSL_SHA512
+    WC_HASH_TYPE_SHA512,
+#if !defined(HAVE_FIPS) && !defined(HAVE_SELFTEST)
+#ifndef WOLFSSL_NOSHA512_224
+    WC_HASH_TYPE_SHA512_224,
+#endif
+#ifndef WOLFSSL_NOSHA512_256
+    WC_HASH_TYPE_SHA512_256,
+#endif
+#endif
+#endif
+#ifdef WOLFSSL_SHA3
+    WC_HASH_TYPE_SHA3_224,
+    WC_HASH_TYPE_SHA3_256,
+    WC_HASH_TYPE_SHA3_384,
+    WC_HASH_TYPE_SHA3_512,
+#if defined(WOLFSSL_SHAKE128)
+    WC_HASH_TYPE_SHAKE128,
+#endif
+#if defined(WOLFSSL_SHAKE256)
+    WC_HASH_TYPE_SHAKE256,
+#endif
+#endif
+#ifdef WOLFSSL_SM3
+    WC_HASH_TYPE_SM3,
+#endif
+    WC_HASH_TYPE_NONE   /* Dummy value to ensure list is non-zero. */
+};
+static const int supportedHashLen = (sizeof(supportedHash) /
+                                     sizeof(enum wc_HashType)) - 1;
+
+static const enum wc_HashType notCompiledHash[] = {
+#ifdef NO_MD5
+    WC_HASH_TYPE_MD5,
+#endif
+#ifdef NO_SHA
+    WC_HASH_TYPE_SHA,
+#endif
+#ifndef WOLFSSL_SHA224
+    WC_HASH_TYPE_SHA224,
+#endif
+#ifdef NO_SHA256
+    WC_HASH_TYPE_SHA256,
+#endif
+#ifndef WOLFSSL_SHA384
+    WC_HASH_TYPE_SHA384,
+#endif
+#ifndef WOLFSSL_SHA512
+    WC_HASH_TYPE_SHA512,
+#endif
+#ifndef WOLFSSL_SHA3
+    WC_HASH_TYPE_SHA3_224,
+    WC_HASH_TYPE_SHA3_256,
+    WC_HASH_TYPE_SHA3_384,
+    WC_HASH_TYPE_SHA3_512,
+#endif
+#if !defined(WOLFSSL_SHA3) || !defined(WOLFSSL_SHAKE128)
+    WC_HASH_TYPE_SHAKE128,
+#endif
+#if !defined(WOLFSSL_SHA3) || !defined(WOLFSSL_SHAKE256)
+    WC_HASH_TYPE_SHAKE256,
+#endif
+#if defined(NO_MD5) || defined(NO_SHA)
+    WC_HASH_TYPE_MD5_SHA,
+#endif
+#ifndef WOLFSSL_MD2
+    WC_HASH_TYPE_MD2,
+#endif
+#ifdef NO_MD4
+    WC_HASH_TYPE_MD4,
+#endif
+#ifndef HAVE_BLAKE2B
+    WC_HASH_TYPE_BLAKE2B,
+#endif
+#ifndef HAVE_BLAKE2S
+    WC_HASH_TYPE_BLAKE2S,
+#endif
+    WC_HASH_TYPE_NONE   /* Dummy value to ensure list is non-zero. */
+};
+static const int notCompiledHashLen = (sizeof(notCompiledHash) /
+                                       sizeof(notCompiledHash[0])) - 1;
+
+static const int notSupportedHash[] = {
+    WC_HASH_TYPE_NONE,
+    WC_HASH_TYPE_MAX + 1
+};
+static const int notSupportedHashLen = (sizeof(notSupportedHash) /
+                                        sizeof(notSupportedHash[0]));
+
+static const enum wc_HashType sizeSupportedHash[] = {
+#if !defined(NO_MD5) && !defined(NO_SHA)
+    WC_HASH_TYPE_MD5_SHA,
+#endif
+#ifdef WOLFSSL_MD2
+    WC_HASH_TYPE_MD2,
+#endif
+#ifndef NO_MD4
+    WC_HASH_TYPE_MD4,
+#endif
+#ifdef HAVE_BLAKE2B
+    WC_HASH_TYPE_BLAKE2B,
+#endif
+#ifdef HAVE_BLAKE2S
+    WC_HASH_TYPE_BLAKE2S,
+#endif
+#if defined(WOLFSSL_SHA3) && defined(WOLFSSL_SHAKE128)
+    WC_HASH_TYPE_SHAKE128,
+#endif
+#if defined(WOLFSSL_SHA3) && defined(WOLFSSL_SHAKE256)
+    WC_HASH_TYPE_SHAKE256,
+#endif
+    WC_HASH_TYPE_NONE   /* Dummy value to ensure list is non-zero. */
+};
+static const int sizeSupportedHashLen = (sizeof(sizeSupportedHash) /
+                                         sizeof(sizeSupportedHash[0])) - 1;
+static const enum wc_HashType sizeNotCompiledHash[] = {
+#if defined(NO_MD5) || defined(NO_SHA)
+    WC_HASH_TYPE_MD5_SHA,
+#endif
+#ifndef WOLFSSL_MD2
+    WC_HASH_TYPE_MD2,
+#endif
+#ifdef NO_MD4
+    WC_HASH_TYPE_MD4,
+#endif
+#ifndef HAVE_BLAKE2B
+    WC_HASH_TYPE_BLAKE2B,
+#endif
+#ifndef HAVE_BLAKE2S
+    WC_HASH_TYPE_BLAKE2S,
+#endif
+#if !defined(WOLFSSL_SHA3) || !defined(WOLFSSL_SHAKE128)
+    WC_HASH_TYPE_SHAKE128,
+#endif
+#if !defined(WOLFSSL_SHA3) || !defined(WOLFSSL_SHAKE256)
+    WC_HASH_TYPE_SHAKE256,
+#endif
+    WC_HASH_TYPE_NONE   /* Dummy value to ensure list is non-zero. */
+};
+static const int sizeNotCompiledHashLen = (sizeof(sizeNotCompiledHash) /
+                                           sizeof(sizeNotCompiledHash[0])) - 1;
+static const int sizeNotSupportedHash[] = {
+    WC_HASH_TYPE_NONE,
+    WC_HASH_TYPE_MAX + 1
+};
+static const int sizeNotSupportedHashLen = (sizeof(sizeNotSupportedHash) /
+                                            sizeof(sizeNotSupportedHash[0]));
+#endif /* NO_HASH_WRAPPER */
+
+int test_wc_HashInit(void)
+{
+    EXPECT_DECLS;
+#ifndef NO_HASH_WRAPPER
+    wc_HashAlg hash;
+    int i;  /* 0 indicates tests passed, 1 indicates failure */
+
+    /* For loop to test various arguments... */
+    for (i = 0; i < supportedHashLen; i++) {
+        /* check for null ptr */
+        ExpectIntEQ(wc_HashInit(NULL, supportedHash[i]),
+            WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+        ExpectIntEQ(wc_HashInit_ex(NULL, supportedHash[i], HEAP_HINT,
+            INVALID_DEVID), WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+
+        ExpectIntEQ(wc_HashInit(&hash, supportedHash[i]), 0);
+        wc_HashFree(&hash, supportedHash[i]);
+        ExpectIntEQ(wc_HashInit_ex(&hash, supportedHash[i], HEAP_HINT,
+            INVALID_DEVID), 0);
+        wc_HashFree(&hash, supportedHash[i]);
+
+        wc_HashFree(NULL,  supportedHash[i]);
+    }  /* end of for loop */
+
+    for (i = 0; i < notCompiledHashLen; i++) {
+        /* check for null ptr */
+        ExpectIntEQ(wc_HashInit(NULL, notCompiledHash[i]),
+            WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+        ExpectIntEQ(wc_HashInit_ex(NULL, notCompiledHash[i], HEAP_HINT,
+            INVALID_DEVID), WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+
+        ExpectIntEQ(wc_HashInit(&hash, notCompiledHash[i]),
+            WC_NO_ERR_TRACE(HASH_TYPE_E));
+        ExpectIntEQ(wc_HashInit_ex(&hash, notCompiledHash[i], HEAP_HINT,
+            INVALID_DEVID), WC_NO_ERR_TRACE(HASH_TYPE_E));
+
+        wc_HashFree(NULL,  notCompiledHash[i]);
+    }
+
+    for (i = 0; i < notSupportedHashLen; i++) {
+        /* check for null ptr */
+        ExpectIntEQ(wc_HashInit(NULL, (enum wc_HashType)notSupportedHash[i]),
+            WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+        ExpectIntEQ(wc_HashInit_ex(NULL, (enum wc_HashType)notSupportedHash[i], HEAP_HINT,
+            INVALID_DEVID), WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+
+        ExpectIntEQ(wc_HashInit(&hash, (enum wc_HashType)notSupportedHash[i]),
+            WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+        wc_HashFree(&hash, (enum wc_HashType)notSupportedHash[i]);
+        ExpectIntEQ(wc_HashInit_ex(&hash, (enum wc_HashType)notSupportedHash[i], HEAP_HINT,
+            INVALID_DEVID), WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+        wc_HashFree(&hash,  (enum wc_HashType)notSupportedHash[i]);
+
+        wc_HashFree(NULL,  (enum wc_HashType)notSupportedHash[i]);
+    }  /* end of for loop */
+
+#endif
+    return EXPECT_RESULT();
+}  /* end of test_wc_HashInit */
+
+int test_wc_HashUpdate(void)
+{
+    EXPECT_DECLS;
+#ifndef NO_HASH_WRAPPER
+    wc_HashAlg hash;
+    int i;  /* 0 indicates tests passed, 1 indicates failure */
+
+    for (i = 0; i < supportedHashLen; i++) {
+        ExpectIntEQ(wc_HashInit(&hash, supportedHash[i]), 0);
+
+        /* Invalid parameters */
+        ExpectIntEQ(wc_HashUpdate(NULL, supportedHash[i], NULL, 1),
+            WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+        ExpectIntEQ(wc_HashUpdate(&hash, supportedHash[i], NULL, 1),
+            WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+        ExpectIntEQ(wc_HashUpdate(NULL, supportedHash[i], NULL, 0),
+            WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+        ExpectIntEQ(wc_HashUpdate(NULL, supportedHash[i], (byte*)"a", 1),
+            WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+
+        ExpectIntEQ(wc_HashUpdate(&hash, supportedHash[i], NULL, 0), 0);
+        ExpectIntEQ(wc_HashUpdate(&hash, supportedHash[i], (byte*)"a", 1), 0);
+
+        wc_HashFree(&hash, supportedHash[i]);
+    }
+
+    for (i = 0; i < notCompiledHashLen; i++) {
+        ExpectIntEQ(wc_HashInit(&hash, notCompiledHash[i]),
+            WC_NO_ERR_TRACE(HASH_TYPE_E));
+
+        /* Invalid parameters */
+        ExpectIntEQ(wc_HashUpdate(NULL, notCompiledHash[i], NULL, 1),
+            WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+        ExpectIntEQ(wc_HashUpdate(&hash, notCompiledHash[i], NULL, 1),
+            WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+        ExpectIntEQ(wc_HashUpdate(NULL, notCompiledHash[i], NULL, 0),
+            WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+        ExpectIntEQ(wc_HashUpdate(NULL, notCompiledHash[i], (byte*)"a", 1),
+            WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+
+        ExpectIntEQ(wc_HashUpdate(&hash, notCompiledHash[i], NULL, 0),
+            WC_NO_ERR_TRACE(HASH_TYPE_E));
+        ExpectIntEQ(wc_HashUpdate(&hash, notCompiledHash[i], (byte*)"a", 1),
+            WC_NO_ERR_TRACE(HASH_TYPE_E));
+
+        wc_HashFree(&hash, notCompiledHash[i]);
+    }
+
+    for (i = 0; i < notSupportedHashLen; i++) {
+        ExpectIntEQ(wc_HashInit(&hash, (enum wc_HashType)notSupportedHash[i]),
+            WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+
+        /* Invalid parameters */
+        ExpectIntEQ(wc_HashUpdate(NULL, (enum wc_HashType)notSupportedHash[i], NULL, 1),
+            WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+        ExpectIntEQ(wc_HashUpdate(&hash, (enum wc_HashType)notSupportedHash[i], NULL, 1),
+            WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+        ExpectIntEQ(wc_HashUpdate(NULL, (enum wc_HashType)notSupportedHash[i], NULL, 0),
+            WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+        ExpectIntEQ(wc_HashUpdate(NULL, (enum wc_HashType)notSupportedHash[i], (byte*)"a", 1),
+            WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+
+        ExpectIntEQ(wc_HashUpdate(&hash, (enum wc_HashType)notSupportedHash[i], NULL, 0),
+            WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+        ExpectIntEQ(wc_HashUpdate(&hash, (enum wc_HashType)notSupportedHash[i], (byte*)"a", 1),
+            WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+
+        wc_HashFree(&hash, (enum wc_HashType)notSupportedHash[i]);
+    }
+
+#if defined(DEBUG_WOLFSSL) && !defined(NO_SHA256) && defined(WOLFSSL_SHA512)
+    ExpectIntEQ(wc_HashInit(&hash, WC_HASH_TYPE_SHA256), 0);
+    ExpectIntEQ(wc_HashUpdate(&hash, WC_HASH_TYPE_SHA512, NULL, 0),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wc_HashUpdate(&hash, WC_HASH_TYPE_SHA512, (byte*)"a", 1),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+#endif
+#endif
+    return EXPECT_RESULT();
+}
+
+int test_wc_HashFinal(void)
+{
+    EXPECT_DECLS;
+#ifndef NO_HASH_WRAPPER
+    wc_HashAlg hash;
+    byte digest[WC_MAX_DIGEST_SIZE];
+    int i;  /* 0 indicates tests passed, 1 indicates failure */
+
+    for (i = 0; i < supportedHashLen; i++) {
+        ExpectIntEQ(wc_HashInit(&hash, supportedHash[i]), 0);
+
+        /* Invalid parameters */
+        ExpectIntEQ(wc_HashFinal(NULL, supportedHash[i], NULL),
+            WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+        ExpectIntEQ(wc_HashFinal(&hash, supportedHash[i], NULL),
+            WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+        ExpectIntEQ(wc_HashFinal(NULL, supportedHash[i], digest),
+            WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+
+        ExpectIntEQ(wc_HashFinal(&hash, supportedHash[i], digest), 0);
+
+        wc_HashFree(&hash, supportedHash[i]);
+    }
+
+    for (i = 0; i < notCompiledHashLen; i++) {
+        ExpectIntEQ(wc_HashInit(&hash, notCompiledHash[i]),
+            WC_NO_ERR_TRACE(HASH_TYPE_E));
+
+        /* Invalid parameters */
+        ExpectIntEQ(wc_HashFinal(NULL, notCompiledHash[i], NULL),
+            WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+        ExpectIntEQ(wc_HashFinal(&hash, notCompiledHash[i], NULL),
+            WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+        ExpectIntEQ(wc_HashFinal(NULL, notCompiledHash[i], digest),
+            WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+
+        ExpectIntEQ(wc_HashFinal(&hash, notCompiledHash[i], digest),
+            WC_NO_ERR_TRACE(HASH_TYPE_E));
+
+        wc_HashFree(&hash, notCompiledHash[i]);
+    }
+
+    for (i = 0; i < notSupportedHashLen; i++) {
+        ExpectIntEQ(wc_HashInit(&hash, (enum wc_HashType)notSupportedHash[i]),
+            WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+
+        /* Invalid parameters */
+        ExpectIntEQ(wc_HashFinal(NULL, (enum wc_HashType)notSupportedHash[i], NULL),
+            WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+        ExpectIntEQ(wc_HashFinal(&hash, (enum wc_HashType)notSupportedHash[i], NULL),
+            WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+        ExpectIntEQ(wc_HashFinal(NULL, (enum wc_HashType)notSupportedHash[i], digest),
+            WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+
+        ExpectIntEQ(wc_HashFinal(&hash, (enum wc_HashType)notSupportedHash[i], digest),
+            WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+
+        wc_HashFree(&hash, (enum wc_HashType)notSupportedHash[i]);
+    }
+#if defined(DEBUG_WOLFSSL) && !defined(NO_SHA256) && defined(WOLFSSL_SHA512)
+    ExpectIntEQ(wc_HashInit(&hash, WC_HASH_TYPE_SHA256), 0);
+    ExpectIntEQ(wc_HashFinal(&hash, WC_HASH_TYPE_SHA512, digest),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+#endif
+#endif
+    return EXPECT_RESULT();
+}
+
+int test_wc_HashNewDelete(void)
+{
+    EXPECT_DECLS;
+#if !defined(NO_HASH_WRAPPER) && !defined(WC_NO_CONSTRUCTORS)
+    wc_HashAlg* hash;
+    byte digest[WC_MAX_DIGEST_SIZE];
+    int ret;
+    int i;
+
+    for (i = 0; i < supportedHashLen; i++) {
+         ExpectNotNull(hash = wc_HashNew(supportedHash[i], HEAP_HINT,
+             INVALID_DEVID, &ret));
+         ExpectIntEQ(ret, 0);
+
+         ExpectIntEQ(wc_HashUpdate(hash, supportedHash[i], (byte*)"a", 1), 0);
+         ExpectIntEQ(wc_HashFinal(hash, supportedHash[i], digest), 0);
+
+         ExpectIntEQ(wc_HashDelete(hash, &hash), 0);
+         ExpectNull(hash);
+
+         ExpectNotNull(hash = wc_HashNew(supportedHash[i], HEAP_HINT,
+             INVALID_DEVID, &ret));
+         ExpectIntEQ(ret, 0);
+         ExpectIntEQ(wc_HashDelete(hash, NULL), 0);
+
+         ExpectIntEQ(wc_HashDelete(NULL, NULL), WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    }
+
+    for (i = 0; i < notCompiledHashLen; i++) {
+         ExpectNull(wc_HashNew(notCompiledHash[i], HEAP_HINT, INVALID_DEVID,
+             &ret));
+         ExpectIntEQ(ret, WC_NO_ERR_TRACE(HASH_TYPE_E));
+    }
+
+    for (i = 0; i < notSupportedHashLen; i++) {
+         ExpectNull(wc_HashNew((enum wc_HashType)notSupportedHash[i], HEAP_HINT, INVALID_DEVID,
+             &ret));
+         ExpectIntEQ(ret, WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    }
+#endif
+    return EXPECT_RESULT();
+}
+
+int test_wc_HashGetDigestSize(void)
+{
+    EXPECT_DECLS;
+#ifndef NO_HASH_WRAPPER
+    int i;
+
+    for (i = 0; i < supportedHashLen; i++) {
+        ExpectIntGT(wc_HashGetDigestSize(supportedHash[i]), 0);
+    }
+    for (i = 0; i < sizeSupportedHashLen; i++) {
+        ExpectIntGT(wc_HashGetDigestSize(sizeSupportedHash[i]), 0);
+    }
+
+    for (i = 0; i < sizeNotCompiledHashLen; i++) {
+        ExpectIntEQ(wc_HashGetDigestSize(sizeNotCompiledHash[i]),
+            WC_NO_ERR_TRACE(HASH_TYPE_E));
+    }
+
+    for (i = 0; i < sizeNotSupportedHashLen; i++) {
+        ExpectIntEQ(wc_HashGetDigestSize((enum wc_HashType)sizeNotSupportedHash[i]),
+            WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    }
+#endif
+    return EXPECT_RESULT();
+}
+
+int test_wc_HashGetBlockSize(void)
+{
+    EXPECT_DECLS;
+#ifndef NO_HASH_WRAPPER
+    int i;
+
+    for (i = 0; i < supportedHashLen; i++) {
+        ExpectIntGT(wc_HashGetBlockSize(supportedHash[i]), 0);
+    }
+    for (i = 0; i < sizeSupportedHashLen; i++) {
+        ExpectIntGT(wc_HashGetBlockSize(sizeSupportedHash[i]), 0);
+    }
+
+    for (i = 0; i < sizeNotCompiledHashLen; i++) {
+        ExpectIntEQ(wc_HashGetBlockSize(sizeNotCompiledHash[i]),
+            WC_NO_ERR_TRACE(HASH_TYPE_E));
+    }
+
+    for (i = 0; i < sizeNotSupportedHashLen; i++) {
+        ExpectIntEQ(wc_HashGetBlockSize((enum wc_HashType)sizeNotSupportedHash[i]),
+            WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    }
+#endif
+    return EXPECT_RESULT();
+}
+
+int test_wc_Hash(void)
+{
+    EXPECT_DECLS;
+#if !defined(NO_HASH_WRAPPER) && !defined(WC_NO_CONSTRUCTORS)
+    byte digest[WC_MAX_DIGEST_SIZE];
+    int i;
+
+    for (i = 0; i < supportedHashLen; i++) {
+        ExpectIntEQ(wc_Hash(supportedHash[i], (byte*)"a", 1,
+            digest, sizeof(digest)), 0);
+        ExpectIntEQ(wc_Hash_ex(supportedHash[i], (byte*)"a", 1,
+            digest, sizeof(digest), HEAP_HINT, INVALID_DEVID), 0);
+    }
+#if !defined(NO_MD5) && !defined(NO_SHA)
+    ExpectIntEQ(wc_Hash(WC_HASH_TYPE_MD5_SHA, (byte*)"a", 1,
+        digest, sizeof(digest)), 0);
+    ExpectIntEQ(wc_Hash_ex(WC_HASH_TYPE_MD5_SHA, (byte*)"a", 1,
+        digest, sizeof(digest), HEAP_HINT, INVALID_DEVID), 0);
+#endif
+
+    for (i = 0; i < notCompiledHashLen; i++) {
+        ExpectIntEQ(wc_Hash(notCompiledHash[i], (byte*)"a", 1,
+            digest, sizeof(digest)), WC_NO_ERR_TRACE(HASH_TYPE_E));
+        ExpectIntEQ(wc_Hash_ex(notCompiledHash[i], (byte*)"a", 1,
+            digest, sizeof(digest), HEAP_HINT, INVALID_DEVID),
+            WC_NO_ERR_TRACE(HASH_TYPE_E));
+    }
+    for (i = 0; i < sizeNotCompiledHashLen; i++) {
+        ExpectIntEQ(wc_Hash(sizeNotCompiledHash[i], (byte*)"a", 1,
+            digest, sizeof(digest)), WC_NO_ERR_TRACE(HASH_TYPE_E));
+        ExpectIntEQ(wc_Hash_ex(sizeNotCompiledHash[i], (byte*)"a", 1,
+            digest, sizeof(digest), HEAP_HINT, INVALID_DEVID),
+            WC_NO_ERR_TRACE(HASH_TYPE_E));
+    }
+
+    for (i = 0; i < sizeNotSupportedHashLen; i++) {
+        if (notSupportedHash[i] == WC_HASH_TYPE_MD5_SHA) {
+            /* Algorithm only supported with wc_Hash() and wc_Hash_ex(). */
+            continue;
+        }
+        ExpectIntEQ(wc_Hash((enum wc_HashType)sizeNotSupportedHash[i], (byte*)"a", 1,
+            digest, sizeof(digest)), WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+        ExpectIntEQ(wc_Hash_ex((enum wc_HashType)sizeNotSupportedHash[i], (byte*)"a", 1,
+            digest, sizeof(digest), HEAP_HINT, INVALID_DEVID),
+            WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    }
+#endif
+    return EXPECT_RESULT();
+}
+
+
+/*
+ * Unit test function for wc_HashSetFlags()
+ */
+int test_wc_HashSetFlags(void)
+{
+    EXPECT_DECLS;
+#if !defined(NO_HASH_WRAPPER) && defined(WOLFSSL_HASH_FLAGS)
+    wc_HashAlg hash;
+    word32 flags = 0;
+    int i;
+
+
+    /* For loop to test various arguments... */
+    for (i = 0; i < supportedHashLen; i++) {
+        ExpectIntEQ(wc_HashInit(&hash, supportedHash[i]), 0);
+        ExpectIntEQ(wc_HashSetFlags(&hash, supportedHash[i], flags), 0);
+        ExpectTrue((flags & WC_HASH_FLAG_ISCOPY) == 0);
+        ExpectIntEQ(wc_HashSetFlags(NULL, supportedHash[i], flags),
+            WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+        wc_HashFree(&hash, supportedHash[i]);
+
+    }
+
+    for (i = 0; i < notCompiledHashLen; i++) {
+        ExpectIntEQ(wc_HashInit(&hash, notCompiledHash[i]),
+            WC_NO_ERR_TRACE(HASH_TYPE_E));
+        ExpectIntEQ(wc_HashSetFlags(&hash, notCompiledHash[i], flags),
+            WC_NO_ERR_TRACE(HASH_TYPE_E));
+        ExpectIntEQ(wc_HashFree(&hash, notCompiledHash[i]),
+            WC_NO_ERR_TRACE(HASH_TYPE_E));
+    }
+
+    /* For loop to test not supported cases */
+    for (i = 0; i < notSupportedHashLen; i++) {
+        ExpectIntEQ(wc_HashInit(&hash, (enum wc_HashType)notSupportedHash[i]),
+            WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+        ExpectIntEQ(wc_HashSetFlags(&hash, (enum wc_HashType)notSupportedHash[i], flags),
+            WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+        ExpectIntEQ(wc_HashFree(&hash, (enum wc_HashType)notSupportedHash[i]),
+            WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    }
+#endif
+    return EXPECT_RESULT();
+}  /* END test_wc_HashSetFlags */
+
+/*
+ * Unit test function for wc_HashGetFlags()
+ */
+int test_wc_HashGetFlags(void)
+{
+    EXPECT_DECLS;
+#if !defined(NO_HASH_WRAPPER) && defined(WOLFSSL_HASH_FLAGS)
+    wc_HashAlg hash;
+    word32 flags = 0;
+    int i;
+
+    /* For loop to test various arguments... */
+    for (i = 0; i < supportedHashLen; i++) {
+        ExpectIntEQ(wc_HashInit(&hash, supportedHash[i]), 0);
+        ExpectIntEQ(wc_HashGetFlags(&hash, supportedHash[i], &flags), 0);
+        ExpectTrue((flags & WC_HASH_FLAG_ISCOPY) == 0);
+        ExpectIntEQ(wc_HashGetFlags(NULL, supportedHash[i], &flags),
+            WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+        wc_HashFree(&hash, supportedHash[i]);
+    }
+
+    for (i = 0; i < notCompiledHashLen; i++) {
+        ExpectIntEQ(wc_HashInit(&hash, notCompiledHash[i]),
+            WC_NO_ERR_TRACE(HASH_TYPE_E));
+        ExpectIntEQ(wc_HashGetFlags(&hash, notCompiledHash[i], &flags),
+            WC_NO_ERR_TRACE(HASH_TYPE_E));
+        ExpectIntEQ(wc_HashFree(&hash, notCompiledHash[i]),
+            WC_NO_ERR_TRACE(HASH_TYPE_E));
+    }
+
+    /* For loop to test not supported cases */
+    for (i = 0; i < notSupportedHashLen; i++) {
+        ExpectIntEQ(wc_HashInit(&hash, (enum wc_HashType)notSupportedHash[i]),
+            WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+        ExpectIntEQ(wc_HashGetFlags(&hash, (enum wc_HashType)notSupportedHash[i], &flags),
+            WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+        ExpectIntEQ(wc_HashFree(&hash, (enum wc_HashType)notSupportedHash[i]),
+            WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    }
+#endif
+    return EXPECT_RESULT();
+}  /* END test_wc_HashGetFlags */
+
+int test_wc_Hash_Algs(void)
+{
+    EXPECT_DECLS;
+#ifndef NO_HASH_WRAPPER
+#ifndef NO_MD5
+    DIGEST_HASH_TEST(Md5, MD5);
+#endif
+#ifndef NO_SHA
+    DIGEST_HASH_TEST(Sha, SHA);
+#endif
+#ifdef WOLFSSL_SHA224
+    DIGEST_HASH_TEST(Sha224, SHA224);
+#endif
+#ifndef NO_SHA256
+    DIGEST_HASH_TEST(Sha256, SHA256);
+#endif
+#ifdef WOLFSSL_SHA384
+    DIGEST_HASH_TEST(Sha384, SHA384);
+#endif
+#ifdef WOLFSSL_SHA512
+    DIGEST_HASH_TEST(Sha512, SHA512);
+#ifndef WOLFSSL_NOSHA512_224
+    DIGEST_HASH_TEST(Sha512_224, SHA512_224);
+#endif
+#ifndef WOLFSSL_NOSHA512_256
+    DIGEST_HASH_TEST(Sha512_256, SHA512_256);
+#endif
+#endif /* WOLFSSL_SHA512 */
+#ifdef WOLFSSL_SHA3
+    #ifndef WOLFSSL_NOSHA3_224
+    DIGEST_COUNT_HASH_TEST(Sha3_224, SHA3_224);
+    #endif
+    #ifndef WOLFSSL_NOSHA3_256
+    DIGEST_COUNT_HASH_TEST(Sha3_256, SHA3_256);
+    #endif
+    #ifndef WOLFSSL_NOSHA3_384
+    DIGEST_COUNT_HASH_TEST(Sha3_384, SHA3_384);
+    #endif
+    #ifndef WOLFSSL_NOSHA3_512
+    DIGEST_COUNT_HASH_TEST(Sha3_512, SHA3_512);
+    #endif
+#endif
+#ifdef WOLFSSL_SM3
+    DIGEST_HASH_TEST(Sm3, SM3);
+#endif
+#endif /* !NO_HASH_WRAPPER */
+    return EXPECT_RESULT();
+}
+
+int test_wc_HashGetOID(void)
+{
+    EXPECT_DECLS;
+#if !defined(NO_HASH_WRAPPER) && (!defined(NO_ASN) || !defined(NO_DH) || \
+                                  defined(HAVE_ECC))
+    static const enum wc_HashType oidOnlySupportedHash[] = {
+    #ifdef WOLFSSL_MD2
+        WC_HASH_TYPE_MD2,
+    #endif
+    #if !defined(NO_MD5) && !defined(NO_SHA)
+        WC_HASH_TYPE_MD5_SHA,
+    #endif
+        WC_HASH_TYPE_NONE   /* Dummy value to ensure list is non-zero. */
+    };
+    static const int oidOnlySupportedHashLen = (sizeof(oidOnlySupportedHash) /
+                                                sizeof(enum wc_HashType)) - 1;
+    static const enum wc_HashType oidOnlyNotCompiledHash[] = {
+    #ifndef WOLFSSL_MD2
+        WC_HASH_TYPE_MD2,
+    #endif
+    #ifdef NO_MD5
+        WC_HASH_TYPE_MD5_SHA,
+    #endif
+        WC_HASH_TYPE_MD4,
+        WC_HASH_TYPE_BLAKE2B,
+        WC_HASH_TYPE_BLAKE2S,
+        WC_HASH_TYPE_NONE   /* Dummy value to ensure list is non-zero. */
+    };
+    static const int oidOnlyNotCompiledHashLen =
+        (sizeof(oidOnlyNotCompiledHash) / sizeof(enum wc_HashType)) - 1;
+    static const int oidNotSupportedHash[] = {
+        WC_HASH_TYPE_NONE,
+        WC_HASH_TYPE_MAX + 1
+    };
+    static const int oidNotSupportedHashLen = (sizeof(oidNotSupportedHash) /
+                                               sizeof(enum wc_HashType));
+    int i;
+
+    for (i = 0; i < supportedHashLen; i++) {
+        ExpectIntGT(wc_HashGetOID(supportedHash[i]), 0);
+    }
+    for (i = 0; i < oidOnlySupportedHashLen; i++) {
+        ExpectIntGT(wc_HashGetOID(oidOnlySupportedHash[i]), 0);
+    }
+
+    for (i = 0; i < notCompiledHashLen; i++) {
+        ExpectIntEQ(wc_HashGetOID(notCompiledHash[i]),
+            WC_NO_ERR_TRACE(HASH_TYPE_E));
+    }
+    for (i = 0; i < oidOnlyNotCompiledHashLen; i++) {
+        ExpectIntEQ(wc_HashGetOID(oidOnlyNotCompiledHash[i]),
+            WC_NO_ERR_TRACE(HASH_TYPE_E));
+    }
+
+    for (i = 0; i < oidNotSupportedHashLen; i++) {
+        ExpectIntEQ(wc_HashGetOID((enum wc_HashType)oidNotSupportedHash[i]),
+            WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    }
+#endif
+    return EXPECT_RESULT();
+}
+
+int test_wc_OidGetHash(void)
+{
+    EXPECT_DECLS;
+#if !defined(NO_HASH_WRAPPER) && !defined(NO_ASN)
+    static const int sumSupportedHash[] = {
+    #ifdef WOLFSSL_MD2
+        MD2h,
+    #endif
+    #ifndef NO_MD5
+        MD5h,
+    #endif
+    #ifndef NO_SHA
+        SHAh,
+    #endif
+    #ifdef WOLFSSL_SHA224
+        SHA224h,
+    #endif
+    #ifndef NO_SHA256
+        SHA256h,
+    #endif
+    #ifdef WOLFSSL_SHA384
+        SHA384h,
+    #endif
+    #ifdef WOLFSSL_SHA512
+        SHA512h,
+        #if (!defined(HAVE_FIPS) || FIPS_VERSION3_GE(7,0,0)) && \
+            !defined(HAVE_SELFTEST)
+        #ifndef WOLFSSL_NOSHA512_224
+        SHA512_224h,
+        #endif
+        #ifndef WOLFSSL_NOSHA512_256
+        SHA512_256h,
+        #endif
+        #endif
+    #endif
+    #ifdef WOLFSSL_SHA3
+        SHA3_224h,
+        SHA3_256h,
+        SHA3_384h,
+        SHA3_512h,
+    #endif
+    #ifdef WOLFSSL_SM3
+        SM3h,
+    #endif
+        0   /* Dummy value to ensure list is non-zero. */
+    };
+    static const int sumSupportedHashLen = (sizeof(sumSupportedHash) /
+                                            sizeof(enum wc_HashType)) - 1;
+    static const int sumNotSupportedHash[] = {
+        MD4h,
+    #ifdef NO_MD5
+        MD5h,
+    #endif
+    #ifdef NO_SHA
+        SHAh,
+    #endif
+    #ifndef WOLFSSL_SHA224
+        SHA224h,
+    #endif
+    #ifdef NO_SHA256
+        SHA256h,
+    #endif
+    #ifndef WOLFSSL_SHA384
+        SHA384h,
+    #endif
+    #ifndef WOLFSSL_SHA512
+        SHA512h,
+        SHA512_224h,
+        SHA512_256h,
+    #elif defined(HAVE_SELFTEST) || \
+          (defined(HAVE_FIPS) && !FIPS_VERSION3_GE(7,0,0))
+        SHA512_224h,
+        SHA512_256h,
+    #else
+        #ifdef WOLFSSL_NOSHA512_224
+        SHA512_224h,
+        #endif
+        #ifdef WOLFSSL_NOSHA512_256
+        SHA512_256h,
+        #endif
+    #endif
+    #ifndef WOLFSSL_SHA3
+        SHA3_224h,
+        SHA3_256h,
+        SHA3_384h,
+        SHA3_512h,
+    #endif
+    #ifndef WOLFSSL_SM3
+        SM3h,
+    #endif
+        0
+    };
+    static const int sumNotSupportedHashLen = (sizeof(sumNotSupportedHash) /
+                                               sizeof(enum wc_HashType));
+    int i;
+    enum wc_HashType hash;
+
+    for (i = 0; i < sumSupportedHashLen; i++) {
+        hash = wc_OidGetHash(sumSupportedHash[i]);
+        ExpectTrue(hash != WC_HASH_TYPE_NONE);
+    }
+
+    for (i = 0; i < sumNotSupportedHashLen; i++) {
+        hash = wc_OidGetHash(sumNotSupportedHash[i]);
+        ExpectTrue(hash == WC_HASH_TYPE_NONE);
+    }
+#endif
+    return EXPECT_RESULT();
+}
+
+/*
+ * MC/DC coverage for wc_HashTypeConvert()'s "current master" mapping arm
+ * (int hashType -> enum wc_HashType), used only when HAVE_FIPS/HAVE_SELFTEST
+ * are NOT defined (the legacy FIPSv1/selftest build instead uses a switch
+ * with its own per-type case labels, a structurally different mechanism):
+ * "hashType > 0 && hashType <= WC_HASH_TYPE_MAX". Every other caller in this
+ * suite (indirectly, via password-based-KDF style paths) only ever
+ * supplies the operand pair's true-true and false-(n/a) sides; this test
+ * supplies the missing independence pair for the "hashType <=
+ * WC_HASH_TYPE_MAX" operand by holding "hashType > 0" true while flipping
+ * the upper-bound check to its false side (an out-of-range positive
+ * value).
+ */
+int test_wc_HashTypeConvert(void)
+{
+    EXPECT_DECLS;
+#if !defined(NO_PWDBASED) || !defined(NO_ASN)
+    /* hashType > 0 (true, held) && hashType <= WC_HASH_TYPE_MAX (false) ->
+     * eHashType stays at its WC_HASH_TYPE_NONE initializer. */
+    enum wc_HashType converted = wc_HashTypeConvert((int)WC_HASH_TYPE_MAX +
+        100);
+
+    ExpectIntEQ((int)converted, (int)WC_HASH_TYPE_NONE);
+#endif
+    return EXPECT_RESULT();
+} /* END test_wc_HashTypeConvert */
+
+/*
+ * MC/DC decision coverage for the wc_Hash* dispatcher in wolfcrypt/src/
+ * hash.c: argument-check / NULL / type-mismatch / unknown-hashType /
+ * short-buffer branches, each asserting the specific error the source
+ * returns for that branch, with the independence pair for every compound
+ * condition (hash == NULL || (data == NULL && dataSz > 0), etc).
+ */
+int test_wc_HashDecisionCoverage(void)
+{
+    EXPECT_DECLS;
+#ifndef NO_HASH_WRAPPER
+    wc_HashAlg hash;
+    byte digest[WC_MAX_DIGEST_SIZE];
+    byte shortBuf[1] = {0};
+
+    if (supportedHashLen > 0) {
+        enum wc_HashType type = supportedHash[0];
+
+        /* wc_HashInit(_ex): hash == NULL (true side). */
+        ExpectIntEQ(wc_HashInit(NULL, type), WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+        ExpectIntEQ(wc_HashInit_ex(NULL, type, HEAP_HINT, INVALID_DEVID),
+            WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+        /* false side: valid struct pointer. */
+        ExpectIntEQ(wc_HashInit(&hash, type), 0);
+
+        /* wc_HashUpdate: hash == NULL || (data == NULL && dataSz > 0). */
+        /* hash == NULL true; short-circuits regardless of data/dataSz. */
+        ExpectIntEQ(wc_HashUpdate(NULL, type, (byte*)"a", 1),
+            WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+        /* hash == NULL false; data == NULL && dataSz > 0 true. */
+        ExpectIntEQ(wc_HashUpdate(&hash, type, NULL, 1),
+            WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+        /* independence pair on "dataSz > 0": data == NULL held, dataSz
+         * flipped to 0 -> AND false -> overall decision false. */
+        ExpectIntEQ(wc_HashUpdate(&hash, type, NULL, 0), 0);
+        /* independence pair on "data == NULL": dataSz > 0 held, data
+         * flipped to non-NULL -> AND false -> overall decision false. */
+        ExpectIntEQ(wc_HashUpdate(&hash, type, (byte*)"a", 1), 0);
+
+        /* wc_HashFinal: hash == NULL || out == NULL. */
+        ExpectIntEQ(wc_HashFinal(NULL, type, digest),
+            WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+        ExpectIntEQ(wc_HashFinal(&hash, type, NULL),
+            WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+        ExpectIntEQ(wc_HashFinal(&hash, type, digest), 0);
+
+        ExpectIntEQ(wc_HashFree(&hash, type), 0);
+
+        /* wc_HashFree: hash == NULL. */
+        ExpectIntEQ(wc_HashFree(NULL, type), WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+
+#ifdef DEBUG_WOLFSSL
+        /* hash->type != type mismatch branches (Update/Final/Free), only
+         * built under DEBUG_WOLFSSL; needs two distinct compiled-in types
+         * for an independence pair against the matching-type calls above. */
+        if (supportedHashLen > 1) {
+            enum wc_HashType type2 = supportedHash[1];
+
+            ExpectIntEQ(wc_HashInit(&hash, type), 0);
+            ExpectIntEQ(wc_HashUpdate(&hash, type2, (byte*)"a", 1),
+                WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+            ExpectIntEQ(wc_HashFinal(&hash, type2, digest),
+                WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+            ExpectIntEQ(wc_HashFree(&hash, type2),
+                WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+            /* clean up with the matching type (false side already shown
+             * by the un-guarded calls above). */
+            ExpectIntEQ(wc_HashFree(&hash, type), 0);
+        }
+#endif /* DEBUG_WOLFSSL */
+
+        /* wc_Hash/wc_Hash_ex: hash_len < (word32)dig_size (true side,
+         * BUFFER_E). False side already covered by every supportedHash[]
+         * call in test_wc_Hash(). */
+        ExpectIntEQ(wc_Hash(type, (byte*)"a", 1, shortBuf, 0),
+            WC_NO_ERR_TRACE(BUFFER_E));
+        ExpectIntEQ(wc_Hash_ex(type, (byte*)"a", 1, shortBuf, 0,
+            HEAP_HINT, INVALID_DEVID), WC_NO_ERR_TRACE(BUFFER_E));
+    }
+
+    /* wc_HashInit_ex/wc_HashUpdate/wc_HashFinal/wc_HashFree: the
+     * "not supported" case labels (MD5_SHA, MD2, MD4, BLAKE2B, BLAKE2S)
+     * always fall to HASH_TYPE_E in these four switches, unconditionally
+     * (no #ifdef inside the case, unlike wc_HashGetDigestSize/BlockSize
+     * which have real, feature-gated arms for the same types). When the
+     * corresponding feature macro (WOLFSSL_MD2, HAVE_BLAKE2B/2S) is
+     * compiled in, notCompiledHash[] above omits these types, so nothing
+     * else in this file drives these particular case labels; exercise
+     * them explicitly here so the arm is reached regardless of build. */
+    ExpectIntEQ(wc_HashInit(&hash, WC_HASH_TYPE_MD5_SHA),
+        WC_NO_ERR_TRACE(HASH_TYPE_E));
+    ExpectIntEQ(wc_HashInit_ex(&hash, WC_HASH_TYPE_MD2, HEAP_HINT,
+        INVALID_DEVID), WC_NO_ERR_TRACE(HASH_TYPE_E));
+    ExpectIntEQ(wc_HashInit(&hash, WC_HASH_TYPE_MD4),
+        WC_NO_ERR_TRACE(HASH_TYPE_E));
+    ExpectIntEQ(wc_HashInit(&hash, WC_HASH_TYPE_BLAKE2B),
+        WC_NO_ERR_TRACE(HASH_TYPE_E));
+    ExpectIntEQ(wc_HashInit(&hash, WC_HASH_TYPE_BLAKE2S),
+        WC_NO_ERR_TRACE(HASH_TYPE_E));
+
+    /* wc_HashUpdate/wc_HashFinal/wc_HashFree reach the "not supported ->
+     * HASH_TYPE_E" switch arm only when DEBUG_WOLFSSL is off: under
+     * DEBUG_WOLFSSL each first checks (hash->type != type) and returns
+     * BAD_FUNC_ARG before the switch. wc_HashInit above legitimately refuses
+     * these types, so hash->type is never one of them and the debug check
+     * always intercepts here, making the arm unreachable in DEBUG builds
+     * (non-DEBUG builds cover it). Not a value workaround -- the arm's
+     * coverage simply comes from non-DEBUG variants in the harness union. */
+#ifndef DEBUG_WOLFSSL
+    ExpectIntEQ(wc_HashUpdate(&hash, WC_HASH_TYPE_MD5_SHA, (byte*)"a", 1),
+        WC_NO_ERR_TRACE(HASH_TYPE_E));
+    ExpectIntEQ(wc_HashUpdate(&hash, WC_HASH_TYPE_BLAKE2B, (byte*)"a", 1),
+        WC_NO_ERR_TRACE(HASH_TYPE_E));
+    ExpectIntEQ(wc_HashUpdate(&hash, WC_HASH_TYPE_BLAKE2S, (byte*)"a", 1),
+        WC_NO_ERR_TRACE(HASH_TYPE_E));
+
+    ExpectIntEQ(wc_HashFinal(&hash, WC_HASH_TYPE_MD5_SHA, digest),
+        WC_NO_ERR_TRACE(HASH_TYPE_E));
+    ExpectIntEQ(wc_HashFinal(&hash, WC_HASH_TYPE_BLAKE2B, digest),
+        WC_NO_ERR_TRACE(HASH_TYPE_E));
+    ExpectIntEQ(wc_HashFinal(&hash, WC_HASH_TYPE_BLAKE2S, digest),
+        WC_NO_ERR_TRACE(HASH_TYPE_E));
+
+    ExpectIntEQ(wc_HashFree(&hash, WC_HASH_TYPE_MD5_SHA),
+        WC_NO_ERR_TRACE(HASH_TYPE_E));
+    ExpectIntEQ(wc_HashFree(&hash, WC_HASH_TYPE_BLAKE2B),
+        WC_NO_ERR_TRACE(HASH_TYPE_E));
+    ExpectIntEQ(wc_HashFree(&hash, WC_HASH_TYPE_BLAKE2S),
+        WC_NO_ERR_TRACE(HASH_TYPE_E));
+#endif /* !DEBUG_WOLFSSL */
+
+    /* wc_Hash/wc_Hash_ex: dig_size < 0 (true side) via an unsupported
+     * hashType hitting the default/NONE arm of wc_HashGetDigestSize. */
+    ExpectIntEQ(wc_Hash(WC_HASH_TYPE_NONE, (byte*)"a", 1, digest,
+        sizeof(digest)), WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wc_Hash_ex(WC_HASH_TYPE_NONE, (byte*)"a", 1, digest,
+        sizeof(digest), HEAP_HINT, INVALID_DEVID),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+
+    /* wc_HashGetDigestSize/wc_HashGetBlockSize: default/NONE arm. */
+    ExpectIntEQ(wc_HashGetDigestSize(WC_HASH_TYPE_NONE),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wc_HashGetBlockSize(WC_HASH_TYPE_NONE),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+
+#if !defined(NO_ASN) || !defined(NO_DH) || defined(HAVE_ECC)
+    /* wc_HashGetOID: WC_HASH_TYPE_NONE arm and default (out-of-range)
+     * arm are two distinct case labels both returning BAD_FUNC_ARG. */
+    ExpectIntEQ(wc_HashGetOID(WC_HASH_TYPE_NONE),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wc_HashGetOID((enum wc_HashType)(WC_HASH_TYPE_MAX + 1)),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+#endif
+
+#if !defined(WC_NO_CONSTRUCTORS)
+    /* wc_HashNew: unsupported hashType -> NULL + BAD_FUNC_ARG result code.
+     * wc_HashDelete: hash == NULL. */
+    {
+        int ret = 0;
+
+        ExpectNull(wc_HashNew((enum wc_HashType)(WC_HASH_TYPE_MAX + 1),
+            HEAP_HINT, INVALID_DEVID, &ret));
+        ExpectIntEQ(ret, WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+        ExpectIntEQ(wc_HashDelete(NULL, NULL), WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    }
+#endif
+
+#ifdef WOLFSSL_HASH_FLAGS
+    /* wc_HashSetFlags/wc_HashGetFlags: hash == NULL. */
+    {
+        word32 flags = 0;
+
+        ExpectIntEQ(wc_HashSetFlags(NULL, WC_HASH_TYPE_NONE, flags),
+            WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+        ExpectIntEQ(wc_HashGetFlags(NULL, WC_HASH_TYPE_NONE, &flags),
+            WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    }
+#endif
+
+#endif /* !NO_HASH_WRAPPER */
+    return EXPECT_RESULT();
+}
+
+/*
+ * Feature/positive-path coverage for the wc_Hash* dispatcher: drives
+ * Init/Update/Final/Free, the one-shot wc_Hash/wc_Hash_ex, GetDigestSize/
+ * GetBlockSize, GetOID (+ wc_OidGetHash round trip), wc_HashNew/Delete,
+ * and wc_HashSetFlags/GetFlags across every digest enabled in the current
+ * build (drives the "true"/enabled side of every case arm's #if guard).
+ */
+int test_wc_HashFeatureCoverage(void)
+{
+    EXPECT_DECLS;
+#ifndef NO_HASH_WRAPPER
+    int i;
+    wc_HashAlg hash;
+    byte digest[WC_MAX_DIGEST_SIZE];
+
+    for (i = 0; i < supportedHashLen; i++) {
+        ExpectIntEQ(wc_HashInit(&hash, supportedHash[i]), 0);
+        ExpectIntEQ(wc_HashUpdate(&hash, supportedHash[i], (byte*)"abc", 3),
+            0);
+        ExpectIntEQ(wc_HashUpdate(&hash, supportedHash[i], NULL, 0), 0);
+        ExpectIntEQ(wc_HashFinal(&hash, supportedHash[i], digest), 0);
+        ExpectIntEQ(wc_HashFree(&hash, supportedHash[i]), 0);
+
+        ExpectIntGT(wc_HashGetDigestSize(supportedHash[i]), 0);
+        ExpectIntGT(wc_HashGetBlockSize(supportedHash[i]), 0);
+
+        ExpectIntEQ(wc_Hash(supportedHash[i], (byte*)"abc", 3, digest,
+            sizeof(digest)), 0);
+        ExpectIntEQ(wc_Hash_ex(supportedHash[i], (byte*)"abc", 3, digest,
+            sizeof(digest), HEAP_HINT, INVALID_DEVID), 0);
+
+#if !defined(NO_ASN) || !defined(NO_DH) || defined(HAVE_ECC)
+        {
+            int oid = wc_HashGetOID(supportedHash[i]);
+            ExpectIntGT(oid, 0);
+            if (oid > 0) {
+                enum wc_HashType rtType = wc_OidGetHash(oid);
+                ExpectIntEQ((int)rtType, (int)supportedHash[i]);
+            }
+        }
+#endif
+    }
+
+#if !defined(WC_NO_CONSTRUCTORS)
+    /* wc_HashNew/wc_HashDelete positive path for every enabled digest. */
+    for (i = 0; i < supportedHashLen; i++) {
+        int ret = 0;
+        wc_HashAlg* h = NULL;
+
+        ExpectNotNull(h = wc_HashNew(supportedHash[i], HEAP_HINT,
+            INVALID_DEVID, &ret));
+        ExpectIntEQ(ret, 0);
+        if (h != NULL) {
+            ExpectIntEQ(wc_HashUpdate(h, supportedHash[i], (byte*)"abc", 3),
+                0);
+            ExpectIntEQ(wc_HashFinal(h, supportedHash[i], digest), 0);
+            ExpectIntEQ(wc_HashDelete(h, &h), 0);
+            ExpectNull(h);
+        }
+    }
+#endif
+
+#ifdef WOLFSSL_HASH_FLAGS
+    /* wc_HashSetFlags/wc_HashGetFlags positive path. */
+    for (i = 0; i < supportedHashLen; i++) {
+        word32 flags = 0;
+
+        ExpectIntEQ(wc_HashInit(&hash, supportedHash[i]), 0);
+        ExpectIntEQ(wc_HashSetFlags(&hash, supportedHash[i], flags), 0);
+        ExpectIntEQ(wc_HashGetFlags(&hash, supportedHash[i], &flags), 0);
+        wc_HashFree(&hash, supportedHash[i]);
+    }
+#endif
+
+#endif /* !NO_HASH_WRAPPER */
+    return EXPECT_RESULT();
+}
+

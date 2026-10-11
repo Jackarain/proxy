@@ -1,12 +1,12 @@
 /* chacha.h
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -61,13 +61,24 @@ Block counter is located at index 12.
 
 /* Size of ChaCha chunks */
 #define CHACHA_CHUNK_WORDS 16
-#define CHACHA_CHUNK_BYTES (CHACHA_CHUNK_WORDS * (word32)sizeof(word32))
+/* A ChaCha word is 4 octets by definition; do not use sizeof(word32) here - it
+ * is the number of addressable cells (2), not octets, where CHAR_BIT != 8 (e.g.
+ * TI C28x), which would halve the block size and desync the block counter. */
+#define CHACHA_CHUNK_BYTES (CHACHA_CHUNK_WORDS * 4U)
 
 #ifdef WOLFSSL_X86_64_BUILD
 #if defined(USE_INTEL_SPEEDUP) && !defined(NO_CHACHA_ASM)
     #define USE_INTEL_CHACHA_SPEEDUP
     #define HAVE_INTEL_AVX1
 #endif
+#elif defined(WOLFSSL_ARMASM)
+    #ifndef NO_CHACHA_ASM
+        #define USE_ARM_CHACHA_SPEEDUP
+    #endif
+#elif defined(WOLFSSL_RISCV_ASM)
+    #ifndef NO_CHACHA_ASM
+        #define USE_RISCV_CHACHA_SPEEDUP
+    #endif
 #endif
 
 enum {
@@ -77,13 +88,23 @@ enum {
 
 typedef struct ChaCha {
     word32 X[CHACHA_CHUNK_WORDS];           /* state of cipher */
-#ifdef HAVE_INTEL_AVX1
+#if defined(USE_INTEL_CHACHA_SPEEDUP)
     /* vpshufd reads 16 bytes but we only use bottom 4. */
     byte extra[12];
 #endif
     word32 left;                            /* number of bytes leftover */
-#if defined(USE_INTEL_CHACHA_SPEEDUP) || defined(WOLFSSL_ARMASM)
+#if defined(USE_INTEL_CHACHA_SPEEDUP) || defined(USE_ARM_CHACHA_SPEEDUP)
     word32 over[CHACHA_CHUNK_WORDS];
+#elif defined(USE_RISCV_CHACHA_SPEEDUP)
+    ALIGN8 word32 over[CHACHA_CHUNK_WORDS];
+#endif
+    WC_BITFIELD keySet:1;                    /* set to 1 once a key is set */
+#ifdef WOLF_CRYPTO_CB
+    /* X[] holds expanded state, but a device is handed a plaintext key, so
+     * keep a copy as Aes.devKey does. Set by wc_Chacha_SetKey_ex(). */
+    byte devKey[CHACHA_MAX_KEY_SZ];
+    word32 devKeySz;
+    int devId;
 #endif
 } ChaCha;
 
@@ -96,15 +117,33 @@ WOLFSSL_API int wc_Chacha_SetIV(ChaCha* ctx, const byte* inIv, word32 counter);
 WOLFSSL_API int wc_Chacha_Process(ChaCha* ctx, byte* cipher, const byte* plain,
                               word32 msglen);
 
-WOLFSSL_LOCAL void wc_Chacha_purge_current_block(ChaCha* ctx);
-
 WOLFSSL_API int wc_Chacha_SetKey(ChaCha* ctx, const byte* key, word32 keySz);
+/* As wc_Chacha_SetKey(), binding the context to a crypto callback device so
+ * wc_ChaCha20Poly1305_Encrypt_ex()/_Decrypt_ex() can offload it. Pass
+ * INVALID_DEVID for software; heap is unused. */
+WOLFSSL_API int wc_Chacha_SetKey_ex(ChaCha* ctx, const byte* key, word32 keySz,
+    void* heap, int devId);
 
 #ifdef HAVE_XCHACHA
+WOLFSSL_LOCAL void wc_Chacha_purge_current_block(ChaCha* ctx);
+
 WOLFSSL_API int wc_XChacha_SetKey(ChaCha *ctx, const byte *key, word32 keySz,
                                   const byte *nonce, word32 nonceSz,
                                   word32 counter);
 #endif
+
+#if defined(USE_ARM_CHACHA_SPEEDUP) || defined(USE_RISCV_CHACHA_SPEEDUP)
+
+WOLFSSL_LOCAL void wc_chacha_setiv(word32* x, const byte* iv, word32 counter);
+WOLFSSL_LOCAL void wc_chacha_setkey(word32* x, const byte* key, word32 keySz);
+WOLFSSL_LOCAL void wc_chacha_use_over(byte* over, byte* output,
+    const byte* input, word32 len);
+
+WOLFSSL_LOCAL void wc_chacha_crypt_bytes(ChaCha* ctx, byte* c, const byte* m,
+    word32 len);
+
+#endif
+
 
 #ifdef __cplusplus
     } /* extern "C" */

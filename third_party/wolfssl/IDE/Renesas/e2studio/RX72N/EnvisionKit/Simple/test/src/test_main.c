@@ -1,12 +1,12 @@
 /* test_main.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -65,6 +65,7 @@ extern "C" {
 static long tick;
 static void timeTick(void *pdata)
 {
+	(void)pdata;
     tick++;
 }
 
@@ -171,12 +172,16 @@ int SetTsiptlsKey()
 
 #endif
 
+extern void sci2_uart_init(void);
+
 void main(void)
 {
     int i = 0;
     int ret;
     int doClientCheck = 0;
     uint32_t channel;
+
+    sci2_uart_init();  /* route printf -> SCI2 UART (P13/TXD2, 19200 baud) */
 
 #if defined(SIMPLE_TCP_CLIENT)
     int cipherlist_sz = 1;
@@ -233,6 +238,7 @@ void main(void)
          printf("wolfCrypt_Init failed %d\n", ret);
     }
 
+    sci2_uart_init();  /* re-init: TSIP may change PCLKB during wolfCrypt_Init */
     printf("Start wolfCrypt Test\n");
     wolfcrypt_test(args);
     printf("End wolfCrypt Test\n");
@@ -259,7 +265,7 @@ void main(void)
 #if defined(SIMPLE_TLS_TSIP_CLIENT)
     SetTsiptlsKey();
 #endif
-    
+
     do {
         /* simply use TCP */
         #if defined(SIMPLE_TCP_CLIENT)

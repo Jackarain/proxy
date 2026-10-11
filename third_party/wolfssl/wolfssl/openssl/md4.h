@@ -1,12 +1,12 @@
 /* md4.h
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -46,12 +46,15 @@ WOLFSSL_API void wolfSSL_MD4_Update(WOLFSSL_MD4_CTX* md4, const void* data,
                        unsigned long len);
 WOLFSSL_API void wolfSSL_MD4_Final(unsigned char* digest, WOLFSSL_MD4_CTX* md4);
 
+#ifndef OPENSSL_COEXIST
 
 typedef WOLFSSL_MD4_CTX MD4_CTX;
 
 #define MD4_Init   wolfSSL_MD4_Init
 #define MD4_Update wolfSSL_MD4_Update
 #define MD4_Final  wolfSSL_MD4_Final
+
+#endif /* !OPENSSL_COEXIST */
 
 #ifdef __cplusplus
     }  /* extern "C" */

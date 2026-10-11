@@ -17,11 +17,27 @@ MAINTAINERCLEANFILES+= $(FIPS_FILES)
 EXTRA_DIST += src/bio.c
 EXTRA_DIST += src/conf.c
 EXTRA_DIST += src/pk.c
+EXTRA_DIST += src/pk_rsa.c
+EXTRA_DIST += src/pk_ec.c
+EXTRA_DIST += src/ssl_api_cert.c
+EXTRA_DIST += src/ssl_api_crl_ocsp.c
+EXTRA_DIST += src/ssl_api_dtls.c
+EXTRA_DIST += src/ssl_api_ext.c
+EXTRA_DIST += src/ssl_api_hs.c
+EXTRA_DIST += src/ssl_api_pk.c
+EXTRA_DIST += src/ssl_api_rw.c
 EXTRA_DIST += src/ssl_asn1.c
+EXTRA_DIST += src/ssl_tsp.c
 EXTRA_DIST += src/ssl_bn.c
 EXTRA_DIST += src/ssl_certman.c
 EXTRA_DIST += src/ssl_crypto.c
+EXTRA_DIST += src/ssl_ech.c
+EXTRA_DIST += src/ssl_err.c
+EXTRA_DIST += src/ssl_load.c
 EXTRA_DIST += src/ssl_misc.c
+EXTRA_DIST += src/ssl_p7p12.c
+EXTRA_DIST += src/ssl_sess.c
+EXTRA_DIST += src/ssl_sk.c
 EXTRA_DIST += src/x509.c
 EXTRA_DIST += src/x509_str.c
 
@@ -32,24 +48,41 @@ if !BUILD_NO_LIBRARY
 lib_LTLIBRARIES+= src/libwolfssl@LIBSUFFIX@.la
 endif
 src_libwolfssl@LIBSUFFIX@_la_SOURCES =
-src_libwolfssl@LIBSUFFIX@_la_LDFLAGS = ${AM_LDFLAGS} -no-undefined -version-info ${WOLFSSL_LIBRARY_VERSION}
+src_libwolfssl@LIBSUFFIX@_la_LDFLAGS = ${AM_LDFLAGS} -no-undefined -version-number ${WOLFSSL_LIBRARY_VERSION}
 src_libwolfssl@LIBSUFFIX@_la_LIBADD = $(LIBM) $(LIB_ADD) $(LIB_STATIC_ADD)
 src_libwolfssl@LIBSUFFIX@_la_CFLAGS = -DBUILDING_WOLFSSL $(AM_CFLAGS) -DLIBWOLFSSL_GLOBAL_EXTRA_CFLAGS="\" $(EXTRA_CFLAGS)\""
 src_libwolfssl@LIBSUFFIX@_la_CPPFLAGS = -DBUILDING_WOLFSSL $(AM_CPPFLAGS)
 
-# install the packaged IPP libraries
-if BUILD_FAST_RSA
-
-# Link needed IPP libraries
-noinst_SCRIPTS+=IPP_links
-IPP_links:
-	@$(IPPLINK)
-
-ippdir = $(libdir)
-ipp_DATA = $(IPPLIBS)
-
-include_HEADERS+=$(IPPHEADERS)
-endif # BUILD_FAST_RSA
+if BUILD_FIPS_V5
+    LEGACY_ARMASM_AES_C := wolfcrypt/src/port/arm/armv8-aes.c
+    LEGACY_ARMASM_SHA256_C := wolfcrypt/src/port/arm/armv8-sha256.c
+    LEGACY_ARMASM_SHA512_C := wolfcrypt/src/port/arm/armv8-sha512.c
+    NEW_ARMASM_AES_ASM_C :=
+    NEW_ARMASM_AES_ASM_S :=
+    NEW_ARMASM_SHA256_ASM_C :=
+    NEW_ARMASM_SHA256_ASM_S :=
+    ARMASM_SHA256_C :=
+else
+if BUILD_FIPS_V6
+    LEGACY_ARMASM_AES_C := wolfcrypt/src/port/arm/armv8-aes.c
+    LEGACY_ARMASM_SHA256_C := wolfcrypt/src/port/arm/armv8-sha256.c
+    LEGACY_ARMASM_SHA512_C := wolfcrypt/src/port/arm/armv8-sha512.c
+    NEW_ARMASM_AES_ASM_C :=
+    NEW_ARMASM_AES_ASM_S :=
+    NEW_ARMASM_SHA256_ASM_C :=
+    NEW_ARMASM_SHA256_ASM_S :=
+    ARMASM_SHA256_C :=
+else
+    LEGACY_ARMASM_AES_C :=
+    LEGACY_ARMASM_SHA256_C :=
+    LEGACY_ARMASM_SHA512_C :=
+    NEW_ARMASM_AES_ASM_C := wolfcrypt/src/port/arm/armv8-aes-asm_c.c
+    NEW_ARMASM_AES_ASM_S := wolfcrypt/src/port/arm/armv8-aes-asm.S
+    NEW_ARMASM_SHA256_ASM_C := wolfcrypt/src/port/arm/armv8-sha256-asm_c.c
+    NEW_ARMASM_SHA256_ASM_S := wolfcrypt/src/port/arm/armv8-sha256-asm.S
+    ARMASM_SHA256_C := wolfcrypt/src/sha256.c
+endif !BUILD_FIPS_V6
+endif !BUILD_FIPS_V5
 
 if BUILD_FIPS
 
@@ -73,15 +106,26 @@ endif
 
 if BUILD_AES
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/aes.c
+if BUILD_CUDA
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/cuda/aes-cuda.cu
+endif BUILD_CUDA
 endif
 
 if BUILD_AESNI
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/aes_asm.S
 if BUILD_X86_ASM
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/aes_gcm_x86_asm.S
+# 32-bit GCM asm has text relocations, so it is left out; 32-bit AES-GCM uses
+# the C GHASH over AES-NI blocks.  See WC_AESNI_GCM in aes.c.
+if BUILD_AESXTS
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/aes_xts_x86_asm.S
+endif
 else
+if BUILD_AESGCM
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/aes_gcm_asm.S
+endif
+if BUILD_AESXTS
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/aes_xts_asm.S
+endif
 endif
 endif
 
@@ -93,21 +137,27 @@ if BUILD_SHA
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sha.c
 endif
 
+if !BUILD_X86_ASM
 if BUILD_INTELASM
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sha256_asm.S
+endif
 endif
 
 if BUILD_SHA512
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sha512.c
+if !BUILD_X86_ASM
 if BUILD_INTELASM
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sha512_asm.S
+endif
 endif
 endif
 
 if BUILD_SHA3
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sha3.c
+if !BUILD_X86_ASM
 if BUILD_INTELASM
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sha3_asm.S
+endif
 endif
 endif
 
@@ -117,6 +167,10 @@ endif
 
 if BUILD_CMAC
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/cmac.c
+endif
+
+if BUILD_SHE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/wc_she.c
 endif
 
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/fips.c \
@@ -147,6 +201,10 @@ src_libwolfssl@LIBSUFFIX@_la_SOURCES += \
                wolfcrypt/src/hmac.c \
                wolfcrypt/src/random.c
 
+if BUILD_RNG_BANK
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/rng_bank.c
+endif
+
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/kdf.c
 
 if BUILD_RSA
@@ -159,72 +217,170 @@ endif
 
 if BUILD_AES
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/aes.c
+if BUILD_CUDA
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/cuda/aes-cuda.cu
+endif BUILD_CUDA
+
 if BUILD_ARMASM
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-aes.c
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += $(LEGACY_ARMASM_AES_C)
 endif BUILD_ARMASM
+
 if BUILD_ARMASM_NEON
-if !BUILD_ARMASM_CRYPTO
 if BUILD_ARMASM_INLINE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += $(NEW_ARMASM_AES_ASM_C)
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-aes-asm_c.c
 else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += $(NEW_ARMASM_AES_ASM_S)
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-aes-asm.S
 endif !BUILD_ARMASM_INLINE
-endif !BUILD_ARMASM_CRYPTO
 else
 if BUILD_ARMASM
 if BUILD_ARMASM_INLINE
+if BUILD_ARM_NONTHUMB
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-aes-asm_c.c
+endif
+if BUILD_ARM_THUMB
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-aes-asm_c.c
+endif
 else
+if BUILD_ARM_NONTHUMB
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-aes-asm.S
+endif
+if BUILD_ARM_THUMB
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-aes-asm.S
+endif
 endif !BUILD_ARMASM_INLINE
 endif BUILD_ARMASM
 endif !BUILD_ARMASM_NEON
-endif BUILD_AES
+
+if BUILD_PPC64_ASM
+if BUILD_PPC64_ASM_INLINE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc64/ppc64-aes-asm_c.c
+else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc64/ppc64-aes-asm.S
+endif !BUILD_PPC64_ASM_INLINE
+endif BUILD_PPC64_ASM
+
+if BUILD_PPC32_ASM
+if BUILD_PPC32_ASM_INLINE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc32/ppc32-aes-asm_c.c
+else
+if BUILD_PPC32_ASM_INLINE_REG
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc32/ppc32-aes-asm_cr.c
+else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc32/ppc32-aes-asm.S
+endif !BUILD_PPC32_ASM_INLINE_REG
+endif !BUILD_PPC32_ASM_INLINE
+endif BUILD_PPC32_ASM
 
 if BUILD_AESNI
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/aes_asm.S
 if BUILD_X86_ASM
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/aes_gcm_x86_asm.S
+# 32-bit GCM asm has text relocations, so it is left out; 32-bit AES-GCM uses
+# the C GHASH over AES-NI blocks.  See WC_AESNI_GCM in aes.c.
+if BUILD_AESXTS
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/aes_xts_x86_asm.S
+endif
 else
+if BUILD_AESGCM
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/aes_gcm_asm.S
+endif
+if BUILD_AESXTS
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/aes_xts_asm.S
 endif
 endif
+endif
+
+if BUILD_RISCV_ASM
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/riscv64/riscv-64-aes-asm.S
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/riscv64/riscv-64-aes-asm_c.c
+endif BUILD_RISCV_ASM
+endif BUILD_AES
 
 if BUILD_SHA
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sha.c
 endif
 
 if BUILD_ARMASM_NEON
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-sha256.c
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += $(ARMASM_SHA256_C)
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += $(LEGACY_ARMASM_SHA256_C)
 if BUILD_ARMASM_INLINE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += $(NEW_ARMASM_SHA256_ASM_C)
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-sha256-asm_c.c
 else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += $(NEW_ARMASM_SHA256_ASM_S)
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-sha256-asm.S
 endif !BUILD_ARMASM_INLINE
 else
 if BUILD_ARMASM
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-sha256.c
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += $(ARMASM_SHA256_C)
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += $(LEGACY_ARMASM_SHA256_C)
 if BUILD_ARMASM_INLINE
+if BUILD_ARM_NONTHUMB
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-sha256-asm_c.c
+endif
+if BUILD_ARM_THUMB
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-sha256-asm_c.c
+endif
 else
+if BUILD_ARM_NONTHUMB
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-sha256-asm.S
+endif
+if BUILD_ARM_THUMB
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-sha256-asm.S
+endif
 endif !BUILD_ARMASM_INLINE
 else
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sha256.c
+if !BUILD_X86_ASM
 if BUILD_INTELASM
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sha256_asm.S
 endif BUILD_INTELASM
+endif !BUILD_X86_ASM
 endif !BUILD_ARMASM
 endif !BUILD_ARMASM_NEON
 
+
+if BUILD_RISCV_ASM
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/riscv64/riscv-64-sha256-asm.S
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/riscv64/riscv-64-sha256-asm_c.c
+endif BUILD_RISCV_ASM
+
+if BUILD_PPC32_ASM
+if BUILD_PPC32_ASM_INLINE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc32/ppc32-sha256-asm_c.c
+else
+if BUILD_PPC32_ASM_INLINE_REG
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc32/ppc32-sha256-asm_cr.c
+else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc32/ppc32-sha256-asm.S
+endif !BUILD_PPC32_ASM_INLINE_REG
+endif !BUILD_PPC32_ASM_INLINE
+endif BUILD_PPC32_ASM
+
+if BUILD_PPC64_ASM
+if BUILD_PPC64_ASM_INLINE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc64/ppc64-sha256-asm_c.c
+else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc64/ppc64-sha256-asm.S
+endif !BUILD_PPC64_ASM_INLINE
+endif BUILD_PPC64_ASM
+
 if BUILD_SHA512
+if BUILD_RISCV_ASM
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sha512.c
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/riscv64/riscv-64-sha512-asm.S
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/riscv64/riscv-64-sha512-asm_c.c
+else
+
+if !BUILD_FIPS_V5
+if !BUILD_FIPS_V6
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sha512.c
+endif !BUILD_FIPS_V6
+endif !BUILD_FIPS_V5
+
 if BUILD_ARMASM_NEON
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-sha512.c
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += $(LEGACY_ARMASM_SHA512_C)
 if BUILD_ARMASM_INLINE
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-sha512-asm_c.c
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-sha512-asm_c.c
@@ -234,21 +390,60 @@ src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-sha512-a
 endif !BUILD_ARMASM_INLINE
 else
 if BUILD_ARMASM
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-sha512.c
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += $(LEGACY_ARMASM_SHA512_C)
 if BUILD_ARMASM_INLINE
+if BUILD_ARM_NONTHUMB
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-sha512-asm_c.c
+endif
+if BUILD_ARM_THUMB
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-sha512-asm_c.c
+endif
 else
+if BUILD_ARM_NONTHUMB
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-sha512-asm.S
+endif
+if BUILD_ARM_THUMB
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-sha512-asm.S
+endif
 endif !BUILD_ARMASM_INLINE
 else
+
+if BUILD_FIPS_V5
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sha512.c
+else
+if BUILD_FIPS_V6
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sha512.c
+endif BUILD_FIPS_V6
+endif !BUILD_FIPS_V5
+
+if !BUILD_X86_ASM
 if BUILD_INTELASM
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sha512_asm.S
 endif BUILD_INTELASM
+endif !BUILD_X86_ASM
 endif !BUILD_ARMASM
 endif !BUILD_ARMASM_NEON
+endif !BUILD_RISCV_ASM
+
+if BUILD_PPC64_ASM
+if BUILD_PPC64_ASM_INLINE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc64/ppc64-sha512-asm_c.c
+else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc64/ppc64-sha512-asm.S
+endif !BUILD_PPC64_ASM_INLINE
+endif BUILD_PPC64_ASM
+
+if BUILD_PPC32_ASM
+if BUILD_PPC32_ASM_INLINE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc32/ppc32-sha512-asm_c.c
+else
+if BUILD_PPC32_ASM_INLINE_REG
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc32/ppc32-sha512-asm_cr.c
+else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc32/ppc32-sha512-asm.S
+endif !BUILD_PPC32_ASM_INLINE_REG
+endif !BUILD_PPC32_ASM_INLINE
+endif BUILD_PPC32_ASM
 endif BUILD_SHA512
 
 if BUILD_SHA3
@@ -260,6 +455,388 @@ else
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-sha3-asm.S
 endif !BUILD_ARMASM_INLINE
 endif BUILD_ARMASM_NEON
+if BUILD_ARMASM
+if BUILD_ARMASM_INLINE
+if BUILD_ARM_NONTHUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-sha3-asm_c.c
+endif
+if BUILD_ARM_THUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-sha3-asm_c.c
+endif
+else
+if BUILD_ARM_NONTHUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-sha3-asm.S
+endif
+if BUILD_ARM_THUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-sha3-asm.S
+endif
+endif !BUILD_ARMASM_INLINE
+endif BUILD_ARMASM
+if BUILD_RISCV_ASM
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/riscv64/riscv-64-sha3-asm.S
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/riscv64/riscv-64-sha3-asm_c.c
+endif BUILD_RISCV_ASM
+if BUILD_PPC64_ASM
+if BUILD_PPC64_ASM_INLINE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc64/ppc64-sha3-asm_c.c
+else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc64/ppc64-sha3-asm.S
+endif !BUILD_PPC64_ASM_INLINE
+endif BUILD_PPC64_ASM
+if BUILD_PPC32_ASM
+if BUILD_PPC32_ASM_INLINE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc32/ppc32-sha3-asm_c.c
+else
+if BUILD_PPC32_ASM_INLINE_REG
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc32/ppc32-sha3-asm_cr.c
+else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc32/ppc32-sha3-asm.S
+endif !BUILD_PPC32_ASM_INLINE_REG
+endif !BUILD_PPC32_ASM_INLINE
+endif BUILD_PPC32_ASM
+if !BUILD_X86_ASM
+if BUILD_INTELASM
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sha3_asm.S
+endif
+endif
+endif
+
+if BUILD_DH
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/dh.c
+endif
+
+if BUILD_CMAC
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/cmac.c
+endif
+
+if BUILD_SHE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/wc_she.c
+endif
+
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/fips.c \
+                             wolfcrypt/src/fips_test.c
+
+# fips last file
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/wolfcrypt_last.c
+
+# v7+ and v5 only.  Listed after wolfcrypt_last.c so its code sits past
+# wolfCrypt_FIPS_last() and the in-core integrity hash does not cover it.  The
+# module calls out to this entropy source, which is what IG 9.3.A asks for.
+# v6 keeps it inside boundary.
+if BUILD_MEMUSE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/wolfentropy.c
+endif
+
+endif BUILD_FIPS_V5
+
+if BUILD_FIPS_V6
+# FIPS 140-3 SRTP-KDF first file
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += \
+               wolfcrypt/src/wolfcrypt_first.c
+
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += \
+               wolfcrypt/src/hmac.c \
+               wolfcrypt/src/random.c
+
+if BUILD_FIPS_V6
+if BUILD_MEMUSE
+if BUILD_KERNEL_MODE_DEFAULTS
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/wolfentropy.c
+endif
+endif
+endif
+
+if !BUILD_FIPS_V6
+if BUILD_MEMUSE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/wolfentropy.c
+endif
+endif
+
+if BUILD_RNG_BANK
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/rng_bank.c
+endif
+
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/kdf.c
+
+if BUILD_RSA
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/rsa.c
+endif
+
+if BUILD_ECC
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/ecc.c
+endif
+
+if BUILD_AES
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/aes.c
+
+if BUILD_ARMASM
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += $(LEGACY_ARMASM_AES_C)
+endif BUILD_ARMASM
+
+if BUILD_ARMASM_NEON
+if BUILD_ARMASM_INLINE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += $(NEW_ARMASM_AES_ASM_C)
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-aes-asm_c.c
+else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += $(NEW_ARMASM_AES_ASM_S)
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-aes-asm.S
+endif !BUILD_ARMASM_INLINE
+else
+if BUILD_ARMASM
+if BUILD_ARMASM_INLINE
+if BUILD_ARM_NONTHUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-aes-asm_c.c
+endif
+if BUILD_ARM_THUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-aes-asm_c.c
+endif
+else
+if BUILD_ARM_NONTHUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-aes-asm.S
+endif
+if BUILD_ARM_THUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-aes-asm.S
+endif
+endif !BUILD_ARMASM_INLINE
+endif BUILD_ARMASM
+endif !BUILD_ARMASM_NEON
+endif BUILD_AES
+
+if BUILD_PPC64_ASM
+if BUILD_PPC64_ASM_INLINE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc64/ppc64-aes-asm_c.c
+else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc64/ppc64-aes-asm.S
+endif !BUILD_PPC64_ASM_INLINE
+endif BUILD_PPC64_ASM
+
+if BUILD_PPC32_ASM
+if BUILD_PPC32_ASM_INLINE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc32/ppc32-aes-asm_c.c
+else
+if BUILD_PPC32_ASM_INLINE_REG
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc32/ppc32-aes-asm_cr.c
+else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc32/ppc32-aes-asm.S
+endif !BUILD_PPC32_ASM_INLINE_REG
+endif !BUILD_PPC32_ASM_INLINE
+endif BUILD_PPC32_ASM
+
+if BUILD_AESNI
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/aes_asm.S
+if BUILD_X86_ASM
+# 32-bit GCM asm has text relocations, so it is left out; 32-bit AES-GCM uses
+# the C GHASH over AES-NI blocks.  See WC_AESNI_GCM in aes.c.
+if BUILD_AESXTS
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/aes_xts_x86_asm.S
+endif
+else
+if BUILD_AESGCM
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/aes_gcm_asm.S
+endif
+if BUILD_AESXTS
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/aes_xts_asm.S
+endif
+endif
+endif
+
+if BUILD_RISCV_ASM
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/riscv64/riscv-64-aes-asm.S
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/riscv64/riscv-64-aes-asm_c.c
+endif BUILD_RISCV_ASM
+
+if BUILD_SHA
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sha.c
+endif
+
+if BUILD_ARMASM_NEON
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += $(ARMASM_SHA256_C)
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += $(LEGACY_ARMASM_SHA256_C)
+if BUILD_ARMASM_INLINE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += $(NEW_ARMASM_SHA256_ASM_C)
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-sha256-asm_c.c
+else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += $(NEW_ARMASM_SHA256_ASM_S)
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-sha256-asm.S
+endif !BUILD_ARMASM_INLINE
+else
+if BUILD_ARMASM
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += $(ARMASM_SHA256_C)
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += $(LEGACY_ARMASM_SHA256_C)
+if BUILD_ARMASM_INLINE
+if BUILD_ARM_NONTHUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-sha256-asm_c.c
+endif
+if BUILD_ARM_THUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-sha256-asm_c.c
+endif
+else
+if BUILD_ARM_NONTHUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-sha256-asm.S
+endif
+if BUILD_ARM_THUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-sha256-asm.S
+endif
+endif !BUILD_ARMASM_INLINE
+else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sha256.c
+if BUILD_INTELASM
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sha256_asm.S
+endif BUILD_INTELASM
+endif !BUILD_ARMASM
+endif !BUILD_ARMASM_NEON
+
+if BUILD_RISCV_ASM
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/riscv64/riscv-64-sha256-asm.S
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/riscv64/riscv-64-sha256-asm_c.c
+endif BUILD_RISCV_ASM
+
+if BUILD_PPC32_ASM
+if BUILD_PPC32_ASM_INLINE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc32/ppc32-sha256-asm_c.c
+else
+if BUILD_PPC32_ASM_INLINE_REG
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc32/ppc32-sha256-asm_cr.c
+else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc32/ppc32-sha256-asm.S
+endif !BUILD_PPC32_ASM_INLINE_REG
+endif !BUILD_PPC32_ASM_INLINE
+endif BUILD_PPC32_ASM
+
+if BUILD_PPC64_ASM
+if BUILD_PPC64_ASM_INLINE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc64/ppc64-sha256-asm_c.c
+else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc64/ppc64-sha256-asm.S
+endif !BUILD_PPC64_ASM_INLINE
+endif BUILD_PPC64_ASM
+
+if BUILD_SHA512
+if BUILD_RISCV_ASM
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sha512.c
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/riscv64/riscv-64-sha512-asm.S
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/riscv64/riscv-64-sha512-asm_c.c
+else
+
+if !BUILD_FIPS_V5
+if !BUILD_FIPS_V6
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sha512.c
+endif !BUILD_FIPS_V6
+endif !BUILD_FIPS_V5
+
+if BUILD_ARMASM_NEON
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += $(LEGACY_ARMASM_SHA512_C)
+if BUILD_ARMASM_INLINE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-sha512-asm_c.c
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-sha512-asm_c.c
+else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-sha512-asm.S
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-sha512-asm.S
+endif !BUILD_ARMASM_INLINE
+else
+if BUILD_ARMASM
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += $(LEGACY_ARMASM_SHA512_C)
+if BUILD_ARMASM_INLINE
+if BUILD_ARM_NONTHUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-sha512-asm_c.c
+endif
+if BUILD_ARM_THUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-sha512-asm_c.c
+endif
+else
+if BUILD_ARM_NONTHUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-sha512-asm.S
+endif
+if BUILD_ARM_THUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-sha512-asm.S
+endif
+endif !BUILD_ARMASM_INLINE
+else
+
+if BUILD_FIPS_V5
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sha512.c
+else
+if BUILD_FIPS_V6
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sha512.c
+endif BUILD_FIPS_V6
+endif !BUILD_FIPS_V5
+
+if BUILD_INTELASM
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sha512_asm.S
+endif BUILD_INTELASM
+endif !BUILD_ARMASM
+endif !BUILD_ARMASM_NEON
+endif !BUILD_RISCV_ASM
+
+if BUILD_PPC64_ASM
+if BUILD_PPC64_ASM_INLINE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc64/ppc64-sha512-asm_c.c
+else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc64/ppc64-sha512-asm.S
+endif !BUILD_PPC64_ASM_INLINE
+endif BUILD_PPC64_ASM
+
+if BUILD_PPC32_ASM
+if BUILD_PPC32_ASM_INLINE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc32/ppc32-sha512-asm_c.c
+else
+if BUILD_PPC32_ASM_INLINE_REG
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc32/ppc32-sha512-asm_cr.c
+else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc32/ppc32-sha512-asm.S
+endif !BUILD_PPC32_ASM_INLINE_REG
+endif !BUILD_PPC32_ASM_INLINE
+endif BUILD_PPC32_ASM
+endif BUILD_SHA512
+
+if BUILD_SHA3
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sha3.c
+if BUILD_ARMASM_NEON
+if BUILD_ARMASM_INLINE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-sha3-asm_c.c
+else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-sha3-asm.S
+endif !BUILD_ARMASM_INLINE
+endif BUILD_ARMASM_NEON
+if BUILD_ARMASM
+if BUILD_ARMASM_INLINE
+if BUILD_ARM_NONTHUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-sha3-asm_c.c
+endif
+if BUILD_ARM_THUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-sha3-asm_c.c
+endif
+else
+if BUILD_ARM_NONTHUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-sha3-asm.S
+endif
+if BUILD_ARM_THUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-sha3-asm.S
+endif
+endif !BUILD_ARMASM_INLINE
+endif BUILD_ARMASM
+if BUILD_RISCV_ASM
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/riscv64/riscv-64-sha3-asm.S
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/riscv64/riscv-64-sha3-asm_c.c
+endif BUILD_RISCV_ASM
+if BUILD_PPC64_ASM
+if BUILD_PPC64_ASM_INLINE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc64/ppc64-sha3-asm_c.c
+else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc64/ppc64-sha3-asm.S
+endif !BUILD_PPC64_ASM_INLINE
+endif BUILD_PPC64_ASM
+if BUILD_PPC32_ASM
+if BUILD_PPC32_ASM_INLINE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc32/ppc32-sha3-asm_c.c
+else
+if BUILD_PPC32_ASM_INLINE_REG
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc32/ppc32-sha3-asm_cr.c
+else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc32/ppc32-sha3-asm.S
+endif !BUILD_PPC32_ASM_INLINE_REG
+endif !BUILD_PPC32_ASM_INLINE
+endif BUILD_PPC32_ASM
 if BUILD_INTELASM
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sha3_asm.S
 endif
@@ -273,118 +850,67 @@ if BUILD_CMAC
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/cmac.c
 endif
 
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/fips.c \
-                             wolfcrypt/src/fips_test.c
-
-# fips last file
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/wolfcrypt_last.c
-endif BUILD_FIPS_V5
-
-endif BUILD_FIPS
-
-# For wolfRand, exclude everything else.
-if !BUILD_FIPS_RAND
-
-# For FIPSV2, exclude the wolfCrypt files included above.
-# For wolfRand, exclude just a couple files.
-# For old FIPS, keep the wolfCrypt versions of the
-# CtaoCrypt files included above.
-if !BUILD_FIPS_CURRENT
-if BUILD_HMAC
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/hmac.c
-endif
-endif !BUILD_FIPS_CURRENT
-
-# CAVP self test
-if BUILD_SELFTEST
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/selftest.c
+if BUILD_SHE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/wc_she.c
 endif
 
-endif !BUILD_FIPS_RAND
-
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/hash.c
-
-if !BUILD_DO178
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/cpuid.c
-endif !BUILD_DO178
-
-if !BUILD_FIPS_RAND
-
-if !BUILD_FIPS_V5
-if BUILD_KDF
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/kdf.c
+if BUILD_CURVE448
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/curve448.c
 endif
-endif !BUILD_FIPS_V5
 
-if !BUILD_FIPS_CURRENT
-if BUILD_RNG
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/random.c
+if BUILD_ED448
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/ed448.c
 endif
-endif !BUILD_FIPS_CURRENT
 
-if !BUILD_FIPS_CURRENT
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sha256.c
-if BUILD_ARMASM_NEON
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-sha256.c
-if BUILD_ARMASM_INLINE
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-sha256-asm_c.c
-else
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-sha256-asm.S
-endif !BUILD_ARMASM_INLINE
-else
+if BUILD_CURVE25519
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/curve25519.c
+endif
+
+if BUILD_ED25519
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/ed25519.c
+endif
+
 if BUILD_ARMASM
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-sha256.c
+if BUILD_ARMASM_NEON
 if BUILD_ARMASM_INLINE
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-sha256-asm_c.c
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-sha256-asm_c.c
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-curve25519_c.c
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-curve25519_c.c
 else
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-sha256-asm.S
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-sha256-asm.S
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-curve25519.S
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-curve25519.S
 endif !BUILD_ARMASM_INLINE
 else
-if BUILD_INTELASM
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sha256_asm.S
-endif BUILD_INTELASM
-endif !BUILD_ARMASM
-endif !BUILD_ARMASM_NEON
-endif !BUILD_FIPS_CURRENT
-
-if BUILD_AFALG
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/af_alg/afalg_hash.c
+if BUILD_ARMASM_INLINE
+if BUILD_ARM_NONTHUMB
+if BUILD_ARM_32
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-curve25519_c.c
 endif
-
-if BUILD_KCAPI
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/kcapi/kcapi_aes.c
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/kcapi/kcapi_hash.c
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/kcapi/kcapi_hmac.c
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/kcapi/kcapi_ecc.c
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/kcapi/kcapi_rsa.c
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/kcapi/kcapi_dh.c
+if BUILD_ARM_64
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-curve25519_c.c
 endif
-
-if BUILD_WOLFEVENT
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/wolfevent.c
 endif
-
-if BUILD_ASYNCCRYPT
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/async.c
+if BUILD_ARM_THUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-curve25519_c.c
 endif
-
-if !BUILD_USER_RSA
-if BUILD_RSA
-if BUILD_FAST_RSA
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/user-crypto/src/rsa.c
 else
-if !BUILD_FIPS_CURRENT
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/rsa.c
-endif !BUILD_FIPS_CURRENT
+if BUILD_ARM_NONTHUMB
+if BUILD_ARM_32
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-curve25519.S
+endif
+if BUILD_ARM_64
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-curve25519.S
 endif
 endif
+if BUILD_ARM_THUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-curve25519.S
 endif
+endif !BUILD_ARMASM_INLINE
+endif !BUILD_ARMASM_NEON
+endif BUILD_ARMASM
 
-if BUILD_RC2
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/rc2.c
-endif
+if BUILD_PWDBASED
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/pwdbased.c
+endif BUILD_PWDBASED
 
 if BUILD_SP
 if BUILD_SP_C32
@@ -414,66 +940,210 @@ endif
 if BUILD_SP_ARM_CORTEX
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sp_cortexm.c
 endif
+if BUILD_SP_RISCV64
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sp_riscv64.c
+endif
 endif BUILD_SP
-if BUILD_SP_INT
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sp_int.c
+
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/fips.c \
+                             wolfcrypt/src/fips_test.c
+
+# fips last file
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/wolfcrypt_last.c
+endif BUILD_FIPS_V6
+
+if BUILD_FIPS_V7_PLUS
+if !BUILD_FIPS_NO_POST
+# FIPS 140-3 v7.0.0+ first file
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += \
+               wolfcrypt/src/wolfcrypt_first.c
+endif !BUILD_FIPS_NO_POST
+
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += \
+               wolfcrypt/src/hmac.c \
+               wolfcrypt/src/random.c
+
+if BUILD_RNG_BANK
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/rng_bank.c
 endif
 
-if !BUILD_FIPS_CURRENT
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/kdf.c
+
+if BUILD_RSA
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/rsa.c
+endif
+
+if BUILD_ECC
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/ecc.c
+endif
+
 if BUILD_AES
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/aes.c
+
 if BUILD_ARMASM
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-aes.c
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += $(LEGACY_ARMASM_AES_C)
 endif BUILD_ARMASM
+
 if BUILD_ARMASM_NEON
-if !BUILD_ARMASM_CRYPTO
 if BUILD_ARMASM_INLINE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += $(NEW_ARMASM_AES_ASM_C)
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-aes-asm_c.c
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-aes-asm_c.c
 else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += $(NEW_ARMASM_AES_ASM_S)
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-aes-asm.S
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-aes-asm.S
 endif !BUILD_ARMASM_INLINE
-endif !BUILD_ARMASM_CRYPTO
 else
 if BUILD_ARMASM
 if BUILD_ARMASM_INLINE
+if BUILD_ARM_NONTHUMB
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-aes-asm_c.c
+endif
+if BUILD_ARM_THUMB
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-aes-asm_c.c
+endif
 else
+if BUILD_ARM_NONTHUMB
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-aes-asm.S
+endif
+if BUILD_ARM_THUMB
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-aes-asm.S
+endif
 endif !BUILD_ARMASM_INLINE
 endif BUILD_ARMASM
 endif !BUILD_ARMASM_NEON
-if BUILD_AFALG
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/af_alg/afalg_aes.c
-endif BUILD_AFALG
 endif BUILD_AES
-endif !BUILD_FIPS_CURRENT
 
-if !BUILD_FIPS_CURRENT
-if BUILD_CMAC
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/cmac.c
+if BUILD_AESNI
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/aes_asm.S
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/aes_x86_64_asm.S
+if BUILD_X86_ASM
+# 32-bit GCM asm has text relocations, so it is left out; 32-bit AES-GCM uses
+# the C GHASH over AES-NI blocks.  See WC_AESNI_GCM in aes.c.
+if BUILD_AESXTS
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/aes_xts_x86_asm.S
 endif
-endif !BUILD_FIPS_CURRENT
+else
+if BUILD_AESGCM
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/aes_gcm_asm.S
+endif
+if BUILD_AESXTS
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/aes_xts_asm.S
+endif
+endif
+endif
 
-if !BUILD_FIPS_V2
-if BUILD_DES3
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/des3.c
-endif BUILD_DES3
-endif !BUILD_FIPS_V2
+# The FIPS v5 and v6 blocks and the non-FIPS block all list these; v7 did not,
+# so aes.c called AES_*_RISCV64, ppc64_AES_* and ppc32_AES_* with nothing to
+# link against, and --enable-fips=v7 with --enable-riscv-asm, --enable-ppc64-asm
+# or --enable-ppc32-asm failed with undefined references to the AES asm entry
+# points.  Placement follows the v5/v6 FIPS blocks, which
+# also sit outside BUILD_AES.
+if BUILD_PPC64_ASM
+if BUILD_PPC64_ASM_INLINE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc64/ppc64-aes-asm_c.c
+else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc64/ppc64-aes-asm.S
+endif !BUILD_PPC64_ASM_INLINE
+endif BUILD_PPC64_ASM
 
-if !BUILD_FIPS_CURRENT
+if BUILD_PPC32_ASM
+if BUILD_PPC32_ASM_INLINE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc32/ppc32-aes-asm_c.c
+else
+if BUILD_PPC32_ASM_INLINE_REG
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc32/ppc32-aes-asm_cr.c
+else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc32/ppc32-aes-asm.S
+endif !BUILD_PPC32_ASM_INLINE_REG
+endif !BUILD_PPC32_ASM_INLINE
+endif BUILD_PPC32_ASM
+
+if BUILD_RISCV_ASM
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/riscv64/riscv-64-aes-asm.S
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/riscv64/riscv-64-aes-asm_c.c
+endif BUILD_RISCV_ASM
+
 if BUILD_SHA
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sha.c
 endif
-endif !BUILD_FIPS_CURRENT
 
-if !BUILD_FIPS_CURRENT
-if BUILD_SHA512
 if BUILD_ARMASM_NEON
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-sha512.c
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += $(ARMASM_SHA256_C)
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += $(LEGACY_ARMASM_SHA256_C)
+if BUILD_ARMASM_INLINE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += $(NEW_ARMASM_SHA256_ASM_C)
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-sha256-asm_c.c
+else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += $(NEW_ARMASM_SHA256_ASM_S)
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-sha256-asm.S
+endif !BUILD_ARMASM_INLINE
+else
+if BUILD_ARMASM
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += $(ARMASM_SHA256_C)
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += $(LEGACY_ARMASM_SHA256_C)
+if BUILD_ARMASM_INLINE
+if BUILD_ARM_NONTHUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-sha256-asm_c.c
+endif
+if BUILD_ARM_THUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-sha256-asm_c.c
+endif
+else
+if BUILD_ARM_NONTHUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-sha256-asm.S
+endif
+if BUILD_ARM_THUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-sha256-asm.S
+endif
+endif !BUILD_ARMASM_INLINE
+else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sha256.c
+if BUILD_INTELASM
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sha256_asm.S
+endif BUILD_INTELASM
+endif !BUILD_ARMASM
+endif !BUILD_ARMASM_NEON
+
+if BUILD_RISCV_ASM
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/riscv64/riscv-64-sha256-asm.S
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/riscv64/riscv-64-sha256-asm_c.c
+endif BUILD_RISCV_ASM
+
+if BUILD_PPC32_ASM
+if BUILD_PPC32_ASM_INLINE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc32/ppc32-sha256-asm_c.c
+else
+if BUILD_PPC32_ASM_INLINE_REG
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc32/ppc32-sha256-asm_cr.c
+else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc32/ppc32-sha256-asm.S
+endif !BUILD_PPC32_ASM_INLINE_REG
+endif !BUILD_PPC32_ASM_INLINE
+endif BUILD_PPC32_ASM
+
+if BUILD_PPC64_ASM
+if BUILD_PPC64_ASM_INLINE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc64/ppc64-sha256-asm_c.c
+else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc64/ppc64-sha256-asm.S
+endif !BUILD_PPC64_ASM_INLINE
+endif BUILD_PPC64_ASM
+
+if BUILD_SHA512
+if BUILD_RISCV_ASM
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sha512.c
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/riscv64/riscv-64-sha512-asm.S
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/riscv64/riscv-64-sha512-asm_c.c
+else
+
+if !BUILD_FIPS_V5
+if !BUILD_FIPS_V6
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sha512.c
+endif !BUILD_FIPS_V6
+endif !BUILD_FIPS_V5
+
+if BUILD_ARMASM_NEON
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += $(LEGACY_ARMASM_SHA512_C)
 if BUILD_ARMASM_INLINE
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-sha512-asm_c.c
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-sha512-asm_c.c
@@ -483,25 +1153,60 @@ src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-sha512-a
 endif !BUILD_ARMASM_INLINE
 else
 if BUILD_ARMASM
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-sha512.c
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += $(LEGACY_ARMASM_SHA512_C)
 if BUILD_ARMASM_INLINE
+if BUILD_ARM_NONTHUMB
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-sha512-asm_c.c
+endif
+if BUILD_ARM_THUMB
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-sha512-asm_c.c
+endif
 else
+if BUILD_ARM_NONTHUMB
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-sha512-asm.S
+endif
+if BUILD_ARM_THUMB
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-sha512-asm.S
+endif
 endif !BUILD_ARMASM_INLINE
 else
+
+if BUILD_FIPS_V5
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sha512.c
+else
+if BUILD_FIPS_V6
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sha512.c
+endif BUILD_FIPS_V6
+endif !BUILD_FIPS_V5
+
 if BUILD_INTELASM
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sha512_asm.S
 endif BUILD_INTELASM
 endif !BUILD_ARMASM
 endif !BUILD_ARMASM_NEON
-endif BUILD_SHA512
-endif !BUILD_FIPS_CURRENT
+endif !BUILD_RISCV_ASM
 
-if !BUILD_FIPS_CURRENT
+if BUILD_PPC64_ASM
+if BUILD_PPC64_ASM_INLINE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc64/ppc64-sha512-asm_c.c
+else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc64/ppc64-sha512-asm.S
+endif !BUILD_PPC64_ASM_INLINE
+endif BUILD_PPC64_ASM
+
+if BUILD_PPC32_ASM
+if BUILD_PPC32_ASM_INLINE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc32/ppc32-sha512-asm_c.c
+else
+if BUILD_PPC32_ASM_INLINE_REG
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc32/ppc32-sha512-asm_cr.c
+else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc32/ppc32-sha512-asm.S
+endif !BUILD_PPC32_ASM_INLINE_REG
+endif !BUILD_PPC32_ASM_INLINE
+endif BUILD_PPC32_ASM
+endif BUILD_SHA512
+
 if BUILD_SHA3
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sha3.c
 if BUILD_ARMASM_NEON
@@ -511,13 +1216,653 @@ else
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-sha3-asm.S
 endif !BUILD_ARMASM_INLINE
 endif BUILD_ARMASM_NEON
+if BUILD_ARMASM
+if BUILD_ARMASM_INLINE
+if BUILD_ARM_NONTHUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-sha3-asm_c.c
+endif
+if BUILD_ARM_THUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-sha3-asm_c.c
+endif
+else
+if BUILD_ARM_NONTHUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-sha3-asm.S
+endif
+if BUILD_ARM_THUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-sha3-asm.S
+endif
+endif !BUILD_ARMASM_INLINE
+endif BUILD_ARMASM
+if BUILD_RISCV_ASM
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/riscv64/riscv-64-sha3-asm.S
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/riscv64/riscv-64-sha3-asm_c.c
+endif BUILD_RISCV_ASM
+if BUILD_PPC64_ASM
+if BUILD_PPC64_ASM_INLINE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc64/ppc64-sha3-asm_c.c
+else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc64/ppc64-sha3-asm.S
+endif !BUILD_PPC64_ASM_INLINE
+endif BUILD_PPC64_ASM
+if BUILD_PPC32_ASM
+if BUILD_PPC32_ASM_INLINE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc32/ppc32-sha3-asm_c.c
+else
+if BUILD_PPC32_ASM_INLINE_REG
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc32/ppc32-sha3-asm_cr.c
+else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc32/ppc32-sha3-asm.S
+endif !BUILD_PPC32_ASM_INLINE_REG
+endif !BUILD_PPC32_ASM_INLINE
+endif BUILD_PPC32_ASM
 if BUILD_INTELASM
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sha3_asm.S
 endif
 endif
-endif !BUILD_FIPS_CURRENT
 
-if !BUILD_FIPS_CURRENT
+if BUILD_DH
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/dh.c
+endif
+
+if BUILD_CMAC
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/cmac.c
+endif
+
+if BUILD_CURVE448
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/curve448.c
+endif
+
+if BUILD_ED448
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/ed448.c
+endif
+
+if BUILD_CURVE25519
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/curve25519.c
+endif
+
+if BUILD_ED25519
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/ed25519.c
+endif
+
+if BUILD_ARMASM
+if BUILD_ARMASM_NEON
+if BUILD_ARMASM_INLINE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-curve25519_c.c
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-curve25519_c.c
+else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-curve25519.S
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-curve25519.S
+endif !BUILD_ARMASM_INLINE
+else
+if BUILD_ARMASM_INLINE
+if BUILD_ARM_NONTHUMB
+if BUILD_ARM_32
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-curve25519_c.c
+endif
+if BUILD_ARM_64
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-curve25519_c.c
+endif
+endif
+if BUILD_ARM_THUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-curve25519_c.c
+endif
+else
+if BUILD_ARM_NONTHUMB
+if BUILD_ARM_32
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-curve25519.S
+endif
+if BUILD_ARM_64
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-curve25519.S
+endif
+endif
+if BUILD_ARM_THUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-curve25519.S
+endif
+endif !BUILD_ARMASM_INLINE
+endif !BUILD_ARMASM_NEON
+endif BUILD_ARMASM
+
+if BUILD_PWDBASED
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/pwdbased.c
+endif BUILD_PWDBASED
+
+if BUILD_SP
+if BUILD_SP_C32
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sp_c32.c
+endif
+if BUILD_SP_C64
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sp_c64.c
+endif
+
+if BUILD_SP_X86_64
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sp_x86_64.c
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sp_x86_64_asm.S
+endif
+if !BUILD_FIPS_V2
+if BUILD_SP_ARM32
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sp_arm32.c
+endif
+endif
+if BUILD_SP_ARM_THUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sp_armthumb.c
+endif
+if !BUILD_FIPS_V2
+if BUILD_SP_ARM64
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sp_arm64.c
+endif
+endif
+if BUILD_SP_ARM_CORTEX
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sp_cortexm.c
+endif
+if BUILD_SP_RISCV64
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sp_riscv64.c
+endif
+endif BUILD_SP
+
+# PQ Algorithms (FIPS v7.0.0+)
+if BUILD_WC_MLKEM
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/wc_mlkem.c
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/wc_mlkem_poly.c
+if BUILD_ARMASM
+if BUILD_ARM_THUMB
+if BUILD_ARMASM_INLINE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-mlkem-asm_c.c
+else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-mlkem-asm.S
+endif !BUILD_ARMASM_INLINE
+else
+if BUILD_ARMASM_INLINE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-mlkem-asm_c.c
+else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-mlkem-asm.S
+endif !BUILD_ARMASM_INLINE
+endif !BUILD_ARM_THUMB
+endif BUILD_ARMASM
+if !BUILD_X86_ASM
+if BUILD_INTELASM
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/wc_mlkem_asm.S
+endif
+endif
+if BUILD_ARMASM_NEON
+if BUILD_ARMASM_INLINE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-mlkem-asm_c.c
+else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-mlkem-asm.S
+endif !BUILD_ARMASM_INLINE
+endif BUILD_ARMASM_NEON
+endif
+
+if BUILD_MLDSA
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/wc_mldsa.c
+if !BUILD_X86_ASM
+if BUILD_INTELASM
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/wc_mldsa_asm.S
+endif BUILD_INTELASM
+endif !BUILD_X86_ASM
+endif
+
+if BUILD_WC_LMS
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/wc_lms.c
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/wc_lms_impl.c
+endif
+
+if BUILD_WC_XMSS
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/wc_xmss.c
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/wc_xmss_impl.c
+endif
+
+if BUILD_WC_SLHDSA
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/wc_slhdsa.c
+endif
+
+if !BUILD_FIPS_NO_POST
+
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/fips.c \
+                             wolfcrypt/src/fips_test.c
+
+# fips last file
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/wolfcrypt_last.c
+
+endif !BUILD_FIPS_NO_POST
+
+# v7+ and v5 only.  Listed after wolfcrypt_last.c so its code sits past
+# wolfCrypt_FIPS_last() and the in-core integrity hash does not cover it.  The
+# module calls out to this entropy source, which is what IG 9.3.A asks for.
+# v6 keeps it inside boundary. Outside the !BUILD_FIPS_NO_POST guard above so
+# --enable-fips=dev-no-post builds it too.
+if BUILD_MEMUSE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/wolfentropy.c
+endif
+
+endif BUILD_FIPS_V7_PLUS
+
+endif BUILD_FIPS
+
+# For wolfRand, exclude everything else.
+if !BUILD_FIPS_RAND
+
+# For FIPSV2, exclude the wolfCrypt files included above.
+# For wolfRand, exclude just a couple files.
+# For old FIPS, keep the wolfCrypt versions of the
+# CtaoCrypt files included above.
+if !BUILD_FIPS_V2_PLUS
+if BUILD_HMAC
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/hmac.c
+endif
+endif !BUILD_FIPS_V2_PLUS
+
+# CAVP self test
+if BUILD_SELFTEST
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/selftest.c
+endif
+
+endif !BUILD_FIPS_RAND
+
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/hash.c
+
+if !BUILD_DO178
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/cpuid.c
+endif !BUILD_DO178
+
+if !BUILD_FIPS_RAND
+
+if !BUILD_FIPS_V5
+if !BUILD_FIPS_V6_PLUS
+if BUILD_KDF
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/kdf.c
+endif
+endif !BUILD_FIPS_V6_PLUS
+endif !BUILD_FIPS_V5
+
+if !BUILD_FIPS_V2_PLUS
+if BUILD_RNG
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/random.c
+if BUILD_MEMUSE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/wolfentropy.c
+endif
+if BUILD_RNG_BANK
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/rng_bank.c
+endif
+endif
+endif !BUILD_FIPS_V2_PLUS
+
+if !BUILD_FIPS_V2_PLUS
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sha256.c
+if BUILD_ARMASM_NEON
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += $(LEGACY_ARMASM_SHA256_C)
+if BUILD_ARMASM_INLINE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += $(NEW_ARMASM_SHA256_ASM_C)
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-sha256-asm_c.c
+else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += $(NEW_ARMASM_SHA256_ASM_S)
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-sha256-asm.S
+endif !BUILD_ARMASM_INLINE
+else
+if BUILD_ARMASM
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += $(LEGACY_ARMASM_SHA256_C)
+if BUILD_ARMASM_INLINE
+if BUILD_ARM_NONTHUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-sha256-asm_c.c
+endif
+if BUILD_ARM_THUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-sha256-asm_c.c
+endif
+else
+if BUILD_ARM_NONTHUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-sha256-asm.S
+endif
+if BUILD_ARM_THUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-sha256-asm.S
+endif
+endif !BUILD_ARMASM_INLINE
+else
+if !BUILD_X86_ASM
+if BUILD_INTELASM
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sha256_asm.S
+endif BUILD_INTELASM
+endif !BUILD_X86_ASM
+endif !BUILD_ARMASM
+endif !BUILD_ARMASM_NEON
+
+if BUILD_RISCV_ASM
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/riscv64/riscv-64-sha256-asm.S
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/riscv64/riscv-64-sha256-asm_c.c
+endif BUILD_RISCV_ASM
+
+if BUILD_PPC32_ASM
+if BUILD_PPC32_ASM_INLINE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc32/ppc32-sha256-asm_c.c
+else
+if BUILD_PPC32_ASM_INLINE_REG
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc32/ppc32-sha256-asm_cr.c
+else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc32/ppc32-sha256-asm.S
+endif !BUILD_PPC32_ASM_INLINE_REG
+endif !BUILD_PPC32_ASM_INLINE
+endif BUILD_PPC32_ASM
+
+if BUILD_PPC64_ASM
+if BUILD_PPC64_ASM_INLINE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc64/ppc64-sha256-asm_c.c
+else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc64/ppc64-sha256-asm.S
+endif !BUILD_PPC64_ASM_INLINE
+endif BUILD_PPC64_ASM
+
+endif !BUILD_FIPS_V2_PLUS
+
+if BUILD_AFALG
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/af_alg/afalg_hash.c
+endif
+
+if BUILD_KCAPI
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/kcapi/kcapi_aes.c
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/kcapi/kcapi_hash.c
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/kcapi/kcapi_hmac.c
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/kcapi/kcapi_ecc.c
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/kcapi/kcapi_rsa.c
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/kcapi/kcapi_dh.c
+endif
+
+if BUILD_WOLFEVENT
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/wolfevent.c
+endif
+
+if BUILD_ASYNCCRYPT
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/async.c
+endif
+
+if BUILD_RSA
+if !BUILD_FIPS_V2_PLUS
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/rsa.c
+endif !BUILD_FIPS_V2_PLUS
+endif
+
+if BUILD_RC2
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/rc2.c
+endif
+
+if !BUILD_FIPS_V6_PLUS
+if BUILD_SP
+if BUILD_SP_C32
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sp_c32.c
+endif
+if BUILD_SP_C64
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sp_c64.c
+endif
+
+if BUILD_SP_X86_64
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sp_x86_64.c
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sp_x86_64_asm.S
+endif
+if !BUILD_FIPS_V2
+if BUILD_SP_ARM32
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sp_arm32.c
+endif
+endif
+if BUILD_SP_ARM_THUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sp_armthumb.c
+endif
+if !BUILD_FIPS_V2
+if BUILD_SP_ARM64
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sp_arm64.c
+endif
+endif
+if BUILD_SP_ARM_CORTEX
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sp_cortexm.c
+endif
+if BUILD_SP_RISCV64
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sp_riscv64.c
+endif
+endif BUILD_SP
+endif !BUILD_FIPS_V6_PLUS
+
+if BUILD_SP_INT
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sp_int.c
+endif
+
+if !BUILD_FIPS_V2_PLUS
+if BUILD_AES
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/aes.c
+if BUILD_CUDA
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/cuda/aes-cuda.cu
+endif BUILD_CUDA
+
+if BUILD_ARMASM
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += $(LEGACY_ARMASM_AES_C)
+endif BUILD_ARMASM
+
+if BUILD_ARMASM_NEON
+if BUILD_ARMASM_INLINE
+if BUILD_ARM_NONTHUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += $(NEW_ARMASM_AES_ASM_C)
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-aes-asm_c.c
+endif
+if BUILD_ARM_THUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-aes-asm_c.c
+endif
+else
+if BUILD_ARM_NONTHUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += $(NEW_ARMASM_AES_ASM_S)
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-aes-asm.S
+endif
+if BUILD_ARM_THUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-aes-asm.S
+endif
+endif !BUILD_ARMASM_INLINE
+else
+if BUILD_ARMASM
+if BUILD_ARMASM_INLINE
+if BUILD_ARM_NONTHUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-aes-asm_c.c
+endif
+if BUILD_ARM_THUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-aes-asm_c.c
+endif
+else
+if BUILD_ARM_NONTHUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-aes-asm.S
+endif
+if BUILD_ARM_THUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-aes-asm.S
+endif
+endif !BUILD_ARMASM_INLINE
+endif BUILD_ARMASM
+endif !BUILD_ARMASM_NEON
+
+if BUILD_PPC64_ASM
+if BUILD_PPC64_ASM_INLINE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc64/ppc64-aes-asm_c.c
+else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc64/ppc64-aes-asm.S
+endif !BUILD_PPC64_ASM_INLINE
+endif BUILD_PPC64_ASM
+
+if BUILD_PPC32_ASM
+if BUILD_PPC32_ASM_INLINE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc32/ppc32-aes-asm_c.c
+else
+if BUILD_PPC32_ASM_INLINE_REG
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc32/ppc32-aes-asm_cr.c
+else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc32/ppc32-aes-asm.S
+endif !BUILD_PPC32_ASM_INLINE_REG
+endif !BUILD_PPC32_ASM_INLINE
+endif BUILD_PPC32_ASM
+
+if BUILD_AFALG
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/af_alg/afalg_aes.c
+endif BUILD_AFALG
+
+if BUILD_RISCV_ASM
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/riscv64/riscv-64-aes-asm.S
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/riscv64/riscv-64-aes-asm_c.c
+endif BUILD_RISCV_ASM
+endif BUILD_AES
+endif !BUILD_FIPS_V2_PLUS
+
+if !BUILD_FIPS_V2_PLUS
+if BUILD_CMAC
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/cmac.c
+endif
+
+if BUILD_SHE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/wc_she.c
+endif
+endif !BUILD_FIPS_V2_PLUS
+
+if !BUILD_FIPS_V2
+if BUILD_DES3
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/des3.c
+endif BUILD_DES3
+endif !BUILD_FIPS_V2
+
+if !BUILD_FIPS_V2_PLUS
+if BUILD_SHA
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sha.c
+endif
+endif !BUILD_FIPS_V2_PLUS
+
+if !BUILD_FIPS_V2_PLUS
+if BUILD_SHA512
+if BUILD_RISCV_ASM
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sha512.c
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/riscv64/riscv-64-sha512-asm.S
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/riscv64/riscv-64-sha512-asm_c.c
+else
+
+if !BUILD_FIPS_V5
+if !BUILD_FIPS_V6
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sha512.c
+endif !BUILD_FIPS_V6
+endif !BUILD_FIPS_V5
+
+if BUILD_ARMASM_NEON
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += $(LEGACY_ARMASM_SHA512_C)
+if BUILD_ARMASM_INLINE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-sha512-asm_c.c
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-sha512-asm_c.c
+else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-sha512-asm.S
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-sha512-asm.S
+endif !BUILD_ARMASM_INLINE
+else
+if BUILD_ARMASM
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += $(LEGACY_ARMASM_SHA512_C)
+if BUILD_ARMASM_INLINE
+if BUILD_ARM_NONTHUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-sha512-asm_c.c
+endif
+if BUILD_ARM_THUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-sha512-asm_c.c
+endif
+else
+if BUILD_ARM_NONTHUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-sha512-asm.S
+endif
+if BUILD_ARM_THUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-sha512-asm.S
+endif
+endif !BUILD_ARMASM_INLINE
+else
+
+if BUILD_FIPS_V5
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sha512.c
+else
+if BUILD_FIPS_V6
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sha512.c
+endif BUILD_FIPS_V6
+endif !BUILD_FIPS_V5
+
+if !BUILD_X86_ASM
+if BUILD_INTELASM
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sha512_asm.S
+endif BUILD_INTELASM
+endif !BUILD_X86_ASM
+endif !BUILD_ARMASM
+endif !BUILD_ARMASM_NEON
+endif !BUILD_RISCV_ASM
+
+if BUILD_PPC64_ASM
+if BUILD_PPC64_ASM_INLINE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc64/ppc64-sha512-asm_c.c
+else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc64/ppc64-sha512-asm.S
+endif !BUILD_PPC64_ASM_INLINE
+endif BUILD_PPC64_ASM
+
+if BUILD_PPC32_ASM
+if BUILD_PPC32_ASM_INLINE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc32/ppc32-sha512-asm_c.c
+else
+if BUILD_PPC32_ASM_INLINE_REG
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc32/ppc32-sha512-asm_cr.c
+else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc32/ppc32-sha512-asm.S
+endif !BUILD_PPC32_ASM_INLINE_REG
+endif !BUILD_PPC32_ASM_INLINE
+endif BUILD_PPC32_ASM
+endif BUILD_SHA512
+endif !BUILD_FIPS_V2_PLUS
+
+if !BUILD_FIPS_V2_PLUS
+if BUILD_SHA3
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sha3.c
+if BUILD_ARMASM_NEON
+if BUILD_ARMASM_INLINE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-sha3-asm_c.c
+else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-sha3-asm.S
+endif !BUILD_ARMASM_INLINE
+endif BUILD_ARMASM_NEON
+if BUILD_ARMASM
+if BUILD_ARMASM_INLINE
+if BUILD_ARM_NONTHUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-sha3-asm_c.c
+endif
+if BUILD_ARM_THUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-sha3-asm_c.c
+endif
+else
+if BUILD_ARM_NONTHUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-sha3-asm.S
+endif
+if BUILD_ARM_THUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-sha3-asm.S
+endif
+endif !BUILD_ARMASM_INLINE
+endif BUILD_ARMASM
+if BUILD_RISCV_ASM
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/riscv64/riscv-64-sha3-asm.S
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/riscv64/riscv-64-sha3-asm_c.c
+endif BUILD_RISCV_ASM
+if BUILD_PPC64_ASM
+if BUILD_PPC64_ASM_INLINE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc64/ppc64-sha3-asm_c.c
+else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc64/ppc64-sha3-asm.S
+endif !BUILD_PPC64_ASM_INLINE
+endif BUILD_PPC64_ASM
+if BUILD_PPC32_ASM
+if BUILD_PPC32_ASM_INLINE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc32/ppc32-sha3-asm_c.c
+else
+if BUILD_PPC32_ASM_INLINE_REG
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc32/ppc32-sha3-asm_cr.c
+else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/ppc32/ppc32-sha3-asm.S
+endif !BUILD_PPC32_ASM_INLINE_REG
+endif !BUILD_PPC32_ASM_INLINE
+endif BUILD_PPC32_ASM
+if !BUILD_X86_ASM
+if BUILD_INTELASM
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sha3_asm.S
+endif
+endif
+endif
+endif !BUILD_FIPS_V2_PLUS
+
+if !BUILD_FIPS_V2_PLUS
 if BUILD_SM2
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sm2.c
 if BUILD_SP
@@ -545,27 +1890,32 @@ if BUILD_SP_ARM64
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sp_sm2_arm64.c
 endif
 endif
+if BUILD_SP_RISCV64
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sp_sm2_riscv64.c
+endif
 if BUILD_SP_ARM_CORTEX
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sp_sm2_cortexm.c
 endif
 endif BUILD_SP
 endif BUILD_SM2
-endif !BUILD_FIPS_CURRENT
+endif !BUILD_FIPS_V2_PLUS
 
-if !BUILD_FIPS_CURRENT
+if !BUILD_FIPS_V2_PLUS
 if BUILD_SM3
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sm3.c
+if !BUILD_X86_ASM
 if BUILD_INTELASM
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sm3_asm.S
 endif
+endif
 endif BUILD_SM3
-endif !BUILD_FIPS_CURRENT
+endif !BUILD_FIPS_V2_PLUS
 
-if !BUILD_FIPS_CURRENT
+if !BUILD_FIPS_V2_PLUS
 if BUILD_SM4
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sm4.c
 endif BUILD_SM4
-endif !BUILD_FIPS_CURRENT
+endif !BUILD_FIPS_V2_PLUS
 
 endif !BUILD_FIPS_RAND
 
@@ -576,6 +1926,43 @@ endif
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += \
                wolfcrypt/src/logging.c \
                wolfcrypt/src/wc_port.c
+
+# FrodoKEM (experimental reference implementation)
+if BUILD_WC_FRODOKEM
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/wc_frodokem.c
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/wc_frodokem_mat.c
+if BUILD_INTELASM
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/wc_frodokem_asm.S
+endif BUILD_INTELASM
+# AArch64: NEON, plus the opt-in SVE and SME ops (guarded by WOLFSSL_FRODOKEM_SVE
+# / WOLFSSL_FRODOKEM_SME), all in the one armv8-frodokem-asm file.
+if BUILD_ARMASM_NEON
+if BUILD_ARMASM_INLINE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-frodokem-asm_c.c
+else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-frodokem-asm.S
+endif !BUILD_ARMASM_INLINE
+endif BUILD_ARMASM_NEON
+# AArch32: NEON and the 32-bit-SIMD (SMLAD/SADD16/...) NEON-absent fallback share
+# the one armv8-32-frodokem-asm file, built for ARM (non-Thumb) with or without
+# NEON. Thumb2 has its own file.
+if BUILD_ARMASM
+if BUILD_ARM_NONTHUMB
+if BUILD_ARMASM_INLINE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-frodokem-asm_c.c
+else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-frodokem-asm.S
+endif !BUILD_ARMASM_INLINE
+endif BUILD_ARM_NONTHUMB
+if BUILD_ARM_THUMB
+if BUILD_ARMASM_INLINE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-frodokem-asm_c.c
+else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-frodokem-asm.S
+endif !BUILD_ARMASM_INLINE
+endif BUILD_ARM_THUMB
+endif BUILD_ARMASM
+endif
 
 if BUILD_ERROR_STRINGS
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/error.c
@@ -595,7 +1982,7 @@ src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/memory.c
 endif
 
 if !BUILD_FIPS_RAND
-if !BUILD_FIPS_CURRENT
+if !BUILD_FIPS_V2_PLUS
 if BUILD_DH
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/dh.c
 endif
@@ -611,19 +1998,39 @@ endif
 
 endif !BUILD_FIPS_RAND
 
-if BUILD_CODING
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/coding.c
-endif
 
 if !BUILD_FIPS_RAND
 
 if BUILD_POLY1305
 if BUILD_ARMASM
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-poly1305.c
+if BUILD_ARMASM_INLINE
+if BUILD_ARM_NONTHUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-poly1305-asm_c.c
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-poly1305-asm_c.c
+endif
+if BUILD_ARM_THUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-poly1305-asm_c.c
+endif
+else
+if BUILD_ARM_NONTHUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-poly1305-asm.S
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-poly1305-asm.S
+endif
+if BUILD_ARM_THUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-poly1305-asm.S
+endif
+endif !BUILD_ARMASM_INLINE
+endif
+if BUILD_RISCV_ASM
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/riscv64/riscv-64-poly1305-asm.S
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/riscv64/riscv-64-poly1305-asm_c.c
 endif
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/poly1305.c
+if !BUILD_X86_ASM
 if BUILD_INTELASM
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/poly1305_asm.S
+endif
 endif
 endif
 
@@ -639,23 +2046,37 @@ if BUILD_MD5
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/md5.c
 endif
 
+if !BUILD_FIPS_V6_PLUS
 if BUILD_PWDBASED
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/pwdbased.c
+endif BUILD_PWDBASED
+endif !BUILD_FIPS_V6_PLUS
+
+if BUILD_PKCS12
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/pkcs12.c
-endif
+endif BUILD_PKCS12
 
 if BUILD_DSA
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/dsa.c
 endif
 
-if !BUILD_FIPS_CURRENT
+if !BUILD_FIPS_V2_PLUS
 if BUILD_AESNI
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/aes_asm.S
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/aes_x86_64_asm.S
 if BUILD_X86_ASM
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/aes_gcm_x86_asm.S
+# 32-bit GCM asm has text relocations, so it is left out; 32-bit AES-GCM uses
+# the C GHASH over AES-NI blocks.  See WC_AESNI_GCM in aes.c.
+if BUILD_AESXTS
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/aes_xts_x86_asm.S
+endif
 else
+if BUILD_AESGCM
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/aes_gcm_asm.S
+endif
+if BUILD_AESXTS
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/aes_xts_asm.S
+endif
 endif
 endif
 endif
@@ -672,7 +2093,7 @@ if BUILD_RIPEMD
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/ripemd.c
 endif
 
-if BUILD_BLAKE2
+if BUILD_BLAKE2B
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/blake2b.c
 endif
 if BUILD_BLAKE2S
@@ -680,17 +2101,53 @@ src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/blake2s.c
 endif
 
 if BUILD_CHACHA
-if BUILD_ARMASM_NEON
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-chacha.c
-else
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/chacha.c
+if !BUILD_CHACHA_NOASM
+if BUILD_ARMASM
+if BUILD_ARMASM_INLINE
+if BUILD_ARM_NONTHUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-chacha-asm_c.c
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-chacha-asm_c.c
+endif
+if BUILD_ARM_THUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-chacha-asm_c.c
+endif
+else
+if BUILD_ARM_NONTHUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-chacha-asm.S
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-chacha-asm.S
+endif
+if BUILD_ARM_THUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-chacha-asm.S
+endif
+endif !BUILD_ARMASM_INLINE
+else
+if BUILD_RISCV_ASM
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/riscv64/riscv-64-chacha-asm.S
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/riscv64/riscv-64-chacha-asm_c.c
+endif BUILD_RISCV_ASM
+if !BUILD_X86_ASM
 if BUILD_INTELASM
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/chacha_asm.S
-endif
-endif
+endif BUILD_INTELASM
+endif !BUILD_X86_ASM
+endif !BUILD_ARMASM
+endif !BUILD_CHACHA_NOASM
 if BUILD_POLY1305
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/chacha20_poly1305.c
+endif BUILD_POLY1305
+endif BUILD_CHACHA
+
+if BUILD_ASCON
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/ascon.c
 endif
+
+if BUILD_ARGON2
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/argon2.c
+endif
+
+if BUILD_PUF
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/puf.c
 endif
 
 if !BUILD_INLINE
@@ -705,7 +2162,7 @@ if BUILD_HEAPMATH
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/integer.c
 endif
 
-if !BUILD_FIPS_CURRENT
+if !BUILD_FIPS_V2_PLUS
 if BUILD_ECC
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/ecc.c
 endif
@@ -718,24 +2175,66 @@ if BUILD_SAKKE
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sakke.c
 endif
 
-if !BUILD_FIPS_CURRENT
-if BUILD_WC_KYBER
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/wc_kyber.c
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/wc_kyber_poly.c
+if !BUILD_FIPS_V7_PLUS
+if BUILD_WC_MLKEM
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/wc_mlkem.c
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/wc_mlkem_poly.c
+if BUILD_ARMASM
+if BUILD_ARM_THUMB
+if BUILD_ARMASM_INLINE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-mlkem-asm_c.c
+else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-mlkem-asm.S
+endif !BUILD_ARMASM_INLINE
+else
+if BUILD_ARMASM_INLINE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-mlkem-asm_c.c
+else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-mlkem-asm.S
+endif !BUILD_ARMASM_INLINE
+endif !BUILD_ARM_THUMB
+endif BUILD_ARMASM
+if !BUILD_X86_ASM
 if BUILD_INTELASM
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/wc_kyber_asm.S
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/wc_mlkem_asm.S
 endif
 endif
+if BUILD_ARMASM_NEON
+if BUILD_ARMASM_INLINE
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-mlkem-asm_c.c
+else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-mlkem-asm.S
+endif !BUILD_ARMASM_INLINE
+endif BUILD_ARMASM_NEON
+endif
+
+if BUILD_MLDSA
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/wc_mldsa.c
+if !BUILD_X86_ASM
+if BUILD_INTELASM
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/wc_mldsa_asm.S
+endif BUILD_INTELASM
+endif !BUILD_X86_ASM
 endif
 
 if BUILD_WC_LMS
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/wc_lms.c
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/wc_lms_impl.c
 endif
 
 if BUILD_WC_XMSS
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/wc_xmss.c
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/wc_xmss_impl.c
 endif
+endif !BUILD_FIPS_V7_PLUS
 
+if !BUILD_FIPS_V7_PLUS
+if BUILD_WC_SLHDSA
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/wc_slhdsa.c
+endif
+endif !BUILD_FIPS_V7_PLUS
+
+if !BUILD_FIPS_V6_PLUS
 if BUILD_CURVE25519
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/curve25519.c
 endif
@@ -743,74 +2242,115 @@ endif
 if BUILD_ED25519
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/ed25519.c
 endif
+endif !BUILD_FIPS_V6_PLUS
 
 if BUILD_FEMATH
-if BUILD_CURVE25519_SMALL
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/fe_low_mem.c
-else
-if BUILD_INTELASM
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/ge_operations.c
+if BUILD_CURVE25519_INTELASM
+if !BUILD_X86_ASM
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/fe_x25519_asm.S
 else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/fe_operations.c
+endif BUILD_X86_ASM
+else
+if BUILD_ARMASM
+if !BUILD_FIPS_V6_PLUS
+if BUILD_ARMASM_NEON
+if BUILD_ARMASM_INLINE
+if BUILD_ARM_32
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-curve25519_c.c
+endif
+if BUILD_ARM_64
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-curve25519_c.c
+endif
+else
+if BUILD_ARM_32
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-curve25519.S
+endif
+if BUILD_ARM_64
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-curve25519.S
+endif
+endif !BUILD_ARMASM_INLINE
+else
+if BUILD_ARMASM_INLINE
+if BUILD_ARM_NONTHUMB
+if BUILD_ARM_32
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-curve25519_c.c
+endif
+if BUILD_ARM_64
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-curve25519_c.c
+endif
+endif
+if BUILD_ARM_THUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-curve25519_c.c
+endif
+else
+if BUILD_ARM_NONTHUMB
+if BUILD_ARM_32
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-curve25519.S
+endif
+if BUILD_ARM_64
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-curve25519.S
+endif
+endif
+if BUILD_ARM_THUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-curve25519.S
+endif
+endif !BUILD_ARMASM_INLINE
+endif !BUILD_ARMASM_NEON
+endif !BUILD_FIPS_V6_PLUS
+else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/fe_operations.c
+endif !BUILD_ARMASM
+endif !BUILD_CURVE25519_INTELASM
+endif BUILD_FEMATH
+
+if BUILD_GEMATH
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/ge_low_mem.c
+if !BUILD_FEMATH
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/ge_operations.c
+if BUILD_CURVE25519_INTELASM
+if !BUILD_X86_ASM
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/fe_x25519_asm.S
+else
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/fe_operations.c
+endif BUILD_X86_ASM
+else
+if !BUILD_FIPS_V6_PLUS
 if BUILD_ARMASM
 if BUILD_ARMASM_NEON
 if BUILD_ARMASM_INLINE
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-curve25519_c.c
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-curve25519_c.c
 else
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-curve25519.S
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-curve25519.S
 endif !BUILD_ARMASM_INLINE
 else
 if BUILD_ARMASM_INLINE
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-curve25519_c.c
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-curve25519_c.c
+if BUILD_ARM_NONTHUMB
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-curve25519_c.c
+endif
+if BUILD_ARM_THUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-curve25519_c.c
+endif
 else
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-32-curve25519.S
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-curve25519.S
+if BUILD_ARM_NONTHUMB
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-curve25519.S
+endif
+if BUILD_ARM_THUMB
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-curve25519.S
+endif
 endif !BUILD_ARMASM_INLINE
 endif !BUILD_ARMASM_NEON
 else
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/fe_operations.c
 endif !BUILD_ARMASM
-endif !BUILD_INTELASM
-endif !BUILD_CURVE25519_SMALL
-endif BUILD_FEMATH
+endif !BUILD_FIPS_V6_PLUS
+endif !BUILD_CURVE25519_INTELASM
+endif !BUILD_FEMATH
+endif BUILD_GEMATH
 
-if BUILD_GEMATH
-if BUILD_ED25519_SMALL
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/ge_low_mem.c
-else
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/ge_operations.c
-if !BUILD_FEMATH
-if BUILD_INTELASM
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/fe_x25519_asm.S
-else
-if BUILD_ARMASM
-if BUILD_ARMASM_NEON
-if BUILD_ARMASM_INLINE
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-curve25519_c.c
-else
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-curve25519.S
-endif
-else
-if BUILD_ARMASM_INLINE
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-curve25519_c.c
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-curve25519_c.c
-else
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/thumb2-curve25519.S
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/arm/armv8-curve25519.S
-endif
-endif
-else
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/fe_operations.c
-endif
-endif
-endif
-endif
-endif
-
+if !BUILD_FIPS_V6_PLUS
 if BUILD_CURVE448
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/curve448.c
 endif
@@ -818,6 +2358,7 @@ endif
 if BUILD_ED448
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/ed448.c
 endif
+endif !BUILD_FIPS_V6_PLUS
 
 if BUILD_FE448
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/fe_448.c
@@ -830,20 +2371,14 @@ src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/fe_448.c
 endif
 endif
 
-if BUILD_LIBOQS
+if BUILD_FALCON
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/falcon.c
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/dilithium.c
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/sphincs.c
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/ext_kyber.c
 endif
 
-if BUILD_LIBLMS
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/ext_lms.c
+if BUILD_FALCON_ASM
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/wc_falcon_fpr_x86_64_asm.S
 endif
 
-if BUILD_LIBXMSS
-src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/ext_xmss.c
-endif
 
 if BUILD_LIBZ
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/compress.c
@@ -851,6 +2386,10 @@ endif
 
 if BUILD_PKCS7
 src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/pkcs7.c
+endif
+
+if BUILD_TSP
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/tsp.c
 endif
 
 if BUILD_SRP
@@ -900,6 +2439,9 @@ endif
 
 endif !BUILD_CRYPTONLY
 
+if BUILD_XILINX
+src_libwolfssl@LIBSUFFIX@_la_SOURCES += wolfcrypt/src/port/xilinx/xil-aesgcm.c
+endif
 
 endif !BUILD_FIPS_RAND
 

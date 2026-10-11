@@ -1,12 +1,12 @@
 /* callbacks.h
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -36,7 +36,7 @@ enum { /* CALLBACK CONSTANTS */
     MAX_CIPHERNAME_SZ     =  24,
     MAX_TIMEOUT_NAME_SZ   =  24,
     MAX_PACKETS_HANDSHAKE =  14,       /* 12 for client auth plus 2 alerts */
-    MAX_VALUE_SZ          = 128,       /* all handshake packets but Cert should
+    MAX_VALUE_SZ          = 128        /* all handshake packets but Cert should
                                           fit here  */
 };
 

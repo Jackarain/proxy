@@ -8,10 +8,10 @@ commit-tests.sh - our commit tests, must pass before a commit is accepted, use
 
 fips-hash.sh - updates the verifyCore hash in fips_test.c
 
+fips-hash-offline.sh - updates the verifyCore hash in an already-linked binary
+
 fips-check.sh - checks if current wolfSSL version works against FIPS wolfCrypt
                 comment out last line to leave working directory
-
-async-check.sh - internal script for validating wolfSSL Async using the simulator.
 
 gencertbuf.pl - creates certs_test.h, our certs / keys C array for easy non
                 filesystem testing
@@ -35,6 +35,7 @@ scripts/
  google.test   - example client test against google, part of tests
  resume.test   - example sessoin resume test, part of tests
  ocsp-stapling.test - example client test against globalsign, part of tests
+ ocsp-stapling1_tls13multi.text - example client test against example server, part of tests
  ocsp-stapling2.test - example client test against example server, part of tests
  sniffer-testsuite.test - runs snifftest on a pcap of testsuite, part of tests
                           in sniffer mode

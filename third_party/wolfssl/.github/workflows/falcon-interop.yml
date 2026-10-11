@@ -1,0 +1,296 @@
+name: Falcon native<->liboqs interop Tests
+
+# START OF COMMON SECTION
+on:
+  push:
+    branches: [ 'release/**' ]
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches: [ '*' ]
+  # Daily run on master reseeds the shared cache (see save steps below).
+  schedule:
+    - cron: '40 4 * * *'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+# END OF COMMON SECTION
+
+env:
+  # liboqs version pinned for the differential/interop baseline.
+  LIBOQS_REF: 0.10.1
+
+jobs:
+  build_liboqs:
+    name: Build liboqs
+    if: ${{ (github.repository_owner == 'wolfssl') && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checking if we have liboqs in cache
+        uses: actions/cache/restore@v5
+        id: cache
+        with:
+          path: oqs-install
+          key: liboqs-${{ env.LIBOQS_REF }}-ubuntu-24.04
+          lookup-only: true
+
+      - name: Checkout liboqs
+        if: steps.cache.outputs.cache-hit != 'true'
+        uses: actions/checkout@v5
+        with:
+          repository: open-quantum-safe/liboqs
+          ref: ${{ env.LIBOQS_REF }}
+          path: liboqs
+          fetch-depth: 1
+
+      - name: Compile and install liboqs
+        if: steps.cache.outputs.cache-hit != 'true'
+        working-directory: liboqs
+        run: |
+          mkdir build
+          cd build
+          cmake -GNinja \
+            -DCMAKE_INSTALL_PREFIX=$GITHUB_WORKSPACE/oqs-install \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_SHARED_LIBS=OFF \
+            -DOQS_USE_OPENSSL=OFF \
+            -DOQS_BUILD_ONLY_LIB=ON \
+            ..
+          ninja
+          ninja install
+
+      # Only master (the daily schedule) saves, so all PRs share one entry.
+      - name: Save liboqs cache
+        if: github.ref == 'refs/heads/master' && steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          path: oqs-install
+          key: liboqs-${{ env.LIBOQS_REF }}-ubuntu-24.04
+
+      # On a cache miss, hand the freshly built liboqs to the test job via an
+      # artifact so it is not compiled a second time in the same run.
+      - name: tar liboqs
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: tar -zcf liboqs.tgz oqs-install
+
+      - name: Upload liboqs build
+        if: steps.cache.outputs.cache-hit != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: liboqs
+          path: liboqs.tgz
+          retention-days: 1
+
+  falcon_interop:
+    name: Interop ${{ matrix.name }} (native Falcon vs liboqs Falcon)
+    if: ${{ (github.repository_owner == 'wolfssl') && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
+    runs-on: ubuntu-24.04
+    needs: build_liboqs
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: 'default',      opts: '--enable-falcon' }
+          - { name: 'smallest-mem', opts: '--enable-falcon=smallest-mem' }
+    steps:
+      - name: Install build tools
+        run: |
+          # A wedged mirror hangs apt instead of failing it. Acquire timeouts
+          # drop a stalled connection, `timeout` hard-kills apt-get if it
+          # wedges anyway, and the loop then retries against a fresh mirror.
+          # Two attempts at 60s+300s stay inside this job's timeout-minutes.
+
+          # No wolfSSL job installs from the runner's Google/Microsoft apt repos,
+          # and a bad index on either fails apt-get update for everyone. Drop them.
+          grep -rlE 'dl\.google\.com|packages\.microsoft\.com' \
+            /etc/apt/sources.list.d/ 2>/dev/null | xargs -r sudo rm -vf || true
+          APT_OPTS=(-o Acquire::Retries=3 -o Acquire::http::Timeout=30
+                    -o Acquire::https::Timeout=30)
+          apt_retry() {
+            local i
+            for i in 1 2; do
+              # An attempt killed mid-unpack leaves dpkg needing this, or the
+              # next apt-get aborts instantly in debSystem::Lock().
+              sudo dpkg --configure -a >/dev/null 2>&1 || true
+              if sudo timeout -k 10 60 apt-get "${APT_OPTS[@]}" update -q && \
+                 sudo timeout -k 10 300 apt-get "${APT_OPTS[@]}" install -y "$@"; then
+                return 0
+              fi
+              echo "::warning::apt-get failed (attempt $i/2)"
+              sleep 5
+            done
+            echo "::error::apt-get failed after 2 attempts"
+            return 1
+          }
+          apt_retry ninja-build
+
+      # Check out wolfSSL first: actions/checkout runs "git clean -ffdx", which
+      # would delete an untracked oqs-install/ placed in the workspace by the
+      # cache/artifact steps below. Restoring liboqs after the checkout keeps it.
+      - name: Checkout wolfSSL
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+
+      - name: Restore liboqs from cache
+        uses: actions/cache/restore@v5
+        id: cache
+        with:
+          path: oqs-install
+          key: liboqs-${{ env.LIBOQS_REF }}-ubuntu-24.04
+
+      # On a cache miss the build_liboqs job uploaded an artifact instead.
+      - name: Download liboqs artifact
+        if: steps.cache.outputs.cache-hit != 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: liboqs
+
+      - name: Untar liboqs artifact
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: tar -zxf liboqs.tgz
+
+      - name: Build wolfSSL with native Falcon
+        run: |
+          ./autogen.sh
+          ./configure ${{ matrix.opts }} --enable-experimental --enable-static
+          make -j$(nproc)
+
+      - name: Build and run the interop harness (native Falcon vs liboqs)
+        run: |
+          gcc -O2 -I. -I$GITHUB_WORKSPACE/oqs-install/include \
+            scripts/falcon-interop.c \
+            src/.libs/libwolfssl.a \
+            $GITHUB_WORKSPACE/oqs-install/lib/liboqs.a \
+            -lm -lcrypto -lpthread -o falcon-interop
+          ./falcon-interop
+
+  # Exercise every selectable Falcon backend, not just the default portable-
+  # integer fpr path. Backend selection is compile-time (no runtime CPUID
+  # fallback), so each leg runs on a host with the required ISA: AVX2/FMA is
+  # present on all GitHub x86 runners, NEON on the free ARM64 runners.
+  falcon_backends:
+    name: Backend ${{ matrix.name }}
+    if: ${{ (github.repository_owner == 'wolfssl') && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: 'default',           runner: ubuntu-latest,    opts: '--enable-falcon' }
+          - { name: 'asm',               runner: ubuntu-latest,    opts: '--enable-falcon=asm' }
+          - { name: 'double',            runner: ubuntu-latest,    opts: '--enable-falcon=double' }
+          - { name: 'avx2',              runner: ubuntu-latest,    opts: '--enable-falcon=avx2',           avx2: true }
+          - { name: 'small-mem',         runner: ubuntu-latest,    opts: '--enable-falcon=small-mem' }
+          - { name: 'avx2+small-mem',    runner: ubuntu-latest,    opts: '--enable-falcon=avx2,small-mem', avx2: true }
+          # -ffp-contract=off: --enable-falcon=neon implies the native double fpr
+          # seam, and aarch64 has baseline FMA with contraction on by default, so
+          # without this even the scalar ops can round differently here.
+          - { name: 'neon (ARM64)',      runner: ubuntu-24.04-arm, opts: '--enable-falcon=neon', cflags: '-ffp-contract=off' }
+          - { name: 'cache-key',         runner: ubuntu-latest,    opts: '--enable-falcon=cache-key', full_suite: true }
+          - { name: 'cache-basis',       runner: ubuntu-latest,    opts: '--enable-falcon=cache-basis', full_suite: true }
+          - { name: 'cache-key+small-mem', runner: ubuntu-latest,  opts: '--enable-falcon=cache-key,small-mem', full_suite: true }
+          - { name: 'smallest-mem',      runner: ubuntu-latest,    opts: '--enable-falcon=smallest-mem', full_suite: true }
+          - { name: 'asm+smallest-mem',  runner: ubuntu-latest,    opts: '--enable-falcon=asm,smallest-mem' }
+          - { name: 'avx2+smallest-mem', runner: ubuntu-latest,    opts: '--enable-falcon=avx2,smallest-mem', avx2: true }
+          - { name: 'neon+smallest-mem (ARM64)', runner: ubuntu-24.04-arm, opts: '--enable-falcon=neon,smallest-mem', cflags: '-ffp-contract=off' }
+          - { name: 'cache-key+smallest-mem', runner: ubuntu-latest, opts: '--enable-falcon=cache-key,smallest-mem', full_suite: true }
+          - { name: 'level1+dynamic-keys+smallest-mem', runner: ubuntu-latest, opts: '--enable-falcon=level1,dynamic-keys,smallest-mem', full_suite: true }
+          - { name: 'level1 only',       runner: ubuntu-latest,    opts: '--enable-falcon=level1', full_suite: true }
+          - { name: 'level5 only',       runner: ubuntu-latest,    opts: '--enable-falcon=level5', full_suite: true }
+          - { name: 'dynamic-keys',      runner: ubuntu-latest,    opts: '--enable-falcon=dynamic-keys', full_suite: true }
+          - { name: 'level1+dynamic-keys', runner: ubuntu-latest,  opts: '--enable-falcon=level1,dynamic-keys', full_suite: true }
+          - { name: 'cache-key+dynamic-keys', runner: ubuntu-latest, opts: '--enable-falcon=cache-key,dynamic-keys', full_suite: true }
+          - { name: 'level5+dynamic-keys', runner: ubuntu-latest,  opts: '--enable-falcon=level5,dynamic-keys', full_suite: true }
+          # verify-only strips keygen/sign; the KAT verifies still run, and
+          # this is the only config where the verify path is all there is.
+          - { name: 'verify-only',       runner: ubuntu-latest,    opts: '--enable-falcon', cppflags: '-DWOLFSSL_FALCON_VERIFY_ONLY' }
+    steps:
+      - name: Install build tools
+        run: |
+          # A wedged mirror hangs apt instead of failing it. Acquire timeouts
+          # drop a stalled connection, `timeout` hard-kills apt-get if it
+          # wedges anyway, and the loop then retries against a fresh mirror.
+          # Two attempts at 60s+300s stay inside this job's timeout-minutes.
+
+          # No wolfSSL job installs from the runner's Google/Microsoft apt repos,
+          # and a bad index on either fails apt-get update for everyone. Drop them.
+          grep -rlE 'dl\.google\.com|packages\.microsoft\.com' \
+            /etc/apt/sources.list.d/ 2>/dev/null | xargs -r sudo rm -vf || true
+          APT_OPTS=(-o Acquire::Retries=3 -o Acquire::http::Timeout=30
+                    -o Acquire::https::Timeout=30)
+          apt_retry() {
+            local i
+            for i in 1 2; do
+              # An attempt killed mid-unpack leaves dpkg needing this, or the
+              # next apt-get aborts instantly in debSystem::Lock().
+              sudo dpkg --configure -a >/dev/null 2>&1 || true
+              if sudo timeout -k 10 60 apt-get "${APT_OPTS[@]}" update -q && \
+                 sudo timeout -k 10 300 apt-get "${APT_OPTS[@]}" install -y "$@"; then
+                return 0
+              fi
+              echo "::warning::apt-get failed (attempt $i/2)"
+              sleep 5
+            done
+            echo "::error::apt-get failed after 2 attempts"
+            return 1
+          }
+          apt_retry autoconf automake libtool
+
+      - name: Checkout wolfSSL
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+
+      # Robustness guard: an AVX2-compiled binary SIGILLs on a non-AVX2 host.
+      # GitHub x86 runners always have AVX2+FMA, but fail loudly if that changes.
+      - name: Require AVX2 on the runner
+        if: ${{ matrix.avx2 }}
+        run: grep -q avx2 /proc/cpuinfo || { echo "::error::runner lacks AVX2"; exit 1; }
+
+      - name: Check the smallest-mem constant tables against their generator
+        if: ${{ contains(matrix.opts, 'smallest-mem') }}
+        run: python3 scripts/falcon_sm_tables.py --check
+
+      # WC_RNG_SEED_CB makes the DRBG reproducible, which is what lets the
+      # deterministic Falcon vector run at all.
+      - name: Build wolfSSL (Falcon ${{ matrix.name }})
+        run: |
+          ./autogen.sh
+          ./configure ${{ matrix.opts }} --enable-experimental --enable-static \
+              CPPFLAGS="-DWC_RNG_SEED_CB ${{ matrix.cppflags }}" \
+              CFLAGS="-O2 ${{ matrix.cflags }}"
+          make -j$(nproc)
+
+      - name: Run wolfCrypt Falcon self-test
+        if: ${{ ! matrix.build_only }}
+        run: ./wolfcrypt/test/testwolfcrypt
+
+      - name: Run Falcon API tests (includes the deterministic vector)
+        if: ${{ ! matrix.build_only }}
+        run: ./tests/unit.test --group falcon
+
+      # The white-box exits 0 either way, as the MC/DC harness expects, and
+      # reports a failed check in its closing "done (..., with failures)" line.
+      - name: Run the Falcon white-box (smallest-mem)
+        if: ${{ ! matrix.build_only && contains(matrix.opts, 'smallest-mem') }}
+        run: |
+          set -o pipefail
+          cp src/.libs/libwolfssl.a falcon-wb.a
+          ar d falcon-wb.a "$(ar t falcon-wb.a | grep -E '_la-falcon\.o$')"
+          gcc -O1 -g -fsanitize=address,undefined -fno-sanitize-recover=all \
+              -fno-omit-frame-pointer -I. -Itests -DHAVE_CONFIG_H \
+              -DWOLFSSL_USE_OPTIONS_H ${{ matrix.cflags }} -o falcon-wb \
+              tests/unit-mcdc/test_falcon_whitebox.c falcon-wb.a -lm -lpthread
+          ./falcon-wb | tee falcon-wb.log
+          ! grep -q 'with failures' falcon-wb.log
+
+      # --group falcon misses the Falcon test in the signature group and every
+      # caller of wc_falcon_set_level in the TLS and ASN paths, which a level
+      # restriction or a struct-changing option reaches.
+      - name: Run the full unit test suite
+        if: ${{ ! matrix.build_only && matrix.full_suite }}
+        run: ./tests/unit.test

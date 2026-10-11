@@ -6,11 +6,17 @@ This IDF version does NOT contain a local component and exists only to test wolf
 
 The recommended configuration is to have only the CMakeLists.txt in the local project components\wolfssl directory. See the [wolfssl_test](../wolfssl_test/README.md) example.
 
-1. `idf.py menuconfig` to configure the program.  
+## VisualGDB
+
+Open the VisualGDB Visual Studio Project file in the VisualGDB directory and click the "Start" button.
+
+## ESP-IDF Commandline
+
+1. `idf.py menuconfig` to configure the program.
     1-1. Example Configuration ->
 
-    TEST_ARG : argument that you want to use. Default is "-lng 0"  
-    The list of argument can be find in help.
+    There are no parametric arguments. See [wolfcrypt/test](https://github.com/wolfSSL/wolfssl/tree/master/wolfcrypt/test).
+    All features enabled in the `user_settings.h` will be tested.
 
 When you want to run the test program
 
@@ -35,17 +41,17 @@ cd /mnt/c/workspace/wolfssl/IDE/Espressif/ESP-IDF/examples/wolfssl_test
 . /mnt/c/SysGCC/esp32/esp-idf/v4.4.2/export.sh
 
 # build and flash, in this example to COM20
-idf.py build flash -p /dev/ttyS20 -b 921600 monitor
+idf.py build flash -p /dev/ttyS20 -b 115200 monitor
 ```
 
 ## Example Output
 
-Note the default wolfSSL `user_settings.h` is configured by default to be the most 
+Note the default wolfSSL `user_settings.h` is configured by default to be the most
 compatible across the widest ranges of targets. Contact wolfSSL at support@wolfssl.com
-for help in optimizing for your particular application, or see the 
+for help in optimizing for your particular application, or see the
 [docs](https://www.wolfssl.com/documentation/manuals/wolfssl/index.html).
 
-Compiled and flashed with `idf.py build  flash -p /dev/ttyS7 -b 921600 monitor`:
+Compiled and flashed with `idf.py build  flash -p /dev/ttyS7 -b 115200 monitor`:
 
 ```
 ets Jun  8 2016 00:22:57

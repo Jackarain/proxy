@@ -1,12 +1,12 @@
 /* hash.h
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -40,7 +40,7 @@
 #if defined(WOLFSSL_SHA384) || defined(WOLFSSL_SHA512)
     #include <wolfssl/wolfcrypt/sha512.h>
 #endif
-#ifdef HAVE_BLAKE2
+#if defined(HAVE_BLAKE2B) || defined(HAVE_BLAKE2S)
     #include <wolfssl/wolfcrypt/blake2.h>
 #endif
 #ifdef WOLFSSL_SHA3
@@ -52,11 +52,21 @@
 #ifdef WOLFSSL_MD2
     #include <wolfssl/wolfcrypt/md2.h>
 #endif
-#if defined(HAVE_BLAKE2) || defined(HAVE_BLAKE2S)
-    #include <wolfssl/wolfcrypt/blake2.h>
-#endif
 #ifdef WOLFSSL_SM3
     #include <wolfssl/wolfcrypt/sm3.h>
+#endif
+
+/* Clear the Silicon Labs SE context carried alongside the software members of
+ * wc_Sha and wc_Sha256. That port uses its "started" flag as a lazy-init
+ * sentinel (wolfCrypt has no callback hook on wc_InitShaXXX), and the init
+ * paths set fields individually rather than zeroing, so a fresh object whose
+ * storage held a non-zero byte would skip SE init and hand an uninitialised
+ * context to update or final. Call it AFTER the NULL check, never before. */
+#ifdef WOLFSSL_SILABS_CRYPTOCB
+    #define WC_SILABS_CLEAR_HASH_CTX(h) \
+        XMEMSET(&(h)->silabsCtx, 0, sizeof((h)->silabsCtx))
+#else
+    #define WC_SILABS_CLEAR_HASH_CTX(h) WC_DO_NOTHING
 #endif
 
 
@@ -80,62 +90,69 @@ enum wc_MACAlgorithm {
     sha512_mac,
     rmd_mac,
     blake2b_mac,
-    sm3_mac,
+    sm3_mac
 };
 
-enum wc_HashFlags {
-    WC_HASH_FLAG_NONE =     0x00000000,
-    WC_HASH_FLAG_WILLCOPY = 0x00000001, /* flag to indicate hash will be copied */
-    WC_HASH_FLAG_ISCOPY =   0x00000002, /* hash is copy */
-#ifdef WOLFSSL_SHA3
-    WC_HASH_SHA3_KECCAK256 =0x00010000, /* Older KECCAK256 */
+/* hash union */
+typedef union {
+#ifndef NO_MD5
+    wc_Md5 md5;
 #endif
-    WOLF_ENUM_DUMMY_LAST_ELEMENT(WC_HASH)
-};
+#ifndef NO_SHA
+    wc_Sha sha;
+#endif
+#ifdef WOLFSSL_SHA224
+    wc_Sha224 sha224;
+#endif
+#ifndef NO_SHA256
+    wc_Sha256 sha256;
+#endif
+#ifdef WOLFSSL_SHA384
+    wc_Sha384 sha384;
+#endif
+#ifdef WOLFSSL_SHA512
+    wc_Sha512 sha512;
+#endif
+#ifdef WOLFSSL_SHA3
+    wc_Sha3 sha3;
+#endif
+#ifdef WOLFSSL_SM3
+    wc_Sm3 sm3;
+#endif
+    WOLF_AGG_DUMMY_MEMBER;
+} wc_Hashes;
 
 #ifndef NO_HASH_WRAPPER
-typedef union {
-    #ifndef NO_MD5
-        wc_Md5 md5;
-    #endif
-    #ifndef NO_SHA
-        wc_Sha sha;
-    #endif
-    #ifdef WOLFSSL_SHA224
-        wc_Sha224 sha224;
-    #endif
-    #ifndef NO_SHA256
-        wc_Sha256 sha256;
-    #endif
-    #ifdef WOLFSSL_SHA384
-        wc_Sha384 sha384;
-    #endif
-    #ifdef WOLFSSL_SHA512
-        wc_Sha512 sha512;
-    #endif
-    #ifdef WOLFSSL_SHA3
-        wc_Sha3 sha3;
-    #endif
-    #ifdef WOLFSSL_SM3
-        wc_Sm3 sm3;
-    #endif
+typedef struct {
+    wc_Hashes alg;
+    enum wc_HashType type; /* sanity check */
+#ifndef WC_NO_CONSTRUCTORS
+    void *heap;
+#endif
 } wc_HashAlg;
 #endif /* !NO_HASH_WRAPPER */
 
+
 /* Find largest possible digest size
    Note if this gets up to the size of 80 or over check smallstack build */
+#undef WC_MAX_DIGEST_SIZE
+#undef WC_MAX_BLOCK_SIZE
 #if defined(WOLFSSL_SHA3)
+    /* note: SHA3-224 has the largest block size */
     #define WC_MAX_DIGEST_SIZE WC_SHA3_512_DIGEST_SIZE
-    #define WC_MAX_BLOCK_SIZE  WC_SHA3_224_BLOCK_SIZE /* 224 is the largest block size */
+    #define WC_MAX_BLOCK_SIZE  WC_SHA3_224_BLOCK_SIZE
 #elif defined(WOLFSSL_SHA512)
     #define WC_MAX_DIGEST_SIZE WC_SHA512_DIGEST_SIZE
     #define WC_MAX_BLOCK_SIZE  WC_SHA512_BLOCK_SIZE
-#elif defined(HAVE_BLAKE2)
+#elif defined(HAVE_BLAKE2B)
     #define WC_MAX_DIGEST_SIZE BLAKE2B_OUTBYTES
     #define WC_MAX_BLOCK_SIZE  BLAKE2B_BLOCKBYTES
 #elif defined(WOLFSSL_SHA384)
     #define WC_MAX_DIGEST_SIZE WC_SHA384_DIGEST_SIZE
     #define WC_MAX_BLOCK_SIZE  WC_SHA384_BLOCK_SIZE
+#elif !defined(NO_SHA) && !defined(NO_MD5)
+    #define WC_MAX_DIGEST_SIZE (WC_SHA_DIGEST_SIZE + WC_MD5_DIGEST_SIZE)
+    #define WC_MAX_BLOCK_SIZE  WC_SHA_BLOCK_SIZE
 #elif !defined(NO_SHA256)
     #define WC_MAX_DIGEST_SIZE WC_SHA256_DIGEST_SIZE
     #define WC_MAX_BLOCK_SIZE  WC_SHA256_BLOCK_SIZE
@@ -156,6 +173,133 @@ typedef union {
     #define WC_MAX_BLOCK_SIZE  128
 #endif
 
+#if defined(WC_HASH_CUSTOM_MAX_DIGEST_SIZE) && \
+    defined(WC_HASH_CUSTOM_MIN_DIGEST_SIZE)
+    #if WC_HASH_CUSTOM_MAX_DIGEST_SIZE < \
+        WC_HASH_CUSTOM_MIN_DIGEST_SIZE
+        #error HASH_CUSTOM_MAX_DIGEST_SIZE < WC_HASH_CUSTOM_MIN_DIGEST_SIZE
+    #endif
+#endif
+#ifdef WC_HASH_CUSTOM_MAX_DIGEST_SIZE
+    #undef WC_MAX_DIGEST_SIZE
+    #define WC_MAX_DIGEST_SIZE WC_HASH_CUSTOM_MAX_DIGEST_SIZE
+#endif
+#ifdef WC_HASH_CUSTOM_MAX_BLOCK_SIZE
+    #undef WC_MAX_BLOCK_SIZE
+    #define WC_MAX_BLOCK_SIZE WC_HASH_CUSTOM_MAX_BLOCK_SIZE
+#endif
+
+/* Set up WC_MIN_DIGEST_SIZE.  This is the shortest digest supported by any
+ * fixed-output-size hash algorithm enabled in the library.  It is not
+ * necessarily the shortest digest permitted for signature generation -- that is
+ * designated by WC_MIN_DIGEST_SIZE_FOR_SIGN, defined below, with additional
+ * restrictions under FIPS 186-5.
+ */
+#if defined(WC_HASH_CUSTOM_MIN_DIGEST_SIZE)
+    /* Note, FIPS 186-5 allows (and we need) SHA-1 in verify-only mode, but
+     * restricts signing to SHA-224 and larger, enforced below.
+     */
+    #if defined(WC_FIPS_186_4_PLUS) && \
+            (WC_HASH_CUSTOM_MIN_DIGEST_SIZE < 160 / 8)
+        #error FIPS 186 requires a minimum hash size >= SHA-1.
+    #elif (WC_HASH_CUSTOM_MIN_DIGEST_SIZE < 128 / 8)
+        #error WC_HASH_CUSTOM_MIN_DIGEST_SIZE is too small.
+    #endif
+    /* Let the user override the minimum digest size */
+    #define WC_MIN_DIGEST_SIZE WC_HASH_CUSTOM_MIN_DIGEST_SIZE
+#elif defined(WOLFSSL_MD2)
+    #define WC_MIN_DIGEST_SIZE WC_MD2_DIGEST_SIZE /* 16 */
+#elif !defined(NO_MD4)
+    #define WC_MIN_DIGEST_SIZE WC_MD4_DIGEST_SIZE /* 16 */
+#elif !defined(NO_MD5)
+    #define WC_MIN_DIGEST_SIZE WC_MD5_DIGEST_SIZE /* 16 */
+#elif !defined(NO_SHA)
+    #define WC_MIN_DIGEST_SIZE WC_SHA_DIGEST_SIZE /* 20 */
+#elif defined(WOLFSSL_SHA224)
+    #define WC_MIN_DIGEST_SIZE WC_SHA224_DIGEST_SIZE
+#elif !defined(HAVE_FIPS) && !defined(HAVE_SELFTEST) && \
+    defined(WOLFSSL_SHA512) && !defined(WOLFSSL_NOSHA512_224)
+    #define WC_MIN_DIGEST_SIZE WC_SHA512_224_DIGEST_SIZE
+#elif defined(WOLFSSL_SHA3) && !defined(WOLFSSL_NOSHA3_224)
+    #define WC_MIN_DIGEST_SIZE WC_SHA3_224_DIGEST_SIZE
+#elif !defined(NO_SHA256)
+    #define WC_MIN_DIGEST_SIZE WC_SHA256_DIGEST_SIZE
+#elif !defined(HAVE_FIPS) && !defined(HAVE_SELFTEST) && \
+    defined(WOLFSSL_SHA512) && !defined(WOLFSSL_NOSHA512_256)
+    #define WC_MIN_DIGEST_SIZE WC_SHA512_256_DIGEST_SIZE
+#elif defined(WOLFSSL_SHA3) && !defined(WOLFSSL_NOSHA3_256)
+    #define WC_MIN_DIGEST_SIZE WC_SHA3_256_DIGEST_SIZE
+#elif defined(HAVE_BLAKE2S)
+    #define WC_MIN_DIGEST_SIZE BLAKE2S_OUTBYTES /* 32 */
+#elif defined(WOLFSSL_SM3)
+    #define WC_MIN_DIGEST_SIZE WC_SM3_DIGEST_SIZE /* 32 */
+#elif defined(WOLFSSL_SHA384)
+    #define WC_MIN_DIGEST_SIZE WC_SHA384_DIGEST_SIZE
+#elif defined(WOLFSSL_SHA3) && !defined(WOLFSSL_NOSHA3_384)
+    #define WC_MIN_DIGEST_SIZE WC_SHA3_384_DIGEST_SIZE
+#elif defined(WOLFSSL_SHA512)
+    #define WC_MIN_DIGEST_SIZE WC_SHA512_DIGEST_SIZE
+#elif defined(WOLFSSL_SHA3) && !defined(WOLFSSL_NOSHA3_512)
+    #define WC_MIN_DIGEST_SIZE WC_SHA3_512_DIGEST_SIZE
+#elif defined(HAVE_BLAKE2B)
+    #define WC_MIN_DIGEST_SIZE BLAKE2B_OUTBYTES /* 64 */
+#elif defined(WOLFSSL_SHAKE128) || defined(WOLFSSL_SHAKE256)
+    #error SHAKE enabled without SHA-3.
+    #define WC_MIN_DIGEST_SIZE 64
+#else
+    #error No builtin hashes enabled and no WC_HASH_CUSTOM_MIN_DIGEST_SIZE.
+    #define WC_MIN_DIGEST_SIZE 64
+#endif
+
+/* We can't use preprocessor comparisons for asserts and conditional definitions
+ * here, because old FIPS uses enums for most of the digest sizes.  Moreover we
+ * can't use WC_SHA_DIGEST_SIZE at all here, because we support SHA-1-sized
+ * digests even in NO_SHA builds.
+ */
+#ifdef WC_MIN_DIGEST_SIZE_FOR_SIGN
+    wc_static_assert2((WC_MIN_DIGEST_SIZE_FOR_SIGN <= WC_MAX_DIGEST_SIZE) &&
+                      (WC_MIN_DIGEST_SIZE_FOR_SIGN >= WC_MIN_DIGEST_SIZE),
+                      "Supplied WC_MIN_DIGEST_SIZE_FOR_SIGN is out of range.");
+    #if defined(WC_FIPS_186_5_PLUS)
+        wc_static_assert2(WC_MIN_DIGEST_SIZE_FOR_SIGN >= 224 / 8,
+            "FIPS 186-5 requires a minimum sign-mode hash size >= SHA-224.");
+    #elif defined(WC_FIPS_186_4)
+        wc_static_assert2(WC_MIN_DIGEST_SIZE_FOR_SIGN >= 160 / 8,
+            "FIPS 186-4 requires a minimum sign-mode hash size >= SHA-1.");
+    #endif
+#else
+    #if defined(WC_FIPS_186_5_PLUS)
+        #define WC_MIN_DIGEST_SIZE_FOR_SIGN \
+            ((WC_MIN_DIGEST_SIZE < 224 / 8) ? (224 / 8) : WC_MIN_DIGEST_SIZE)
+    #elif defined(WC_FIPS_186_4)
+        #define WC_MIN_DIGEST_SIZE_FOR_SIGN \
+            ((WC_MIN_DIGEST_SIZE < 224 / 8) ? (160 / 8) : WC_MIN_DIGEST_SIZE)
+    #else
+        #define WC_MIN_DIGEST_SIZE_FOR_SIGN WC_MIN_DIGEST_SIZE
+    #endif
+#endif
+
+/* The minimum digest _FOR_VERIFY_under FIPS 186-5, FIPS 140-3, and SP 800-131A,
+ * is permitted to be shorter, to allow verify-only legacy DSA and ECDSA
+ * operations.
+ */
+#ifdef WC_MIN_DIGEST_SIZE_FOR_VERIFY
+    wc_static_assert2((WC_MIN_DIGEST_SIZE_FOR_VERIFY <= WC_MAX_DIGEST_SIZE) &&
+                      (WC_MIN_DIGEST_SIZE_FOR_VERIFY >= 128 / 8),
+                      "Supplied WC_MIN_DIGEST_SIZE_FOR_VERIFY is out of range.");
+    #if defined(WC_FIPS_186_4_PLUS)
+        wc_static_assert2(WC_MIN_DIGEST_SIZE_FOR_VERIFY >= 160 / 8,
+            "FIPS 186 requires a minimum verify-mode hash size >= SHA-1.");
+    #endif
+#else
+    #if defined(WC_FIPS_186_4_PLUS)
+        #define WC_MIN_DIGEST_SIZE_FOR_VERIFY \
+            ((WC_MIN_DIGEST_SIZE < 160 / 8) ? (160 / 8) : WC_MIN_DIGEST_SIZE)
+    #else
+        #define WC_MIN_DIGEST_SIZE_FOR_VERIFY WC_MIN_DIGEST_SIZE
+    #endif
+#endif
+
 #if !defined(NO_ASN) || !defined(NO_DH) || defined(HAVE_ECC)
 WOLFSSL_API int wc_HashGetOID(enum wc_HashType hash_type);
 WOLFSSL_API enum wc_HashType wc_OidGetHash(int oid);
@@ -170,6 +314,9 @@ WOLFSSL_API int wc_HashGetBlockSize(enum wc_HashType hash_type);
 WOLFSSL_API int wc_Hash(enum wc_HashType hash_type,
     const byte* data, word32 data_len,
     byte* hash, word32 hash_len);
+WOLFSSL_API int wc_Hash_ex(enum wc_HashType hash_type,
+    const byte* data, word32 data_len,
+    byte* hash, word32 hash_len, void* heap, int devId);
 
 /* generic hash operation wrappers */
 WOLFSSL_API int wc_HashInit_ex(wc_HashAlg* hash, enum wc_HashType type,
@@ -180,6 +327,11 @@ WOLFSSL_API int wc_HashUpdate(wc_HashAlg* hash, enum wc_HashType type,
 WOLFSSL_API int wc_HashFinal(wc_HashAlg* hash, enum wc_HashType type,
     byte* out);
 WOLFSSL_API int wc_HashFree(wc_HashAlg* hash, enum wc_HashType type);
+#ifndef WC_NO_CONSTRUCTORS
+WOLFSSL_API wc_HashAlg* wc_HashNew(enum wc_HashType type, void* heap,
+                                   int devId, int *result_code);
+WOLFSSL_API int wc_HashDelete(wc_HashAlg *hash, wc_HashAlg **hash_p);
+#endif
 
 #ifdef WOLFSSL_HASH_FLAGS
     WOLFSSL_API int wc_HashSetFlags(wc_HashAlg* hash, enum wc_HashType type,
@@ -191,33 +343,53 @@ WOLFSSL_API int wc_HashFree(wc_HashAlg* hash, enum wc_HashType type);
 #ifndef NO_MD5
 #include <wolfssl/wolfcrypt/md5.h>
 WOLFSSL_API int wc_Md5Hash(const byte* data, word32 len, byte* hash);
+WOLFSSL_API int wc_Md5Hash_ex(const byte* data, word32 len, byte* hash,
+    void* heap, int devId);
 #endif
 
 #ifndef NO_SHA
 #include <wolfssl/wolfcrypt/sha.h>
 WOLFSSL_API int wc_ShaHash(const byte* data, word32 len, byte* hash);
+WOLFSSL_API int wc_ShaHash_ex(const byte* data, word32 len, byte* hash,
+    void* heap, int devId);
 #endif
 
 #ifdef WOLFSSL_SHA224
 #include <wolfssl/wolfcrypt/sha256.h>
 WOLFSSL_API int wc_Sha224Hash(const byte* data, word32 len, byte* hash);
+WOLFSSL_API int wc_Sha224Hash_ex(const byte* data, word32 len, byte* hash,
+    void* heap, int devId);
 #endif /* defined(WOLFSSL_SHA224) */
 
 #ifndef NO_SHA256
 #include <wolfssl/wolfcrypt/sha256.h>
 WOLFSSL_API int wc_Sha256Hash(const byte* data, word32 len, byte* hash);
+WOLFSSL_API int wc_Sha256Hash_ex(const byte* data, word32 len, byte* hash,
+    void* heap, int devId);
 #endif
 
 #ifdef WOLFSSL_SHA384
 #include <wolfssl/wolfcrypt/sha512.h>
 WOLFSSL_API int wc_Sha384Hash(const byte* data, word32 len, byte* hash);
+WOLFSSL_API int wc_Sha384Hash_ex(const byte* data, word32 len, byte* hash,
+    void* heap, int devId);
 #endif /* defined(WOLFSSL_SHA384) */
 
 #ifdef WOLFSSL_SHA512
 #include <wolfssl/wolfcrypt/sha512.h>
 WOLFSSL_API int wc_Sha512Hash(const byte* data, word32 len, byte* hash);
-WOLFSSL_API int wc_Sha512_224Hash(const byte* data, word32 len, byte* hash);
-WOLFSSL_API int wc_Sha512_256Hash(const byte* data, word32 len, byte* hash);
+WOLFSSL_API int wc_Sha512Hash_ex(const byte* data, word32 len, byte* hash,
+    void* heap, int devId);
+#ifndef WOLFSSL_NOSHA512_224
+    WOLFSSL_API int wc_Sha512_224Hash(const byte* data, word32 len, byte* hash);
+    WOLFSSL_API int wc_Sha512_224Hash_ex(const byte* data, word32 len,
+        byte* hash, void* heap, int devId);
+#endif
+#ifndef WOLFSSL_NOSHA512_256
+    WOLFSSL_API int wc_Sha512_256Hash(const byte* data, word32 len, byte* hash);
+    WOLFSSL_API int wc_Sha512_256Hash_ex(const byte* data, word32 len,
+        byte* hash, void* heap, int devId);
+#endif
 #endif /* WOLFSSL_SHA512 */
 
 #ifdef WOLFSSL_SHA3
@@ -226,18 +398,32 @@ WOLFSSL_API int wc_Sha3_224Hash(const byte* data, word32 len, byte* hash);
 WOLFSSL_API int wc_Sha3_256Hash(const byte* data, word32 len, byte* hash);
 WOLFSSL_API int wc_Sha3_384Hash(const byte* data, word32 len, byte* hash);
 WOLFSSL_API int wc_Sha3_512Hash(const byte* data, word32 len, byte* hash);
+WOLFSSL_API int wc_Sha3_224Hash_ex(const byte* data, word32 len, byte* hash,
+    void* heap, int devId);
+WOLFSSL_API int wc_Sha3_256Hash_ex(const byte* data, word32 len, byte* hash,
+    void* heap, int devId);
+WOLFSSL_API int wc_Sha3_384Hash_ex(const byte* data, word32 len, byte* hash,
+    void* heap, int devId);
+WOLFSSL_API int wc_Sha3_512Hash_ex(const byte* data, word32 len, byte* hash,
+    void* heap, int devId);
 #ifdef WOLFSSL_SHAKE128
 WOLFSSL_API int wc_Shake128Hash(const byte* data, word32 len, byte* hash,
     word32 hashLen);
+WOLFSSL_API int wc_Shake128Hash_ex(const byte* data, word32 len, byte* hash,
+    word32 hashLen, void* heap, int devId);
 #endif
 #ifdef WOLFSSL_SHAKE256
 WOLFSSL_API int wc_Shake256Hash(const byte* data, word32 len, byte* hash,
     word32 hashLen);
+WOLFSSL_API int wc_Shake256Hash_ex(const byte* data, word32 len, byte* hash,
+    word32 hashLen, void* heap, int devId);
 #endif
 #endif /* WOLFSSL_SHA3 */
 
 #ifdef WOLFSSL_SM3
 WOLFSSL_API int wc_Sm3Hash(const byte* data, word32 len, byte* hash);
+WOLFSSL_API int wc_Sm3Hash_ex(const byte* data, word32 len, byte* hash,
+    void* heap, int devId);
 #endif
 
 #endif /* !NO_HASH_WRAPPER */

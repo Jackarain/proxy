@@ -1,0 +1,204 @@
+/* test_pkcs7.h
+ *
+ * Copyright (C) 2006-2026 wolfSSL Inc.
+ *
+ * This file is part of wolfSSL.
+ *
+ * wolfSSL is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * wolfSSL is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1335, USA
+ */
+
+#ifndef WOLFCRYPT_TEST_PKCS7_H
+#define WOLFCRYPT_TEST_PKCS7_H
+
+#include <tests/api/api_decl.h>
+
+int test_wc_PKCS7_New(void);
+int test_wc_PKCS7_Init(void);
+int test_wc_PKCS7_InitWithCert(void);
+int test_wc_PKCS7_InitWithCert_guardrails(void);
+int test_wc_PKCS7_EncodeData(void);
+int test_wc_PKCS7_EncodeSignedData(void);
+int test_wc_PKCS7_EncodeSignedData_SKID(void);
+int test_wc_PKCS7_VerifySignedData_ExplicitSKID(void);
+int test_wc_PKCS7_EncodeSignedData_AttribOverflow(void);
+int test_wc_PKCS7_EncodeAuthEnvelopedData_AttribOverflow(void);
+#if defined(HAVE_PKCS7) && defined(WC_RSA_PSS) && !defined(NO_RSA) && \
+    !defined(NO_FILESYSTEM) && !defined(NO_SHA256)
+int test_wc_PKCS7_EncodeSignedData_RSA_PSS(void);
+#endif
+#if defined(HAVE_PKCS7) && defined(WC_RSA_PSS) && !defined(NO_RSA) && \
+    !defined(NO_FILESYSTEM) && !defined(NO_SHA256) && \
+    !defined(NO_AES) && defined(HAVE_AES_CBC) && defined(WOLFSSL_AES_256)
+int test_wc_PKCS7_EnvelopedData_KTRI_RSA_PSS(void);
+#endif
+#if defined(HAVE_PKCS7) && !defined(NO_RSA) && !defined(NO_SHA256) && \
+    !defined(NO_AES) && defined(HAVE_AES_CBC) && defined(WOLFSSL_AES_128) && \
+    defined(WOLFSSL_AES_256) && !defined(NO_HMAC) && \
+    !defined(WOLFSSL_NO_MALLOC) && \
+    (defined(USE_CERT_BUFFERS_2048) || defined(USE_CERT_BUFFERS_1024) || \
+     !defined(NO_FILESYSTEM))
+int test_wc_PKCS7_EnvelopedData_KTRI_BadRsaPad(void);
+#endif
+int test_wc_PKCS7_EncodeSignedData_ex(void);
+int test_wc_PKCS7_VerifySignedData_RSA(void);
+int test_wc_PKCS7_VerifySignedData_TamperedAttribs(void);
+int test_wc_PKCS7_VerifySignedData_ECC(void);
+int test_wc_PKCS7_VerifySignedData_ECC_TamperedAttribs(void);
+int test_wc_PKCS7_DecodeEnvelopedData_stream(void);
+int test_wc_PKCS7_EncodeDecodeEnvelopedData(void);
+int test_wc_PKCS7_IndefiniteRecipientSet(void);
+int test_wc_PKCS7_SetAESKeyWrapUnwrapCb(void);
+int test_wc_PKCS7_MultipleRecipients(void);
+int test_wc_PKCS7_GetEnvelopedDataKariRid(void);
+int test_wc_PKCS7_EncodeEncryptedData(void);
+int test_wc_PKCS7_EncodeEncryptedData_AttribOverflow(void);
+int test_wc_PKCS7_DecodeEncryptedKeyPackage(void);
+int test_wc_PKCS7_DecodeSymmetricKeyPackage(void);
+int test_wc_PKCS7_DecodeOneSymmetricKey(void);
+int test_wc_PKCS7_Degenerate(void);
+int test_wc_PKCS7_BER(void);
+int test_wc_PKCS7_signed_enveloped(void);
+int test_wc_PKCS7_NoDefaultSignedAttribs(void);
+int test_wc_PKCS7_SetOriEncryptCtx(void);
+int test_wc_PKCS7_SetOriDecryptCtx(void);
+int test_wc_PKCS7_DecodeCompressedData(void);
+int test_wc_PKCS7_DecodeEnvelopedData_multiple_recipients(void);
+int test_wc_PKCS7_DecodeEnvelopedData_forgedRecipientSetLen(void);
+int test_wc_PKCS7_DecodeEnvelopedData_constructedDefiniteOctet(void);
+int test_wc_PKCS7_DecodeEnvelopedData_version(void);
+int test_wc_PKCS7_DecodeEnvelopedData_fragmented(void);
+int test_wc_PKCS7_DecodeAuthEnvelopedData_fragmented(void);
+int test_wc_PKCS7_DecodeOpenSslStream(void);
+int test_wc_PKCS7_DecodeEnvelopedData_split(void);
+int test_wc_PKCS7_DecodeAuthEnvelopedData_truncated(void);
+int test_wc_PKCS7_DecodeAuthEnvelopedData_shortTag(void);
+int test_wc_PKCS7_DecodeAuthEnvelopedData_shortTagCcm(void);
+int test_wc_PKCS7_DecodeAuthEnvelopedData_shortTagChunked(void);
+int test_wc_PKCS7_AuthEnvelopedData_stream_leak(void);
+int test_wc_PKCS7_VerifySignedData_PKCS7ContentSeq(void);
+int test_wc_PKCS7_VerifySignedData_IndefLenOOB(void);
+int test_wc_PKCS7_VerifySignedData_TruncEContentTag(void);
+int test_wc_PKCS7_VerifySignedData_TruncCertSetTag(void);
+int test_wc_PKCS7_VerifySignedData_DegenerateMinimal(void);
+int test_wc_PKCS7_VerifySignedData_DegenerateEmptyCertsCrls(void);
+int test_wc_PKCS7_VerifySignedData_TruncSignerInfosTag(void);
+int test_wc_PKCS7_VerifySignedData_NoSignerInfosTag(void);
+int test_wc_PKCS7_VerifySignedData_DegenerateNonEmptyDigestAlgos(void);
+int test_wc_PKCS7_VerifySignedData_DegenerateWithCert(void);
+int test_wc_PKCS7_VerifySignedData_NoDegenerateAcceptsRealSigner(void);
+int test_wc_PKCS7_VerifySignedData_NoDigestParams(void);
+
+
+#define TEST_PKCS7_DECLS                                        \
+    TEST_DECL_GROUP("pkcs7", test_wc_PKCS7_New),                \
+    TEST_DECL_GROUP("pkcs7", test_wc_PKCS7_Init)
+
+#if defined(HAVE_PKCS7) && defined(WC_RSA_PSS) && !defined(NO_RSA) && \
+    !defined(NO_FILESYSTEM) && !defined(NO_SHA256)
+#define TEST_PKCS7_RSA_PSS_SD_DECL \
+    TEST_DECL_GROUP("pkcs7_sd", test_wc_PKCS7_EncodeSignedData_RSA_PSS),
+#else
+#define TEST_PKCS7_RSA_PSS_SD_DECL
+#endif
+
+#if defined(HAVE_PKCS7) && defined(WC_RSA_PSS) && !defined(NO_RSA) && \
+    !defined(NO_FILESYSTEM) && !defined(NO_SHA256) && \
+    !defined(NO_AES) && defined(HAVE_AES_CBC) && defined(WOLFSSL_AES_256)
+#define TEST_PKCS7_RSA_PSS_ED_DECL \
+    TEST_DECL_GROUP("pkcs7_ed", test_wc_PKCS7_EnvelopedData_KTRI_RSA_PSS),
+#else
+#define TEST_PKCS7_RSA_PSS_ED_DECL
+#endif
+
+#if defined(HAVE_PKCS7) && !defined(NO_RSA) && !defined(NO_SHA256) && \
+    !defined(NO_AES) && defined(HAVE_AES_CBC) && defined(WOLFSSL_AES_128) && \
+    defined(WOLFSSL_AES_256) && !defined(NO_HMAC) && \
+    !defined(WOLFSSL_NO_MALLOC) && \
+    (defined(USE_CERT_BUFFERS_2048) || defined(USE_CERT_BUFFERS_1024) || \
+     !defined(NO_FILESYSTEM))
+#define TEST_PKCS7_KTRI_BADRSAPAD_DECL \
+    TEST_DECL_GROUP("pkcs7_ed", test_wc_PKCS7_EnvelopedData_KTRI_BadRsaPad),
+#else
+#define TEST_PKCS7_KTRI_BADRSAPAD_DECL
+#endif
+
+#define TEST_PKCS7_SIGNED_DATA_DECLS                                    \
+    TEST_DECL_GROUP("pkcs7_sd", test_wc_PKCS7_InitWithCert),            \
+    TEST_DECL_GROUP("pkcs7_sd", test_wc_PKCS7_InitWithCert_guardrails), \
+    TEST_DECL_GROUP("pkcs7_sd", test_wc_PKCS7_EncodeData),              \
+    TEST_DECL_GROUP("pkcs7_sd", test_wc_PKCS7_EncodeSignedData),        \
+    TEST_DECL_GROUP("pkcs7_sd", test_wc_PKCS7_EncodeSignedData_SKID),   \
+    TEST_DECL_GROUP("pkcs7_sd", test_wc_PKCS7_VerifySignedData_ExplicitSKID), \
+    TEST_DECL_GROUP("pkcs7_sd", test_wc_PKCS7_EncodeSignedData_AttribOverflow), \
+    TEST_PKCS7_RSA_PSS_SD_DECL                                           \
+    TEST_DECL_GROUP("pkcs7_sd", test_wc_PKCS7_EncodeSignedData_ex),     \
+    TEST_DECL_GROUP("pkcs7_sd", test_wc_PKCS7_VerifySignedData_RSA),    \
+    TEST_DECL_GROUP("pkcs7_sd", test_wc_PKCS7_VerifySignedData_TamperedAttribs), \
+    TEST_DECL_GROUP("pkcs7_sd", test_wc_PKCS7_VerifySignedData_ECC),    \
+    TEST_DECL_GROUP("pkcs7_sd", test_wc_PKCS7_VerifySignedData_ECC_TamperedAttribs), \
+    TEST_DECL_GROUP("pkcs7_sd", test_wc_PKCS7_Degenerate),              \
+    TEST_DECL_GROUP("pkcs7_sd", test_wc_PKCS7_BER),                     \
+    TEST_DECL_GROUP("pkcs7_sd", test_wc_PKCS7_NoDefaultSignedAttribs),  \
+    TEST_DECL_GROUP("pkcs7_sd", test_wc_PKCS7_VerifySignedData_PKCS7ContentSeq), \
+    TEST_DECL_GROUP("pkcs7_sd", test_wc_PKCS7_VerifySignedData_IndefLenOOB), \
+    TEST_DECL_GROUP("pkcs7_sd", test_wc_PKCS7_VerifySignedData_TruncEContentTag), \
+    TEST_DECL_GROUP("pkcs7_sd", test_wc_PKCS7_VerifySignedData_TruncCertSetTag), \
+    TEST_DECL_GROUP("pkcs7_sd", test_wc_PKCS7_VerifySignedData_DegenerateMinimal), \
+    TEST_DECL_GROUP("pkcs7_sd", test_wc_PKCS7_VerifySignedData_DegenerateEmptyCertsCrls), \
+    TEST_DECL_GROUP("pkcs7_sd", test_wc_PKCS7_VerifySignedData_TruncSignerInfosTag), \
+    TEST_DECL_GROUP("pkcs7_sd", test_wc_PKCS7_VerifySignedData_NoSignerInfosTag), \
+    TEST_DECL_GROUP("pkcs7_sd", test_wc_PKCS7_VerifySignedData_DegenerateNonEmptyDigestAlgos), \
+    TEST_DECL_GROUP("pkcs7_sd", test_wc_PKCS7_VerifySignedData_DegenerateWithCert), \
+    TEST_DECL_GROUP("pkcs7_sd", test_wc_PKCS7_VerifySignedData_NoDegenerateAcceptsRealSigner), \
+    TEST_DECL_GROUP("pkcs7_sd", test_wc_PKCS7_VerifySignedData_NoDigestParams)
+
+#define TEST_PKCS7_ENCRYPTED_DATA_DECLS                                     \
+    TEST_DECL_GROUP("pkcs7_ed", test_wc_PKCS7_DecodeEnvelopedData_stream),  \
+    TEST_DECL_GROUP("pkcs7_ed", test_wc_PKCS7_EncodeDecodeEnvelopedData),   \
+    TEST_DECL_GROUP("pkcs7_ed", test_wc_PKCS7_IndefiniteRecipientSet),      \
+    TEST_PKCS7_RSA_PSS_ED_DECL                                              \
+    TEST_PKCS7_KTRI_BADRSAPAD_DECL                                          \
+    TEST_DECL_GROUP("pkcs7_ed", test_wc_PKCS7_SetAESKeyWrapUnwrapCb),       \
+    TEST_DECL_GROUP("pkcs7_ed", test_wc_PKCS7_MultipleRecipients),          \
+    TEST_DECL_GROUP("pkcs7_ed", test_wc_PKCS7_GetEnvelopedDataKariRid),     \
+    TEST_DECL_GROUP("pkcs7_ed", test_wc_PKCS7_EncodeEncryptedData),         \
+    TEST_DECL_GROUP("pkcs7_ed", test_wc_PKCS7_EncodeEncryptedData_AttribOverflow), \
+    TEST_DECL_GROUP("pkcs7_ed", test_wc_PKCS7_EncodeAuthEnvelopedData_AttribOverflow), \
+    TEST_DECL_GROUP("pkcs7_ed", test_wc_PKCS7_DecodeEncryptedKeyPackage),   \
+    TEST_DECL_GROUP("pkcs7_ed", test_wc_PKCS7_DecodeSymmetricKeyPackage),   \
+    TEST_DECL_GROUP("pkcs7_ed", test_wc_PKCS7_DecodeOneSymmetricKey),       \
+    TEST_DECL_GROUP("pkcs7_ed", test_wc_PKCS7_SetOriEncryptCtx),            \
+    TEST_DECL_GROUP("pkcs7_ed", test_wc_PKCS7_SetOriDecryptCtx),            \
+    TEST_DECL_GROUP("pkcs7_ed", test_wc_PKCS7_DecodeEnvelopedData_multiple_recipients), \
+    TEST_DECL_GROUP("pkcs7_ed", test_wc_PKCS7_DecodeEnvelopedData_forgedRecipientSetLen), \
+    TEST_DECL_GROUP("pkcs7_ed", test_wc_PKCS7_DecodeEnvelopedData_constructedDefiniteOctet), \
+    TEST_DECL_GROUP("pkcs7_ed", test_wc_PKCS7_DecodeEnvelopedData_version), \
+    TEST_DECL_GROUP("pkcs7_ed", test_wc_PKCS7_DecodeEnvelopedData_fragmented), \
+    TEST_DECL_GROUP("pkcs7_ed", test_wc_PKCS7_DecodeAuthEnvelopedData_fragmented), \
+    TEST_DECL_GROUP("pkcs7_ed", test_wc_PKCS7_DecodeOpenSslStream), \
+    TEST_DECL_GROUP("pkcs7_ed", test_wc_PKCS7_DecodeEnvelopedData_split), \
+    TEST_DECL_GROUP("pkcs7_ed", test_wc_PKCS7_DecodeAuthEnvelopedData_truncated), \
+    TEST_DECL_GROUP("pkcs7_ed", test_wc_PKCS7_DecodeAuthEnvelopedData_shortTag), \
+    TEST_DECL_GROUP("pkcs7_ed", test_wc_PKCS7_DecodeAuthEnvelopedData_shortTagCcm), \
+    TEST_DECL_GROUP("pkcs7_ed", test_wc_PKCS7_DecodeAuthEnvelopedData_shortTagChunked), \
+    TEST_DECL_GROUP("pkcs7_ed", test_wc_PKCS7_AuthEnvelopedData_stream_leak)
+
+#define TEST_PKCS7_SIGNED_ENCRYPTED_DATA_DECLS                              \
+    TEST_DECL_GROUP("pkcs7_sed", test_wc_PKCS7_signed_enveloped)
+
+#define TEST_PKCS7_COMPRESSED_DATA_DECLS                                    \
+    TEST_DECL_GROUP("pkcs7_cd", test_wc_PKCS7_DecodeCompressedData)
+
+#endif /* WOLFCRYPT_TEST_PKCS7_H */

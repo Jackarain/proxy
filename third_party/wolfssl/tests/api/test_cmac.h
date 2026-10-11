@@ -1,0 +1,56 @@
+/* test_cmac.h
+ *
+ * Copyright (C) 2006-2026 wolfSSL Inc.
+ *
+ * This file is part of wolfSSL.
+ *
+ * wolfSSL is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * wolfSSL is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1335, USA
+ */
+
+#ifndef WOLFCRYPT_TEST_CMAC_H
+#define WOLFCRYPT_TEST_CMAC_H
+
+#include <tests/api/api_decl.h>
+
+int test_wc_InitCmac(void);
+int test_wc_CmacUpdate(void);
+int test_wc_CmacFinal(void);
+int test_wc_AesCmacGenerate(void);
+int test_wc_CmacSetTagLen(void);
+int test_wc_CMAC_Grow(void);
+int test_wc_InitCmac_Id(void);
+int test_wc_InitCmac_Label(void);
+int test_wc_AesCmacGenerateExDecisionCoverage(void);
+int test_wc_AesCmacVerifyExDecisionCoverage(void);
+int test_wc_AesCmacVerify_CryptoCb_LenMismatch(void);
+int test_wc_CryptoCb_CmacFree(void);
+int test_wc_CryptoCb_CmacTagLen(void);
+
+#define TEST_CMAC_DECLS                                 \
+    TEST_DECL_GROUP("cmac", test_wc_InitCmac),          \
+    TEST_DECL_GROUP("cmac", test_wc_CmacUpdate),        \
+    TEST_DECL_GROUP("cmac", test_wc_CmacFinal),         \
+    TEST_DECL_GROUP("cmac", test_wc_AesCmacGenerate),   \
+    TEST_DECL_GROUP("cmac", test_wc_CmacSetTagLen),     \
+    TEST_DECL_GROUP("cmac", test_wc_CMAC_Grow),         \
+    TEST_DECL_GROUP("cmac", test_wc_InitCmac_Id),       \
+    TEST_DECL_GROUP("cmac", test_wc_InitCmac_Label),    \
+    TEST_DECL_GROUP("cmac", test_wc_AesCmacGenerateExDecisionCoverage), \
+    TEST_DECL_GROUP("cmac", test_wc_AesCmacVerifyExDecisionCoverage), \
+    TEST_DECL_GROUP("cmac", test_wc_AesCmacVerify_CryptoCb_LenMismatch), \
+    TEST_DECL_GROUP("cmac", test_wc_CryptoCb_CmacFree),                     \
+    TEST_DECL_GROUP("cmac", test_wc_CryptoCb_CmacTagLen)
+
+#endif /* WOLFCRYPT_TEST_CMAC_H */

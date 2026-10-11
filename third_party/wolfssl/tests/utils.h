@@ -1,12 +1,12 @@
 /* utils.h
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -18,121 +18,61 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1335, USA
  */
-#ifdef HAVE_CONFIG_H
-    #include <config.h>
-#endif
 
 #include <wolfssl/wolfcrypt/settings.h>
-#include <tests/unit.h>
+#include <wolfssl/wolfcrypt/types.h>
+#include <wolfssl/ssl.h>
+#include <wolfssl/test.h>
 
-#ifndef NO_FILESYSTEM
+#ifndef TESTS_UTILS_H
+#define TESTS_UTILS_H
 
-#ifdef _MSC_VER
-#include <direct.h>
+#ifdef WOLFSSL_DUMP_MEMIO_STREAM
+extern char tmpDirName[16];
+extern const char* currentTestName;
 #endif
 
-#define TMP_DIR_PREFIX "tmpDir-"
-/* len is length of tmpDir name, assuming
- * len does not include null terminating character */
-char* create_tmp_dir(char *tmpDir, int len)
-{
-    if (len < (int)XSTR_SIZEOF(TMP_DIR_PREFIX))
-        return NULL;
-
-    XMEMCPY(tmpDir, TMP_DIR_PREFIX, XSTR_SIZEOF(TMP_DIR_PREFIX));
-
-    if (mymktemp(tmpDir, len, len - XSTR_SIZEOF(TMP_DIR_PREFIX)) == NULL)
-        return NULL;
-
-#ifdef _MSC_VER
-    if (_mkdir(tmpDir) != 0)
-        return NULL;
-#elif defined(__MINGW32__)
-    if (mkdir(tmpDir) != 0)
-        return NULL;
-#else
-    if (mkdir(tmpDir, 0700) != 0)
-        return NULL;
+/* Base dependencies for the manual memio test harness. The harness itself does
+ * not require certificate support, so cert-less tests (e.g. PSK-only) can use
+ * it through this narrower macro. */
+#if !defined(NO_WOLFSSL_SERVER) && !defined(NO_WOLFSSL_CLIENT) && \
+    (!defined(WOLFSSL_NO_TLS12) || defined(WOLFSSL_TLS13)) && defined(NO_CERTS)
+#define HAVE_MANUAL_MEMIO_TESTS_DEPENDENCIES_NO_CERTS
+#define HAVE_MANUAL_MEMIO_TESTS_DEPENDENCIES_BUILD
 #endif
 
-    return tmpDir;
-}
-
-int rem_dir(const char* dirName)
-{
-#ifdef _MSC_VER
-    if (_rmdir(dirName) != 0)
-        return -1;
-#else
-    if (rmdir(dirName) != 0)
-        return -1;
-#endif
-    return 0;
-}
-
-int rem_file(const char* fileName)
-{
-#ifdef _MSC_VER
-    if (_unlink(fileName) != 0)
-        return -1;
-#else
-    if (unlink(fileName) != 0)
-        return -1;
-#endif
-    return 0;
-}
-
-int copy_file(const char* in, const char* out)
-{
-    byte buf[100];
-    XFILE inFile = XBADFILE;
-    XFILE outFile = XBADFILE;
-    size_t sz;
-    int ret = -1;
-
-    inFile = XFOPEN(in, "rb");
-    if (inFile == XBADFILE)
-        goto cleanup;
-
-    outFile = XFOPEN(out, "wb");
-    if (outFile == XBADFILE)
-        goto cleanup;
-
-    while ((sz = XFREAD(buf, 1, sizeof(buf), inFile)) != 0) {
-        if (XFWRITE(buf, 1, sz, outFile) != sz)
-            goto cleanup;
-    }
-
-    ret = 0;
-cleanup:
-    if (inFile != XBADFILE)
-        XFCLOSE(inFile);
-    if (outFile != XBADFILE)
-        XFCLOSE(outFile);
-    return ret;
-}
-#endif /* !NO_FILESYSTEM */
-
-#if !defined(NO_FILESYSTEM) && !defined(NO_CERTS) && !defined(NO_RSA) && \
-    !defined(NO_WOLFSSL_SERVER) && !defined(NO_WOLFSSL_CLIENT)
-
-/* This set of memio functions allows for more fine tuned control of the TLS
- * connection operations. For new tests, try to use ssl_memio first. */
-
-/* To dump the memory in gdb use
- *   dump memory client.bin test_ctx.c_buff test_ctx.c_buff+test_ctx.c_len
- *   dump memory server.bin test_ctx.s_buff test_ctx.s_buff+test_ctx.s_len
- * This can be imported into Wireshark by transforming the file with
- *   od -Ax -tx1 -v client.bin > client.bin.hex
- *   od -Ax -tx1 -v server.bin > server.bin.hex
- * And then loading test_output.dump.hex into Wireshark using the
- * "Import from Hex Dump..." option ion and selecting the TCP
- * encapsulation option.
- */
-
+/* Full dependencies: the base harness plus certificate support. Most memio
+ * tests set up a certificate-based handshake and must use this macro. */
+#if !defined(NO_WOLFSSL_SERVER) && !defined(NO_WOLFSSL_CLIENT) && \
+    (!defined(WOLFSSL_NO_TLS12) || defined(WOLFSSL_TLS13)) && \
+    !defined(NO_FILESYSTEM) && !defined(NO_CERTS) && \
+    (!defined(NO_RSA) || defined(HAVE_RPK))
 #define HAVE_MANUAL_MEMIO_TESTS_DEPENDENCIES
+#define HAVE_MANUAL_MEMIO_TESTS_DEPENDENCIES_BUILD
+#endif
 
+/* With WOLFSSL_RW_THREADED the read path never transmits, so anything a read
+ * schedules to be sent, an ACK in particular, is only sent from the write
+ * side. Stand in for the application, which is required to pump that work
+ * from its write thread. A no-op in builds where reads send for themselves. */
+#if defined(WOLFSSL_DTLS13) && defined(WOLFSSL_RW_THREADED) && \
+    !defined(WOLFSSL_LEANPSK)
+    #define TEST_DTLS13_PUMP(ssl)                                             \
+        do {                                                                  \
+            ExpectIntEQ(wolfSSL_dtls13_do_scheduled_work(ssl),                \
+                WOLFSSL_SUCCESS);                                             \
+        } while (0)
+#else
+    #define TEST_DTLS13_PUMP(ssl)                                             \
+        do {                                                                  \
+            (void)(ssl);                                                      \
+        } while (0)
+#endif
+
+#ifdef HAVE_MANUAL_MEMIO_TESTS_DEPENDENCIES_BUILD
 #define TEST_MEMIO_BUF_SZ (64 * 1024)
+#define TEST_MEMIO_MAX_MSGS 32
+
 struct test_memio_ctx
 {
     byte c_buff[TEST_MEMIO_BUF_SZ];
@@ -141,245 +81,66 @@ struct test_memio_ctx
     byte s_buff[TEST_MEMIO_BUF_SZ];
     int s_len;
     const char* s_ciphers;
-};
 
+    int c_force_want_write;
+    int s_force_want_write;
+
+    /* Transport keeps a byte stream rather than datagrams (DTLS over SCTP),
+     * so a partial read must not drop the rest of the message. */
+    byte sctp;
+
+    int c_msg_sizes[TEST_MEMIO_MAX_MSGS];
+    int c_msg_count;
+    int c_msg_pos;
+
+    int s_msg_sizes[TEST_MEMIO_MAX_MSGS];
+    int s_msg_count;
+    int s_msg_pos;
+};
+int test_memio_write_cb(WOLFSSL *ssl, char *data, int sz, void *ctx);
+int test_memio_read_cb(WOLFSSL *ssl, char *data, int sz, void *ctx);
 int test_memio_do_handshake(WOLFSSL *ssl_c, WOLFSSL *ssl_s,
     int max_rounds, int *rounds);
 int test_memio_setup(struct test_memio_ctx *ctx,
     WOLFSSL_CTX **ctx_c, WOLFSSL_CTX **ctx_s, WOLFSSL **ssl_c, WOLFSSL **ssl_s,
     method_provider method_c, method_provider method_s);
-
-static WC_INLINE int test_memio_write_cb(WOLFSSL *ssl, char *data, int sz,
-    void *ctx)
-{
-    struct test_memio_ctx *test_ctx;
-    byte *buf;
-    int *len;
-
-    test_ctx = (struct test_memio_ctx*)ctx;
-
-    if (wolfSSL_GetSide(ssl) == WOLFSSL_SERVER_END) {
-        buf = test_ctx->c_buff;
-        len = &test_ctx->c_len;
-    }
-    else {
-        buf = test_ctx->s_buff;
-        len = &test_ctx->s_len;
-    }
-
-    if ((unsigned)(*len + sz) > TEST_MEMIO_BUF_SZ)
-        return WOLFSSL_CBIO_ERR_WANT_WRITE;
-
-#ifdef WOLFSSL_DUMP_MEMIO_STREAM
-    {
-        WOLFSSL_BIO *dump_file = wolfSSL_BIO_new_file("test_memio.dump", "a");
-        if (dump_file != NULL) {
-            (void)wolfSSL_BIO_write(dump_file, data, sz);
-            wolfSSL_BIO_free(dump_file);
-        }
-    }
-#endif
-    XMEMCPY(buf + *len, data, sz);
-    *len += sz;
-
-    return sz;
-}
-
-static WC_INLINE int test_memio_read_cb(WOLFSSL *ssl, char *data, int sz,
-    void *ctx)
-{
-    struct test_memio_ctx *test_ctx;
-    int read_sz;
-    byte *buf;
-    int *len;
-
-    test_ctx = (struct test_memio_ctx*)ctx;
-
-    if (wolfSSL_GetSide(ssl) == WOLFSSL_SERVER_END) {
-        buf = test_ctx->s_buff;
-        len = &test_ctx->s_len;
-    }
-    else {
-        buf = test_ctx->c_buff;
-        len = &test_ctx->c_len;
-    }
-
-    if (*len == 0)
-        return WOLFSSL_CBIO_ERR_WANT_READ;
-
-    read_sz = sz < *len ? sz : *len;
-
-    XMEMCPY(data, buf, read_sz);
-    XMEMMOVE(buf, buf + read_sz, *len - read_sz);
-
-    *len -= read_sz;
-
-    return read_sz;
-}
-
-int test_memio_do_handshake(WOLFSSL *ssl_c, WOLFSSL *ssl_s,
-    int max_rounds, int *rounds)
-{
-    byte handshake_complete = 0, hs_c = 0, hs_s = 0;
-    int ret, err;
-
-    if (rounds != NULL)
-        *rounds = 0;
-    while (!handshake_complete && max_rounds > 0) {
-        if (!hs_c) {
-            wolfSSL_SetLoggingPrefix("client");
-            ret = wolfSSL_connect(ssl_c);
-            wolfSSL_SetLoggingPrefix(NULL);
-            if (ret == WOLFSSL_SUCCESS) {
-                hs_c = 1;
-            }
-            else {
-                err = wolfSSL_get_error(ssl_c, ret);
-                if (err != WOLFSSL_ERROR_WANT_READ &&
-                    err != WOLFSSL_ERROR_WANT_WRITE)
-                    return -1;
-            }
-        }
-        if (!hs_s) {
-            wolfSSL_SetLoggingPrefix("server");
-            ret = wolfSSL_accept(ssl_s);
-            wolfSSL_SetLoggingPrefix(NULL);
-            if (ret == WOLFSSL_SUCCESS) {
-                hs_s = 1;
-            }
-            else {
-                err = wolfSSL_get_error(ssl_s, ret);
-                if (err != WOLFSSL_ERROR_WANT_READ &&
-                    err != WOLFSSL_ERROR_WANT_WRITE)
-                    return -1;
-            }
-        }
-        handshake_complete = hs_c && hs_s;
-        max_rounds--;
-        if (rounds != NULL)
-            *rounds = *rounds + 1;
-    }
-
-    if (!handshake_complete)
-        return -1;
-
-    return 0;
-}
-
-int test_memio_setup(struct test_memio_ctx *ctx,
+int test_memio_setup_ex(struct test_memio_ctx *ctx,
     WOLFSSL_CTX **ctx_c, WOLFSSL_CTX **ctx_s, WOLFSSL **ssl_c, WOLFSSL **ssl_s,
-    method_provider method_c, method_provider method_s)
-{
-    int ret;
+    method_provider method_c, method_provider method_s,
+    byte *caCert, int caCertSz, byte *serverCert, int serverCertSz,
+    byte *serverKey, int serverKeySz);
+void test_memio_simulate_want_write(struct test_memio_ctx *ctx, int is_client,
+        int enable);
+void test_memio_clear_buffer(struct test_memio_ctx *ctx, int is_client);
+int test_memio_inject_message(struct test_memio_ctx *ctx, int client, const char *data, int sz);
+int test_memio_copy_message(const struct test_memio_ctx *ctx, int client,
+        char *out, int *out_sz, int msg_pos);
+int test_memio_get_message(const struct test_memio_ctx *ctx, int client,
+        const char **out, int *out_sz, int msg_pos);
+int test_memio_msg_is_hello_retry_request(const struct test_memio_ctx *ctx);
+int test_memio_move_message(struct test_memio_ctx *ctx, int client,
+        int msg_pos_in, int msg_pos_out);
+int test_memio_drop_message(struct test_memio_ctx *ctx, int client, int msg_pos);
+int test_memio_modify_message_len(struct test_memio_ctx *ctx, int client, int msg_pos, int new_len);
+int test_memio_remove_from_buffer(struct test_memio_ctx *ctx, int client, int off, int sz);
+#endif /* HAVE_MANUAL_MEMIO_TESTS_DEPENDENCIES_BUILD */
 
-    if (ctx_c != NULL && *ctx_c == NULL) {
-        *ctx_c = wolfSSL_CTX_new(method_c());
-        if (*ctx_c == NULL)
-            return -1;
-#ifndef NO_CERTS
-        ret = wolfSSL_CTX_load_verify_locations(*ctx_c, caCertFile, 0);
-        if (ret != WOLFSSL_SUCCESS)
-            return -1;
-#endif /* NO_CERTS */
-        wolfSSL_SetIORecv(*ctx_c, test_memio_read_cb);
-        wolfSSL_SetIOSend(*ctx_c, test_memio_write_cb);
-        if (ctx->c_ciphers != NULL) {
-            ret = wolfSSL_CTX_set_cipher_list(*ctx_c, ctx->c_ciphers);
-            if (ret != WOLFSSL_SUCCESS)
-                return -1;
-        }
-    }
+/* Shared TLS server/client thread bodies, defined in tests/api.c. The
+ * definitions are gated on ENABLE_TLS_CALLBACK_TEST (a composite condition
+ * locally #defined inside api.c) or (WOLFSSL_DTLS && WOLFSSL_SESSION_EXPORT).
+ * Declared unconditionally here so api.c itself sees the prototype regardless
+ * of which side of the local #define triggers; absent the definition the
+ * prototypes are harmless and any caller would get a link error. */
+THREAD_RETURN WOLFSSL_THREAD run_wolfssl_server(void* args);
+void run_wolfssl_client(void* args);
 
-    if (ctx_s != NULL && *ctx_s == NULL) {
-        *ctx_s = wolfSSL_CTX_new(method_s());
-        if (*ctx_s == NULL)
-            return -1;
-#ifndef NO_CERTS
-        ret = wolfSSL_CTX_use_PrivateKey_file(*ctx_s, svrKeyFile,
-            WOLFSSL_FILETYPE_PEM);
-        if (ret != WOLFSSL_SUCCESS)
-            return- -1;
-        ret = wolfSSL_CTX_use_certificate_file(*ctx_s, svrCertFile,
-                                               WOLFSSL_FILETYPE_PEM);
-        if (ret != WOLFSSL_SUCCESS)
-            return -1;
-#endif
-        wolfSSL_SetIORecv(*ctx_s, test_memio_read_cb);
-        wolfSSL_SetIOSend(*ctx_s, test_memio_write_cb);
-        if (ctx->s_ciphers != NULL) {
-            ret = wolfSSL_CTX_set_cipher_list(*ctx_s, ctx->s_ciphers);
-            if (ret != WOLFSSL_SUCCESS)
-                return -1;
-        }
-    }
-
-    if (ctx_c != NULL && ssl_c != NULL) {
-        *ssl_c = wolfSSL_new(*ctx_c);
-        if (*ssl_c == NULL)
-            return -1;
-        wolfSSL_SetIOWriteCtx(*ssl_c, ctx);
-        wolfSSL_SetIOReadCtx(*ssl_c, ctx);
-    }
-    if (ctx_s != NULL && ssl_s != NULL) {
-        *ssl_s = wolfSSL_new(*ctx_s);
-        if (*ssl_s == NULL)
-            return -1;
-        wolfSSL_SetIOWriteCtx(*ssl_s, ctx);
-        wolfSSL_SetIOReadCtx(*ssl_s, ctx);
-#if !defined(NO_DH)
-        SetDH(*ssl_s);
-#endif
-    }
-
-    return 0;
-}
-#endif
-
-#if !defined(SINGLE_THREADED) && defined(WOLFSSL_COND)
-void signal_ready(tcp_ready* ready)
-{
-    THREAD_CHECK_RET(wolfSSL_CondStart(&ready->cond));
-    ready->ready = 1;
-    THREAD_CHECK_RET(wolfSSL_CondSignal(&ready->cond));
-    THREAD_CHECK_RET(wolfSSL_CondEnd(&ready->cond));
-}
-#endif
-
-void wait_tcp_ready(func_args* args)
-{
-#if !defined(SINGLE_THREADED) && defined(WOLFSSL_COND)
-    tcp_ready* ready = args->signal;
-    THREAD_CHECK_RET(wolfSSL_CondStart(&ready->cond));
-    if (!ready->ready) {
-        THREAD_CHECK_RET(wolfSSL_CondWait(&ready->cond));
-    }
-    ready->ready = 0; /* reset */
-    THREAD_CHECK_RET(wolfSSL_CondEnd(&ready->cond));
+#if !defined(NO_FILESYSTEM) && defined(OPENSSL_EXTRA) && \
+    defined(DEBUG_UNIT_TEST_CERTS)
+void DEBUG_WRITE_CERT_X509(WOLFSSL_X509* x509, const char* fileName);
+void DEBUG_WRITE_DER(const byte* der, int derSz, const char* fileName);
 #else
-    /* no threading wait or single threaded */
-    (void)args;
+#define DEBUG_WRITE_CERT_X509(x509, fileName) WC_DO_NOTHING
+#define DEBUG_WRITE_DER(der, derSz, fileName) WC_DO_NOTHING
 #endif
-}
 
-#ifndef SINGLE_THREADED
-/* Start a thread.
- *
- * @param [in]  fun     Function to execute in thread.
- * @param [in]  args    Object to send to function in thread.
- * @param [out] thread  Handle to thread.
- */
-void start_thread(THREAD_CB fun, func_args* args, THREAD_TYPE* thread)
-{
-    THREAD_CHECK_RET(wolfSSL_NewThread(thread, fun, args));
-}
-
-
-/* Join thread to wait for completion.
- *
- * @param [in] thread  Handle to thread.
- */
-void join_thread(THREAD_TYPE thread)
-{
-    THREAD_CHECK_RET(wolfSSL_JoinThread(thread));
-}
-#endif /* SINGLE_THREADED */
+#endif /* TESTS_UTILS_H */

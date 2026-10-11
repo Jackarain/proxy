@@ -1,12 +1,12 @@
 /* ssl_bn.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -19,13 +19,9 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1335, USA
  */
 
-#ifdef HAVE_CONFIG_H
-    #include <config.h>
-#endif
+#include <wolfssl/wolfcrypt/libwolfssl_sources.h>
 
-#include <wolfssl/wolfcrypt/settings.h>
-
- #include <wolfssl/internal.h>
+#include <wolfssl/internal.h>
 #ifndef WC_NO_RNG
     #include <wolfssl/wolfcrypt/random.h>
 #endif
@@ -64,7 +60,7 @@ static int wolfssl_bn_set_neg(WOLFSSL_BIGNUM* bn, int neg)
 
     if (BN_IS_NULL(bn)) {
         WOLFSSL_MSG("bn NULL error");
-        ret = -1;
+        ret = WOLFSSL_FATAL_ERROR;
     }
 #if !defined(WOLFSSL_SP_MATH_ALL) || defined(WOLFSSL_SP_INT_NEGATIVE)
     else if (neg) {
@@ -102,17 +98,17 @@ int wolfssl_bn_get_value(WOLFSSL_BIGNUM* bn, mp_int* mpi)
     /* Validate parameters. */
     if (BN_IS_NULL(bn)) {
         WOLFSSL_MSG("bn NULL error");
-        ret = -1;
+        ret = WOLFSSL_FATAL_ERROR;
     }
     else if (mpi == NULL) {
         WOLFSSL_MSG("mpi NULL error");
-        ret = -1;
+        ret = WOLFSSL_FATAL_ERROR;
     }
 
     /* Copy the internal representation into MP integer. */
     if ((ret == 1) && mp_copy((mp_int*)bn->internal, mpi) != MP_OKAY) {
         WOLFSSL_MSG("mp_copy error");
-        ret = -1;
+        ret = WOLFSSL_FATAL_ERROR;
     }
 
     return ret;
@@ -138,14 +134,12 @@ int wolfssl_bn_set_value(WOLFSSL_BIGNUM** bn, mp_int* mpi)
     int ret = 1;
     WOLFSSL_BIGNUM* a = NULL;
 
-#ifdef WOLFSSL_DEBUG_OPENSSL
-    WOLFSSL_ENTER("wolfssl_bn_set_value");
-#endif
+    WOLFSSL_ENTER_VERBOSE("wolfssl_bn_set_value");
 
     /* Validate parameters. */
     if ((bn == NULL) || (mpi == NULL)) {
         WOLFSSL_MSG("mpi or bn NULL error");
-        ret = -1;
+        ret = WOLFSSL_FATAL_ERROR;
     }
 
     /* Allocate a new big number if one not passed in. */
@@ -153,7 +147,7 @@ int wolfssl_bn_set_value(WOLFSSL_BIGNUM** bn, mp_int* mpi)
         a = wolfSSL_BN_new();
         if (a == NULL) {
             WOLFSSL_MSG("wolfssl_bn_set_value alloc failed");
-            ret = -1;
+            ret = WOLFSSL_FATAL_ERROR;
         }
         *bn = a;
     }
@@ -161,12 +155,12 @@ int wolfssl_bn_set_value(WOLFSSL_BIGNUM** bn, mp_int* mpi)
     /* Copy MP integer value into internal representation of big number. */
     if ((ret == 1) && (mp_copy(mpi, (mp_int*)((*bn)->internal)) != MP_OKAY)) {
         WOLFSSL_MSG("mp_copy error");
-        ret = -1;
+        ret = WOLFSSL_FATAL_ERROR;
     }
 
     /* Dispose of any allocated big number on error. */
     if ((ret == -1) && (a != NULL)) {
-        BN_free(a);
+        wolfSSL_BN_free(a);
         *bn = NULL;
     }
     return ret;
@@ -197,9 +191,7 @@ WOLFSSL_BIGNUM* wolfSSL_BN_new(void)
 {
     WOLFSSL_BIGNUM* bn = NULL;
 
-#ifdef WOLFSSL_DEBUG_OPENSSL
-    WOLFSSL_ENTER("wolfSSL_BN_new");
-#endif
+    WOLFSSL_ENTER_VERBOSE("wolfSSL_BN_new");
 
     /* Allocate memory for big number. */
     bn = (WOLFSSL_BIGNUM*)XMALLOC(sizeof(WOLFSSL_BIGNUM), NULL,
@@ -226,9 +218,7 @@ WOLFSSL_BIGNUM* wolfSSL_BN_new(void)
  */
 void wolfSSL_BN_init(WOLFSSL_BIGNUM* bn)
 {
-#ifdef WOLFSSL_DEBUG_OPENSSL
-    WOLFSSL_ENTER("wolfSSL_BN_init");
-#endif
+    WOLFSSL_ENTER_VERBOSE("wolfSSL_BN_init");
 
     /* Validate parameter. */
     if (bn != NULL) {
@@ -246,9 +236,7 @@ void wolfSSL_BN_init(WOLFSSL_BIGNUM* bn)
  */
 void wolfSSL_BN_free(WOLFSSL_BIGNUM* bn)
 {
-#ifdef WOLFSSL_DEBUG_OPENSSL
-    WOLFSSL_ENTER("wolfSSL_BN_free");
-#endif
+    WOLFSSL_ENTER_VERBOSE("wolfSSL_BN_free");
 
     /* Validate parameter. */
     if (bn != NULL) {
@@ -271,9 +259,7 @@ void wolfSSL_BN_free(WOLFSSL_BIGNUM* bn)
  */
 void wolfSSL_BN_clear_free(WOLFSSL_BIGNUM* bn)
 {
-#ifdef WOLFSSL_DEBUG_OPENSSL
-    WOLFSSL_ENTER("wolfSSL_BN_clear_free");
-#endif
+    WOLFSSL_ENTER_VERBOSE("wolfSSL_BN_clear_free");
 
     /* Validate parameter. */
     if (bn != NULL) {
@@ -293,9 +279,7 @@ void wolfSSL_BN_clear_free(WOLFSSL_BIGNUM* bn)
  */
 void wolfSSL_BN_clear(WOLFSSL_BIGNUM* bn)
 {
-#ifdef WOLFSSL_DEBUG_OPENSSL
-    WOLFSSL_ENTER("wolfSSL_BN_clear");
-#endif
+    WOLFSSL_ENTER_VERBOSE("wolfSSL_BN_clear");
 
     /* Validate parameter. */
     if (!BN_IS_NULL(bn)) {
@@ -330,23 +314,21 @@ const WOLFSSL_BIGNUM* wolfSSL_BN_value_one(void)
             wolfSSL_BN_free(one);
             one = NULL;
         }
-        else
+        else {
     #ifndef SINGLE_THREADED
-        /* Ensure global has not been set by another thread. */
-        if (bn_one == NULL)
-    #endif
-        {
+            void* expected = NULL;
+            /* Publish atomically so a losing thread frees only its own object,
+             * never a pointer already handed to another thread. */
+            if (!wolfSSL_Atomic_Ptr_CompareExchange((void* volatile*)&bn_one,
+                    &expected, one)) {
+                wolfSSL_BN_free(one);
+                one = (WOLFSSL_BIGNUM*)expected;
+            }
+    #else
             /* Set this big number as the global. */
             bn_one = one;
-        }
-    #ifndef SINGLE_THREADED
-        /* Check if another thread has set the global. */
-        if (bn_one != one) {
-            /* Dispose of this big number and return the global.  */
-            wolfSSL_BN_free(one);
-            one = bn_one;
-        }
     #endif
+        }
     }
 
     return one;
@@ -455,7 +437,7 @@ int wolfSSL_BN_bn2bin(const WOLFSSL_BIGNUM* bn, unsigned char* r)
     /* Validate parameters. */
     if (BN_IS_NULL(bn)) {
         WOLFSSL_MSG("NULL bn error");
-        ret = -1;
+        ret = WOLFSSL_FATAL_ERROR;
     }
     else {
         /* Get the length of the encoding. */
@@ -464,11 +446,61 @@ int wolfSSL_BN_bn2bin(const WOLFSSL_BIGNUM* bn, unsigned char* r)
         if ((r != NULL) && (mp_to_unsigned_bin((mp_int*)bn->internal, r) !=
                 MP_OKAY)) {
             WOLFSSL_MSG("mp_to_unsigned_bin error");
-            ret = -1;
+            ret = WOLFSSL_FATAL_ERROR;
         }
     }
 
     return ret;
+}
+
+
+/* Encode a big number as a big-endian byte array, zero-padded to toLen bytes.
+ *
+ * Returns toLen on success, -1 on error (including when the number is too
+ * large to fit in toLen bytes).
+ *
+ * @param [in]  bn     Big number to encode.
+ * @param [out] r      Buffer to place encoding into. Must be at least toLen
+ *                     bytes.
+ * @param [in]  toLen  Desired output length in bytes.
+ * @return  toLen on success.
+ * @return  -1 on error.
+ */
+int wolfSSL_BN_bn2binpad(const WOLFSSL_BIGNUM* bn, unsigned char* r, int toLen)
+{
+    int numBytes;
+
+    WOLFSSL_ENTER("wolfSSL_BN_bn2binpad");
+
+    /* Validate parameters. */
+    if (BN_IS_NULL(bn) || (r == NULL) || (toLen < 0)) {
+        WOLFSSL_MSG("NULL bn, r, or invalid toLen error");
+        return WOLFSSL_FATAL_ERROR;
+    }
+
+    /* Get the number of bytes needed to encode the big number. */
+    numBytes = mp_unsigned_bin_size((mp_int*)bn->internal);
+    if (numBytes < 0) {
+        WOLFSSL_MSG("mp_unsigned_bin_size error");
+        return WOLFSSL_FATAL_ERROR;
+    }
+    if (numBytes > toLen) {
+        WOLFSSL_MSG("BN too large for toLen");
+        return WOLFSSL_FATAL_ERROR;
+    }
+
+    /* Zero-pad leading bytes. */
+    XMEMSET(r, 0, (size_t)(toLen - numBytes));
+
+    /* Encode the big number into the remaining bytes. */
+    if (numBytes > 0 &&
+        mp_to_unsigned_bin((mp_int*)bn->internal, r + toLen - numBytes) !=
+            MP_OKAY) {
+        WOLFSSL_MSG("mp_to_unsigned_bin error");
+        return WOLFSSL_FATAL_ERROR;
+    }
+
+    return toLen;
 }
 
 
@@ -492,7 +524,7 @@ WOLFSSL_BIGNUM* wolfSSL_BN_bin2bn(const unsigned char* data, int len,
     WOLFSSL_ENTER("wolfSSL_BN_bin2bn");
 
     /* Validate parameters. */
-    if ((data == NULL) || (len < 0)) {
+    if (len < 0) {
         ret = NULL;
     }
     /* Allocate a new big number when ret is NULL. */
@@ -507,7 +539,7 @@ WOLFSSL_BIGNUM* wolfSSL_BN_bin2bn(const unsigned char* data, int len,
         if (ret->internal == NULL) {
             ret = NULL;
         }
-        else {
+        else if (data != NULL) {
             /* Decode into big number. */
             if (mp_read_unsigned_bin((mp_int*)ret->internal, data, (word32)len)
                     != 0) {
@@ -516,9 +548,14 @@ WOLFSSL_BIGNUM* wolfSSL_BN_bin2bn(const unsigned char* data, int len,
                 ret = NULL;
             }
             else {
-                /* Don't free bn as we may be returning it. */
+                /* Don't free bn as we are returning it. */
                 bn = NULL;
             }
+        }
+        else if (data == NULL) {
+            wolfSSL_BN_zero(ret);
+            /* Don't free bn as we are returning it. */
+            bn = NULL;
         }
     }
 
@@ -902,11 +939,7 @@ int wolfSSL_BN_set_bit(WOLFSSL_BIGNUM* bn, int n)
 int wolfSSL_BN_clear_bit(WOLFSSL_BIGNUM* bn, int n)
 {
     int ret = 1;
-#ifndef WOLFSSL_SMALL_STACK
-    mp_int tmp[1];
-#else
-    mp_int* tmp = NULL;
-#endif
+    WC_DECLARE_VAR(tmp, mp_int, 1, 0);
 
     /* Validate parameters. */
     if (BN_IS_NULL(bn) || (n < 0)) {
@@ -915,13 +948,8 @@ int wolfSSL_BN_clear_bit(WOLFSSL_BIGNUM* bn, int n)
     }
     /* Check if bit is set to clear. */
     if ((ret == 1) && (mp_is_bit_set((mp_int*)bn->internal, n))) {
-    #ifdef WOLFSSL_SMALL_STACK
         /* Allocate a new MP integer to hold bit to clear. */
-        tmp = (mp_int*)XMALLOC(sizeof(mp_int), NULL, DYNAMIC_TYPE_BIGINT);
-        if (tmp == NULL) {
-            ret = 0;
-        }
-    #endif
+        WC_ALLOC_VAR_EX(tmp, mp_int, 1, NULL, DYNAMIC_TYPE_BIGINT, ret=0);
         if (ret == 1) {
             /* Reset new MP integer. */
             XMEMSET(tmp, 0, sizeof(mp_int));
@@ -941,10 +969,7 @@ int wolfSSL_BN_clear_bit(WOLFSSL_BIGNUM* bn, int n)
 
         /* Free any dynamic memory in MP integer. */
         mp_clear(tmp);
-    #ifdef WOLFSSL_SMALL_STACK
-        /* Dispose of temporary MP integer. */
-        XFREE(tmp, NULL, DYNAMIC_TYPE_BIGINT);
-    #endif
+        WC_FREE_VAR_EX(tmp, NULL, DYNAMIC_TYPE_BIGINT);
     }
 
     return ret;
@@ -1129,8 +1154,7 @@ int wolfSSL_BN_cmp(const WOLFSSL_BIGNUM* a, const WOLFSSL_BIGNUM* b)
             ret = 0;
         }
         else {
-            /* NULL less than not NULL. */
-            ret = -1;
+            ret = -1; /* NULL less than not NULL. */
         }
     }
     else if (bIsNull) {
@@ -1138,6 +1162,8 @@ int wolfSSL_BN_cmp(const WOLFSSL_BIGNUM* a, const WOLFSSL_BIGNUM* b)
         ret = 1;
     }
     else {
+        PRAGMA_GCC_DIAG_PUSH
+        PRAGMA_GCC("GCC diagnostic ignored \"-Wduplicated-branches\"")
         /* Compare big numbers with wolfCrypt. */
         ret = mp_cmp((mp_int*)a->internal, (mp_int*)b->internal);
         /* Convert wolfCrypt return value. */
@@ -1147,11 +1173,73 @@ int wolfSSL_BN_cmp(const WOLFSSL_BIGNUM* a, const WOLFSSL_BIGNUM* b)
         else if (ret == MP_GT) {
             ret = 1;
         }
-        else {
+        else if (ret == MP_LT) {
             ret = -1;
         }
+        else {
+            /* ignored warning here because the same return value
+               was intentional */
+            ret = WOLFSSL_FATAL_ERROR; /* also -1 */
+        }
+        PRAGMA_GCC_DIAG_POP
     }
 
+    return ret;
+}
+
+/* Same as above, but compare absolute value. */
+int wolfSSL_BN_ucmp(const WOLFSSL_BIGNUM* a, const WOLFSSL_BIGNUM* b)
+{
+    int ret = 0;
+    int bIsNull;
+
+    WOLFSSL_ENTER("wolfSSL_BN_ucmp");
+
+    /* Must know whether b is NULL. */
+    bIsNull = BN_IS_NULL(b);
+    /* Check whether a is NULL. */
+    if (BN_IS_NULL(a)) {
+        if (bIsNull) {
+            /* NULL equals NULL. */
+            ret = 0;
+        }
+        else {
+            ret = -1; /* NULL less than not NULL. */
+        }
+    }
+    else if (bIsNull) {
+        /* not NULL greater than NULL. */
+        ret = 1;
+    }
+    else {
+        /* Neither are NULL; copy to new instances and switch to positive if
+         * required, compare, and then free.  Must copy because there is
+         * possibility of switch to positive but they are declared const.
+         * wolfssl_bn_set_neg() only returns -1 if the bn is NULL, but we
+         * already check that so we can ignore the return code. Note for
+         * wolfSSL_BN_is_negative if n=1 then set to positive. */
+        WOLFSSL_BIGNUM* abs_a = wolfSSL_BN_dup(a);
+        WOLFSSL_BIGNUM* abs_b = wolfSSL_BN_dup(b);
+
+        if (abs_a == NULL || abs_b == NULL) {
+            WOLFSSL_MSG("wolfSSL_BN_dup failed");
+            wolfSSL_BN_free(abs_a);
+            wolfSSL_BN_free(abs_b);
+            return WOLFSSL_FATAL_ERROR;
+        }
+
+        if (wolfSSL_BN_is_negative(abs_a)) {
+            wolfssl_bn_set_neg(abs_a, 1);
+        }
+
+        if (wolfSSL_BN_is_negative(abs_b)) {
+            wolfssl_bn_set_neg(abs_b, 1);
+        }
+
+        ret = wolfSSL_BN_cmp(abs_a, abs_b);
+        wolfSSL_BN_free(abs_a);
+        wolfSSL_BN_free(abs_b);
+    }
     return ret;
 }
 
@@ -1266,105 +1354,139 @@ int wolfSSL_BN_is_word(const WOLFSSL_BIGNUM* bn, WOLFSSL_BN_ULONG w)
  * Word operation APIs.
  ******************************************************************************/
 
-/* Add/subtract a word to/from a big number.
+enum BN_WORD_OP {
+    BN_WORD_ADD = 0,
+    BN_WORD_SUB = 1,
+    BN_WORD_MUL = 2,
+    BN_WORD_DIV = 3,
+    BN_WORD_MOD = 4
+};
+
+/* Helper function for word operations.
  *
- * Internal function for adding/subtracting an unsigned long from a
- * WOLFSSL_BIGNUM. To add, pass "sub" as 0. To subtract, pass it as 1.
- *
- * @param [in, out] bn   Big number to operate on.
- * @param [in]      w    Word to operate with.
- * @param [in]      sub  Indicates whether operation to perform is a subtract.
+ * @param [in, out] bn  Big number to operate on.
+ * @param [in]      w   Word to operate with.
+ * @param [in]      op  Operation to perform. See BN_WORD_OP for valid values.
+ * @param [out]     mod_res Result of the modulo operation.
  * @return  1 on success.
- * @return  0 in failure.
+ * @return  0 on failure.
  */
-static int wolfssl_bn_add_word_int(WOLFSSL_BIGNUM *bn, WOLFSSL_BN_ULONG w,
-    int sub)
+static int bn_word_helper(const WOLFSSL_BIGNUM *bn, WOLFSSL_BN_ULONG w,
+        enum BN_WORD_OP op, WOLFSSL_BN_ULONG* mod_res)
 {
     int ret = 1;
-#if DIGIT_BIT < (SIZEOF_LONG * CHAR_BIT)
-#ifdef WOLFSSL_SMALL_STACK
-    mp_int* w_mp = NULL;
-#else
-    mp_int w_mp[1];
-#endif /* WOLFSSL_SMALL_STACK */
-#endif
 
-#if DIGIT_BIT < (SIZEOF_LONG * CHAR_BIT)
-#ifdef WOLFSSL_SMALL_STACK
-    /* Allocate temporary MP integer. */
-    w_mp = (mp_int*)XMALLOC(sizeof(*w_mp), NULL, DYNAMIC_TYPE_TMP_BUFFER);
-    if (w_mp == NULL) {
-        ret = 0;
-    }
-    else
-#endif /* WOLFSSL_SMALL_STACK */
-    {
-        /* Clear out MP integer so it can be freed. */
-        XMEMSET(w_mp, 0, sizeof(*w_mp));
-    }
-#endif
+    WOLFSSL_ENTER("bn_word_helper");
 
     /* Validate parameters. */
-    if (BN_IS_NULL(bn)) {
+    if (ret == 1 && BN_IS_NULL(bn)) {
         WOLFSSL_MSG("bn NULL error");
         ret = 0;
     }
 
     if (ret == 1) {
-        int rc = 0;
+        int rc = MP_OKAY;
 #if DIGIT_BIT < (SIZEOF_LONG * CHAR_BIT)
+        /* When input 'w' is greater than what can be stored in one digit */
         if (w > (WOLFSSL_BN_ULONG)MP_MASK) {
-            /* Initialize temporary MP integer. */
-            if (mp_init(w_mp) != MP_OKAY) {
+            DECL_MP_INT_SIZE_DYN(w_mp, sizeof(WOLFSSL_BN_ULONG) * CHAR_BIT,
+                                       sizeof(WOLFSSL_BN_ULONG) * CHAR_BIT);
+            NEW_MP_INT_SIZE(w_mp, sizeof(WOLFSSL_BN_ULONG) * CHAR_BIT, NULL,
+                    DYNAMIC_TYPE_TMP_BUFFER);
+#ifdef MP_INT_SIZE_CHECK_NULL
+            if (w_mp == NULL) {
+                WOLFSSL_MSG("NEW_MP_INT_SIZE error");
                 ret = 0;
             }
-            /* Set value into temporary MP integer. */
-            if ((ret == 1) && (mp_set_int(w_mp, w) != MP_OKAY)) {
+#endif
+            if (ret == 1 && mp_set_int(w_mp, w) != MP_OKAY) {
+                WOLFSSL_MSG("mp_set_int error");
                 ret = 0;
             }
             if (ret == 1) {
-                if (sub) {
-                    /* Subtract as MP integer. */
-                    rc = mp_sub((mp_int *)bn->internal, w_mp,
-                        (mp_int *)bn->internal);
-                }
-                else {
-                    /* Add as MP integer. */
-                    rc = mp_add((mp_int *)bn->internal, w_mp,
-                        (mp_int *)bn->internal);
-                }
-                if (rc != MP_OKAY) {
-                    WOLFSSL_MSG("mp_add/sub error");
-                    ret = 0;
+                switch (op) {
+                    case BN_WORD_ADD:
+                        rc = mp_add((mp_int*)bn->internal, w_mp,
+                                (mp_int*)bn->internal);
+                        break;
+                    case BN_WORD_SUB:
+                        rc = mp_sub((mp_int*)bn->internal, w_mp,
+                                (mp_int*)bn->internal);
+                        break;
+                    case BN_WORD_MUL:
+                        rc = mp_mul((mp_int*)bn->internal, w_mp,
+                                (mp_int*)bn->internal);
+                        break;
+                    case BN_WORD_DIV:
+                        rc = mp_div((mp_int*)bn->internal, w_mp,
+                                (mp_int*)bn->internal, NULL);
+                        break;
+                    case BN_WORD_MOD:
+                        rc = mp_mod((mp_int*) bn->internal, w_mp,
+                                w_mp);
+                        if (rc == MP_OKAY && mod_res != NULL)
+                            *mod_res = wolfssl_bn_get_word_1(w_mp);
+                        break;
+                    default:
+                        rc = WOLFSSL_NOT_IMPLEMENTED;
+                        break;
                 }
             }
+            FREE_MP_INT_SIZE(w_mp, NULL, DYNAMIC_TYPE_RSA);
         }
         else
 #endif
         {
-            if (sub) {
-                /* Subtract word from MP integer. */
-                rc = mp_sub_d((mp_int*)bn->internal, (mp_digit)w,
-                    (mp_int*)bn->internal);
+            switch (op) {
+                case BN_WORD_ADD:
+                    rc = mp_add_d((mp_int*)bn->internal, (mp_digit)w,
+                            (mp_int*)bn->internal);
+                    break;
+                case BN_WORD_SUB:
+                    rc = mp_sub_d((mp_int*)bn->internal, (mp_digit)w,
+                            (mp_int*)bn->internal);
+                    break;
+                case BN_WORD_MUL:
+                    rc = mp_mul_d((mp_int*)bn->internal, (mp_digit)w,
+                            (mp_int*)bn->internal);
+                    break;
+                case BN_WORD_DIV:
+#if defined(WOLFSSL_SP_MATH) || defined(WOLFSSL_SP_MATH_ALL)
+/* copied from sp_int.h */
+#if (defined(WOLFSSL_SP_MATH_ALL) && !defined(WOLFSSL_RSA_VERIFY_ONLY)) || \
+    defined(WOLFSSL_KEY_GEN) || defined(HAVE_COMP_KEY) || \
+    defined(WC_MP_TO_RADIX)
+                    rc = mp_div_d((mp_int*)bn->internal, (mp_digit)w,
+                            (mp_int*)bn->internal, NULL);
+#else
+                    rc = WOLFSSL_NOT_IMPLEMENTED;
+#endif
+#else
+                    rc = WOLFSSL_NOT_IMPLEMENTED;
+#endif
+                    break;
+                case BN_WORD_MOD:
+                    {
+                        mp_digit _mod_res;
+                        rc = mp_mod_d((mp_int*) bn->internal, (mp_digit) w,
+                                &_mod_res);
+                        if (rc == MP_OKAY && mod_res != NULL)
+                            *mod_res = (WOLFSSL_BN_ULONG)_mod_res;
+                    }
+                    break;
+                default:
+                    rc = WOLFSSL_NOT_IMPLEMENTED;
+                    break;
             }
-            else {
-                /* Add word from MP integer. */
-                rc = mp_add_d((mp_int*)bn->internal, (mp_digit)w,
-                    (mp_int*)bn->internal);
-            }
-            if (rc != MP_OKAY) {
-                WOLFSSL_MSG("mp_add/sub_d error");
-                ret = 0;
-            }
+        }
+        if (ret == 1 && rc != MP_OKAY) {
+            WOLFSSL_MSG("mp word operation error or not implemented");
+            ret = 0;
         }
     }
 
-#if DIGIT_BIT < (SIZEOF_LONG * CHAR_BIT)
-    mp_free(w_mp);
-#ifdef WOLFSSL_SMALL_STACK
-    XFREE(w_mp, NULL, DYNAMIC_TYPE_TMP_BUFFER);
-#endif /* WOLFSSL_SMALL_STACK */
-#endif
+    WOLFSSL_LEAVE("bn_word_helper", ret);
+
     return ret;
 }
 
@@ -1383,7 +1505,7 @@ int wolfSSL_BN_add_word(WOLFSSL_BIGNUM *bn, WOLFSSL_BN_ULONG w)
 
     WOLFSSL_ENTER("wolfSSL_BN_add_word");
 
-    ret = wolfssl_bn_add_word_int(bn, w, 0);
+    ret = bn_word_helper(bn, w, BN_WORD_ADD, NULL);
 
     WOLFSSL_LEAVE("wolfSSL_BN_add_word", ret);
 
@@ -1405,9 +1527,36 @@ int wolfSSL_BN_sub_word(WOLFSSL_BIGNUM* bn, WOLFSSL_BN_ULONG w)
 
     WOLFSSL_ENTER("wolfSSL_BN_sub_word");
 
-    ret = wolfssl_bn_add_word_int(bn, w, 1);
+    ret = bn_word_helper(bn, w, BN_WORD_SUB, NULL);
 
     WOLFSSL_LEAVE("wolfSSL_BN_sub_word", ret);
+
+    return ret;
+}
+
+int wolfSSL_BN_mul_word(WOLFSSL_BIGNUM *bn, WOLFSSL_BN_ULONG w)
+{
+    int ret;
+
+    WOLFSSL_ENTER("wolfSSL_BN_mul_word");
+
+    ret = bn_word_helper(bn, w, BN_WORD_MUL, NULL);
+
+    WOLFSSL_LEAVE("wolfSSL_BN_mul_word", ret);
+
+    return ret;
+}
+
+
+int wolfSSL_BN_div_word(WOLFSSL_BIGNUM *bn, WOLFSSL_BN_ULONG w)
+{
+    int ret;
+
+    WOLFSSL_ENTER("wolfSSL_BN_div_word");
+
+    ret = bn_word_helper(bn, w, BN_WORD_DIV, NULL);
+
+    WOLFSSL_LEAVE("wolfSSL_BN_div_word", ret);
 
     return ret;
 }
@@ -1424,70 +1573,16 @@ int wolfSSL_BN_sub_word(WOLFSSL_BIGNUM* bn, WOLFSSL_BN_ULONG w)
 WOLFSSL_BN_ULONG wolfSSL_BN_mod_word(const WOLFSSL_BIGNUM *bn,
     WOLFSSL_BN_ULONG w)
 {
-    WOLFSSL_BN_ULONG ret = 0;
+    int ret;
+    WOLFSSL_BN_ULONG res = 0;
 
     WOLFSSL_ENTER("wolfSSL_BN_mod_word");
 
-    /* Validate parameters. */
-    if (BN_IS_NULL(bn)) {
-        WOLFSSL_MSG("bn NULL error");
-        ret = (WOLFSSL_BN_ULONG)-1;
-    }
+    ret = bn_word_helper(bn, w, BN_WORD_MOD, &res);
 
-#if DIGIT_BIT < (SIZEOF_LONG * CHAR_BIT)
-    if ((ret == 0) && (w > (WOLFSSL_BN_ULONG)MP_MASK)) {
-        /* TODO: small stack */
-        mp_int w_mp;
-        mp_int r_mp;
+    WOLFSSL_LEAVE("wolfSSL_BN_mod_word", ret);
 
-        /* Memset MP integers to be safe to free. */
-        XMEMSET(&w_mp, 0, sizeof(w_mp));
-        XMEMSET(&r_mp, 0, sizeof(r_mp));
-
-        /* Initialize MP integer to hold word. */
-        if (mp_init(&w_mp) != MP_OKAY) {
-            ret = (WOLFSSL_BN_ULONG)-1;
-        }
-        /* Initialize MP integer to hold result word. */
-        if ((ret == 0) && (mp_init(&r_mp) != MP_OKAY)) {
-            ret = (WOLFSSL_BN_ULONG)-1;
-        }
-        /* Set modulus word into MP integer. */
-        if ((ret == 0) && (mp_set_int(&w_mp, w) != MP_OKAY)) {
-            ret = (WOLFSSL_BN_ULONG)-1;
-        }
-        /* Calculate modulus result. */
-        if ((ret == 0) && (mp_mod((mp_int *)bn->internal, &w_mp, &r_mp) !=
-                MP_OKAY)) {
-            WOLFSSL_MSG("mp_mod error");
-            ret = (WOLFSSL_BN_ULONG)-1;
-        }
-        if (ret == 0) {
-            /* Get modulus result into an unsigned long. */
-            ret = wolfssl_bn_get_word_1(&r_mp);
-        }
-
-        /* Dispose of dynamically allocated data. */
-        mp_free(&r_mp);
-        mp_free(&w_mp);
-    }
-    else
-#endif
-    if (ret == 0) {
-        mp_digit mp_ret;
-
-        /* Calculate modulus result using wolfCrypt. */
-        if (mp_mod_d((mp_int*)bn->internal, (mp_digit)w, &mp_ret) != MP_OKAY) {
-            WOLFSSL_MSG("mp_add_d error");
-            ret = (WOLFSSL_BN_ULONG)-1;
-        }
-        else {
-            /* Return result. */
-            ret = (WOLFSSL_BN_ULONG)mp_ret;
-        }
-    }
-
-    return ret;
+    return ret == 1 ? res : (WOLFSSL_BN_ULONG)-1;
 }
 #endif /* WOLFSSL_KEY_GEN && (!NO_RSA || !NO_DH || !NO_DSA) */
 
@@ -2037,10 +2132,19 @@ int wolfSSL_BN_rand(WOLFSSL_BIGNUM* bn, int bits, int top, int bottom)
             WOLFSSL_MSG("Failed to allocate buffer.");
             ret = 0;
         }
-        /* Generate bytes to cover bits. */
-        if ((ret == 1) && wc_RNG_GenerateBlock(rng, buff, len) != 0) {
-            WOLFSSL_MSG("wc_RNG_GenerateBlock failed");
+        /* Global RNG is shared, lock it while generating. */
+        if ((ret == 1) && (wc_LockMutex(&globalRNGMutex) != 0)) {
+            WOLFSSL_MSG("Bad Lock Mutex rng");
             ret = 0;
+        }
+
+        /* Generate bytes to cover bits. */
+        if (ret == 1) {
+            if (wc_RNG_GenerateBlock(rng, buff, len) != 0) {
+                WOLFSSL_MSG("wc_RNG_GenerateBlock failed");
+                ret = 0;
+            }
+            wc_UnLockMutex(&globalRNGMutex);
         }
         /* Read bytes in to big number. */
         if ((ret == 1) && mp_read_unsigned_bin((mp_int*)bn->internal, buff, len)
@@ -2051,8 +2155,8 @@ int wolfSSL_BN_rand(WOLFSSL_BIGNUM* bn, int bits, int top, int bottom)
         /* Dispose of buffer - no longer needed. */
         XFREE(buff, NULL, DYNAMIC_TYPE_TMP_BUFFER);
 
-        if (ret == 1) {
-            /* Truncate to requested bit length. */
+        /* Truncate to requested bit length when not a whole number of bytes. */
+        if ((ret == 1) && ((bits % 8) != 0)) {
             mp_rshb((mp_int*)bn->internal, 8 - (bits % 8));
         }
 
@@ -2189,11 +2293,7 @@ int wolfSSL_BN_generate_prime_ex(WOLFSSL_BIGNUM* prime, int bits,
     WOLFSSL_BN_GENCB* cb)
 {
     int ret = 1;
-#ifdef WOLFSSL_SMALL_STACK
-    WC_RNG* tmpRng = NULL;
-#else
-    WC_RNG  tmpRng[1];
-#endif
+    WC_DECLARE_VAR(tmpRng, WC_RNG, 1, 0);
     WC_RNG* rng = NULL;
     int localRng = 0;
 
@@ -2225,9 +2325,7 @@ int wolfSSL_BN_generate_prime_ex(WOLFSSL_BIGNUM* prime, int bits,
     if (localRng) {
         /* Dispose of local RNG that was created. */
         wc_FreeRng(rng);
-    #ifdef WOLFSSL_SMALL_STACK
-        XFREE(rng, NULL, DYNAMIC_TYPE_RNG);
-    #endif
+        WC_FREE_VAR_EX(rng, NULL, DYNAMIC_TYPE_RNG);
     }
 
     WOLFSSL_LEAVE("wolfSSL_BN_generate_prime_ex", ret);
@@ -2252,11 +2350,7 @@ int wolfSSL_BN_is_prime_ex(const WOLFSSL_BIGNUM *bn, int checks,
 {
     int ret = 1;
     WC_RNG* rng    = NULL;
-#ifdef WOLFSSL_SMALL_STACK
-    WC_RNG* tmpRng = NULL;
-#else
-    WC_RNG  tmpRng[1];
-#endif
+    WC_DECLARE_VAR(tmpRng, WC_RNG, 1, 0);
     int localRng = 0;
     int res = MP_NO;
 
@@ -2268,25 +2362,23 @@ int wolfSSL_BN_is_prime_ex(const WOLFSSL_BIGNUM *bn, int checks,
 
     if (BN_IS_NULL(bn)) {
         WOLFSSL_MSG("bn NULL error");
-        ret = -1;
+        ret = WOLFSSL_FATAL_ERROR;
     }
 
     /* Create a new RNG or use global. */
     if ((ret == 1) && ((rng = wolfssl_make_rng(tmpRng, &localRng)) == NULL)) {
-        ret = -1;
+        ret = WOLFSSL_FATAL_ERROR;
     }
 
     if ((ret == 1) && (mp_prime_is_prime_ex((mp_int*)bn->internal, checks, &res,
             rng) != MP_OKAY)) {
         WOLFSSL_MSG("mp_prime_is_prime_ex error");
-        ret = -1;
+        ret = WOLFSSL_FATAL_ERROR;
     }
 
     if (localRng) {
         wc_FreeRng(rng);
-    #ifdef WOLFSSL_SMALL_STACK
-        XFREE(rng, NULL, DYNAMIC_TYPE_RNG);
-    #endif
+        WC_FREE_VAR_EX(rng, NULL, DYNAMIC_TYPE_RNG);
     }
 
     if ((ret != -1) && (res != MP_YES)) {
@@ -2303,7 +2395,8 @@ int wolfSSL_BN_is_prime_ex(const WOLFSSL_BIGNUM *bn, int checks,
  * Print APIs
  ******************************************************************************/
 
-#if !defined(NO_FILESYSTEM) && defined(XFPRINTF)
+#if !defined(NO_FILESYSTEM) && !defined(NO_STDIO_FILESYSTEM) && \
+    defined(XFPRINTF)
 /* Print big number to file pointer.
  *
  * Return code compliant with OpenSSL.
@@ -2347,27 +2440,38 @@ int wolfSSL_BN_print_fp(XFILE fp, const WOLFSSL_BIGNUM *bn)
 }
 #endif /* !NO_FILESYSTEM && XFPRINTF */
 
+#ifndef NO_WOLFSSL_BN_CTX
 /*******************************************************************************
  * BN_CTX APIs
  ******************************************************************************/
 
-/* Allocate and return a new BN context object.
+/* Create a new BN context object.
  *
- * BN context not needed for operations.
- *
- * @return  Pointer to dummy object.
+ * @return  BN context object on success.
+ * @return  NULL on failure.
  */
 WOLFSSL_BN_CTX* wolfSSL_BN_CTX_new(void)
 {
-    /* wolfcrypt doesn't need BN context. */
-    static int ctx;
+    WOLFSSL_BN_CTX* ctx = NULL;
+
     WOLFSSL_ENTER("wolfSSL_BN_CTX_new");
-    return (WOLFSSL_BN_CTX*)&ctx;
+    ctx = (WOLFSSL_BN_CTX*)XMALLOC(sizeof(WOLFSSL_BN_CTX), NULL,
+            DYNAMIC_TYPE_OPENSSL);
+    if (ctx != NULL) {
+        XMEMSET(ctx, 0, sizeof(WOLFSSL_BN_CTX));
+    }
+
+    return ctx;
 }
 
-/* Initialize a BN context object.
+
+#ifndef NO_WOLFSSL_STUB
+/* deprecated
  *
- * BN context not needed for operations.
+ * Initialize a BN context object.
+ * This function was removed in OpenSSL 1.1.0 and later.
+ * Keeping a stub function here for older applications that have BN_CTX_init()
+ * calls.
  *
  * @param [in] ctx  Dummy BN context.
  */
@@ -2375,37 +2479,59 @@ void wolfSSL_BN_CTX_init(WOLFSSL_BN_CTX* ctx)
 {
     (void)ctx;
     WOLFSSL_ENTER("wolfSSL_BN_CTX_init");
+    WOLFSSL_STUB("wolfSSL_BN_CTX_init");
+    WOLFSSL_MSG("wolfSSL_BN_CTX_init is deprecated");
 }
+#endif
 
 
 /* Free a BN context object.
  *
- * BN context not needed for operations.
- *
- * @param [in] ctx  Dummy BN context.
+ * @param [in] ctx  BN context object.
  */
 void wolfSSL_BN_CTX_free(WOLFSSL_BN_CTX* ctx)
 {
-    (void)ctx;
     WOLFSSL_ENTER("wolfSSL_BN_CTX_free");
-    /* Don't do anything since using dummy, static BN context. */
+    if (ctx != NULL) {
+        while (ctx->list != NULL) {
+            struct WOLFSSL_BN_CTX_LIST* tmp = ctx->list;
+            ctx->list = ctx->list->next;
+            wolfSSL_BN_free(tmp->bn);
+            XFREE(tmp, NULL, DYNAMIC_TYPE_OPENSSL);
+        }
+        XFREE(ctx, NULL, DYNAMIC_TYPE_OPENSSL);
+    }
 }
 
-/* Get a big number based on the BN context.
+/* Get a big number from the BN context.
  *
- * @param [in] ctx  BN context. Not used.
+ * @param [in] ctx  BN context object.
  * @return  Big number on success.
  * @return  NULL on failure.
  */
 WOLFSSL_BIGNUM *wolfSSL_BN_CTX_get(WOLFSSL_BN_CTX *ctx)
 {
-    /* ctx is not used - returning a new big number. */
-    (void)ctx;
+    WOLFSSL_BIGNUM* bn = NULL;
 
     WOLFSSL_ENTER("wolfSSL_BN_CTX_get");
+    if (ctx != NULL) {
+        struct WOLFSSL_BN_CTX_LIST* node = (struct WOLFSSL_BN_CTX_LIST*)XMALLOC(
+                sizeof(struct WOLFSSL_BN_CTX_LIST), NULL, DYNAMIC_TYPE_OPENSSL);
+        if (node != NULL) {
+            XMEMSET(node, 0, sizeof(struct WOLFSSL_BN_CTX_LIST));
+            bn = node->bn = wolfSSL_BN_new();
+            if (node->bn != NULL) {
+                node->next = ctx->list;
+                ctx->list = node;
+            }
+            else {
+                XFREE(node, NULL, DYNAMIC_TYPE_OPENSSL);
+                node = NULL;
+            }
+        }
+    }
 
-    /* Return a new big number. */
-    return wolfSSL_BN_new();
+    return bn;
 }
 
 #ifndef NO_WOLFSSL_STUB
@@ -2424,6 +2550,75 @@ void wolfSSL_BN_CTX_start(WOLFSSL_BN_CTX *ctx)
     WOLFSSL_MSG("wolfSSL_BN_CTX_start TBD");
 }
 #endif
+
+#endif /* NO_WOLFSSL_BN_CTX */
+
+/*******************************************************************************
+ * BN_MONT_CTX APIs
+ ******************************************************************************/
+
+WOLFSSL_BN_MONT_CTX* wolfSSL_BN_MONT_CTX_new(void)
+{
+    /* wolfcrypt doesn't need BN MONT context. */
+    static int mont;
+    WOLFSSL_ENTER("wolfSSL_BN_MONT_CTX_new");
+    return (WOLFSSL_BN_MONT_CTX*)&mont;
+}
+
+void wolfSSL_BN_MONT_CTX_free(WOLFSSL_BN_MONT_CTX *mont)
+{
+    (void)mont;
+    WOLFSSL_ENTER("wolfSSL_BN_MONT_CTX_free");
+    /* Don't do anything since using dummy, static BN context. */
+}
+
+int wolfSSL_BN_MONT_CTX_set(WOLFSSL_BN_MONT_CTX *mont,
+        const WOLFSSL_BIGNUM *mod, WOLFSSL_BN_CTX *ctx)
+{
+    (void) mont;
+    (void) mod;
+    (void) ctx;
+    WOLFSSL_ENTER("wolfSSL_BN_MONT_CTX_set");
+    return WOLFSSL_SUCCESS;
+}
+
+/* Calculate r = a ^ p % m.
+ *
+ * @param [out] r    Big number to store the result.
+ * @param [in]  a    Base as an unsigned long.
+ * @param [in]  p    Exponent as a big number.
+ * @param [in]  m    Modulus as a big number.
+ * @param [in]  ctx  BN context object. Unused.
+ * @param [in]  mont Montgomery context object. Unused.
+ *
+ * @return  1 on success.
+ * @return  0 on failure.
+ */
+int wolfSSL_BN_mod_exp_mont_word(WOLFSSL_BIGNUM *r, WOLFSSL_BN_ULONG a,
+        const WOLFSSL_BIGNUM *p, const WOLFSSL_BIGNUM *m, WOLFSSL_BN_CTX *ctx,
+        WOLFSSL_BN_MONT_CTX *mont)
+{
+    WOLFSSL_BIGNUM* tmp = NULL;
+    int ret = WOLFSSL_SUCCESS;
+
+    (void)mont;
+    WOLFSSL_ENTER("wolfSSL_BN_mod_exp_mont_word");
+
+    if (ret == WOLFSSL_SUCCESS && (tmp = wolfSSL_BN_new()) == NULL) {
+        WOLFSSL_MSG("wolfSSL_BN_new failed");
+        ret = WOLFSSL_FAILURE;
+    }
+    if (ret == WOLFSSL_SUCCESS && (wolfSSL_BN_set_word(tmp, (unsigned long)a))
+                                   == WC_NO_ERR_TRACE(WOLFSSL_FAILURE)) {
+        WOLFSSL_MSG("wolfSSL_BN_set_word failed");
+        ret = WOLFSSL_FAILURE;
+    }
+    if (ret == WOLFSSL_SUCCESS)
+        ret = wolfSSL_BN_mod_exp(r, tmp, p, m, ctx);
+
+    wolfSSL_BN_free(tmp);
+    return ret;
+}
 
 #endif /* OPENSSL_EXTRA */
 

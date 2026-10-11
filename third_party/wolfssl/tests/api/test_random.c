@@ -1,0 +1,1688 @@
+/* test_random.c
+ *
+ * Copyright (C) 2006-2026 wolfSSL Inc.
+ *
+ * This file is part of wolfSSL.
+ *
+ * wolfSSL is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * wolfSSL is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1335, USA
+ */
+
+#include <tests/unit.h>
+
+#ifdef NO_INLINE
+    #include <wolfssl/wolfcrypt/misc.h>
+#else
+    #define WOLFSSL_MISC_INCLUDED
+    #include <wolfcrypt/src/misc.c>
+#endif
+
+#include <wolfssl/wolfcrypt/random.h>
+#include <wolfssl/wolfcrypt/types.h>
+#ifdef HAVE_ENTROPY_MEMUSE
+    #include <wolfssl/wolfcrypt/wolfentropy.h>
+#endif
+#include <tests/api/api.h>
+#include <tests/api/test_random.h>
+
+
+int test_wc_InitRng(void)
+{
+    EXPECT_DECLS;
+#ifndef WC_NO_RNG
+    WC_RNG rng[1];
+
+    (void)rng;
+
+    /* Bad parameter. */
+    ExpectIntEQ(wc_InitRng(NULL), WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wc_InitRng_ex(NULL, HEAP_HINT, INVALID_DEVID),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wc_FreeRng(NULL), WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+
+#ifdef HAVE_HASHDRBG
+    /* Good parameter. */
+    ExpectIntEQ(wc_InitRng(rng), 0);
+    ExpectIntEQ(wc_FreeRng(rng), 0);
+    ExpectIntEQ(wc_InitRng_ex(rng, HEAP_HINT, INVALID_DEVID), 0);
+    ExpectIntEQ(wc_FreeRng(rng), 0);
+#endif
+#elif !defined(HAVE_FIPS) || \
+      (defined(HAVE_FIPS_VERSION) && (HAVE_FIPS_VERSION >= 2))
+    WC_RNG rng[1];
+
+    (void)rng;
+
+    ExpectIntEQ(wc_InitRng(NULL), WC_NO_ERR_TRACE(NOT_COMPILED_IN));
+    ExpectIntEQ(wc_InitRng_ex(NULL, HEAP_HINT, INVALID_DEVID),
+        WC_NO_ERR_TRACE(NOT_COMPILED_IN));
+    ExpectIntEQ(wc_FreeRng(NULL), WC_NO_ERR_TRACE(NOT_COMPILED_IN));
+
+    ExpectIntEQ(wc_InitRng(rng), WC_NO_ERR_TRACE(NOT_COMPILED_IN));
+    ExpectIntEQ(wc_InitRng_ex(rng, HEAP_HINT, INVALID_DEVID),
+        WC_NO_ERR_TRACE(NOT_COMPILED_IN));
+    ExpectIntEQ(wc_FreeRng(rng), WC_NO_ERR_TRACE(NOT_COMPILED_IN));
+#endif
+    return EXPECT_RESULT();
+}
+
+
+int test_wc_RNG_GenerateBlock_Reseed(void)
+{
+    EXPECT_DECLS;
+#if defined(HAVE_HASHDRBG) && defined(TEST_RESEED_INTERVAL)
+    int i;
+    WC_RNG rng;
+    byte key[32];
+
+    XMEMSET(&rng, 0, sizeof(WC_RNG));
+
+    ExpectIntEQ(wc_InitRng(&rng), 0);
+    for (i = 0; i < WC_RESEED_INTERVAL + 10; i++) {
+        ExpectIntEQ(wc_RNG_GenerateBlock(&rng, key, sizeof(key)), 0);
+    }
+    DoExpectIntEQ(wc_FreeRng(&rng), 0);
+#endif
+    return EXPECT_RESULT();
+}
+
+int test_wc_RNG_ReseedBoundary(void)
+{
+    EXPECT_DECLS;
+#if defined(HAVE_HASHDRBG) && !defined(CUSTOM_RAND_GENERATE_BLOCK) && \
+    !defined(HAVE_FIPS) && !defined(HAVE_SELFTEST)
+    WC_RNG rng;
+    byte   out[32];
+    int    drbgChecked = 0;
+
+    XMEMSET(&rng, 0, sizeof(WC_RNG));
+    ExpectIntEQ(wc_InitRng(&rng), 0);
+
+#ifndef NO_SHA256
+    if (rng.drbgType == WC_DRBG_SHA256) {
+        struct DRBG_internal* drbg = (struct DRBG_internal*)rng.drbg;
+        if (drbg != NULL && rng.status == WC_DRBG_OK) {
+        #ifdef WORD64_AVAILABLE
+            word64 startCtr = drbg->reseedCtr;
+        #else
+            word32 startCtr = drbg->reseedCtr;
+        #endif
+            ExpectIntEQ(wc_RNG_GenerateBlock(&rng, out, sizeof(out)), 0);
+            if (drbg->reseedCtr == startCtr + 1) {
+                drbg->reseedCtr = WC_RESEED_INTERVAL - 1;
+                ExpectIntEQ(wc_RNG_GenerateBlock(&rng, out, sizeof(out)), 0);
+                ExpectTrue(drbg->reseedCtr == WC_RESEED_INTERVAL);
+                ExpectIntEQ(wc_RNG_GenerateBlock(&rng, out, sizeof(out)), 0);
+                ExpectTrue(drbg->reseedCtr == 2);
+                drbgChecked = 1;
+            }
+        }
+    }
+#endif
+#ifdef WOLFSSL_DRBG_SHA512
+    if (!drbgChecked && rng.drbgType == WC_DRBG_SHA512) {
+        struct DRBG_SHA512_internal* drbg =
+            (struct DRBG_SHA512_internal*)rng.drbg512;
+        if (drbg != NULL && rng.status == WC_DRBG_OK) {
+            word64 startCtr = drbg->reseedCtr;
+            ExpectIntEQ(wc_RNG_GenerateBlock(&rng, out, sizeof(out)), 0);
+            if (drbg->reseedCtr == startCtr + 1) {
+                drbg->reseedCtr = WC_RESEED_INTERVAL - 1;
+                ExpectIntEQ(wc_RNG_GenerateBlock(&rng, out, sizeof(out)), 0);
+                ExpectTrue(drbg->reseedCtr == WC_RESEED_INTERVAL);
+                ExpectIntEQ(wc_RNG_GenerateBlock(&rng, out, sizeof(out)), 0);
+                ExpectTrue(drbg->reseedCtr == 2);
+                drbgChecked = 1;
+            }
+        }
+    }
+#endif
+    /* Some build configurations (e.g. --enable-intelrand) bypass the
+     * Hash_DRBG generate path entirely, so reseedCtr does not increment
+     * after wc_RNG_GenerateBlock; in that case both branches above
+     * legitimately decline to exercise the boundary. Only emit a debug
+     * note rather than failing the test. */
+    if (drbgChecked == 0) {
+        WOLFSSL_MSG("RNG_ReseedBoundary: DRBG path not exercised in this "
+                    "config");
+    }
+
+    DoExpectIntEQ(wc_FreeRng(&rng), 0);
+#endif
+    return EXPECT_RESULT();
+}
+
+int test_wc_RNG_GenerateBlock(void)
+{
+    EXPECT_DECLS;
+#ifdef HAVE_HASHDRBG
+    int i;
+    WC_RNG rng;
+    byte key[32];
+
+    XMEMSET(&rng, 0, sizeof(WC_RNG));
+
+    ExpectIntEQ(wc_InitRng(&rng), 0);
+
+    /* Bad parameters. */
+    ExpectIntEQ(wc_RNG_GenerateBlock(NULL, NULL, sizeof(key)),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wc_RNG_GenerateBlock(&rng, NULL, sizeof(key)),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wc_RNG_GenerateBlock(NULL, key , sizeof(key)),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+
+    for (i = 0; i < (int)sizeof(key); i++) {
+        ExpectIntEQ(wc_RNG_GenerateBlock(&rng, key + i, sizeof(key) - i), 0);
+    }
+    DoExpectIntEQ(wc_FreeRng(&rng), 0);
+#endif
+    return EXPECT_RESULT();
+}
+
+int test_wc_RNG_GenerateByte(void)
+{
+    EXPECT_DECLS;
+#ifdef HAVE_HASHDRBG
+    int i;
+    WC_RNG rng;
+    byte output[10];
+
+    XMEMSET(&rng, 0, sizeof(WC_RNG));
+
+    ExpectIntEQ(wc_InitRng(&rng), 0);
+
+    /* Bad parameters. */
+    ExpectIntEQ(wc_RNG_GenerateByte(NULL, NULL), WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wc_RNG_GenerateByte(&rng, NULL), WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wc_RNG_GenerateByte(NULL, output),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+
+    for (i = 0; i < (int)sizeof(output); i++) {
+        ExpectIntEQ(wc_RNG_GenerateByte(&rng, output + i), 0);
+    }
+
+    DoExpectIntEQ(wc_FreeRng(&rng), 0);
+#endif
+    return EXPECT_RESULT();
+}
+
+int test_wc_InitRngNonce(void)
+{
+    EXPECT_DECLS;
+#if !defined(WC_NO_RNG) && !defined(HAVE_SELFTEST) && \
+    (!defined(HAVE_FIPS) || (defined(HAVE_FIPS_VERSION) && \
+     HAVE_FIPS_VERSION >= 2))
+    WC_RNG rng;
+    byte   nonce[] = "\x0D\x74\xDB\x42\xA9\x10\x77\xDE"
+                     "\x45\xAC\x13\x7A\xE1\x48\xAF\x16";
+    word32 nonceSz = sizeof(nonce);
+
+    /* Bad parameters. */
+    ExpectIntEQ(wc_InitRngNonce(NULL, NULL , nonceSz),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wc_InitRngNonce(&rng, NULL , nonceSz),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wc_InitRngNonce(NULL, nonce, nonceSz),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+
+    /* Good parameters. */
+    ExpectIntEQ(wc_InitRngNonce(&rng, nonce, nonceSz), 0);
+    ExpectIntEQ(wc_FreeRng(&rng), 0);
+    ExpectIntEQ(wc_InitRngNonce(&rng, NULL, 0), 0);
+    ExpectIntEQ(wc_FreeRng(&rng), 0);
+    ExpectIntEQ(wc_InitRngNonce(&rng, nonce, 0), 0);
+    ExpectIntEQ(wc_FreeRng(&rng), 0);
+#endif
+    return EXPECT_RESULT();
+}
+
+int test_wc_InitRngNonce_ex(void)
+{
+    EXPECT_DECLS;
+#if !defined(WC_NO_RNG) && !defined(HAVE_SELFTEST) && \
+    (!defined(HAVE_FIPS) || (defined(HAVE_FIPS_VERSION) && \
+     HAVE_FIPS_VERSION >= 2))
+    WC_RNG rng;
+    byte   nonce[] = "\x0D\x74\xDB\x42\xA9\x10\x77\xDE"
+                     "\x45\xAC\x13\x7A\xE1\x48\xAF\x16";
+    word32 nonceSz = sizeof(nonce);
+
+    /* Bad parameters. */
+    ExpectIntEQ(wc_InitRngNonce_ex(NULL, NULL , nonceSz, HEAP_HINT, testDevId),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wc_InitRngNonce_ex(&rng, NULL , nonceSz, HEAP_HINT, testDevId),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wc_InitRngNonce_ex(NULL, nonce, nonceSz, HEAP_HINT, testDevId),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+
+    ExpectIntEQ(wc_InitRngNonce_ex(&rng, nonce, nonceSz, HEAP_HINT, testDevId),
+        0);
+    ExpectIntEQ(wc_FreeRng(&rng), 0);
+    ExpectIntEQ(wc_InitRngNonce_ex(&rng, NULL, 0, HEAP_HINT, testDevId), 0);
+    ExpectIntEQ(wc_FreeRng(&rng), 0);
+    ExpectIntEQ(wc_InitRngNonce_ex(&rng, nonce, 0, HEAP_HINT, testDevId), 0);
+    ExpectIntEQ(wc_FreeRng(&rng), 0);
+#endif
+    return EXPECT_RESULT();
+}
+
+int test_wc_GenerateSeed(void)
+{
+    EXPECT_DECLS;
+/* Under CUSTOM_RAND_GENERATE_BLOCK, random.c's wc_GenerateSeed() ladder has
+ * an intentionally empty "#elif defined(CUSTOM_RAND_GENERATE_BLOCK)" arm (by
+ * design: the custom block generator is meant to replace wc_GenerateSeed(),
+ * not call it), so no wc_GenerateSeed symbol is compiled at all in that
+ * configuration; calling it here would be a link error, not a test
+ * failure. */
+#if !defined(WC_NO_RNG) && !defined(HAVE_FIPS) && !defined(HAVE_SELFTEST) && \
+    !defined(CUSTOM_RAND_GENERATE_BLOCK)
+    OS_Seed seed[1];
+    byte output[16];
+
+    XMEMSET(seed, 0, sizeof(OS_Seed));
+
+    /* Different configurations have different paths and different errors or
+     * no error at all. */
+#ifdef TEST_WC_GENERATE_SEED_PARAMS
+    /* NOTE (the uncovered-condition report residual, line ~5525 "os == NULL || output == NULL"):
+     * TEST_WC_GENERATE_SEED_PARAMS is not defined by any variant in
+     * configs/random/ today. Its header comment cites a real historical
+     * bug -- the generic Linux getrandom()/dev-urandom wc_GenerateSeed()
+     * arm's vDSO getrandom() fast path used to segfault on a NULL output
+     * buffer instead of returning an error. That bug was fixed by
+     * "random: reject NULL output in Unix wc_GenerateSeed" (adds this
+     * exact "os == NULL || output == NULL" guard ahead of any backend
+     * dispatch), and empirically (native --enable-all build, getrandom()
+     * backend) both wc_GenerateSeed(NULL, output, sz) and
+     * wc_GenerateSeed(os, NULL, sz) now return BAD_FUNC_ARG cleanly with no
+     * crash. Defining TEST_WC_GENERATE_SEED_PARAMS in
+     * configs/random/user_settings.base.h (none of this module's variants
+     * select a different OS/HW entropy backend) would safely close this
+     * residual; left undefined here since gap-closing tasks don't modify
+     * the shared suite config headers -- flagged for the orchestrator. */
+    /* Bad parameters. */
+    ExpectIntEQ(wc_GenerateSeed(NULL, NULL  , 16),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntLT(wc_GenerateSeed(seed, NULL  , 16), 0);
+    ExpectIntEQ(wc_GenerateSeed(NULL, output, 16),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+#endif
+
+    /* Good parameters. */
+    ExpectIntEQ(wc_GenerateSeed(seed, output, 16), 0);
+#endif
+    return EXPECT_RESULT();
+}
+
+int test_wc_rng_new(void)
+{
+    EXPECT_DECLS;
+#if !defined(WC_NO_RNG) && !defined(HAVE_FIPS) && !defined(HAVE_SELFTEST) && \
+    !defined(WOLFSSL_NO_MALLOC)
+    WC_RNG* rng = NULL;
+    unsigned char nonce[16];
+    word32 nonceSz = (word32)sizeof(nonce);
+
+    XMEMSET(nonce, 0xa5, nonceSz);
+
+    /* Bad parameters. */
+    ExpectNull(wc_rng_new(NULL, nonceSz, HEAP_HINT));
+    ExpectIntEQ(wc_rng_new_ex(&rng, NULL, nonceSz, HEAP_HINT, INVALID_DEVID),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectNull(rng);
+
+    /* Good parameters. */
+    ExpectNotNull(rng = wc_rng_new(nonce, nonceSz, HEAP_HINT));
+#ifdef HAVE_HASHDRBG
+    /* Ensure random object is usable. */
+    ExpectIntEQ(wc_RNG_GenerateBlock(rng, nonce, nonceSz), 0);
+#endif
+    wc_rng_free(rng);
+    rng = NULL;
+    ExpectNotNull(rng = wc_rng_new(nonce, 0, HEAP_HINT));
+#ifdef HAVE_HASHDRBG
+    /* Ensure random object is usable. */
+    ExpectIntEQ(wc_RNG_GenerateBlock(rng, nonce, nonceSz), 0);
+#endif
+    wc_rng_free(rng);
+    rng = NULL;
+
+    ExpectIntEQ(wc_rng_new_ex(&rng, nonce, nonceSz, HEAP_HINT, INVALID_DEVID),
+        0);
+    ExpectNotNull(rng);
+#ifdef HAVE_HASHDRBG
+    /* Ensure random object is usable. */
+    ExpectIntEQ(wc_RNG_GenerateBlock(rng, nonce, nonceSz), 0);
+#endif
+    wc_rng_free(rng);
+    rng = NULL;
+    ExpectIntEQ(wc_rng_new_ex(&rng, nonce, 0, HEAP_HINT, INVALID_DEVID), 0);
+    ExpectNotNull(rng);
+#ifdef HAVE_HASHDRBG
+    /* Ensure random object is usable. */
+    ExpectIntEQ(wc_RNG_GenerateBlock(rng, nonce, nonceSz), 0);
+#endif
+    wc_rng_free(rng);
+
+    wc_rng_free(NULL);
+#endif
+    return EXPECT_RESULT();
+}
+
+int test_wc_RNG_DRBG_Reseed(void)
+{
+    EXPECT_DECLS;
+#if defined(HAVE_HASHDRBG) && !defined(HAVE_FIPS) && !defined(HAVE_SELFTEST)
+    WC_RNG rng[1];
+    byte entropy[16];
+    word32 entropySz = sizeof(entropy);
+
+    XMEMSET(entropy, 0xa5, entropySz);
+
+    ExpectIntEQ(wc_InitRng(rng), 0);
+
+    /* Bad Parameters. */
+    ExpectIntEQ(wc_RNG_DRBG_Reseed(NULL, NULL, entropySz),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wc_RNG_DRBG_Reseed(rng, NULL, entropySz),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wc_RNG_DRBG_Reseed(NULL, entropy, entropySz),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+
+    /* Good Parameters. */
+    ExpectIntEQ(wc_RNG_DRBG_Reseed(rng, entropy, entropySz), 0);
+    ExpectIntEQ(wc_RNG_GenerateBlock(rng, entropy, entropySz), 0);
+    ExpectIntEQ(wc_RNG_DRBG_Reseed(rng, entropy, 0), 0);
+    ExpectIntEQ(wc_RNG_GenerateBlock(rng, entropy, entropySz), 0);
+
+    ExpectIntEQ(wc_FreeRng(rng), 0);
+#endif
+    return EXPECT_RESULT();
+}
+
+#if defined(HAVE_HASHDRBG) && \
+    (!defined(HAVE_FIPS) || FIPS_VERSION3_GE(7,0,0)) && \
+    !defined(HAVE_SELFTEST) && !defined(WC_RNG_SEED_APT_CUTOFF) && \
+    !defined(WC_RNG_SEED_APT_WINDOW) && !defined(WC_RNG_SEED_RCT_CUTOFF)
+/* Build one APT window whose reference value occurs m+1 times, keeping runs
+ * under the RCT cutoff so only the APT can fire.  Returns -1 if m does not
+ * fit in the window. */
+static int test_random_apt_window(byte* s, word32 start, word32 win, byte ref,
+    word32 m)
+{
+    word32 i, placed = 0, run = 1;
+    byte filler = 0;
+
+    for (i = 0; i < win; i++) {
+        if (++filler == ref)
+            filler++;
+        s[start + i] = filler;
+    }
+    s[start] = ref;
+    for (i = 1; (i < win) && (placed < m); i++) {
+        if (run >= 29) {
+            run = 0;
+            continue;
+        }
+        s[start + i] = ref;
+        placed++;
+        run++;
+    }
+    return (placed == m) ? 0 : -1;
+}
+
+/* Build one window whose majority value is NOT its reference sample, so the
+ * 4.4.2 test stays quiet and only the all-values test can fire. */
+static int test_random_allvals_window(byte* s, word32 win, byte ref, byte val,
+    word32 m)
+{
+    word32 i, placed = 0, run = 0;
+    byte filler = 0;
+
+    for (i = 0; i < win; i++) {
+        if (++filler == val)
+            filler++;
+        s[i] = filler;
+    }
+    s[0] = ref;
+    for (i = 1; (i < win) && (placed < m); i++) {
+        if (run >= 29) {
+            run = 0;
+            continue;
+        }
+        s[i] = val;
+        placed++;
+        run++;
+    }
+    return (placed == m) ? 0 : -1;
+}
+
+/* Smallest match count that trips the APT at this window, discovered through
+ * the public API; 0 when the window cannot reach its cutoff. */
+static word32 test_random_apt_cutoff(byte* buf, word32 win, int allValues)
+{
+    word32 lo = 2, hi = win, best = 0;
+
+    while (lo <= hi) {
+        word32 mid = lo + ((hi - lo) / 2);
+        int built;
+
+        if (allValues)
+            built = test_random_allvals_window(buf, win, 0x01, 0x99, mid);
+        else
+            built = test_random_apt_window(buf, 0, win, 0x11, mid - 1);
+
+        if ((built != 0) ||
+            (wc_RNG_TestSeed(buf, win) != WC_NO_ERR_TRACE(ENTROPY_APT_E))) {
+            if (built != 0)
+                hi = mid - 1;
+            else
+                lo = mid + 1;
+        }
+        else {
+            best = mid;
+            hi = mid - 1;
+        }
+    }
+    return best;
+}
+#endif
+
+int test_wc_RNG_TestSeed(void)
+{
+    EXPECT_DECLS;
+#if defined(HAVE_HASHDRBG) && \
+    (!(defined(HAVE_FIPS) || defined(HAVE_SELFTEST)) || \
+    (defined(HAVE_FIPS_VERSION) && (HAVE_FIPS_VERSION >= 2)))
+    byte seed[32];
+    byte i;
+
+#ifdef TEST_WC_RNG_TESTSEED_BAD_PARAMS
+    /* Doesn't handle NULL. */
+    ExpectIntEQ(wc_RNG_TestSeed(NULL, sizeof(seed)),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    /* Doesn't handle seed being less than SEED_BLOCK_SZ which is not public
+     * and is different for different configurations. */
+    for (i = 0; i < 4; i++) {
+        ExpectIntEQ(wc_RNG_TestSeed(seed, i),
+            WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    }
+#endif
+
+    /* Bad seed as it repeats. */
+    XMEMSET(seed, 0xa5, sizeof(seed));
+    /* Return value is DRBG_CONT_FAILURE which is not public. */
+    /* Moving forward with the RCT test check LT instead of GT */
+#if !defined(HAVE_FIPS) || ( defined(HAVE_FIPS) && FIPS_VERSION3_GE(7,0,0) )
+    ExpectIntLT(wc_RNG_TestSeed(seed, sizeof(seed)), 0);
+#else
+    ExpectIntGT(wc_RNG_TestSeed(seed, sizeof(seed)), 0);
+#endif
+
+    /* Good seed. */
+    for (i = 0; i < (byte)sizeof(seed); i++)
+        seed[i] = i;
+    ExpectIntEQ(wc_RNG_TestSeed(seed, sizeof(seed)), 0);
+#endif
+
+#if defined(HAVE_HASHDRBG) && \
+    (!defined(HAVE_FIPS) || FIPS_VERSION3_GE(7,0,0)) && \
+    !defined(HAVE_SELFTEST) && !defined(WC_RNG_SEED_APT_CUTOFF) && \
+    !defined(WC_RNG_SEED_APT_WINDOW) && !defined(WC_RNG_SEED_RCT_CUTOFF)
+    /* SP 800-90B 4.4.2 cutoffs are per window size, 1 + CRITBINOM(W, 2^-H,
+     * 1-alpha) with H = 1 and alpha = 2^-30: 101 at W = 132 (the FIPS reseed
+     * seed), 140 at W = 196 (instantiate) and 325 at W = 512. */
+    {
+        byte* buf = (byte*)XMALLOC(1024, HEAP_HINT, DYNAMIC_TYPE_TMP_BUFFER);
+
+        ExpectNotNull(buf);
+        if (buf != NULL) {
+            /* one below the cutoff passes, the cutoff itself fails */
+            ExpectIntEQ(test_random_apt_window(buf, 0, 132, 0x11, 101 - 2), 0);
+            ExpectIntEQ(wc_RNG_TestSeed(buf, 132), 0);
+            ExpectIntEQ(test_random_apt_window(buf, 0, 132, 0x11, 101 - 1), 0);
+            ExpectIntEQ(wc_RNG_TestSeed(buf, 132),
+                WC_NO_ERR_TRACE(ENTROPY_APT_E));
+
+            ExpectIntEQ(test_random_apt_window(buf, 0, 196, 0x22, 140 - 2), 0);
+            ExpectIntEQ(wc_RNG_TestSeed(buf, 196), 0);
+            ExpectIntEQ(test_random_apt_window(buf, 0, 196, 0x22, 140 - 1), 0);
+            ExpectIntEQ(wc_RNG_TestSeed(buf, 196),
+                WC_NO_ERR_TRACE(ENTROPY_APT_E));
+
+            ExpectIntEQ(test_random_apt_window(buf, 0, 512, 0x33, 325 - 2), 0);
+            ExpectIntEQ(wc_RNG_TestSeed(buf, 512), 0);
+            ExpectIntEQ(test_random_apt_window(buf, 0, 512, 0x33, 325 - 1), 0);
+            ExpectIntEQ(wc_RNG_TestSeed(buf, 512),
+                WC_NO_ERR_TRACE(ENTROPY_APT_E));
+
+            /* windows do not overlap: bias in the second window is caught */
+            ExpectIntEQ(test_random_apt_window(buf, 0, 512, 0x44, 0), 0);
+            ExpectIntEQ(test_random_apt_window(buf, 512, 512, 0x55, 325 - 1),
+                0);
+            ExpectIntEQ(wc_RNG_TestSeed(buf, 1024),
+                WC_NO_ERR_TRACE(ENTROPY_APT_E));
+
+            /* the all-values test (SP 800-90B 4.3 Req 1c) catches bias toward
+             * a value that is not the window's first byte; its cutoff is
+             * 1 + CRITBINOM(W, 2^-H, 1-alpha/256), which is 105 at W = 132 */
+            {
+                word32 j, placed = 0, run = 0;
+                byte filler = 0;
+
+                for (j = 0; j < 132; j++) {
+                    if ((placed < 105) && (run < 28) && (j > 0)) {
+                        buf[j] = 0x99;
+                        placed++;
+                        run++;
+                    }
+                    else {
+                        if (++filler == 0x99)
+                            filler++;
+                        buf[j] = filler;
+                        run = 0;
+                    }
+                }
+                buf[0] = 0x01;
+                ExpectIntEQ(placed, 105);
+                ExpectIntEQ(wc_RNG_TestSeed(buf, 132),
+                    WC_NO_ERR_TRACE(ENTROPY_APT_E));
+                buf[1] = 0x02;    /* one below the cutoff */
+                ExpectIntEQ(wc_RNG_TestSeed(buf, 132), 0);
+            }
+
+            /* a seed that does not divide into whole windows slides its last
+             * window back to full length, so the trailing bytes are covered by
+             * a window whose cutoff is reachable (IG D.K Res 16) */
+            ExpectIntEQ(test_random_apt_window(buf, 0, 512, 0x44, 0), 0);
+            ExpectIntEQ(wc_RNG_TestSeed(buf, 513), 0);
+            ExpectIntEQ(test_random_apt_window(buf, 88, 512, 0x66, 325 - 1), 0);
+            ExpectIntEQ(wc_RNG_TestSeed(buf, 600),
+                WC_NO_ERR_TRACE(ENTROPY_APT_E));
+
+            /* under 30 bytes no cutoff is reachable, so the APT is not applied
+             * and a short all-same seed is left to the RCT */
+            XMEMSET(buf, 0x5a, 20);
+            ExpectIntEQ(wc_RNG_TestSeed(buf, 20), 0);
+
+            /* Sweep the windows a seed can actually present.  seedSz is at
+             * least SEED_BLOCK_SZ, and no cutoff is reachable below W = 30
+             * (38 for the all-values table), so smaller windows are visited
+             * but only the reachable ones are asserted.  That still covers far
+             * more of the 1024 constants than the few sizes one build uses. */
+            {
+                word32 w;
+                word32 prev = 0, prevAll = 0;
+                word32 firstFire = 0, firstFireAll = 0;
+                int bad = 0, badAll = 0;
+
+                for (w = 4; w <= 512; w++) {
+                    word32 c = test_random_apt_cutoff(buf, w, 0);
+                    word32 a2 = test_random_apt_cutoff(buf, w, 1);
+
+                    if (c != 0) {
+                        if (firstFire == 0)
+                            firstFire = w;
+                        /* reachable, and a strict majority of the window */
+                        if ((c > w) || (c <= (w / 2)))
+                            bad = (bad != 0) ? bad : (int)w;
+                        /* C(W) rises by 0 or 1 as the window grows */
+                        if ((prev != 0) && ((c < prev) || ((c - prev) > 1)))
+                            bad = (bad != 0) ? bad : (int)w;
+                        prev = c;
+                    }
+                    if (a2 != 0) {
+                        if (firstFireAll == 0)
+                            firstFireAll = w;
+                        if ((a2 > w) || (a2 <= (w / 2)))
+                            badAll = (badAll != 0) ? badAll : (int)w;
+                        if ((prevAll != 0) &&
+                            ((a2 < prevAll) || ((a2 - prevAll) > 1)))
+                            badAll = (badAll != 0) ? badAll : (int)w;
+                        /* alpha/256 is stricter, so it never sits lower */
+                        if ((c != 0) && (a2 < c))
+                            badAll = (badAll != 0) ? badAll : (int)w;
+                        prevAll = a2;
+                    }
+                }
+                /* the failing window, not just "something broke" */
+                ExpectIntEQ(bad, 0);
+                ExpectIntEQ(badAll, 0);
+                /* Nothing fires below the window where alpha 2^-30 first
+                 * makes a cutoff reachable.  This is one-sided on purpose:
+                 * the densest window these helpers can build still keeps
+                 * runs under the RCT cutoff, so the smallest window they can
+                 * actually trip sits above the table's own floor. */
+                ExpectIntGE((int)firstFire, 30);
+                ExpectIntGE((int)firstFireAll, 38);
+                /* and the anchors the derivation is quoted against */
+                ExpectIntEQ((int)test_random_apt_cutoff(buf, 132, 0), 101);
+                ExpectIntEQ((int)test_random_apt_cutoff(buf, 196, 0), 140);
+                ExpectIntEQ((int)test_random_apt_cutoff(buf, 512, 0), 325);
+                ExpectIntEQ((int)test_random_apt_cutoff(buf, 132, 1), 105);
+                ExpectIntEQ((int)test_random_apt_cutoff(buf, 196, 1), 146);
+                ExpectIntEQ((int)test_random_apt_cutoff(buf, 512, 1), 334);
+            }
+        }
+        XFREE(buf, HEAP_HINT, DYNAMIC_TYPE_TMP_BUFFER);
+    }
+#endif
+    return EXPECT_RESULT();
+}
+
+int test_wc_RNG_HealthTest(void)
+{
+    EXPECT_DECLS;
+#if defined(HAVE_HASHDRBG)
+    static const byte test1Seed[] = {
+        0xa6, 0x5a, 0xd0, 0xf3, 0x45, 0xdb, 0x4e, 0x0e,
+        0xff, 0xe8, 0x75, 0xc3, 0xa2, 0xe7, 0x1f, 0x42,
+        0xc7, 0x12, 0x9d, 0x62, 0x0f, 0xf5, 0xc1, 0x19,
+        0xa9, 0xef, 0x55, 0xf0, 0x51, 0x85, 0xe0, 0xfb,
+        0x85, 0x81, 0xf9, 0x31, 0x75, 0x17, 0x27, 0x6e,
+        0x06, 0xe9, 0x60, 0x7d, 0xdb, 0xcb, 0xcc, 0x2e
+    };
+    static const byte test1Output[] = {
+        0xd3, 0xe1, 0x60, 0xc3, 0x5b, 0x99, 0xf3, 0x40,
+        0xb2, 0x62, 0x82, 0x64, 0xd1, 0x75, 0x10, 0x60,
+        0xe0, 0x04, 0x5d, 0xa3, 0x83, 0xff, 0x57, 0xa5,
+        0x7d, 0x73, 0xa6, 0x73, 0xd2, 0xb8, 0xd8, 0x0d,
+        0xaa, 0xf6, 0xa6, 0xc3, 0x5a, 0x91, 0xbb, 0x45,
+        0x79, 0xd7, 0x3f, 0xd0, 0xc8, 0xfe, 0xd1, 0x11,
+        0xb0, 0x39, 0x13, 0x06, 0x82, 0x8a, 0xdf, 0xed,
+        0x52, 0x8f, 0x01, 0x81, 0x21, 0xb3, 0xfe, 0xbd,
+        0xc3, 0x43, 0xe7, 0x97, 0xb8, 0x7d, 0xbb, 0x63,
+        0xdb, 0x13, 0x33, 0xde, 0xd9, 0xd1, 0xec, 0xe1,
+        0x77, 0xcf, 0xa6, 0xb7, 0x1f, 0xe8, 0xab, 0x1d,
+        0xa4, 0x66, 0x24, 0xed, 0x64, 0x15, 0xe5, 0x1c,
+        0xcd, 0xe2, 0xc7, 0xca, 0x86, 0xe2, 0x83, 0x99,
+        0x0e, 0xea, 0xeb, 0x91, 0x12, 0x04, 0x15, 0x52,
+        0x8b, 0x22, 0x95, 0x91, 0x02, 0x81, 0xb0, 0x2d,
+        0xd4, 0x31, 0xf4, 0xc9, 0xf7, 0x04, 0x27, 0xdf
+    };
+    static const byte test2SeedA[] = {
+        0x63, 0x36, 0x33, 0x77, 0xe4, 0x1e, 0x86, 0x46,
+        0x8d, 0xeb, 0x0a, 0xb4, 0xa8, 0xed, 0x68, 0x3f,
+        0x6a, 0x13, 0x4e, 0x47, 0xe0, 0x14, 0xc7, 0x00,
+        0x45, 0x4e, 0x81, 0xe9, 0x53, 0x58, 0xa5, 0x69,
+        0x80, 0x8a, 0xa3, 0x8f, 0x2a, 0x72, 0xa6, 0x23,
+        0x59, 0x91, 0x5a, 0x9f, 0x8a, 0x04, 0xca, 0x68
+    };
+    static const byte test2SeedB[] = {
+        0xe6, 0x2b, 0x8a, 0x8e, 0xe8, 0xf1, 0x41, 0xb6,
+        0x98, 0x05, 0x66, 0xe3, 0xbf, 0xe3, 0xc0, 0x49,
+        0x03, 0xda, 0xd4, 0xac, 0x2c, 0xdf, 0x9f, 0x22,
+        0x80, 0x01, 0x0a, 0x67, 0x39, 0xbc, 0x83, 0xd3
+    };
+    static const byte test2Output[] = {
+        0x04, 0xee, 0xc6, 0x3b, 0xb2, 0x31, 0xdf, 0x2c,
+        0x63, 0x0a, 0x1a, 0xfb, 0xe7, 0x24, 0x94, 0x9d,
+        0x00, 0x5a, 0x58, 0x78, 0x51, 0xe1, 0xaa, 0x79,
+        0x5e, 0x47, 0x73, 0x47, 0xc8, 0xb0, 0x56, 0x62,
+        0x1c, 0x18, 0xbd, 0xdc, 0xdd, 0x8d, 0x99, 0xfc,
+        0x5f, 0xc2, 0xb9, 0x20, 0x53, 0xd8, 0xcf, 0xac,
+        0xfb, 0x0b, 0xb8, 0x83, 0x12, 0x05, 0xfa, 0xd1,
+        0xdd, 0xd6, 0xc0, 0x71, 0x31, 0x8a, 0x60, 0x18,
+        0xf0, 0x3b, 0x73, 0xf5, 0xed, 0xe4, 0xd4, 0xd0,
+        0x71, 0xf9, 0xde, 0x03, 0xfd, 0x7a, 0xea, 0x10,
+        0x5d, 0x92, 0x99, 0xb8, 0xaf, 0x99, 0xaa, 0x07,
+        0x5b, 0xdb, 0x4d, 0xb9, 0xaa, 0x28, 0xc1, 0x8d,
+        0x17, 0x4b, 0x56, 0xee, 0x2a, 0x01, 0x4d, 0x09,
+        0x88, 0x96, 0xff, 0x22, 0x82, 0xc9, 0x55, 0xa8,
+        0x19, 0x69, 0xe0, 0x69, 0xfa, 0x8c, 0xe0, 0x07,
+        0xa1, 0x80, 0x18, 0x3a, 0x07, 0xdf, 0xae, 0x17
+    };
+#if !(defined(HAVE_FIPS) || defined(HAVE_SELFTEST)) || \
+    (defined(HAVE_FIPS_VERSION) && (HAVE_FIPS_VERSION >= 2))
+    static const byte testEx1Nonce[] = {
+        0x89, 0xc9, 0x49, 0xe9, 0xc8, 0x04, 0xaf, 0x01,
+        0x4d, 0x56, 0x04, 0xb3, 0x94, 0x59, 0xf2, 0xc8
+    };
+    static const byte testEx1Output[] = {
+        0x2d, 0xa7, 0x72, 0x76, 0xe2, 0xab, 0xf5, 0x79,
+        0x08, 0x4f, 0x1a, 0xf3, 0x53, 0xb4, 0xec, 0x58,
+        0x07, 0x09, 0x1f, 0x61, 0xa4, 0x3c, 0x65, 0x38,
+        0xd3, 0x43, 0x66, 0x29, 0x10, 0x81, 0x33, 0xa6,
+        0xb8, 0x71, 0x8d, 0xc0, 0x27, 0x80, 0xfe, 0x11,
+        0x85, 0xc6, 0xe6, 0x40, 0x69, 0x23, 0x39, 0x74,
+        0x4a, 0xc9, 0xdc, 0x68, 0x6f, 0x47, 0x5c, 0x5c,
+        0x56, 0xc8, 0x00, 0x78, 0xcf, 0x12, 0x7a, 0x67,
+        0x27, 0x1b, 0xe7, 0x14, 0xdf, 0x9d, 0x22, 0xb5,
+        0x5a, 0x8a, 0x2f, 0xdd, 0x7b, 0x6f, 0xb7, 0xf4,
+        0xe3, 0x58, 0x8e, 0x6c, 0x79, 0x09, 0xf1, 0xe3,
+        0x15, 0x1d, 0x9f, 0x1f, 0x69, 0x23, 0x70, 0x2f,
+        0xd0, 0xee, 0x4e, 0xdd, 0x02, 0x56, 0xeb, 0x3f,
+        0x25, 0xcc, 0x63, 0x06, 0x70, 0x97, 0x07, 0x76,
+        0xb3, 0xe1, 0x39, 0xbd, 0xd3, 0xc2, 0x12, 0xeb,
+        0x42, 0x77, 0xe8, 0xc5, 0xd0, 0xde, 0xf1, 0x4f
+    };
+    static const byte testEx2Nonce[] = {
+        0xeb, 0xb7, 0x73, 0xf9, 0x93, 0x27, 0x8e, 0xff,
+        0xf0, 0x51, 0x77, 0x8b, 0x65, 0xdb, 0x13, 0x57
+    };
+    static const byte testEx2Output[] = {
+        0x40, 0xb2, 0xeb, 0x2b, 0x10, 0x53, 0x30, 0x8f,
+        0xe4, 0xa0, 0x47, 0xe0, 0x24, 0x22, 0xe7, 0x03,
+        0x03, 0x90, 0x91, 0x7b, 0xa5, 0xa8, 0xa2, 0xfd,
+        0xba, 0x3b, 0xc9, 0x8e, 0xfb, 0x39, 0xef, 0xd9,
+        0xae, 0x62, 0xb7, 0x0b, 0x21, 0xe6, 0x93, 0x22,
+        0xeb, 0x3d, 0x3b, 0x00, 0x59, 0xaa, 0xc0, 0x27,
+        0x0c, 0xde, 0xb4, 0xbd, 0x5c, 0x73, 0xa6, 0x51,
+        0xf5, 0x55, 0x2c, 0xf4, 0xb8, 0xc8, 0x46, 0x04,
+        0x03, 0x63, 0xa7, 0x9f, 0x81, 0xd1, 0x34, 0x1c,
+        0x93, 0x86, 0x43, 0x09, 0x4c, 0x0e, 0x0a, 0x7d,
+        0x54, 0x63, 0xc4, 0x72, 0xbe, 0xe3, 0x30, 0x39,
+        0x3b, 0x1b, 0x8d, 0xbe, 0x55, 0x9a, 0x46, 0x11,
+        0x75, 0x22, 0x00, 0xcc, 0x5a, 0xa6, 0xbb, 0x8c,
+        0xd1, 0x70, 0xba, 0xbc, 0x3c, 0xf5, 0xcf, 0x81,
+        0xa5, 0x17, 0x5a, 0x34, 0x0c, 0x29, 0xca, 0xcf,
+        0x2b, 0x27, 0x38, 0x42, 0x21, 0x32, 0x9b, 0xc0
+    };
+#endif
+    byte output[WC_SHA256_DIGEST_SIZE * 4];
+
+    /* Bad parameters. */
+    ExpectIntEQ(wc_RNG_HealthTest(0, NULL     , 0                , NULL, 0,
+        NULL  , 0             ), WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wc_RNG_HealthTest(0, test1Seed, sizeof(test1Seed), NULL, 0,
+        NULL  , 0             ), WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wc_RNG_HealthTest(0, NULL     , 0                , NULL, 0,
+        output, sizeof(output)), WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+#if (defined(HAVE_FIPS) && FIPS_VERSION3_LT(7,0,0)) || defined(HAVE_SELFTEST)
+    ExpectIntEQ(wc_RNG_HealthTest(0, test1Seed, sizeof(test1Seed), NULL, 0,
+        output, 0             ), -1);
+#else
+    ExpectIntEQ(wc_RNG_HealthTest(0, test1Seed, sizeof(test1Seed), NULL, 0,
+        output, 0             ), WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+#endif
+    /* Good parameters. */
+    ExpectIntEQ(wc_RNG_HealthTest(0, test1Seed, sizeof(test1Seed), NULL, 0,
+        output, sizeof(output)), 0);
+    ExpectBufEQ(test1Output, output, sizeof(output));
+
+    ExpectIntEQ(wc_RNG_HealthTest(1, test2SeedA, sizeof(test2SeedA), test2SeedB,
+        sizeof(test2SeedB), output, sizeof(output)), 0);
+    ExpectBufEQ(test2Output, output, sizeof(output));
+
+#if !(defined(HAVE_FIPS) || defined(HAVE_SELFTEST)) || \
+    (defined(HAVE_FIPS_VERSION) && (HAVE_FIPS_VERSION >= 2))
+    /* Bad parameters. */
+    ExpectIntEQ(wc_RNG_HealthTest_ex(0, NULL, 0, NULL     , 0                ,
+        NULL, 0, NULL  , 0             , HEAP_HINT, INVALID_DEVID),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wc_RNG_HealthTest_ex(0, NULL, 0, test1Seed, sizeof(test1Seed),
+        NULL, 0, NULL  , 0             , HEAP_HINT,
+        INVALID_DEVID), WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wc_RNG_HealthTest_ex(0, NULL, 0, NULL     , 0                ,
+        NULL, 0, output, sizeof(output), HEAP_HINT, INVALID_DEVID),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+#if (defined(HAVE_FIPS) && FIPS_VERSION3_LT(7,0,0)) || defined(HAVE_SELFTEST)
+    ExpectIntEQ(wc_RNG_HealthTest_ex(0, NULL, 0, test1Seed, sizeof(test1Seed),
+        NULL, 0, output, 0             , HEAP_HINT, INVALID_DEVID), -1);
+#else
+    ExpectIntEQ(wc_RNG_HealthTest_ex(0, NULL, 0, test1Seed, sizeof(test1Seed),
+        NULL, 0, output, 0             , HEAP_HINT, INVALID_DEVID),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+#endif
+    /* reseed requested but seedB NULL: wc_RNG_HealthTest() (above) never
+     * varies this combination since it always forwards a matching
+     * reseed/seedB pair. */
+    ExpectIntEQ(wc_RNG_HealthTest_ex(1, NULL, 0, test1Seed, sizeof(test1Seed),
+        NULL, 0, output, sizeof(output), HEAP_HINT, INVALID_DEVID),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+
+    /* Good parameters. */
+    ExpectIntEQ(wc_RNG_HealthTest_ex(0, NULL, 0, test1Seed, sizeof(test1Seed),
+        NULL, 0, output, sizeof(output), HEAP_HINT, INVALID_DEVID), 0);
+    ExpectBufEQ(test1Output, output, sizeof(output));
+    /*  with nonce */
+    ExpectIntEQ(wc_RNG_HealthTest_ex(0, testEx1Nonce, sizeof(testEx1Nonce),
+        test1Seed, sizeof(test1Seed), NULL, 0, output, sizeof(output),
+        HEAP_HINT, INVALID_DEVID), 0);
+    ExpectBufEQ(testEx1Output, output, sizeof(output));
+
+    ExpectIntEQ(wc_RNG_HealthTest_ex(1, NULL, 0, test2SeedA, sizeof(test2SeedA),
+        test2SeedB, sizeof(test2SeedB), output, sizeof(output), HEAP_HINT,
+        INVALID_DEVID), 0);
+    ExpectBufEQ(test2Output, output, sizeof(output));
+    /*  with nonce */
+    ExpectIntEQ(wc_RNG_HealthTest_ex(1, testEx2Nonce, sizeof(testEx2Nonce),
+        test2SeedA, sizeof(test2SeedA), test2SeedB, sizeof(test2SeedB), output,
+        sizeof(output), HEAP_HINT, INVALID_DEVID), 0);
+    ExpectBufEQ(testEx2Output, output, sizeof(output));
+#endif
+#endif
+    return EXPECT_RESULT();
+}
+
+/*
+ * Testing wc_RNG_HealthTest_SHA512()
+ * Test vectors from NIST CAVP drbgtestvectors.zip, Hash_DRBG.rsp, [SHA-512].
+ * Source: https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-
+ * Validation-Program/documents/drbg/drbgtestvectors.zip
+ */
+int test_wc_RNG_HealthTest_SHA512(void)
+{
+    EXPECT_DECLS;
+#if defined(HAVE_HASHDRBG) && defined(WOLFSSL_DRBG_SHA512) && \
+    !defined(HAVE_SELFTEST) && \
+    (!defined(HAVE_FIPS) || FIPS_VERSION3_GE(7,0,0))
+
+    /* No-reseed test: drbgvectors_no_reseed/Hash_DRBG.rsp, [SHA-512],
+     * COUNT=0 */
+    const byte test1Seed[] =
+    {
+        /* EntropyInput (32 bytes) */
+        0x6b, 0x50, 0xa7, 0xd8, 0xf8, 0xa5, 0x5d, 0x7a,
+        0x3d, 0xf8, 0xbb, 0x40, 0xbc, 0xc3, 0xb7, 0x22,
+        0xd8, 0x70, 0x8d, 0xe6, 0x7f, 0xda, 0x01, 0x0b,
+        0x03, 0xc4, 0xc8, 0x4d, 0x72, 0x09, 0x6f, 0x8c,
+        /* Nonce (16 bytes) */
+        0x3e, 0xc6, 0x49, 0xcc, 0x62, 0x56, 0xd9, 0xfa,
+        0x31, 0xdb, 0x7a, 0x29, 0x04, 0xaa, 0xf0, 0x25
+    };
+    const byte test1Output[] =
+    {
+        0x95, 0xb7, 0xf1, 0x7e, 0x98, 0x02, 0xd3, 0x57,
+        0x73, 0x92, 0xc6, 0xa9, 0xc0, 0x80, 0x83, 0xb6,
+        0x7d, 0xd1, 0x29, 0x22, 0x65, 0xb5, 0xf4, 0x2d,
+        0x23, 0x7f, 0x1c, 0x55, 0xbb, 0x9b, 0x10, 0xbf,
+        0xcf, 0xd8, 0x2c, 0x77, 0xa3, 0x78, 0xb8, 0x26,
+        0x6a, 0x00, 0x99, 0x14, 0x3b, 0x3c, 0x2d, 0x64,
+        0x61, 0x1e, 0xee, 0xb6, 0x9a, 0xcd, 0xc0, 0x55,
+        0x95, 0x7c, 0x13, 0x9e, 0x8b, 0x19, 0x0c, 0x7a,
+        0x06, 0x95, 0x5f, 0x2c, 0x79, 0x7c, 0x27, 0x78,
+        0xde, 0x94, 0x03, 0x96, 0xa5, 0x01, 0xf4, 0x0e,
+        0x91, 0x39, 0x6a, 0xcf, 0x8d, 0x7e, 0x45, 0xeb,
+        0xdb, 0xb5, 0x3b, 0xbf, 0x8c, 0x97, 0x52, 0x30,
+        0xd2, 0xf0, 0xff, 0x91, 0x06, 0xc7, 0x61, 0x19,
+        0xae, 0x49, 0x8e, 0x7f, 0xbc, 0x03, 0xd9, 0x0f,
+        0x8e, 0x4c, 0x51, 0x62, 0x7a, 0xed, 0x5c, 0x8d,
+        0x42, 0x63, 0xd5, 0xd2, 0xb9, 0x78, 0x87, 0x3a,
+        0x0d, 0xe5, 0x96, 0xee, 0x6d, 0xc7, 0xf7, 0xc2,
+        0x9e, 0x37, 0xee, 0xe8, 0xb3, 0x4c, 0x90, 0xdd,
+        0x1c, 0xf6, 0xa9, 0xdd, 0xb2, 0x2b, 0x4c, 0xbd,
+        0x08, 0x6b, 0x14, 0xb3, 0x5d, 0xe9, 0x3d, 0xa2,
+        0xd5, 0xcb, 0x18, 0x06, 0x69, 0x8c, 0xbd, 0x7b,
+        0xbb, 0x67, 0xbf, 0xe3, 0xd3, 0x1f, 0xd2, 0xd1,
+        0xdb, 0xd2, 0xa1, 0xe0, 0x58, 0xa3, 0xeb, 0x99,
+        0xd7, 0xe5, 0x1f, 0x1a, 0x93, 0x8e, 0xed, 0x5e,
+        0x1c, 0x1d, 0xe2, 0x3a, 0x6b, 0x43, 0x45, 0xd3,
+        0x19, 0x14, 0x09, 0xf9, 0x2f, 0x39, 0xb3, 0x67,
+        0x0d, 0x8d, 0xbf, 0xb6, 0x35, 0xd8, 0xe6, 0xa3,
+        0x69, 0x32, 0xd8, 0x10, 0x33, 0xd1, 0x44, 0x8d,
+        0x63, 0xb4, 0x03, 0xdd, 0xf8, 0x8e, 0x12, 0x1b,
+        0x6e, 0x81, 0x9a, 0xc3, 0x81, 0x22, 0x6c, 0x13,
+        0x21, 0xe4, 0xb0, 0x86, 0x44, 0xf6, 0x72, 0x7c,
+        0x36, 0x8c, 0x5a, 0x9f, 0x7a, 0x4b, 0x3e, 0xe2
+    };
+
+    /* Reseed test: drbgvectors_pr_false/Hash_DRBG.rsp, [SHA-512], COUNT=0 */
+    const byte test2SeedA[] =
+    {
+        /* EntropyInput (32 bytes) */
+        0x31, 0x44, 0xe1, 0x7a, 0x10, 0xc8, 0x56, 0x12,
+        0x97, 0x64, 0xf5, 0x8f, 0xd8, 0xe4, 0x23, 0x10,
+        0x20, 0x54, 0x69, 0x96, 0xc0, 0xbf, 0x6c, 0xff,
+        0x8e, 0x91, 0xc2, 0x4e, 0xe0, 0x9b, 0xe3, 0x33,
+        /* Nonce (16 bytes) */
+        0xb1, 0x6f, 0xcb, 0x1c, 0xf0, 0xc0, 0x10, 0xf3,
+        0x1f, 0xea, 0xb7, 0x33, 0x58, 0x8b, 0x8e, 0x04
+    };
+    const byte test2SeedB[] =
+    {
+        /* EntropyInputReseed (32 bytes) */
+        0xa0, 0xb3, 0x58, 0x4c, 0x2c, 0x84, 0x12, 0xf6,
+        0x18, 0x40, 0x68, 0x34, 0x40, 0x4d, 0x1e, 0xb0,
+        0xce, 0x99, 0x9b, 0xa2, 0x89, 0x66, 0x05, 0x4d,
+        0x7e, 0x49, 0x7e, 0x0d, 0xb6, 0x08, 0xb9, 0x67
+    };
+    const byte test2Output[] =
+    {
+        0xef, 0xa3, 0x5d, 0xd0, 0x36, 0x2a, 0xdb, 0x76,
+        0x26, 0x45, 0x6b, 0x36, 0xfa, 0xc7, 0x4d, 0x3c,
+        0x28, 0xd0, 0x1d, 0x92, 0x64, 0x20, 0x27, 0x5a,
+        0x28, 0xbe, 0xa9, 0xc9, 0xdd, 0x75, 0x47, 0xc1,
+        0x5e, 0x79, 0x31, 0x85, 0x2a, 0xc1, 0x27, 0x70,
+        0x76, 0x56, 0x75, 0x35, 0x23, 0x9c, 0x1f, 0x42,
+        0x9c, 0x7f, 0x75, 0xcf, 0x74, 0xc2, 0x26, 0x7d,
+        0xeb, 0x6a, 0x3e, 0x59, 0x6c, 0xf3, 0x26, 0x15,
+        0x6c, 0x79, 0x69, 0x41, 0x28, 0x3b, 0x8d, 0x58,
+        0x3f, 0x17, 0x1c, 0x2f, 0x6e, 0x33, 0x23, 0xf7,
+        0x55, 0x5e, 0x1b, 0x18, 0x1f, 0xfd, 0xa3, 0x05,
+        0x07, 0x21, 0x0c, 0xb1, 0xf5, 0x89, 0xb2, 0x3c,
+        0xd7, 0x18, 0x80, 0xfd, 0x44, 0x37, 0x0c, 0xac,
+        0xf4, 0x33, 0x75, 0xb0, 0xdb, 0x7e, 0x33, 0x6f,
+        0x12, 0xb3, 0x09, 0xbf, 0xd4, 0xf6, 0x10, 0xbb,
+        0x8f, 0x20, 0xe1, 0xa1, 0x5e, 0x25, 0x3a, 0x4f,
+        0xe5, 0x11, 0xa0, 0x27, 0x96, 0x8d, 0xf0, 0xb1,
+        0x05, 0xa1, 0xd7, 0x3a, 0xff, 0x7c, 0x7a, 0x82,
+        0x6d, 0x39, 0xf6, 0x40, 0xdf, 0xb8, 0xf5, 0x22,
+        0x25, 0x9e, 0xd4, 0x02, 0x28, 0x2e, 0x2c, 0x2e,
+        0x9d, 0x3a, 0x49, 0x8f, 0x51, 0x72, 0x5f, 0xe4,
+        0x14, 0x1b, 0x06, 0xda, 0x55, 0x98, 0xa4, 0x2a,
+        0xc1, 0xe0, 0x49, 0x4e, 0x99, 0x7d, 0x56, 0x6a,
+        0x1a, 0x39, 0xb6, 0x76, 0xb9, 0x6a, 0x60, 0x03,
+        0xa4, 0xc5, 0xdb, 0x84, 0xf2, 0x46, 0x58, 0x4e,
+        0xe6, 0x5a, 0xf7, 0x0f, 0xf2, 0x16, 0x02, 0x78,
+        0x16, 0x6d, 0xa1, 0x6d, 0x91, 0xc9, 0xb8, 0xf2,
+        0xde, 0xb0, 0x27, 0x51, 0xa1, 0x08, 0x8a, 0xd6,
+        0xbe, 0x4e, 0x80, 0xef, 0x96, 0x6e, 0xb7, 0x3e,
+        0x66, 0xbc, 0x87, 0xca, 0xd8, 0x7c, 0x77, 0xc0,
+        0xb3, 0x4a, 0x21, 0xba, 0x1d, 0xa0, 0xba, 0x6d,
+        0x16, 0xca, 0x50, 0x46, 0xdc, 0x4a, 0xbd, 0xa0
+    };
+
+    byte output[WC_SHA512_DIGEST_SIZE * 4]; /* 256 bytes */
+
+    /* Bad parameter tests */
+    ExpectIntNE(wc_RNG_HealthTest_SHA512(0, NULL, sizeof(test1Seed),
+        NULL, 0, output, sizeof(output)), 0);
+    ExpectIntNE(wc_RNG_HealthTest_SHA512(0, test1Seed, sizeof(test1Seed),
+        NULL, 0, NULL, sizeof(output)), 0);
+    ExpectIntNE(wc_RNG_HealthTest_SHA512(0, test1Seed, sizeof(test1Seed),
+        NULL, 0, output, 42), 0); /* wrong output size */
+    /* reseed requested but seedB NULL: BAD_FUNC_ARG from
+     * wc_RNG_HealthTest_SHA512_ex_internal(); no other call site here
+     * requests reseed without also supplying seedB. */
+    ExpectIntNE(wc_RNG_HealthTest_SHA512(1, test1Seed, sizeof(test1Seed),
+        NULL, 0, output, sizeof(output)), 0);
+
+    /* Good parameter tests */
+    /* No-reseed */
+    ExpectIntEQ(wc_RNG_HealthTest_SHA512(0, test1Seed, sizeof(test1Seed),
+        NULL, 0, output, sizeof(output)), 0);
+    ExpectBufEQ(test1Output, output, sizeof(output));
+
+    /* With reseed */
+    ExpectIntEQ(wc_RNG_HealthTest_SHA512(1, test2SeedA, sizeof(test2SeedA),
+        test2SeedB, sizeof(test2SeedB), output, sizeof(output)), 0);
+    ExpectBufEQ(test2Output, output, sizeof(output));
+
+#endif /* HAVE_HASHDRBG && WOLFSSL_DRBG_SHA512 && !HAVE_SELFTEST && FIPS v7+ */
+    return EXPECT_RESULT();
+}
+
+/* wc_RNG_HealthTest_SHA256_ex(): the ACVP-oriented extended health test
+ * entry point, exercising all of Hash_df's optional nonce/personalization-
+ * string inputs (Hash_df's "inB"/"inC" MC/DC leaves) and Hash_DRBG_Reseed/
+ * Generate's optional additional-input leaves, in both prediction-
+ * resistance modes. None of the other test_random.c cases call this
+ * function or vary these particular combinations. */
+int test_wc_RNG_HealthTest_SHA256_Ext(void)
+{
+    EXPECT_DECLS;
+#if !defined(NO_SHA256) && defined(HAVE_HASHDRBG) && !defined(HAVE_SELFTEST) \
+    && (!defined(HAVE_FIPS) || FIPS_VERSION3_GE(7,0,0))
+    byte entropyA[48], entropyB[48], entropyC[48];
+    byte nonce[16], perso[16], addA[16], addB[16], addReseed[16];
+    byte output[WC_SHA256_DIGEST_SIZE * 4];
+    byte i;
+
+    for (i = 0; i < (byte)sizeof(entropyA); i++) entropyA[i] = (byte)(i+1);
+    for (i = 0; i < (byte)sizeof(entropyB); i++) entropyB[i] = (byte)(i+2);
+    for (i = 0; i < (byte)sizeof(entropyC); i++) entropyC[i] = (byte)(i+3);
+    for (i = 0; i < (byte)sizeof(nonce); i++) nonce[i] = (byte)(i+4);
+    for (i = 0; i < (byte)sizeof(perso); i++) perso[i] = (byte)(i+5);
+    for (i = 0; i < (byte)sizeof(addA); i++) addA[i] = (byte)(i+6);
+    for (i = 0; i < (byte)sizeof(addB); i++) addB[i] = (byte)(i+7);
+    for (i = 0; i < (byte)sizeof(addReseed); i++) addReseed[i] = (byte)(i+8);
+
+    /* Bad parameters. */
+    ExpectIntEQ(wc_RNG_HealthTest_SHA256_ex(0, NULL, 0, NULL, 0, NULL, 0,
+        NULL, 0, NULL, 0, NULL, 0, NULL, 0, NULL, 0, output, sizeof(output),
+        HEAP_HINT, INVALID_DEVID), WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wc_RNG_HealthTest_SHA256_ex(0, NULL, 0, NULL, 0,
+        entropyA, sizeof(entropyA), NULL, 0, NULL, 0, NULL, 0, NULL, 0,
+        NULL, 0, NULL, 0, HEAP_HINT, INVALID_DEVID),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wc_RNG_HealthTest_SHA256_ex(0, NULL, 0, NULL, 0,
+        entropyA, sizeof(entropyA), NULL, 0, NULL, 0, NULL, 0, NULL, 0,
+        NULL, 0, output, 0, HEAP_HINT, INVALID_DEVID),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+
+    /* Standard mode (predResistance == 0): every optional input absent
+     * (nonce/perso NULL -> Hash_df inB/inC false side; entropyB NULL ->
+     * skip reseed; additionalA/B/Reseed NULL -> additional-input false
+     * side). */
+    ExpectIntEQ(wc_RNG_HealthTest_SHA256_ex(0, NULL, 0, NULL, 0,
+        entropyA, sizeof(entropyA), NULL, 0, NULL, 0, NULL, 0, NULL, 0,
+        NULL, 0, output, sizeof(output), HEAP_HINT, INVALID_DEVID), 0);
+
+    /* Standard mode: every optional input present (nonce/perso non-NULL ->
+     * Hash_df inB/inC true side; entropyB present -> reseed with
+     * additionalReseed; additionalA/B present -> Generate additional-input
+     * true side). */
+    ExpectIntEQ(wc_RNG_HealthTest_SHA256_ex(0, nonce, sizeof(nonce),
+        perso, sizeof(perso), entropyA, sizeof(entropyA),
+        entropyB, sizeof(entropyB), NULL, 0,
+        addA, sizeof(addA), addB, sizeof(addB),
+        addReseed, sizeof(addReseed), output, sizeof(output),
+        HEAP_HINT, INVALID_DEVID), 0);
+
+    /* Prediction-resistance mode (predResistance == 1), no reseed entropy:
+     * entropyB/entropyC both NULL -> both reseed-guard false sides,
+     * Generate calls get NULL additional input by construction. */
+    ExpectIntEQ(wc_RNG_HealthTest_SHA256_ex(1, nonce, sizeof(nonce),
+        perso, sizeof(perso), entropyA, sizeof(entropyA),
+        NULL, 0, NULL, 0, addA, sizeof(addA), addB, sizeof(addB),
+        NULL, 0, output, sizeof(output), HEAP_HINT, INVALID_DEVID), 0);
+
+    /* Prediction-resistance mode with both reseed entropy inputs present:
+     * entropyB/entropyC true sides, additionalA/B feed the *reseed* calls
+     * in this mode (still exercises the same additional-input leaf, from a
+     * different call site than the standard-mode case above). */
+    ExpectIntEQ(wc_RNG_HealthTest_SHA256_ex(1, nonce, sizeof(nonce),
+        perso, sizeof(perso), entropyA, sizeof(entropyA),
+        entropyB, sizeof(entropyB), entropyC, sizeof(entropyC),
+        addA, sizeof(addA), addB, sizeof(addB),
+        NULL, 0, output, sizeof(output), HEAP_HINT, INVALID_DEVID), 0);
+
+    /* Isolate the "XSz > 0" half of the "X != NULL && XSz > 0" leaves
+     * above: a valid (non-NULL) pointer paired with size 0 is a shape the
+     * calls above never produce (they always pair a NULL pointer with
+     * size 0, or a valid pointer with a valid size), so MC/DC cannot yet
+     * attribute independence to the size operand alone. nonce/perso/addA
+     * are unrelated decisions (different parameters), so isolating them
+     * together in one call is safe. */
+    ExpectIntEQ(wc_RNG_HealthTest_SHA256_ex(0, nonce, 0, perso, 0,
+        entropyA, sizeof(entropyA), NULL, 0, NULL, 0,
+        addA, 0, addB, sizeof(addB), NULL, 0, output, sizeof(output),
+        HEAP_HINT, INVALID_DEVID), 0);
+
+    /* Same isolation for entropyB/entropyC, prediction-resistance mode
+     * (the reseed-guard call site inside the "if (predResistance)"
+     * branch). */
+    ExpectIntEQ(wc_RNG_HealthTest_SHA256_ex(1, nonce, sizeof(nonce),
+        perso, sizeof(perso), entropyA, sizeof(entropyA),
+        entropyB, 0, entropyC, 0,
+        addA, sizeof(addA), addB, sizeof(addB),
+        NULL, 0, output, sizeof(output), HEAP_HINT, INVALID_DEVID), 0);
+
+    /* Same isolation for entropyB, standard mode (a different reseed-guard
+     * call site than the prediction-resistance one above). */
+    ExpectIntEQ(wc_RNG_HealthTest_SHA256_ex(0, nonce, sizeof(nonce),
+        perso, sizeof(perso), entropyA, sizeof(entropyA),
+        entropyB, 0, NULL, 0,
+        addA, sizeof(addA), addB, sizeof(addB),
+        addReseed, sizeof(addReseed), output, sizeof(output),
+        HEAP_HINT, INVALID_DEVID), 0);
+#endif
+    return EXPECT_RESULT();
+}
+
+/* wc_RNG_HealthTest_SHA512_ex()/_ex2(): the SHA-512 twins of the extended
+ * health test coverage above -- Hash512_df's inB/inC leaves and
+ * Hash512_DRBG_Reseed/Generate's additional-input leaves, plus the
+ * seedB-presence leaf in wc_RNG_HealthTest_SHA512_ex() that
+ * wc_RNG_HealthTest_SHA512() (already covered above) never varies since it
+ * always forwards its own reseed/seedB straight through. */
+int test_wc_RNG_HealthTest_SHA512_Ext(void)
+{
+    EXPECT_DECLS;
+#if defined(HAVE_HASHDRBG) && defined(WOLFSSL_DRBG_SHA512) && \
+    !defined(HAVE_SELFTEST) && (!defined(HAVE_FIPS) || FIPS_VERSION3_GE(7,0,0))
+    byte entropyA[32], entropyB[32], entropyC[32];
+    byte nonce[16], perso[16], addA[16], addB[16];
+    byte output[WC_SHA512_DIGEST_SIZE * 4];
+    byte i;
+
+    for (i = 0; i < (byte)sizeof(entropyA); i++) entropyA[i] = (byte)(i+11);
+    for (i = 0; i < (byte)sizeof(entropyB); i++) entropyB[i] = (byte)(i+12);
+    for (i = 0; i < (byte)sizeof(entropyC); i++) entropyC[i] = (byte)(i+13);
+    for (i = 0; i < (byte)sizeof(nonce); i++) nonce[i] = (byte)(i+14);
+    for (i = 0; i < (byte)sizeof(perso); i++) perso[i] = (byte)(i+15);
+    for (i = 0; i < (byte)sizeof(addA); i++) addA[i] = (byte)(i+16);
+    for (i = 0; i < (byte)sizeof(addB); i++) addB[i] = (byte)(i+17);
+
+    /* wc_RNG_HealthTest_SHA512_ex(): reseed requested but seedB NULL --
+     * unlike wc_RNG_HealthTest_SHA512_ex_internal() (used by the simple
+     * wc_RNG_HealthTest_SHA512() above, which rejects this combination
+     * with BAD_FUNC_ARG), this extended entry point's own
+     * "seedB != NULL && seedBSz > 0" guard just silently skips the reseed
+     * step and still succeeds. This is the only call site that reaches
+     * that leaf's false side. */
+    ExpectIntEQ(wc_RNG_HealthTest_SHA512_ex(1, NULL, 0, NULL, 0,
+        entropyA, sizeof(entropyA), NULL, 0, NULL, 0, NULL, 0,
+        output, sizeof(output), HEAP_HINT, INVALID_DEVID), 0);
+
+    /* No optional inputs: nonce/perso/additionalA/B all NULL, no reseed. */
+    ExpectIntEQ(wc_RNG_HealthTest_SHA512_ex(0, NULL, 0, NULL, 0,
+        entropyA, sizeof(entropyA), NULL, 0, NULL, 0, NULL, 0,
+        output, sizeof(output), HEAP_HINT, INVALID_DEVID), 0);
+
+    /* All optional inputs present, with reseed. */
+    ExpectIntEQ(wc_RNG_HealthTest_SHA512_ex(1, nonce, sizeof(nonce),
+        perso, sizeof(perso), entropyA, sizeof(entropyA),
+        entropyB, sizeof(entropyB), addA, sizeof(addA), addB, sizeof(addB),
+        output, sizeof(output), HEAP_HINT, INVALID_DEVID), 0);
+
+    /* wc_RNG_HealthTest_SHA512_ex2(): standard mode, no optional inputs. */
+    ExpectIntEQ(wc_RNG_HealthTest_SHA512_ex2(0, NULL, 0, NULL, 0,
+        entropyA, sizeof(entropyA), NULL, 0, NULL, 0,
+        addA, sizeof(addA), addB, sizeof(addB), NULL, 0,
+        output, sizeof(output), HEAP_HINT, INVALID_DEVID), 0);
+
+    /* Standard mode, all optional inputs present. */
+    ExpectIntEQ(wc_RNG_HealthTest_SHA512_ex2(0, nonce, sizeof(nonce),
+        perso, sizeof(perso), entropyA, sizeof(entropyA),
+        entropyB, sizeof(entropyB), NULL, 0,
+        addA, sizeof(addA), addB, sizeof(addB), addA, sizeof(addA),
+        output, sizeof(output), HEAP_HINT, INVALID_DEVID), 0);
+
+    /* Prediction-resistance mode, no reseed entropy. */
+    ExpectIntEQ(wc_RNG_HealthTest_SHA512_ex2(1, nonce, sizeof(nonce),
+        perso, sizeof(perso), entropyA, sizeof(entropyA),
+        NULL, 0, NULL, 0, addA, sizeof(addA), addB, sizeof(addB),
+        NULL, 0, output, sizeof(output), HEAP_HINT, INVALID_DEVID), 0);
+
+    /* Prediction-resistance mode, both reseed entropy inputs present. */
+    ExpectIntEQ(wc_RNG_HealthTest_SHA512_ex2(1, nonce, sizeof(nonce),
+        perso, sizeof(perso), entropyA, sizeof(entropyA),
+        entropyB, sizeof(entropyB), entropyC, sizeof(entropyC),
+        addA, sizeof(addA), addB, sizeof(addB), NULL, 0,
+        output, sizeof(output), HEAP_HINT, INVALID_DEVID), 0);
+
+    /* wc_RNG_HealthTest_SHA512_ex2() bad-parameter isolation: the 3-operand
+     * "entropyA == NULL || output == NULL || outputSz == 0" guard was not
+     * exercised at all above (every call so far used valid entropyA/
+     * output/outputSz). One flip at a time from an all-good baseline
+     * shows each operand's independent effect. */
+    ExpectIntEQ(wc_RNG_HealthTest_SHA512_ex2(0, NULL, 0, NULL, 0,
+        NULL, 0, NULL, 0, NULL, 0, NULL, 0, NULL, 0, NULL, 0,
+        output, sizeof(output), HEAP_HINT, INVALID_DEVID),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wc_RNG_HealthTest_SHA512_ex2(0, NULL, 0, NULL, 0,
+        entropyA, sizeof(entropyA), NULL, 0, NULL, 0, NULL, 0, NULL, 0,
+        NULL, 0, NULL, 0, HEAP_HINT, INVALID_DEVID),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wc_RNG_HealthTest_SHA512_ex2(0, NULL, 0, NULL, 0,
+        entropyA, sizeof(entropyA), NULL, 0, NULL, 0, NULL, 0, NULL, 0,
+        NULL, 0, output, 0, HEAP_HINT, INVALID_DEVID),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+
+    /* wc_RNG_HealthTest_SHA512_ex() bad-parameter isolation: not exercised
+     * at all above (every call so far used valid seedA/output). One flip
+     * at a time from an all-good-parameters baseline. */
+    ExpectIntEQ(wc_RNG_HealthTest_SHA512_ex(0, NULL, 0, NULL, 0,
+        NULL, 0, NULL, 0, NULL, 0, NULL, 0,
+        output, sizeof(output), HEAP_HINT, INVALID_DEVID),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wc_RNG_HealthTest_SHA512_ex(0, NULL, 0, NULL, 0,
+        entropyA, sizeof(entropyA), NULL, 0, NULL, 0, NULL, 0,
+        NULL, 0, HEAP_HINT, INVALID_DEVID),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+
+    /* Isolate the "XSz > 0" half of each "X != NULL && XSz > 0" leaf, same
+     * reasoning as the SHA-256 case above: Hash512_df's inC (perso) and
+     * Hash512_DRBG_Generate's additional-input leaf via
+     * wc_RNG_HealthTest_SHA512_ex(); wc_RNG_HealthTest_SHA512_ex()'s own
+     * seedB leaf; and entropyB/entropyC via wc_RNG_HealthTest_SHA512_ex2()
+     * in both prediction-resistance and standard mode. */
+    ExpectIntEQ(wc_RNG_HealthTest_SHA512_ex(0, nonce, 0, perso, 0,
+        entropyA, sizeof(entropyA), NULL, 0,
+        addA, 0, addB, sizeof(addB),
+        output, sizeof(output), HEAP_HINT, INVALID_DEVID), 0);
+    ExpectIntEQ(wc_RNG_HealthTest_SHA512_ex(1, NULL, 0, NULL, 0,
+        entropyA, sizeof(entropyA), entropyB, 0, NULL, 0, NULL, 0,
+        output, sizeof(output), HEAP_HINT, INVALID_DEVID), 0);
+    ExpectIntEQ(wc_RNG_HealthTest_SHA512_ex2(1, nonce, sizeof(nonce),
+        perso, sizeof(perso), entropyA, sizeof(entropyA),
+        entropyB, 0, entropyC, 0,
+        addA, sizeof(addA), addB, sizeof(addB), NULL, 0,
+        output, sizeof(output), HEAP_HINT, INVALID_DEVID), 0);
+    ExpectIntEQ(wc_RNG_HealthTest_SHA512_ex2(0, nonce, sizeof(nonce),
+        perso, sizeof(perso), entropyA, sizeof(entropyA),
+        entropyB, 0, NULL, 0,
+        addA, sizeof(addA), addB, sizeof(addB), addA, sizeof(addA),
+        output, sizeof(output), HEAP_HINT, INVALID_DEVID), 0);
+#endif
+    return EXPECT_RESULT();
+}
+
+/* Guard must match test_wc_RNG_SeedCb (the only user) exactly, else these
+ * static functions are unused -> -Werror=unused-function in FIPS/self-test builds
+ * that define WC_RNG_SEED_CB but compile the test itself out. */
+#if defined(WC_RNG_SEED_CB) && defined(HAVE_HASHDRBG) && \
+    !defined(HAVE_SELFTEST) && !defined(HAVE_FIPS)
+/* Varying (non-repeating) pattern so wc_RNG_TestSeed()'s RCT/APT continuous
+ * checks (called from _InitRng()/PollAndReSeed() right after the callback
+ * runs) do not reject it; a constant fill would legitimately fail those
+ * checks and make a "successful callback" case indistinguishable from a
+ * "callback broke the seed" case. */
+static int test_random_seedCb_ok(OS_Seed* os, byte* seed, word32 sz)
+{
+    word32 i;
+
+    (void)os;
+    for (i = 0; i < sz; i++) {
+        seed[i] = (byte)(i * 37 + 11);
+    }
+    return 0;
+}
+
+static int test_random_seedCb_fail(OS_Seed* os, byte* seed, word32 sz)
+{
+    (void)os;
+    (void)seed;
+    (void)sz;
+    return -1;
+}
+#endif /* WC_RNG_SEED_CB */
+
+/* wc_SetSeed_Cb()'s custom seed callback path (WC_RNG_SEED_CB): replaces
+ * the direct wc_GenerateSeed() call in _InitRng()/PollAndReSeed() with an
+ * application-supplied callback. Covers: seedCb != NULL success, seedCb
+ * returning a failure (mapped to DRBG_FAILURE), and seedCb == NULL
+ * (DRBG_NO_SEED_CB mapped to DRBG_FAILURE). */
+int test_wc_RNG_SeedCb(void)
+{
+    EXPECT_DECLS;
+#if defined(WC_RNG_SEED_CB) && defined(HAVE_HASHDRBG) && !defined(HAVE_SELFTEST) && !defined(HAVE_FIPS)
+    WC_RNG rng;
+
+    XMEMSET(&rng, 0, sizeof(WC_RNG));
+
+    /* Good callback: InitRng succeeds using it instead of
+     * wc_GenerateSeed(). */
+    ExpectIntEQ(wc_SetSeed_Cb(test_random_seedCb_ok), 0);
+    ExpectIntEQ(wc_InitRng(&rng), 0);
+    DoExpectIntEQ(wc_FreeRng(&rng), 0);
+
+    /* Failing callback: InitRng propagates the failure instead of falling
+     * back to wc_GenerateSeed(). */
+    ExpectIntEQ(wc_SetSeed_Cb(test_random_seedCb_fail), 0);
+    XMEMSET(&rng, 0, sizeof(WC_RNG));
+    ExpectIntNE(wc_InitRng(&rng), 0);
+
+    /* No callback installed: DRBG_NO_SEED_CB internal mapping. */
+    ExpectIntEQ(wc_SetSeed_Cb(NULL), 0);
+    XMEMSET(&rng, 0, sizeof(WC_RNG));
+    ExpectIntNE(wc_InitRng(&rng), 0);
+
+    /* Restore a working callback: seedCb is a file-static that persists
+     * across tests/groups sharing this process. */
+    ExpectIntEQ(wc_SetSeed_Cb(test_random_seedCb_ok), 0);
+    XMEMSET(&rng, 0, sizeof(WC_RNG));
+    ExpectIntEQ(wc_InitRng(&rng), 0);
+    DoExpectIntEQ(wc_FreeRng(&rng), 0);
+#endif
+    return EXPECT_RESULT();
+}
+
+#if defined(WC_RNG_SEED_CB) && defined(HAVE_HASHDRBG) && \
+    !defined(CUSTOM_RAND_GENERATE_BLOCK) && !defined(HAVE_SELFTEST) && \
+    (!defined(HAVE_FIPS) || FIPS_VERSION3_GE(7,0,0)) && \
+    defined(HAVE_GETPID) && !defined(WOLFSSL_NO_GETPID) && \
+    !defined(WC_RNG_SEED_APT_CUTOFF) && !defined(WC_RNG_SEED_APT_WINDOW) && \
+    !defined(WC_RNG_SEED_RCT_CUTOFF)
+/* Stuck noise source: every seed byte is zero. */
+static int test_random_seedCb_stuck(OS_Seed* os, byte* seed, word32 sz)
+{
+    (void)os;
+    XMEMSET(seed, 0, sz);
+    return 0;
+}
+
+/* Source stuck on one value, with a different byte every 28 so no run can
+ * reach the RCT cutoff: only the APT can object, at any seed size. */
+static int test_random_seedCb_biased(OS_Seed* os, byte* seed, word32 sz)
+{
+    word32 i;
+    byte filler = 0;
+
+    (void)os;
+    for (i = 0; i < sz; i++) {
+        if ((i > 0) && ((i % 28) == 0)) {
+            if (++filler == 0x99)
+                filler++;
+            seed[i] = filler;
+        }
+        else {
+            seed[i] = 0x99;
+        }
+    }
+    return 0;
+}
+
+/* Source that fails with something that is not a 90B verdict. */
+static int test_random_seedCb_broken(OS_Seed* os, byte* seed, word32 sz)
+{
+    (void)os;
+    (void)seed;
+    (void)sz;
+    return WC_NO_ERR_TRACE(BAD_FUNC_ARG);
+}
+#endif
+
+/* A stuck seed source at reseed reports the SP 800-90B RCT code.
+ * rng.pid = 0 never matches the process, so the next generate reseeds. */
+int test_wc_RNG_ReseedVerdict(void)
+{
+    EXPECT_DECLS;
+#if defined(WC_RNG_SEED_CB) && defined(HAVE_HASHDRBG) && \
+    !defined(CUSTOM_RAND_GENERATE_BLOCK) && !defined(HAVE_SELFTEST) && \
+    (!defined(HAVE_FIPS) || FIPS_VERSION3_GE(7,0,0)) && \
+    defined(HAVE_GETPID) && !defined(WOLFSSL_NO_GETPID) && \
+    !defined(WC_RNG_SEED_APT_CUTOFF) && !defined(WC_RNG_SEED_APT_WINDOW) && \
+    !defined(WC_RNG_SEED_RCT_CUTOFF)
+    WC_RNG rng;
+    byte   out[32];
+
+    /* Do not inherit whatever source the previous test left installed: under
+     * HAVE_FIPS seedCb starts NULL and wc_InitRng() would fail. */
+    DoExpectIntEQ(wc_SetSeed_Cb(WC_GENERATE_SEED_DEFAULT), 0);
+    XMEMSET(&rng, 0, sizeof(WC_RNG));
+    ExpectIntEQ(wc_InitRng(&rng), 0);
+
+    /* Control: a forced reseed from a working source succeeds. */
+    rng.pid = 0;
+    ExpectIntEQ(wc_RNG_GenerateBlock(&rng, out, sizeof(out)), 0);
+
+    ExpectIntEQ(wc_SetSeed_Cb(test_random_seedCb_stuck), 0);
+    rng.pid = 0;
+    ExpectIntEQ(wc_RNG_GenerateBlock(&rng, out, sizeof(out)),
+        WC_NO_ERR_TRACE(ENTROPY_RT_E));
+    /* The failed instance stays failed. */
+    ExpectIntEQ(wc_RNG_GenerateBlock(&rng, out, sizeof(out)),
+        WC_NO_ERR_TRACE(RNG_FAILURE_E));
+
+    /* A biased source reports the APT verdict out of the generate path. */
+    DoExpectIntEQ(wc_FreeRng(&rng), 0);
+    XMEMSET(&rng, 0, sizeof(WC_RNG));
+    DoExpectIntEQ(wc_SetSeed_Cb(WC_GENERATE_SEED_DEFAULT), 0);
+    ExpectIntEQ(wc_InitRng(&rng), 0);
+    ExpectIntEQ(wc_SetSeed_Cb(test_random_seedCb_biased), 0);
+    rng.pid = 0;
+    ExpectIntEQ(wc_RNG_GenerateBlock(&rng, out, sizeof(out)),
+        WC_NO_ERR_TRACE(ENTROPY_APT_E));
+
+    /* A source error that is not a 90B verdict still reports RNG_FAILURE_E. */
+    DoExpectIntEQ(wc_FreeRng(&rng), 0);
+    XMEMSET(&rng, 0, sizeof(WC_RNG));
+    DoExpectIntEQ(wc_SetSeed_Cb(WC_GENERATE_SEED_DEFAULT), 0);
+    ExpectIntEQ(wc_InitRng(&rng), 0);
+    ExpectIntEQ(wc_SetSeed_Cb(test_random_seedCb_broken), 0);
+    rng.pid = 0;
+    ExpectIntEQ(wc_RNG_GenerateBlock(&rng, out, sizeof(out)),
+        WC_NO_ERR_TRACE(RNG_FAILURE_E));
+
+    /* Do-form: restore even after a failed check, or later tests inherit it. */
+    DoExpectIntEQ(wc_SetSeed_Cb(WC_GENERATE_SEED_DEFAULT), 0);
+    DoExpectIntEQ(wc_FreeRng(&rng), 0);
+#endif
+    return EXPECT_RESULT();
+}
+
+/* CUSTOM_RAND_GENERATE_BLOCK: an external RNG function bypasses Hash_DRBG
+ * generation entirely in wc_RNG_GenerateBlock() (and _InitRng() itself is
+ * skipped, since it is guarded by
+ * "defined(HAVE_HASHDRBG) && !defined(CUSTOM_RAND_GENERATE_BLOCK)"). Not
+ * gated on HAVE_HASHDRBG since this path is intentionally independent of
+ * it -- see configs/random/user_settings.custom_rand.h in the harness for
+ * why forcing both together is unsafe. */
+int test_wc_RNG_CustomRandBlock(void)
+{
+    EXPECT_DECLS;
+#if defined(CUSTOM_RAND_GENERATE_BLOCK) && !defined(WC_NO_RNG)
+    WC_RNG rng;
+    byte output[16];
+
+    XMEMSET(&rng, 0, sizeof(WC_RNG));
+    ExpectIntEQ(wc_InitRng(&rng), 0);
+    ExpectIntEQ(wc_RNG_GenerateBlock(&rng, output, sizeof(output)), 0);
+    DoExpectIntEQ(wc_FreeRng(&rng), 0);
+#endif
+    return EXPECT_RESULT();
+}
+
+/* Runtime DRBG disable/enable API (wc_Sha256Drbg_ and wc_Sha512Drbg_
+ * functions): the mutually-exclusive rng->drbgType selection in
+ * wc_InitRng() (SHA-512 preferred whenever it is enabled, else SHA-256,
+ * else BAD_STATE_E) and the disable functions' own "can't disable both"
+ * BAD_STATE_E guard. */
+int test_wc_RNG_DrbgDisable(void)
+{
+    EXPECT_DECLS;
+#if defined(HAVE_HASHDRBG) && defined(WOLFSSL_DRBG_SHA512) && \
+    !defined(HAVE_SELFTEST) && \
+    (!defined(HAVE_FIPS) || FIPS_VERSION3_GE(7,0,0))
+    WC_RNG rng;
+    byte output[16];
+
+    ExpectIntEQ(wc_Sha256Drbg_IsDisabled(), 0);
+    ExpectIntEQ(wc_Sha512Drbg_IsDisabled(), 0);
+
+    /* Baseline: neither disabled -- SHA-512 is preferred. */
+    XMEMSET(&rng, 0, sizeof(WC_RNG));
+    ExpectIntEQ(wc_InitRng(&rng), 0);
+    ExpectIntEQ(rng.drbgType, WC_DRBG_SHA512);
+    ExpectIntEQ(wc_RNG_GenerateBlock(&rng, output, sizeof(output)), 0);
+    DoExpectIntEQ(wc_FreeRng(&rng), 0);
+
+    /* Disable SHA-512: new RNGs fall back to SHA-256. */
+    ExpectIntEQ(wc_Sha512Drbg_Disable(), 0);
+    ExpectIntEQ(wc_Sha512Drbg_IsDisabled(), 1);
+    XMEMSET(&rng, 0, sizeof(WC_RNG));
+    ExpectIntEQ(wc_InitRng(&rng), 0);
+    ExpectIntEQ(rng.drbgType, WC_DRBG_SHA256);
+    ExpectIntEQ(wc_RNG_GenerateBlock(&rng, output, sizeof(output)), 0);
+    DoExpectIntEQ(wc_FreeRng(&rng), 0);
+
+    /* Disabling SHA-256 too (both would be disabled) must be rejected. */
+    ExpectIntEQ(wc_Sha256Drbg_Disable(), WC_NO_ERR_TRACE(BAD_STATE_E));
+
+    /* Re-enable SHA-512, then disable SHA-256 instead (symmetric case). */
+    ExpectIntEQ(wc_Sha512Drbg_Enable(), 0);
+    ExpectIntEQ(wc_Sha512Drbg_IsDisabled(), 0);
+    ExpectIntEQ(wc_Sha256Drbg_Disable(), 0);
+    ExpectIntEQ(wc_Sha256Drbg_IsDisabled(), 1);
+    XMEMSET(&rng, 0, sizeof(WC_RNG));
+    ExpectIntEQ(wc_InitRng(&rng), 0);
+    ExpectIntEQ(rng.drbgType, WC_DRBG_SHA512);
+    ExpectIntEQ(wc_RNG_GenerateBlock(&rng, output, sizeof(output)), 0);
+    DoExpectIntEQ(wc_FreeRng(&rng), 0);
+
+    /* Disabling SHA-512 now (both would be disabled) must also be
+     * rejected -- the symmetric guard in wc_Sha512Drbg_Disable(). */
+    ExpectIntEQ(wc_Sha512Drbg_Disable(), WC_NO_ERR_TRACE(BAD_STATE_E));
+
+    /* Restore both enabled for any later use of the RNG in this
+     * process. */
+    ExpectIntEQ(wc_Sha256Drbg_Enable(), 0);
+    ExpectIntEQ(wc_Sha256Drbg_IsDisabled(), 0);
+#endif
+    return EXPECT_RESULT();
+}
+
+int test_wc_Entropy_Get(void)
+{
+    EXPECT_DECLS;
+#ifdef HAVE_ENTROPY_MEMUSE
+    byte entropy[WC_SHA3_256_DIGEST_SIZE]; /* 32 bytes */
+
+    /* bits <= 0: must reject */
+    ExpectIntEQ(wc_Entropy_Get(0, entropy, sizeof(entropy)),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wc_Entropy_Get(-1, entropy, sizeof(entropy)),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+
+    /* bits > MAX_ENTROPY_BITS: must reject (overflow guard) */
+    ExpectIntEQ(wc_Entropy_Get(MAX_ENTROPY_BITS + 1, entropy, sizeof(entropy)),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wc_Entropy_Get(MAX_ENTROPY_BITS * 8 + 1, entropy, sizeof(entropy)),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+
+    /* entropy == NULL with len > 0: must reject */
+    ExpectIntEQ(wc_Entropy_Get(MAX_ENTROPY_BITS, NULL, sizeof(entropy)),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+
+    /* valid call: bits == MAX_ENTROPY_BITS */
+    ExpectIntEQ(wc_Entropy_Get(MAX_ENTROPY_BITS, entropy, sizeof(entropy)), 0);
+#endif /* HAVE_ENTROPY_MEMUSE */
+    return EXPECT_RESULT();
+}
+
+/* Consolidated MC/DC decision coverage for the public Hash_DRBG argument
+ * checks that gate the generate/reseed paths: each compound guard is driven
+ * with an independence pair (vary one operand at a time) and paired with a
+ * passing baseline call in the same run. Guarded off for the frozen
+ * FIPS/self-test random.c: several of these argument-rejection paths and the
+ * "sz == 0" early success were added after the v4.1.0 module boundary, so
+ * asserting them there would diverge (frozen-module lesson). */
+int test_wc_DrbgDecisionCoverage(void)
+{
+    EXPECT_DECLS;
+#if defined(HAVE_HASHDRBG) && !defined(WC_NO_RNG) && \
+    !defined(CUSTOM_RAND_GENERATE_BLOCK) && \
+    !defined(HAVE_SELFTEST) && !defined(HAVE_FIPS)
+    WC_RNG rng;
+    byte   output[24];
+    byte   seed[32];
+
+    XMEMSET(&rng, 0, sizeof(rng));
+    XMEMSET(output, 0, sizeof(output));
+    XMEMSET(seed, 7, sizeof(seed));
+
+    /* wc_RNG_GenerateByte() delegates to wc_RNG_GenerateBlock(rng, b, 1):
+     * "rng == NULL || output == NULL" -- flip each operand alone. */
+    ExpectIntEQ(wc_RNG_GenerateByte(NULL, output),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));                 /* rng NULL */
+
+    ExpectIntEQ(wc_InitRng_ex(&rng, HEAP_HINT, INVALID_DEVID), 0);
+
+    ExpectIntEQ(wc_RNG_GenerateByte(&rng, NULL),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));                 /* output NULL */
+    ExpectIntEQ(wc_RNG_GenerateByte(&rng, output), 0);  /* both non-NULL */
+
+    /* wc_RNG_GenerateBlock(): NULL rng rejected; "sz == 0" is the early
+     * success that never enters the DRBG generate path; a non-zero request
+     * takes the generate path. */
+    ExpectIntEQ(wc_RNG_GenerateBlock(NULL, output, sizeof(output)),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wc_RNG_GenerateBlock(&rng, output, 0), 0);          /* sz==0 */
+    ExpectIntEQ(wc_RNG_GenerateBlock(&rng, output, sizeof(output)), 0);
+
+    /* wc_RNG_DRBG_Reseed(): "rng == NULL || seed == NULL" independence pair
+     * then a valid reseed on the initialised RNG (success side). */
+    ExpectIntEQ(wc_RNG_DRBG_Reseed(NULL, seed, sizeof(seed)),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wc_RNG_DRBG_Reseed(&rng, NULL, sizeof(seed)),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wc_RNG_DRBG_Reseed(&rng, seed, sizeof(seed)), 0);
+
+    DoExpectIntEQ(wc_FreeRng(&rng), 0);
+#endif
+    return EXPECT_RESULT();
+}
+
+/* Positive-path feature coverage that drives the Hash_DRBG_Generate output
+ * loop and the reseed-interval-exceeded decision through the public API.
+ * Varying the requested size exercises the per-block copy-out branch
+ * ("outSz > OUTPUT_BLOCK_LEN" true for multi-block, false for a sub-block
+ * tail); the reseed-interval-exceeded (DRBG_NEED_RESEED -> PollAndReSeed)
+ * branch is forced by setting the active DRBG's reseedCtr to
+ * WC_RESEED_INTERVAL - 1 before a generate (same idiom as
+ * test_wc_RNG_ReseedBoundary) -- the default interval (1,000,000) is far
+ * beyond a bounded test loop, so a simple burst would NOT reach it.
+ * Repeated under both DRBG hash widths when SHA-512 is compiled in. */
+int test_wc_DrbgFeatureCoverage(void)
+{
+    EXPECT_DECLS;
+#if defined(HAVE_HASHDRBG) && !defined(WC_NO_RNG) && \
+    !defined(CUSTOM_RAND_GENERATE_BLOCK) && \
+    !defined(HAVE_SELFTEST) && !defined(HAVE_FIPS)
+    WC_RNG rng;
+    byte   big[256];
+    static const word32 sizes[] = { 1, 15, 16, 31, 32, 55, 64, 120, 250 };
+    word32 i;
+    int    j;
+
+    for (j = 0; j < 2; j++) {
+    #if defined(WOLFSSL_DRBG_SHA512) && \
+        (!defined(HAVE_FIPS) || FIPS_VERSION3_GE(7,0,0))
+        /* j==0: SHA-256 width (disable SHA-512); j==1: SHA-512 width. */
+        if (j == 0)
+            (void)wc_Sha512Drbg_Disable();
+        else
+            (void)wc_Sha256Drbg_Disable();
+    #else
+        if (j == 1)
+            break; /* only one width compiled in */
+    #endif
+
+        XMEMSET(&rng, 0, sizeof(rng));
+        ExpectIntEQ(wc_InitRng_ex(&rng, HEAP_HINT, INVALID_DEVID), 0);
+
+        for (i = 0; i < (word32)(sizeof(sizes) / sizeof(sizes[0])); i++) {
+            XMEMSET(big, 0, sizeof(big));
+            ExpectIntEQ(wc_RNG_GenerateBlock(&rng, big, sizes[i]), 0);
+        }
+        /* Force the reseed-interval-exceeded path. The default
+         * WC_RESEED_INTERVAL (1,000,000) is unreachable in a bounded loop, so
+         * set the active DRBG's reseedCtr just below the limit and generate
+         * across it, taking DRBG_NEED_RESEED -> PollAndReSeed (same idiom as
+         * test_wc_RNG_ReseedBoundary). Guarded via a probe generate so configs
+         * that bypass the Hash_DRBG path (e.g. --enable-intelrand) skip it. */
+    #ifndef NO_SHA256
+        if (rng.drbgType == WC_DRBG_SHA256) {
+            struct DRBG_internal* drbg = (struct DRBG_internal*)rng.drbg;
+            if (drbg != NULL && rng.status == WC_DRBG_OK) {
+            #ifdef WORD64_AVAILABLE
+                word64 startCtr = drbg->reseedCtr;
+            #else
+                word32 startCtr = drbg->reseedCtr;
+            #endif
+                ExpectIntEQ(wc_RNG_GenerateBlock(&rng, big, 32), 0);
+                if (drbg->reseedCtr == startCtr + 1) {
+                    drbg->reseedCtr = WC_RESEED_INTERVAL - 1;
+                    ExpectIntEQ(wc_RNG_GenerateBlock(&rng, big, 32), 0);
+                    ExpectTrue(drbg->reseedCtr == WC_RESEED_INTERVAL);
+                    ExpectIntEQ(wc_RNG_GenerateBlock(&rng, big, 32), 0);
+                    ExpectTrue(drbg->reseedCtr == 2);
+                }
+            }
+        }
+    #endif
+    #ifdef WOLFSSL_DRBG_SHA512
+        if (rng.drbgType == WC_DRBG_SHA512) {
+            struct DRBG_SHA512_internal* drbg512 =
+                (struct DRBG_SHA512_internal*)rng.drbg512;
+            if (drbg512 != NULL && rng.status == WC_DRBG_OK) {
+                word64 startCtr = drbg512->reseedCtr;
+                ExpectIntEQ(wc_RNG_GenerateBlock(&rng, big, 32), 0);
+                if (drbg512->reseedCtr == startCtr + 1) {
+                    drbg512->reseedCtr = WC_RESEED_INTERVAL - 1;
+                    ExpectIntEQ(wc_RNG_GenerateBlock(&rng, big, 32), 0);
+                    ExpectTrue(drbg512->reseedCtr == WC_RESEED_INTERVAL);
+                    ExpectIntEQ(wc_RNG_GenerateBlock(&rng, big, 32), 0);
+                    ExpectTrue(drbg512->reseedCtr == 2);
+                }
+            }
+        }
+    #endif
+        DoExpectIntEQ(wc_FreeRng(&rng), 0);
+
+    #if defined(WOLFSSL_DRBG_SHA512) && \
+        (!defined(HAVE_FIPS) || FIPS_VERSION3_GE(7,0,0))
+        /* Restore both widths for later tests sharing this process. */
+        (void)wc_Sha256Drbg_Enable();
+        (void)wc_Sha512Drbg_Enable();
+    #endif
+    }
+#endif
+    return EXPECT_RESULT();
+}

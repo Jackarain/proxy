@@ -1,12 +1,12 @@
 /* test_main.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -28,11 +28,14 @@
 #if defined(WOLFSSL_RENESAS_SCEPROTECT) || \
 defined(WOLFSSL_RENESAS_SCEPROTECT_CRYPTONLY)
  #include <wolfssl/wolfcrypt/port/Renesas/renesas-fspsm-crypt.h>
+ /* Always declared: used unconditionally by the CRYPT_TEST/BENCHMARK
+  * branches of sce_test() below, which are independent of whether the
+  * TLS_CLIENT branch's multithread demo is also toggled on. */
+ FSPSM_ST guser_PKCbInfo;
 #if defined(TLS_MULTITHREAD_TEST)
+ /* Only used by the TLS_CLIENT branch's per-task connections. */
  FSPSM_ST guser_PKCbInfo_taskA;
  FSPSM_ST guser_PKCbInfo_taskB;
-#else
- FSPSM_ST guser_PKCbInfo;
 #endif
 #endif
 
@@ -50,19 +53,6 @@ void abort(void);
  int sce_crypt_test();
 #endif
 
-void R_BSP_WarmStart(bsp_warm_start_event_t event);
-
-/* the function is called just before main() to set up pins */
-/* this needs to be called to setup IO Port */
-void R_BSP_WarmStart (bsp_warm_start_event_t event)
-{
-
-    if (BSP_WARM_START_POST_C == event) {
-        /* C runtime environment and system clocks are setup. */
-        /* Configure pins. */
-        R_IOPORT_Open(&g_ioport_ctrl, g_ioport.p_cfg);
-    }
-}
 
 #if defined(TLS_CLIENT)
 
@@ -100,9 +90,9 @@ static int SetScetlsKey()
 
     #endif
 
-#endif    
+#endif
     return 0;
-}    
+}
 #endif
 
 typedef struct func_args {
@@ -114,6 +104,49 @@ typedef struct func_args {
 
 void wolfcrypt_test(func_args args);
 int  benchmark_test(void *args);
+
+#if defined(CRYPT_TEST) || defined(TLS_CLIENT)
+#define BUILD_YEAR  ( \
+    ((__DATE__)[7]  - '0') * 1000 + \
+    ((__DATE__)[8]  - '0') * 100  + \
+    ((__DATE__)[9]  - '0') * 10   + \
+    ((__DATE__)[10] - '0') * 1      \
+)
+#define BUILD_MONTH ( \
+    __DATE__[2] == 'n' ? (__DATE__[1] == 'a' ? 1 : 6) \
+  : __DATE__[2] == 'b' ? 2 \
+  : __DATE__[2] == 'r' ? (__DATE__[0] == 'M' ? 3 : 4) \
+  : __DATE__[2] == 'y' ? 5 \
+  : __DATE__[2] == 'l' ? 7 \
+  : __DATE__[2] == 'g' ? 8 \
+  : __DATE__[2] == 'p' ? 9 \
+  : __DATE__[2] == 't' ? 10 \
+  : __DATE__[2] == 'v' ? 11 \
+  : 12 \
+)
+#define BUILD_HOUR ( \
+    ((__TIME__)[0] - '0') * 10 + ((__TIME__)[1] - '0') \
+)
+#define BUILD_MIN ( \
+    ((__TIME__)[3] - '0') * 10 + ((__TIME__)[4] - '0') \
+)
+#define BUILD_SEC ( \
+    ((__TIME__)[6] - '0') * 10 + ((__TIME__)[7] - '0') \
+)
+
+static time_t build_time_cb(time_t* t)
+{
+    static time_t tick = 0;
+    time_t buildTime = (time_t)(((BUILD_YEAR - 1970) * 365 + 30 * BUILD_MONTH) *
+        24 * 60 * 60 + BUILD_HOUR * 60 * 60 + BUILD_MIN * 60 + BUILD_SEC);
+    /* tick advances each call so time isn't frozen at one instant */
+    time_t now = buildTime + tick++;
+    if (t != NULL) {
+        *t = now;
+    }
+    return now;
+}
+#endif /* defined(CRYPT_TEST) || defined(TLS_CLIENT) */
 
 #ifdef TLS_MULTITHREAD_TEST
 static void my_Logging_cb(const int logLevel, const char *const logMessage)
@@ -142,32 +175,35 @@ void SCE_KeyGeneration(FSPSM_ST *g)
         if (err == FSP_SUCCESS)
             g->keyflgs_crypt.bits.aes256_installedkey_set = 1;
     }
-    
-    
+
+
 }
 
 void Clr_CallbackCtx(FSPSM_ST *g)
 {
     (void) g;
 
-   #if defined(WOLFSSL_RENESAS_SCEPROTECT_CRYPTONLY)
+    if (g == NULL) return;
+
+    if (g->wrapped_key_aes256 != NULL)
+        g->wrapped_key_aes256 = NULL;
+
+    if (g->wrapped_key_aes128 != NULL)
+        g->wrapped_key_aes128 = NULL;
+
+   #if defined(WOLFSSL_RENESAS_RSIP_CRYPTONLY)
     if (g->wrapped_key_rsapri2048 != NULL)
-        XFREE(g->wrapped_key_rsapri2048,
-                            NULL, DYNAMIC_TYPE_TMP_BUFFER);
+        g->wrapped_key_rsapri2048 = NULL;
 
     if (g->wrapped_key_rsapub2048 != NULL)
-        XFREE(g->wrapped_key_rsapub2048,
-                            NULL, DYNAMIC_TYPE_TMP_BUFFER);
+        g->wrapped_key_rsapub2048 = NULL;
 
     if (g->wrapped_key_rsapri1024 != NULL)
-        XFREE(g->wrapped_key_rsapri1024,
-                            NULL, DYNAMIC_TYPE_TMP_BUFFER);
+        g->wrapped_key_rsapri1024 = NULL;
 
     if (g->wrapped_key_rsapub2048 != NULL)
-        XFREE(g->wrapped_key_rsapub1024,
-                            NULL, DYNAMIC_TYPE_TMP_BUFFER);
+        g->wrapped_key_rsapub2048 = NULL;
    #endif
-   XMEMSET(g, 0, sizeof(FSPSM_ST));
 }
 #endif
 
@@ -225,6 +261,8 @@ void sce_test(void)
 
 
 
+    wc_SetTimeCb(build_time_cb);
+
     printf("Start wolfCrypt Test\n");
     wolfcrypt_test(args);
     printf("End wolfCrypt Test\n");
@@ -245,7 +283,7 @@ void sce_test(void)
     if ((ret = wolfCrypt_Init()) != 0) {
          printf("wolfCrypt_Init failed %d\n", ret);
     }
-    
+
 #if defined(HAVE_RENESAS_SYNC) && \
     defined(HAVE_AES_CBC)
 
@@ -267,14 +305,11 @@ void sce_test(void)
     printf("Start wolfCrypt Benchmark\n");
     benchmark_test(NULL);
     printf("End wolfCrypt Benchmark\n");
-    
-    /* free */
-    Clr_CallbackCtx(&guser_PKCbInfo);
 
 #elif defined(TLS_CLIENT)
     #include "hal_data.h"
     #include "r_sce.h"
-    
+
 #if defined(WOLFSSL_TLS13)
     /* TLS1.3 needs RSA_PSS enabled.
      * SCE doesn't support RSA PSS Padding
@@ -335,6 +370,10 @@ void sce_test(void)
     int j = 0;
     #endif
     int i = 0;
+    int ret = 0;
+    (void)ret;
+
+    wc_SetTimeCb(build_time_cb);
 
     printf("\n Start Client Example, ");
     printf("\n Connecting to %s\n\n", SERVER_IP);
@@ -359,20 +398,20 @@ void sce_test(void)
             info[j].log_f = my_Logging_cb;
 
             memset(info[j].name, 0, sizeof(info[j].name));
-            sprintf(info[j].name, "clt_thd_%s", ((j%2) == 0) ? 
+            sprintf(info[j].name, "clt_thd_%s", ((j%2) == 0) ?
                                                             "taskA" : "taskB");
 
             printf(" %s connecting to %d port\n", info[j].name, info[j].port);
 
-            xReturned = xTaskCreate(wolfSSL_TLS_client_do, info[j].name, 
+            xReturned = xTaskCreate((void (*)(void *))wolfSSL_TLS_client_do, info[j].name,
                                     THREAD_STACK_SIZE, &info[j], 2, NULL);
             if (xReturned != pdPASS) {
                  printf("Failed to create task\n");
             }
         }
-        
+
         for(j = i; j < (i+2); j++) {
-            xSemaphoreGiveFromISR(info[j].xBinarySemaphore, 
+            xSemaphoreGiveFromISR(info[j].xBinarySemaphore,
                                                 &xHigherPriorityTaskWoken);
         }
 
@@ -404,7 +443,8 @@ void sce_test(void)
         XMEMSET(info[i].name, 0, sizeof(info[i].name));
         XSPRINTF(info[i].name, "wolfSSL_TLS_client_do(%02d)", i);
 
-        if(wolfSSL_TLS_client_do(&info[i]) == -116) {
+        ret = wolfSSL_TLS_client_do(&info[i]);
+        if(ret == -116 || ret == -128) {
             TCP_connect_retry++;
             continue;
         }

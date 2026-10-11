@@ -1,12 +1,12 @@
 /* wc_devcrypto.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -19,25 +19,20 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1335, USA
  */
 
-
-#ifdef HAVE_CONFIG_H
-    #include <config.h>
-#endif
-
-#include <wolfssl/wolfcrypt/settings.h>
+#include <wolfssl/wolfcrypt/libwolfssl_sources.h>
 
 #if defined(WOLFSSL_DEVCRYPTO)
 
 static volatile int fd;
 
-#include <wolfssl/wolfcrypt/error-crypt.h>
-#include <wolfssl/wolfcrypt/logging.h>
 #include <wolfssl/wolfcrypt/port/devcrypto/wc_devcrypto.h>
+#include <fcntl.h>
 
 int wc_DevCryptoInit(void)
 {
     /* create descriptor */
-    if ((fd = open("/dev/crypto", O_RDWR, 0)) < 0) {
+    fd = wc_open_cloexec("/dev/crypto", O_RDWR);
+    if (fd < 0) {
         WOLFSSL_MSG("Error opening /dev/crypto is cryptodev module loaded?");
         return WC_DEVCRYPTO_E;
     }
@@ -82,19 +77,25 @@ int wc_DevCryptoCreate(WC_CRYPTODEV* ctx, int type, byte* key, word32 keySz)
         return BAD_FUNC_ARG;
     }
 
+    /* Note: ctx is an out parameter and may be uninitialized stack memory, so
+     * it must not be inspected here. Callers that reuse a long lived ctx are
+     * responsible for calling wc_DevCryptoFree() before re-creating it. */
+
     /* sanity check on session type before creating descriptor */
     XMEMSET(ctx, 0, sizeof(WC_CRYPTODEV));
+
+    ctx->cfd = -1;
 
     /* clone the master fd */
     if (ioctl(fd, CRIOGET, &ctx->cfd) != 0) {
         WOLFSSL_MSG("Error cloning fd");
+        ctx->cfd = -1;
         return WC_DEVCRYPTO_E;
     }
 
     if (fcntl(ctx->cfd, F_SETFD, 1) == -1) {
         WOLFSSL_MSG("Error setting F_SETFD with fcntl");
-        (void)close(ctx->cfd);
-        return WC_DEVCRYPTO_E;
+        goto err_close;
     }
 
     /* set up session */
@@ -155,6 +156,7 @@ int wc_DevCryptoCreate(WC_CRYPTODEV* ctx, int type, byte* key, word32 keySz)
         default:
             WOLFSSL_MSG("Unknown / Unimplemented algorithm type");
             (void)close(ctx->cfd);
+            ctx->cfd = -1;
             return BAD_FUNC_ARG;
     }
 
@@ -163,37 +165,48 @@ int wc_DevCryptoCreate(WC_CRYPTODEV* ctx, int type, byte* key, word32 keySz)
     #if defined(DEBUG_DEVCRYPTO)
         perror("CIOGSESSION error ");
     #endif
-        (void)close(ctx->cfd);
         WOLFSSL_MSG("Error starting cryptodev session");
-        return WC_DEVCRYPTO_E;
+        goto err_close;
     }
 
 #if defined(CIOCGSESSINFO) && defined(DEBUG_DEVCRYPTO)
     sesInfo.ses = ctx->sess.ses;
     if (ioctl(ctx->cfd, CIOCGSESSINFO, &sesInfo)) {
-        (void)close(ctx->cfd);
         WOLFSSL_MSG("Error getting session info");
-        return WC_DEVCRYPTO_E;
+        goto err_close;
     }
-    printf("Using %s with driver %s\n", sesInfo.hash_info.cra_name,
-        sesInfo.hash_info.cra_driver_name);
+    if (ctx->sess.cipher == 0) {
+        printf("Using %s with driver %s\n", sesInfo.hash_info.cra_name,
+            sesInfo.hash_info.cra_driver_name);
+    } else {
+        printf("Using %s with driver %s\n", sesInfo.cipher_info.cra_name,
+            sesInfo.cipher_info.cra_driver_name);
+    }
 #endif
+    /* successful init */
+    ctx->inited = 1;
     (void)key;
     (void)keySz;
 
     return 0;
+
+err_close:
+    (void)close(ctx->cfd);
+    ctx->cfd = -1;
+    return WC_DEVCRYPTO_E;
 }
 
 
 /* free up descriptor and session used with ctx */
 void wc_DevCryptoFree(WC_CRYPTODEV* ctx)
 {
-    if (ctx != NULL && ctx->cfd >= 0) {
+    if (ctx != NULL && ctx->inited == 1) {
         if (ioctl(ctx->cfd, CIOCFSESSION, &ctx->sess.ses)) {
             WOLFSSL_MSG("Error stopping cryptodev session");
         }
         (void)close(ctx->cfd);
         ctx->cfd = -1;
+        ctx->inited = 0;
     }
 }
 
@@ -234,7 +247,7 @@ void wc_SetupCryptAead(struct crypt_auth_op* crt, WC_CRYPTODEV* dev,
          byte* src, word32 srcSz, byte* dst, byte* iv, word32 ivSz, int flag,
          byte* authIn, word32 authInSz, byte* authTag, word32 authTagSz)
 {
-    XMEMSET(crt, 0, sizeof(struct crypt_op));
+    XMEMSET(crt, 0, sizeof(struct crypt_auth_op));
     crt->ses    = dev->sess.ses;
     crt->src    = src;
     crt->len    = srcSz;

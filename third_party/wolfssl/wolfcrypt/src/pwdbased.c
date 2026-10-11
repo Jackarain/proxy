@@ -1,12 +1,12 @@
 /* pwdbased.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -19,20 +19,27 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1335, USA
  */
 
+#define WC_FIPS_LL_CRYPTO
+#define _WC_BUILDING_PWDBASED_C
 
-#ifdef HAVE_CONFIG_H
-    #include <config.h>
-#endif
-
-#include <wolfssl/wolfcrypt/settings.h>
+#include <wolfssl/wolfcrypt/libwolfssl_sources.h>
 
 #ifndef NO_PWDBASED
+
+#if FIPS_VERSION3_GE(6,0,0)
+       #ifdef USE_WINDOWS_API
+               #pragma code_seg(".fipsA$h")
+               #pragma const_seg(".fipsB$h")
+       #endif
+#endif
 
 #include <wolfssl/wolfcrypt/pwdbased.h>
 #include <wolfssl/wolfcrypt/hmac.h>
 #include <wolfssl/wolfcrypt/hash.h>
 #include <wolfssl/wolfcrypt/wolfmath.h>
-#include <wolfssl/wolfcrypt/error-crypt.h>
+#ifdef WOLF_CRYPTO_CB
+    #include <wolfssl/wolfcrypt/cryptocb.h>
+#endif
 
 #ifdef NO_INLINE
     #include <wolfssl/wolfcrypt/misc.h>
@@ -41,6 +48,32 @@
     #include <wolfcrypt/src/misc.c>
 #endif
 
+#if FIPS_VERSION3_GE(6,0,0)
+    const unsigned int wolfCrypt_FIPS_pbkdf_ro_sanity[2] =
+                                                     { 0x1a2b3c4d, 0x00000010 };
+    int wolfCrypt_FIPS_PBKDF_sanity(void)
+    {
+        return 0;
+    }
+#endif
+
+static int current_wc_pbkdf_max_iterations = WC_PBKDF_DEFAULT_MAX_ITERATIONS;
+
+int wc_PBKDF_max_iterations_set(int iters)
+{
+    if (iters <= 0)
+        return BAD_FUNC_ARG;
+    else {
+        int prev = current_wc_pbkdf_max_iterations;
+        current_wc_pbkdf_max_iterations = iters;
+        return prev;
+    }
+}
+
+int wc_PBKDF_max_iterations_get(void)
+{
+    return current_wc_pbkdf_max_iterations;
+}
 
 #ifdef HAVE_PBKDF1
 
@@ -55,11 +88,7 @@ int wc_PBKDF1_ex(byte* key, int keyLen, byte* iv, int ivLen,
     int  keyOutput = 0;
     int  digestLen;
     byte digest[WC_MAX_DIGEST_SIZE];
-#ifdef WOLFSSL_SMALL_STACK
-    wc_HashAlg* hash = NULL;
-#else
-    wc_HashAlg  hash[1];
-#endif
+    WC_DECLARE_VAR(hash, wc_HashAlg, 1, 0);
     enum wc_HashType hashT;
 
     (void)heap;
@@ -68,8 +97,16 @@ int wc_PBKDF1_ex(byte* key, int keyLen, byte* iv, int ivLen,
         return BAD_FUNC_ARG;
     }
 
+    if (keyLen > INT_MAX - ivLen)
+        return BAD_FUNC_ARG;
+
     if (iterations <= 0)
-        iterations = 1;
+        return BAD_FUNC_ARG;
+
+    if (iterations > current_wc_pbkdf_max_iterations) {
+        WOLFSSL_MSG("PBKDF1 iteration count exceeds current_wc_pbkdf_max_iterations");
+        return BAD_FUNC_ARG;
+    }
 
     hashT = wc_HashTypeConvert(hashType);
     err = wc_HashGetDigestSize(hashT);
@@ -78,20 +115,20 @@ int wc_PBKDF1_ex(byte* key, int keyLen, byte* iv, int ivLen,
     digestLen = err;
 
     /* initialize hash */
-#ifdef WOLFSSL_SMALL_STACK
-    hash = (wc_HashAlg*)XMALLOC(sizeof(wc_HashAlg), heap,
-                                DYNAMIC_TYPE_HASHCTX);
-    if (hash == NULL)
-        return MEMORY_E;
-#endif
+    WC_ALLOC_VAR_EX(hash, wc_HashAlg, 1, heap, DYNAMIC_TYPE_HASHCTX,
+        return MEMORY_E);
 
     err = wc_HashInit_ex(hash, hashT, heap, INVALID_DEVID);
     if (err != 0) {
-    #ifdef WOLFSSL_SMALL_STACK
-        XFREE(hash, heap, DYNAMIC_TYPE_HASHCTX);
-    #endif
+        WC_FREE_VAR_EX(hash, heap, DYNAMIC_TYPE_HASHCTX);
         return err;
     }
+
+#ifdef WOLFSSL_CHECK_MEM_ZERO
+    /* poison so a missed ForceZero on any path is caught by the check */
+    XMEMSET(digest, 0xff, sizeof(digest));
+    wc_MemZero_Add("wc_PBKDF1_ex digest", digest, sizeof(digest));
+#endif
 
     keyLeft = keyLen;
     ivLeft  = ivLen;
@@ -148,8 +185,11 @@ int wc_PBKDF1_ex(byte* key, int keyLen, byte* iv, int ivLen,
 
     wc_HashFree(hash, hashT);
 
-#ifdef WOLFSSL_SMALL_STACK
-    XFREE(hash, heap, DYNAMIC_TYPE_HASHCTX);
+    WC_FREE_VAR_EX(hash, heap, DYNAMIC_TYPE_HASHCTX);
+
+    ForceZero(digest, sizeof(digest));
+#ifdef WOLFSSL_CHECK_MEM_ZERO
+    wc_MemZero_Check(digest, sizeof(digest));
 #endif
 
     if (err != 0)
@@ -165,6 +205,7 @@ int wc_PBKDF1_ex(byte* key, int keyLen, byte* iv, int ivLen,
 int wc_PBKDF1(byte* output, const byte* passwd, int pLen, const byte* salt,
            int sLen, int iterations, int kLen, int hashType)
 {
+
     return wc_PBKDF1_ex(output, kLen, NULL, 0,
         passwd, pLen, salt, sLen, iterations, hashType, NULL);
 }
@@ -191,8 +232,49 @@ int wc_PBKDF2_ex(byte* output, const byte* passwd, int pLen, const byte* salt,
         return BAD_FUNC_ARG;
     }
 
+#if FIPS_VERSION3_GE(6,0,0)
+    /* Per SP800-132 section 5 "The kLen value shall be at least 112 bits in
+     * length", ensure the returned bits for the derived master key are at a
+     * minimum 14-bytes or 112-bits after stretching and strengthening
+     * (iterations) */
+    if (kLen < HMAC_FIPS_MIN_KEY)
+        return BAD_LENGTH_E;
+#endif
+
+#if FIPS_VERSION3_GE(6,0,0) && defined(DEBUG_WOLFSSL)
+    /* SP800-132 section 5.2 recommends an iteration count of 1000 but this is
+     * not strictly enforceable and is listed in Appendix B Table 1 as a
+     * non-testable requirement. wolfCrypt will log it when appropriate but
+     * take no action */
+    if (iterations < 1000) {
+        WOLFSSL_MSG("WARNING: Iteration < 1,000, see SP800-132 section 5.2");
+    }
+#endif
     if (iterations <= 0)
-        iterations = 1;
+        return BAD_FUNC_ARG;
+
+    if (iterations > current_wc_pbkdf_max_iterations) {
+        WOLFSSL_MSG("PBKDF2 iteration count exceeds current_wc_pbkdf_max_iterations");
+        return BAD_FUNC_ARG;
+    }
+
+#ifdef WOLF_CRYPTO_CB
+    /* Validate the pointer/length pairs before dispatching so a registered
+     * device sees the same contract the software path enforces later via
+     * wc_HmacSetKey_ex()/wc_HmacUpdate(). NULL is allowed only for a
+     * zero-length input. */
+    if (output == NULL || (passwd == NULL && pLen > 0) ||
+            (salt == NULL && sLen > 0) || pLen < 0 || sLen < 0 || kLen < 0) {
+        return BAD_FUNC_ARG;
+    }
+    if (devId != INVALID_DEVID) {
+        ret = wc_CryptoCb_Pbkdf2(output, passwd, pLen, salt, sLen, iterations,
+            kLen, hashType, devId);
+        if (ret != WC_NO_ERR_TRACE(CRYPTOCB_UNAVAILABLE))
+            return ret;
+        /* fall-through when unavailable */
+    }
+#endif
 
     hashT = wc_HashTypeConvert(hashType);
     hLen = wc_HashGetDigestSize(hashT);
@@ -210,11 +292,27 @@ int wc_PBKDF2_ex(byte* output, const byte* passwd, int pLen, const byte* salt,
     }
 #endif
 
+#ifdef WOLFSSL_CHECK_MEM_ZERO
+    /* poison so a missed ForceZero on any path is caught by the check */
+    XMEMSET(buffer, 0xff, (word32)hLen);
+    wc_MemZero_Add("wc_PBKDF2_ex buffer", buffer, (word32)hLen);
+#endif
+
     ret = wc_HmacInit(hmac, heap, devId);
     if (ret == 0) {
         word32 i = 1;
         /* use int hashType here, since HMAC FIPS uses the old unique value */
+    #if FIPS_VERSION3_GE(6,0,0)
+        {
+            /* Allow passwords that are less than 14-bytes for compatibility
+             * / interoperability, only since module v6.0.0 */
+            int allowShortPasswd = 1;
+            ret = wc_HmacSetKey_ex(hmac, hashType, passwd, (word32)pLen,
+                                   allowShortPasswd);
+        }
+    #else
         ret = wc_HmacSetKey(hmac, hashType, passwd, (word32)pLen);
+    #endif
 
         while (ret == 0 && kLen) {
             int currentLen;
@@ -265,10 +363,12 @@ int wc_PBKDF2_ex(byte* output, const byte* passwd, int pLen, const byte* salt,
         wc_HmacFree(hmac);
     }
 
-#ifdef WOLFSSL_SMALL_STACK
-    XFREE(buffer, heap, DYNAMIC_TYPE_TMP_BUFFER);
-    XFREE(hmac, heap, DYNAMIC_TYPE_HMAC);
+    ForceZero(buffer, (word32)hLen);
+#if !defined(WOLFSSL_SMALL_STACK) && defined(WOLFSSL_CHECK_MEM_ZERO)
+    wc_MemZero_Check(buffer, (word32)hLen);
 #endif
+    WC_FREE_VAR_EX(buffer, heap, DYNAMIC_TYPE_TMP_BUFFER);
+    WC_FREE_VAR_EX(hmac, heap, DYNAMIC_TYPE_HMAC);
 
     return ret;
 }
@@ -284,59 +384,37 @@ int wc_PBKDF2(byte* output, const byte* passwd, int pLen, const byte* salt,
 
 #ifdef HAVE_PKCS12
 
-/* helper for PKCS12_PBKDF(), does hash operation */
-static int DoPKCS12Hash(int hashType, byte* buffer, word32 totalLen,
-                 byte* Ai, word32 u, int iterations)
+/* helper for PKCS12_PBKDF(), does hash operation.
+ * buffer and Ai are guaranteed non-NULL by the caller: each is either a stack
+ * array or an XMALLOC result whose failure returns MEMORY_E before the call. */
+static int DoPKCS12Hash(enum wc_HashType hashT, byte* buffer, word32 totalLen,
+    byte* Ai, word32 u, int iterations)
 {
     int i;
     int ret = 0;
-#ifdef WOLFSSL_SMALL_STACK
-    wc_HashAlg* hash = NULL;
-#else
-    wc_HashAlg  hash[1];
-#endif
-    enum wc_HashType hashT;
-
-    if (buffer == NULL || Ai == NULL) {
-        return BAD_FUNC_ARG;
-    }
-
-    hashT = wc_HashTypeConvert(hashType);
+    WC_DECLARE_VAR(hash, wc_HashAlg, 1, 0);
 
     /* initialize hash */
-#ifdef WOLFSSL_SMALL_STACK
-    hash = (wc_HashAlg*)XMALLOC(sizeof(wc_HashAlg), NULL,
-                                DYNAMIC_TYPE_HASHCTX);
-    if (hash == NULL)
-        return MEMORY_E;
-#endif
+    WC_ALLOC_VAR_EX(hash, wc_HashAlg, 1, NULL, DYNAMIC_TYPE_HASHCTX,
+        return MEMORY_E);
 
     ret = wc_HashInit(hash, hashT);
-    if (ret != 0) {
-    #ifdef WOLFSSL_SMALL_STACK
-        XFREE(hash, NULL, DYNAMIC_TYPE_HASHCTX);
-    #endif
-        return ret;
-    }
-
-    ret = wc_HashUpdate(hash, hashT, buffer, totalLen);
-
-    if (ret == 0)
-        ret = wc_HashFinal(hash, hashT, Ai);
-
-    for (i = 1; i < iterations; i++) {
-        if (ret == 0)
-            ret = wc_HashUpdate(hash, hashT, Ai, u);
+    if (ret == 0) {
+        ret = wc_HashUpdate(hash, hashT, buffer, totalLen);
         if (ret == 0)
             ret = wc_HashFinal(hash, hashT, Ai);
+
+        for (i = 1; i < iterations; i++) {
+            if (ret == 0)
+                ret = wc_HashUpdate(hash, hashT, Ai, u);
+            if (ret == 0)
+                ret = wc_HashFinal(hash, hashT, Ai);
+        }
+
+        wc_HashFree(hash, hashT);
     }
 
-    wc_HashFree(hash, hashT);
-
-#ifdef WOLFSSL_SMALL_STACK
-    XFREE(hash, NULL, DYNAMIC_TYPE_HASHCTX);
-#endif
-
+    WC_FREE_VAR_EX(hash, NULL, DYNAMIC_TYPE_HASHCTX);
     return ret;
 }
 
@@ -350,6 +428,7 @@ int wc_PKCS12_PBKDF(byte* output, const byte* passwd, int passLen,
 }
 
 
+#ifdef WC_PKCS12_PBKDF_USING_MP_API
 /* extended API that allows a heap hint to be used */
 int wc_PKCS12_PBKDF_ex(byte* output, const byte* passwd, int passLen,
                        const byte* salt, int saltLen, int iterations, int kLen,
@@ -390,7 +469,13 @@ int wc_PKCS12_PBKDF_ex(byte* output, const byte* passwd, int passLen,
     }
 
     if (iterations <= 0)
-        iterations = 1;
+        return BAD_FUNC_ARG;
+
+    if (iterations > current_wc_pbkdf_max_iterations) {
+        WOLFSSL_MSG("PKCS12 PBKDF iteration count exceeds "
+                    "current_wc_pbkdf_max_iterations");
+        return BAD_FUNC_ARG;
+    }
 
     hashT = wc_HashTypeConvert(hashType);
     ret = wc_HashGetDigestSize(hashT);
@@ -406,6 +491,9 @@ int wc_PKCS12_PBKDF_ex(byte* output, const byte* passwd, int passLen,
     if (ret == 0)
         return BAD_STATE_E;
     v = (word32)ret;
+    /* the block size must not be mistaken for a result when kLen is 0 and the
+     * derivation loop below never runs */
+    ret = 0;
 
 #ifdef WOLFSSL_SMALL_STACK
     Ai = (byte*)XMALLOC(WC_MAX_DIGEST_SIZE, heap, DYNAMIC_TYPE_TMP_BUFFER);
@@ -428,17 +516,25 @@ int wc_PKCS12_PBKDF_ex(byte* output, const byte* passwd, int passLen,
     /* with passLen checked at the top of the function for >= 0 then passLen
      * must be 1 or greater here and is always 'true' */
     pLen = v * (((word32)passLen + v - 1) / v);
-    iLen = sLen + pLen;
 
-    totalLen = dLen + sLen + pLen;
+    if (! WC_SAFE_SUM_UNSIGNED(word32, sLen, pLen, iLen)) {
+        WC_FREE_VAR_EX(Ai, heap, DYNAMIC_TYPE_TMP_BUFFER);
+        WC_FREE_VAR_EX(B, heap, DYNAMIC_TYPE_TMP_BUFFER);
+        return BAD_FUNC_ARG;
+    }
+
+    /* the working buffer holds D || S || P, so totalLen is dLen + iLen */
+    if (! WC_SAFE_SUM_UNSIGNED(word32, dLen, iLen, totalLen)) {
+        WC_FREE_VAR_EX(Ai, heap, DYNAMIC_TYPE_TMP_BUFFER);
+        WC_FREE_VAR_EX(B, heap, DYNAMIC_TYPE_TMP_BUFFER);
+        return BAD_FUNC_ARG;
+    }
 
     if (totalLen > sizeof(staticBuffer)) {
         buffer = (byte*)XMALLOC(totalLen, heap, DYNAMIC_TYPE_KEY);
         if (buffer == NULL) {
-#ifdef WOLFSSL_SMALL_STACK
-            XFREE(Ai, heap, DYNAMIC_TYPE_TMP_BUFFER);
-            XFREE(B,  heap, DYNAMIC_TYPE_TMP_BUFFER);
-#endif
+            WC_FREE_VAR_EX(Ai, heap, DYNAMIC_TYPE_TMP_BUFFER);
+            WC_FREE_VAR_EX(B, heap, DYNAMIC_TYPE_TMP_BUFFER);
             return MEMORY_E;
         }
         dynamic = 1;
@@ -456,6 +552,12 @@ int wc_PKCS12_PBKDF_ex(byte* output, const byte* passwd, int passLen,
     for (i = 0; i < pLen; i++)
         P[i] = passwd[i % (word32)passLen];
 
+#ifdef WOLFSSL_CHECK_MEM_ZERO
+    wc_MemZero_Add("wc_PKCS12_PBKDF_ex Ai", Ai, WC_MAX_DIGEST_SIZE);
+    wc_MemZero_Add("wc_PKCS12_PBKDF_ex B", B, WC_MAX_BLOCK_SIZE);
+    wc_MemZero_Add("wc_PKCS12_PBKDF_ex buffer", buffer, totalLen);
+#endif
+
 #ifdef WOLFSSL_SMALL_STACK
     if (((B1 = (mp_int *)XMALLOC(sizeof(*B1), heap, DYNAMIC_TYPE_TMP_BUFFER))
          == NULL) ||
@@ -471,8 +573,8 @@ int wc_PKCS12_PBKDF_ex(byte* output, const byte* passwd, int passLen,
     while (kLen > 0) {
         word32 currentLen;
 
-        ret = DoPKCS12Hash(hashType, buffer, totalLen, Ai, u, iterations);
-        if (ret < 0)
+        ret = DoPKCS12Hash(hashT, buffer, totalLen, Ai, u, iterations);
+        if (ret != 0)
             break;
 
         for (i = 0; i < v; i++)
@@ -538,23 +640,221 @@ int wc_PKCS12_PBKDF_ex(byte* output, const byte* passwd, int passLen,
 #ifdef WOLFSSL_SMALL_STACK
   out:
 
-    if (Ai != NULL)
-        XFREE(Ai, heap, DYNAMIC_TYPE_TMP_BUFFER);
-    if (B != NULL)
-        XFREE(B,  heap, DYNAMIC_TYPE_TMP_BUFFER);
-    if (B1 != NULL)
-        XFREE(B1, heap, DYNAMIC_TYPE_TMP_BUFFER);
-    if (i1 != NULL)
-        XFREE(i1, heap, DYNAMIC_TYPE_TMP_BUFFER);
-    if (res != NULL)
-        XFREE(res, heap, DYNAMIC_TYPE_TMP_BUFFER);
+    ForceZero(Ai, WC_MAX_DIGEST_SIZE);
+    XFREE(Ai, heap, DYNAMIC_TYPE_TMP_BUFFER);
+    ForceZero(B, WC_MAX_BLOCK_SIZE);
+    XFREE(B, heap, DYNAMIC_TYPE_TMP_BUFFER);
+    XFREE(B1, heap, DYNAMIC_TYPE_TMP_BUFFER);
+    XFREE(i1, heap, DYNAMIC_TYPE_TMP_BUFFER);
+    XFREE(res, heap, DYNAMIC_TYPE_TMP_BUFFER);
+#else
+    ForceZero(Ai, WC_MAX_DIGEST_SIZE);
+    ForceZero(B, WC_MAX_BLOCK_SIZE);
+#if defined(WOLFSSL_CHECK_MEM_ZERO)
+    wc_MemZero_Check(Ai, WC_MAX_DIGEST_SIZE);
+    wc_MemZero_Check(B, WC_MAX_BLOCK_SIZE);
+#endif
 #endif
 
+    ForceZero(buffer, totalLen);
+#if defined(WOLFSSL_CHECK_MEM_ZERO)
+    if (!dynamic)
+        wc_MemZero_Check(buffer, totalLen);
+#endif
     if (dynamic)
         XFREE(buffer, heap, DYNAMIC_TYPE_KEY);
 
     return ret;
 }
+#else
+
+#if defined(WC_64BIT_CPU) && defined(HAVE___UINT128_T) && \
+    !defined(NO_INT128)
+    #define PKCS12_DWORD                        word128
+    #define PKCS12_WORD                         word64
+    #define PKCS12_ByteReverseWords             ByteReverseWords64
+#elif defined(WC_32BIT_CPU) || defined(WC_64BIT_CPU)
+    #define PKCS12_DWORD                        word64
+    #define PKCS12_WORD                         word32
+    #define PKCS12_ByteReverseWords             ByteReverseWords
+#else
+    #define PKCS12_DWORD                        word16
+    #define PKCS12_WORD                         word8
+    /* No need to byte reverse when handling 1 byte at a time. */
+    #define PKCS12_ByteReverseWords(r, a, n)    WC_DO_NOTHING
+#endif
+
+/* extended API that allows a heap hint to be used */
+int wc_PKCS12_PBKDF_ex(byte* output, const byte* passwd, int passLen,
+                       const byte* salt, int saltLen, int iterations, int kLen,
+                       int hashType, int id, void* heap)
+{
+    word32 u, v, pLen, iLen, sLen, totalLen;
+    /* nwc:     v / sizeof(PKCS12_WORD) - words per v-byte block
+     *          (v is always a multiple of sizeof(PKCS12_WORD))
+     * nBlocks: iLen / v - number of v-byte blocks in I */
+    word32 nwc, nBlocks;
+    int    ret = 0;
+    word32 i, k, blk;
+    byte*        I;
+    PKCS12_WORD* Bw;
+#ifdef WOLFSSL_SMALL_STACK
+    byte   staticBuffer[1]; /* force dynamic usage */
+    byte*  B   = NULL;
+#else
+    ALIGN8 byte   staticBuffer[1024];
+    ALIGN8 byte   B[WC_MAX_BLOCK_SIZE];
+#endif
+    byte*  buffer = staticBuffer;
+    enum wc_HashType hashT;
+
+    (void)heap;
+
+    if ((output == NULL) || (passLen <= 0) || (saltLen <= 0) || (kLen < 0)) {
+        return BAD_FUNC_ARG;
+    }
+
+    if (iterations <= 0) {
+        return BAD_FUNC_ARG;
+    }
+
+    if (iterations > current_wc_pbkdf_max_iterations) {
+        WOLFSSL_MSG("PKCS12 PBKDF iteration count exceeds "
+                    "current_wc_pbkdf_max_iterations");
+        return BAD_FUNC_ARG;
+    }
+
+    /* u = hash output size. */
+    hashT = wc_HashTypeConvert(hashType);
+    ret = wc_HashGetDigestSize(hashT);
+    if (ret < 0)
+        return ret;
+    if (ret == 0)
+        return BAD_STATE_E;
+    u = (word32)ret;
+
+    /* v = hash block size. */
+    ret = wc_HashGetBlockSize(hashT);
+    if (ret < 0)
+        return ret;
+    if (ret == 0)
+        return BAD_STATE_E;
+    v = (word32)ret;
+
+    /* RFC 7292 B.2 step 2: S = salt repeated to ceil(saltLen/v)*v bytes */
+    sLen = v * (((word32)saltLen + v - 1) / v);
+    /* RFC 7292 B.2 step 3: P = password repeated to ceil(passLen/v)*v bytes */
+    pLen = v * (((word32)passLen + v - 1) / v);
+
+    /* RFC 7292 B.2 step 4: I = S || P */
+    if (! WC_SAFE_SUM_UNSIGNED(word32, sLen, pLen, iLen)) {
+        return BAD_FUNC_ARG;
+    }
+
+    if (! WC_SAFE_SUM_UNSIGNED(word32, v, iLen, totalLen)) {
+        return BAD_FUNC_ARG;
+    }
+
+    nwc     = v / (word32)sizeof(PKCS12_WORD);
+    nBlocks = iLen / v;
+
+#ifdef WOLFSSL_SMALL_STACK
+    B = (byte*)XMALLOC(WC_MAX_BLOCK_SIZE, heap, DYNAMIC_TYPE_TMP_BUFFER);
+    if (B == NULL)
+        return MEMORY_E;
+#endif
+    Bw = (PKCS12_WORD*)B;
+
+    if (totalLen > sizeof(staticBuffer)) {
+        buffer = (byte*)XMALLOC(totalLen, heap, DYNAMIC_TYPE_KEY);
+        if (buffer == NULL) {
+            WC_FREE_VAR_EX(B, heap, DYNAMIC_TYPE_TMP_BUFFER);
+            return MEMORY_E;
+        }
+    }
+
+    /* RFC 7292 B.2 step 1: D = v bytes each set to ID */
+    /* RFC 7292 B.2 step 4: I = S || P; buffer = D || I */
+    I = buffer + v;
+    XMEMSET(buffer, id, v);
+    for (i = 0; i < sLen; i++)
+        I[i] = salt[i % (word32)saltLen];
+    for (i = 0; i < pLen; i++)
+        I[sLen + i] = passwd[i % (word32)passLen];
+
+#ifdef WOLFSSL_CHECK_MEM_ZERO
+    wc_MemZero_Add("wc_PKCS12_PBKDF_ex buffer", buffer, totalLen);
+#endif
+
+    ret = 0;
+    while ((ret == 0) && (kLen > 0)) {
+        /* RFC 7292 B.2 step 6a: A_i = H^r(D || I) */
+        ret = DoPKCS12Hash(hashT, buffer, totalLen, B, u, iterations);
+        if (ret != 0)
+            break;
+
+        /* RFC 7292 B.2 step 7: output A_i bytes (up to kLen) */
+        i = min((word32)kLen, u);
+        XMEMCPY(output, B, i);
+        output += i;
+        kLen -= (int)i;
+        if (kLen == 0)
+            break;
+
+        /* RFC 7292 B.2 step 6b: B = A_i repeated to length v */
+        for (i = u; i < v; i++)
+            B[i] = B[i % u];
+
+        /* RFC 7292 B.2 step 6c: I_j = (I_j + B + 1) mod 2^(8v). */
+#ifndef BIG_ENDIAN_ORDER
+        PKCS12_ByteReverseWords(Bw, Bw, v);
+#endif
+        /* Increment B by 1. */
+        for (k = nwc; k > 0; ) {
+            --k;
+            ++Bw[k];
+            if (Bw[k] != 0)
+                break;
+        }
+
+#ifndef BIG_ENDIAN_ORDER
+        PKCS12_ByteReverseWords((PKCS12_WORD*)I, (PKCS12_WORD*)I, nBlocks * v);
+#endif
+        /* Add B+1 to each I_j block. */
+        for (blk = 0; blk < nBlocks; blk++) {
+            PKCS12_DWORD c  = 0;
+            PKCS12_WORD* Iw = (PKCS12_WORD*)(I + blk * v);
+            for (k = nwc; k-- > 0; ) {
+                c     += (PKCS12_DWORD)Iw[k];
+                c     += (PKCS12_DWORD)Bw[k];
+                Iw[k]  = (PKCS12_WORD)c;
+                c    >>= 8 * sizeof(PKCS12_WORD);
+            }
+        }
+#ifndef BIG_ENDIAN_ORDER
+        PKCS12_ByteReverseWords((PKCS12_WORD*)I, (PKCS12_WORD*)I, nBlocks * v);
+#endif
+    }
+
+    ForceZero(B, WC_MAX_BLOCK_SIZE);
+    WC_FREE_VAR_EX(B, heap, DYNAMIC_TYPE_TMP_BUFFER);
+    ForceZero(buffer, totalLen);
+#if defined(WOLFSSL_CHECK_MEM_ZERO)
+    if (buffer == staticBuffer)
+        wc_MemZero_Check(buffer, totalLen);
+#endif
+    if (buffer != staticBuffer) {
+        XFREE(buffer, heap, DYNAMIC_TYPE_KEY);
+    }
+
+    return ret;
+}
+
+#undef PKCS12_DWORD
+#undef PKCS12_WORD
+#undef PKCS12_ByteReverseWords
+
+#endif
 
 #endif /* HAVE_PKCS12 */
 
@@ -706,14 +1006,17 @@ static void scryptROMix(byte* x, byte* v, byte* y, int r, word32 n)
     for (i = 0; i < n; i++)
     {
 #ifdef LITTLE_ENDIAN_ORDER
-#ifdef WORD64_AVAILABLE
-        j = (word32)(*(word64*)(x + (2*r - 1) * 64) & (n-1));
+        /* x is an allocator byte array; the big-endian path below already
+         * assembles this byte-wise. */
+#if defined(WORD64_AVAILABLE) && !defined(WOLFSSL_NO_WORD64_OPS)
+        j = (word32)(readUnalignedWord64(x + (2*r - 1) * 64) & (n-1));
 #else
-        j = *(word32*)(x + (2*r - 1) * 64) & (n-1);
+        j = readUnalignedWord32(x + (2*r - 1) * 64) & (n-1);
 #endif
 #else
         byte* t = x + (2*r - 1) * 64;
-        j = (t[0] | (t[1] << 8) | (t[2] << 16) | ((word32)t[3] << 24)) & (n-1);
+        j = ((word32)t[0] | ((word32)t[1] << 8) | ((word32)t[2] << 16) |
+                ((word32)t[3] << 24)) & (n-1);
 #endif
 #ifdef WORD64_AVAILABLE
         for (k = 0; k < bSz / 8; k++)
@@ -780,9 +1083,16 @@ int wc_scrypt(byte* output, const byte* passwd, int passLen,
         ret = MEMORY_E;
         goto end;
     }
+
+    /* Check that (1 << cost) * bSz won't overflow or exceed allowed max */
+    if (((size_t)1 << cost) * (size_t)bSz > SCRYPT_WORD32_MAX) {
+        ret = BAD_FUNC_ARG;
+        goto end;
+    }
+
     /* Temporary for scryptROMix. */
-    v = (byte*)XMALLOC((size_t)((1 << cost) * bSz), NULL,
-                       DYNAMIC_TYPE_TMP_BUFFER);
+    v = (byte*)XMALLOC(((size_t)1 << cost) * (size_t)bSz, NULL,
+                         DYNAMIC_TYPE_TMP_BUFFER);
     if (v == NULL) {
         ret = MEMORY_E;
         goto end;
@@ -795,6 +1105,8 @@ int wc_scrypt(byte* output, const byte* passwd, int passLen,
         goto end;
     }
 
+    XMEMSET(y, 0, (size_t)(blockSize * 128));
+
     /* Step 1. */
     ret = wc_PBKDF2(blocks, passwd, passLen, salt, saltLen, 1, (int)blocksSz,
                     WC_SHA256);
@@ -803,18 +1115,26 @@ int wc_scrypt(byte* output, const byte* passwd, int passLen,
 
     /* Step 2. */
     for (i = 0; i < parallel; i++)
-        scryptROMix(blocks + i * (int)bSz, v, y, (int)blockSize, 1 << cost);
+        scryptROMix(blocks + i * (int)bSz, v, y, (int)blockSize,
+                    (word32)((size_t)1 << cost));
 
     /* Step 3. */
     ret = wc_PBKDF2(output, passwd, passLen, blocks, (int)blocksSz, 1, dkLen,
                     WC_SHA256);
 end:
-    if (blocks != NULL)
-        XFREE(blocks, NULL, DYNAMIC_TYPE_TMP_BUFFER);
-    if (v != NULL)
-        XFREE(v, NULL, DYNAMIC_TYPE_TMP_BUFFER);
-    if (y != NULL)
-        XFREE(y, NULL, DYNAMIC_TYPE_TMP_BUFFER);
+    if (blocks != NULL) {
+        ForceZero(blocks, blocksSz);
+    }
+    if (v != NULL) {
+        ForceZero(v, ((size_t)1 << cost) * (size_t)bSz);
+    }
+    if (y != NULL) {
+        ForceZero(y, (size_t)blockSize * 128);
+    }
+
+    XFREE(blocks, NULL, DYNAMIC_TYPE_TMP_BUFFER);
+    XFREE(v, NULL, DYNAMIC_TYPE_TMP_BUFFER);
+    XFREE(y, NULL, DYNAMIC_TYPE_TMP_BUFFER);
 
     return ret;
 }

@@ -2,6 +2,7 @@
     \defgroup 3DES Algorithms - 3DES
     \defgroup AES Algorithms - AES
     \defgroup ARC4 Algorithms - ARC4
+    \defgroup ARGON2 Algorithms - Argon2
     \defgroup BLAKE2 Algorithms - BLAKE2
     \defgroup Camellia Algorithms - Camellia
     \defgroup ChaCha Algorithms - ChaCha
@@ -15,6 +16,103 @@
     \defgroup ECC Algorithms - ECC
     \defgroup ED25519 Algorithms - ED25519
     \defgroup ED448 Algorithms - ED448
+    \defgroup Falcon Algorithms - Falcon
+    Falcon is a quantum-resistant lattice-based digital signature scheme
+    (NTRU / fast Fourier sampling). It has not been standardized by NIST yet;
+    because the algorithm is not yet standardized and its API name is subject
+    to change, wolfCrypt gates it behind --enable-experimental, and the
+    wc_falcon_* / falcon_key spelling is expected to follow the standardized
+    name once it is final. Two parameter sets are supported, selected with
+    wc_falcon_set_level(): level 1 (Falcon-512) and level 5 (Falcon-1024).
+    See <wolfssl/wolfcrypt/falcon.h>.
+    \defgroup HPKE Algorithms - HPKE (RFC 9180)
+    HPKE (Hybrid Public Key Encryption) is a single-shot public key
+    encryption scheme built from a KEM, a KDF and an AEAD. wolfCrypt
+    implements the RFC 9180 base mode (no pre-shared key, no sender
+    authentication) and is enabled with --enable-hpke; it is also pulled in
+    by the TLS 1.3 Encrypted Client Hello (ECH) support, its main in-tree
+    consumer. Supported ciphersuites are the DHKEM P-256/P-384/P-521 and
+    X25519 KEMs, HKDF-SHA256/384/512 and AES-128-GCM / AES-256-GCM. An Hpke
+    structure is bound to one ciphersuite triple with wc_HpkeInit(); a
+    one-shot wc_HpkeSealBase() / wc_HpkeOpenBase() pair and a streaming
+    context API (wc_HpkeInitSealContext() / wc_HpkeContextSealBase() and the
+    matching open calls) are provided. See <wolfssl/wolfcrypt/hpke.h>.
+    \defgroup ML_DSA Algorithms - ML-DSA (FIPS 204)
+    ML-DSA (Module-Lattice-based Digital Signature Algorithm) is a
+    quantum-resistant digital signature scheme standardized by NIST as
+    FIPS 204. The pre-standardization name was Dilithium; legacy
+    Dilithium type and macro names remain as aliases for unmigrated
+    consumer code (see <wolfssl/wolfcrypt/dilithium.h>).
+
+    ML-DSA defines three parameter sets identified by NIST security
+    category: ML-DSA-44 (level 2), ML-DSA-65 (level 3) and ML-DSA-87
+    (level 5). All three are supported by the same wc_MlDsaKey object;
+    the parameter set is selected with wc_MlDsaKey_SetParams().
+
+    \defgroup ML_KEM Algorithms - ML-KEM (FIPS 203)
+    ML-KEM (Module-Lattice-based Key Encapsulation Mechanism) is a
+    quantum-resistant key encapsulation mechanism standardized by NIST
+    as FIPS 203. The pre-standardization name was Kyber; legacy Kyber
+    type and macro names remain as aliases for unmigrated consumer
+    code.
+
+    ML-KEM defines three parameter sets: ML-KEM-512 (NIST level 1),
+    ML-KEM-768 (level 3) and ML-KEM-1024 (level 5). The variant is
+    selected when the key is initialized via wc_MlKemKey_Init() or
+    wc_MlKemKey_New().
+
+    \defgroup FRODO_KEM Algorithms - FrodoKEM
+    FrodoKEM is a conservative, unstructured-lattice (plain LWE) key
+    encapsulation mechanism. This is an experimental reference
+    implementation following the ISO/CFRG (salted) FrodoKEM and the
+    ephemeral eFrodoKEM (salt-less) variants. Three parameter sets are
+    provided - FrodoKEM-640 (NIST level 1), FrodoKEM-976 (level 3) and
+    FrodoKEM-1344 (level 5) - each with either SHAKE-128 or AES-128
+    generation of the public matrix A. The variant is selected by the
+    key type (a base parameter set optionally OR'd with FRODOKEM_AES
+    and/or FRODOKEM_EPHEMERAL) when the key is initialized via
+    wc_FrodoKemKey_Init() or wc_FrodoKemKey_New().
+
+    \defgroup SLH_DSA Algorithms - SLH-DSA (FIPS 205)
+    SLH-DSA (Stateless Hash-based Digital Signature Algorithm) is a
+    quantum-resistant signature scheme standardized by NIST as
+    FIPS 205. It descends from the SPHINCS+ submission and is
+    stateless: signing does not mutate the private key, so there is no
+    key-state synchronization burden on the application.
+
+    Twelve parameter sets are supported, formed by combining a hash
+    family (SHAKE or SHA2), a security category (128/192/256) and a
+    speed/size tradeoff (s = small signatures, f = fast signing). The
+    parameter set is selected when the key is initialized via
+    wc_SlhDsaKey_Init().
+
+    \defgroup LMS Algorithms - LMS / HSS (RFC 8554)
+    LMS (Leighton-Micali Signatures) and its multi-tree composition
+    HSS (Hierarchical Signature System) are stateful hash-based
+    signature schemes specified in RFC 8554 and NIST SP 800-208. Each
+    signature consumes a one-time component of the private key, so the
+    application MUST persist the private key state (via the read/write
+    callbacks registered with wc_LmsKey_SetReadCb() and
+    wc_LmsKey_SetWriteCb()) between signing operations. Reusing a
+    one-time key destroys the security of the scheme.
+
+    The number of signatures available from a key is bounded by the
+    parameter set; query the remaining count with
+    wc_LmsKey_SigsLeft().
+
+    \defgroup XMSS Algorithms - XMSS / XMSS^MT (RFC 8391)
+    XMSS (eXtended Merkle Signature Scheme) and its multi-tree variant
+    XMSS^MT are stateful hash-based signature schemes specified in
+    RFC 8391 and NIST SP 800-208. As with LMS, each signature consumes
+    a one-time component of the private key, so the application MUST
+    persist the private key state via the callbacks registered with
+    wc_XmssKey_SetReadCb() and wc_XmssKey_SetWriteCb(). Reusing a
+    one-time key destroys the security of the scheme.
+
+    The number of signatures available from a key is bounded by the
+    parameter set; query the remaining count with
+    wc_XmssKey_SigsLeft().
+
     \defgroup ECCSI_Overview Overview of ECCSI
     ECCSI (Elliptic Curve-Based Certificateless Signatures for Identity-Based Encryption) is specified in RFC 6507 (https://tools.ietf.org/html/rfc6507).
 
@@ -154,7 +252,7 @@
       -# Set the RSK and, optionally precomputation table: wc_SetSakkeRsk()
       -# Derive SSV and auth data: wc_DeriveSakkeSSV()
       -# Free SAKKE Key: wc_FreeSakkeKey()
-    
+
     \defgroup SAKKE_Setup Setup SAKKE Key
     Operations for establishing a SAKKE key.
 
@@ -199,12 +297,31 @@
     \defgroup MD4 Algorithms - MD4
     \defgroup MD5 Algorithms - MD5
     \defgroup PKCS7 Algorithms - PKCS7
+    \defgroup TSP Time-Stamp Protocol (RFC 3161)
     \defgroup PKCS11 Algorithms - PKCS11
+    \defgroup PKCS12 Algorithms - PKCS12
+    PKCS #12 (RFC 7292) defines the PFX bundle format, a single password
+    protected file that carries a private key together with its
+    certificate and any CA certificates in the chain. It is the format
+    behind the common .p12 and .pfx files. wolfCrypt support is enabled
+    with --enable-pkcs12 or by defining HAVE_PKCS12, and also requires
+    password based key derivation (--enable-pwdbased).
+
+    A bundle is read by allocating a WC_PKCS12 structure
+    (wc_PKCS12_new() or wc_PKCS12_new_ex()), decoding the DER into it
+    (wc_d2i_PKCS12() or wc_d2i_PKCS12_fp()), then verifying the MAC and
+    decrypting the contents with wc_PKCS12_parse(), which returns the
+    DER private key, the certificate, and optionally the CA chain.\n
+    A bundle is written by building the structure with
+    wc_PKCS12_create() and encoding it with wc_i2d_PKCS12().\n
+    See <wolfssl/wolfcrypt/pkcs12.h>.
     \defgroup Password Algorithms - Password Based
     \defgroup Poly1305 Algorithms - Poly1305
+    \defgroup PUF Algorithms - PUF
     \defgroup RIPEMD Algorithms - RIPEMD
     \defgroup RSA Algorithms - RSA
     \defgroup SHA Algorithms - SHA 128/224/256/384/512
+    \defgroup SHE Algorithms - SHE
     \defgroup SipHash Algorithm - SipHash
     \defgroup SrtpKdf Algorithm - SRTP KDF
     \defgroup SRP Algorithms - SRP
@@ -234,6 +351,22 @@
     \defgroup Math Math API
     \defgroup Memory Memory Handling
     \defgroup Random Random Number Generation
+    Makes the unguessable numbers used for keys and other secrets.  It
+    takes a little true randomness from an entropy source and stretches
+    it into as much output as you ask for.
+
+    When that source is wolfEntropy, see \ref wolfEntropy.
+
+    \defgroup wolfEntropy Entropy Source - wolfEntropy (MemUse)
+    Randomness has to start somewhere.  wolfEntropy gets it by timing
+    memory reads: each one takes a slightly different, unpredictable
+    amount of time, and those tiny differences are the raw material.
+    It watches its own output and returns an error rather than hand
+    back randomness that looks broken.
+
+    Turn it on with --enable-wolfEntropy.  Most code never calls these
+    functions; the random number generator (\ref Random) does it for
+    you.
     \defgroup Signature Signature API
     \defgroup openSSL OpenSSL API
     \defgroup wolfCrypt wolfCrypt Init and Cleanup
@@ -242,4 +375,5 @@
     \defgroup Setup wolfSSL Context and Session Set Up
     \defgroup IO wolfSSL Connection, Session, and I/O
     \defgroup Debug wolfSSL Error Handling and Reporting
+    \defgroup STM32 STM32 Hardware Crypto Port
 */

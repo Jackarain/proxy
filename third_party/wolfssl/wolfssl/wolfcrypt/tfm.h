@@ -1,12 +1,12 @@
 /* tfm.h
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -40,6 +40,7 @@
 #define WOLF_CRYPT_TFM_H
 
 #include <wolfssl/wolfcrypt/types.h>
+#include <wolfssl/wolfcrypt/error-crypt.h>
 #ifndef CHAR_BIT
     #include <limits.h>
 #endif
@@ -233,6 +234,9 @@
    #ifndef NO_TFM_64BIT
       #if defined(_MSC_VER) || defined(__BORLANDC__)
          typedef unsigned __int64   ulong64;
+         #if defined(INTIME_RTOS)
+            #undef long64
+         #endif
          typedef   signed __int64    long64;
       #else
          typedef unsigned long long ulong64;
@@ -305,10 +309,10 @@
 
 /* return codes */
 #define FP_OKAY      0
-#define FP_VAL      (-1)
-#define FP_MEM      (-2)
-#define FP_NOT_INF  (-3)
-#define FP_WOULDBLOCK (-4)
+#define FP_VAL      MP_VAL
+#define FP_MEM      MP_MEM
+#define FP_NOT_INF  MP_NOT_INF
+#define FP_WOULDBLOCK MP_WOULDBLOCK
 
 /* equalities */
 #define FP_LT        (-1)   /* less than */
@@ -364,8 +368,12 @@ while (0)
 /* Initialize an mp_int. */
 #define INIT_MP_INT_SIZE(name, bits) \
     mp_init(name)
-/* Type to cast to when using size marcos. */
+/* Type to cast to when using size macros. */
 #define MP_INT_SIZE     mp_int
+
+/* tfm.h allocates full-sized mp_int buffers, so DECL_MP_INT_SIZE_DYN cannot
+ * be undersized for any 'bits' value -- no check is needed. */
+#define MP_BITS_OVER_MAX(bits, max) 0
 
 
 #ifdef HAVE_WOLF_BIGINT
@@ -377,6 +385,9 @@ while (0)
     } WC_BIGINT;
     #define WOLF_BIGINT_DEFINED
 #endif
+
+#define wc_mp_size_t int
+#define wc_mp_sign_t int
 
 /* a FP type */
 typedef struct fp_int {
@@ -513,7 +524,7 @@ int fp_set_bit (fp_int * a, fp_digit b);
 
 /* copy from a to b */
 void fp_copy(const fp_int *a, fp_int *b);
-void fp_init_copy(fp_int *a, fp_int *b);
+void fp_init_copy(fp_int *a, const fp_int *b);
 
 /* clamp digits */
 #define fp_clamp(a)   { while ((a)->used && (a)->dp[(a)->used-1] == 0) --((a)->used); (a)->sign = (a)->used ? (a)->sign : FP_ZPOS; }
@@ -720,7 +731,8 @@ int fp_leading_bit(fp_int *a);
 
 int fp_unsigned_bin_size(const fp_int *a);
 int fp_read_unsigned_bin(fp_int *a, const unsigned char *b, int c);
-int fp_to_unsigned_bin(fp_int *a, unsigned char *b);
+int fp_to_unsigned_bin(const fp_int *a, unsigned char *b);
+int fp_to_unsigned_bin_len_ct(fp_int *a, unsigned char *out, int outSz);
 int fp_to_unsigned_bin_len(fp_int *a, unsigned char *b, int c);
 int fp_to_unsigned_bin_at_pos(int x, fp_int *t, unsigned char *b);
 
@@ -776,9 +788,7 @@ int  fp_sqr_comba64(fp_int *a, fp_int *b);
 #define MP_LT   FP_LT   /* less than    */
 #define MP_EQ   FP_EQ   /* equal to     */
 #define MP_GT   FP_GT   /* greater than */
-#define MP_VAL  FP_VAL  /* invalid */
-#define MP_MEM  FP_MEM  /* memory error */
-#define MP_NOT_INF FP_NOT_INF /* point not at infinity */
+#define MP_RANGE MP_NOT_INF
 #define MP_OKAY FP_OKAY /* ok result    */
 #define MP_NO   FP_NO   /* yes/no result */
 #define MP_YES  FP_YES  /* yes/no result */
@@ -807,7 +817,7 @@ int  fp_sqr_comba64(fp_int *a, fp_int *b);
 #define mp_tohex(M, S)     mp_toradix((M), (S), MP_RADIX_HEX)
 
 MP_API int  mp_init (mp_int * a);
-MP_API int  mp_init_copy(fp_int * a, fp_int * b);
+MP_API int  mp_init_copy(fp_int * a, const fp_int * b);
 MP_API void mp_clear (mp_int * a);
 MP_API void mp_free (mp_int * a);
 MP_API void mp_forcezero (mp_int * a);
@@ -837,14 +847,15 @@ MP_API int  mp_2expt(mp_int* a, int b);
 
 MP_API int  mp_div(mp_int * a, mp_int * b, mp_int * c, mp_int * d);
 
-MP_API int  mp_cmp(mp_int *a, mp_int *b);
+MP_API int  mp_cmp(const mp_int *a, const mp_int *b);
+#define mp_cmp_ct(a, b, n) mp_cmp(a, b)
 MP_API int  mp_cmp_d(mp_int *a, mp_digit b);
 
 MP_API int  mp_unsigned_bin_size(const mp_int * a);
 MP_API int  mp_read_unsigned_bin (mp_int * a, const unsigned char *b, int c);
 MP_API int  mp_to_unsigned_bin_at_pos(int x, mp_int *t, unsigned char *b);
-MP_API int  mp_to_unsigned_bin (mp_int * a, unsigned char *b);
-#define mp_to_unsigned_bin_len_ct   mp_to_unsigned_bin_len
+MP_API int  mp_to_unsigned_bin(const mp_int * a, unsigned char *b);
+MP_API int  mp_to_unsigned_bin_len_ct(mp_int * a, unsigned char *b, int c);
 MP_API int  mp_to_unsigned_bin_len(mp_int * a, unsigned char *b, int c);
 
 MP_API int  mp_sub_d(fp_int *a, fp_digit b, fp_int *c);
@@ -876,8 +887,9 @@ MP_API int mp_radix_size (mp_int * a, int radix, int *size);
 MP_API int mp_montgomery_reduce(fp_int *a, fp_int *m, fp_digit mp);
 MP_API int mp_montgomery_reduce_ex(fp_int *a, fp_int *m, fp_digit mp, int ct);
 MP_API int mp_montgomery_setup(fp_int *a, fp_digit *rho);
+MP_API int mp_sqr(fp_int *a, fp_int *b);
+
 #ifdef HAVE_ECC
-    MP_API int mp_sqr(fp_int *a, fp_int *b);
     MP_API int mp_div_2(fp_int * a, fp_int * b);
     MP_API int mp_div_2_mod_ct(mp_int *a, mp_int *b, mp_int *c);
 #endif
@@ -908,6 +920,7 @@ MP_API int  mp_cond_swap_ct(mp_int* a, mp_int* b, int c, int m);
 
 MP_API int  mp_cnt_lsb(fp_int *a);
 MP_API int  mp_div_2d(fp_int *a, int b, fp_int *c, fp_int *d);
+MP_API int  mp_mod_2d(fp_int *a, int b, fp_int *c);
 MP_API int  mp_mod_d(fp_int* a, fp_digit b, fp_digit* c);
 MP_API int  mp_lshd (mp_int * a, int b);
 MP_API int  mp_abs(mp_int* a, mp_int* b);

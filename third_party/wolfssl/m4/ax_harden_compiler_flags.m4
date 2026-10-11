@@ -19,23 +19,23 @@
 #
 #  Copyright (C) 2012 Brian Aker
 #  All rights reserved.
-#  
+#
 #  Redistribution and use in source and binary forms, with or without
 #  modification, are permitted provided that the following conditions are
 #  met:
-#  
+#
 #      * Redistributions of source code must retain the above copyright
 #  notice, this list of conditions and the following disclaimer.
-#  
+#
 #      * Redistributions in binary form must reproduce the above
 #  copyright notice, this list of conditions and the following disclaimer
 #  in the documentation and/or other materials provided with the
 #  distribution.
-#  
+#
 #      * The names of its contributors may not be used to endorse or
 #  promote products derived from this software without specific prior
 #  written permission.
-#  
+#
 #  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 #  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -145,7 +145,9 @@
       AX_APPEND_COMPILE_FLAGS([-Wpointer-arith],,[$ax_append_compile_cflags_extra])
       AX_APPEND_COMPILE_FLAGS([-Wpointer-sign],,[$ax_append_compile_cflags_extra])
 dnl      AX_APPEND_COMPILE_FLAGS([-Wredundant-decls],,[$ax_append_compile_cflags_extra])
-      AX_APPEND_COMPILE_FLAGS([-Wshadow],,[$ax_append_compile_cflags_extra])
+      AS_CASE([$CFLAGS], [*-Wno-shadow*], [], [
+        AX_APPEND_COMPILE_FLAGS([-Wshadow],,[$ax_append_compile_cflags_extra])
+        ])
       AX_APPEND_COMPILE_FLAGS([-Wshorten-64-to-32],,[$ax_append_compile_cflags_extra])
       AX_APPEND_COMPILE_FLAGS([-Wsign-compare],,[$ax_append_compile_cflags_extra])
       AX_APPEND_COMPILE_FLAGS([-Wstrict-overflow=1],,[$ax_append_compile_cflags_extra])
@@ -207,7 +209,9 @@ dnl      AX_APPEND_COMPILE_FLAGS([-Wredundant-decls],,[$ax_append_compile_cflags
       AX_APPEND_COMPILE_FLAGS([-Woverloaded-virtual],,[$ax_append_compile_cxxflags_extra])
       AX_APPEND_COMPILE_FLAGS([-Wpointer-arith],,[$ax_append_compile_cxxflags_extra])
 dnl      AX_APPEND_COMPILE_FLAGS([-Wredundant-decls],,[$ax_append_compile_cxxflags_extra])
-      AX_APPEND_COMPILE_FLAGS([-Wshadow],,[$ax_append_compile_cxxflags_extra])
+      AS_CASE([$CFLAGS], [*-Wno-shadow*], [], [
+        AX_APPEND_COMPILE_FLAGS([-Wshadow],,[$ax_append_compile_cxxflags_extra])
+        ])
       AX_APPEND_COMPILE_FLAGS([-Wshorten-64-to-32],,[$ax_append_compile_cxxflags_extra])
       AX_APPEND_COMPILE_FLAGS([-Wsign-compare],,[$ax_append_compile_cxxflags_extra])
       AX_APPEND_COMPILE_FLAGS([-Wstrict-overflow=1],,[$ax_append_compile_cxxflags_extra])

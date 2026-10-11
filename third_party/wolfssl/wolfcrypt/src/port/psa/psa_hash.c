@@ -1,12 +1,12 @@
 /* psa_hash.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -127,8 +127,11 @@ static int wc_psa_hash_clone(const psa_hash_operation_t *src,
         return BAD_FUNC_ARG;
 
     PSA_LOCK();
-    psa_hash_abort(dst);
+    s = psa_hash_abort(dst);
     PSA_UNLOCK();
+
+    if (s != PSA_SUCCESS)
+        return WC_HW_E;
 
     PSA_LOCK();
     s = psa_hash_clone(src, dst);
@@ -173,7 +176,9 @@ static int wc_psa_get_hash(psa_hash_operation_t *ctx,
     s = psa_hash_clone(ctx, &tmp);
     PSA_UNLOCK();
     if (s != PSA_SUCCESS) {
+        PSA_LOCK();
         psa_hash_abort(&tmp);
+        PSA_UNLOCK();
         return WC_HW_E;
     }
 

@@ -1,12 +1,12 @@
 /* afalg_hash.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -19,20 +19,19 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1335, USA
  */
 
-
-#ifdef HAVE_CONFIG_H
-    #include <config.h>
+#if defined(__linux__) && !defined(_GNU_SOURCE)
+    #define _GNU_SOURCE 1
 #endif
 
-#include <wolfssl/wolfcrypt/settings.h>
+#include <wolfssl/wolfcrypt/libwolfssl_sources.h>
 
 #if defined(WOLFSSL_AFALG_HASH) || (defined(WOLFSSL_AFALG_XILINX_SHA3) \
         && defined(WOLFSSL_SHA3))
 
-#include <wolfssl/wolfcrypt/error-crypt.h>
-#include <wolfssl/wolfcrypt/logging.h>
 #include <wolfssl/wolfcrypt/port/af_alg/wc_afalg.h>
 #include <wolfssl/wolfcrypt/port/af_alg/afalg_hash.h>
+#include <errno.h>
+#include <fcntl.h>
 
 static const char WC_TYPE_HASH[] = "hash";
 
@@ -43,20 +42,18 @@ static void AfalgHashFree(wolfssl_AFALG_Hash* hash)
     if (hash == NULL)
         return;
 
-    if (hash->alFd > 0) {
+    if (hash->alFd > WC_SOCK_NOTSET) {
         (void)close(hash->alFd);
-        hash->alFd = -1; /* avoid possible double close on socket */
+        hash->alFd = WC_SOCK_NOTSET; /* avoid possible double close on socket */
     }
-    if (hash->rdFd > 0) {
+    if (hash->rdFd > WC_SOCK_NOTSET) {
         (void)close(hash->rdFd);
-        hash->rdFd = -1; /* avoid possible double close on socket */
+        hash->rdFd = WC_SOCK_NOTSET; /* avoid possible double close on socket */
     }
 
     #if defined(WOLFSSL_AFALG_HASH_KEEP)
-    if (hash->msg != NULL) {
-        XFREE(hash->msg, hash->heap, DYNAMIC_TYPE_TMP_BUFFER);
-        hash->msg = NULL;
-    }
+    XFREE(hash->msg, hash->heap, DYNAMIC_TYPE_TMP_BUFFER);
+    hash->msg = NULL;
     #endif
 }
 
@@ -76,8 +73,8 @@ static int AfalgHashInit(wolfssl_AFALG_Hash* hash, void* heap, int devId,
     hash->len  = 0;
     hash->used = 0;
     hash->msg  = NULL;
-    hash->alFd = -1;
-    hash->rdFd = -1;
+    hash->alFd = WC_SOCK_NOTSET;
+    hash->rdFd = WC_SOCK_NOTSET;
 
     hash->alFd = wc_Afalg_Socket();
     if (hash->alFd < 0) {
@@ -87,6 +84,7 @@ static int AfalgHashInit(wolfssl_AFALG_Hash* hash, void* heap, int devId,
     hash->rdFd = wc_Afalg_CreateRead(hash->alFd, WC_TYPE_HASH, type);
     if (hash->rdFd < 0) {
         (void)close(hash->alFd);
+        hash->alFd = WC_SOCK_NOTSET;
         return WC_AFALG_SOCK_E;
     }
 
@@ -195,7 +193,7 @@ static int AfalgHashGet(wolfssl_AFALG_Hash* hash, byte* out, word32 outSz)
     }
 
     if ((ret = (int)read(hash->rdFd, out, outSz)) != (int)outSz) {
-        return ret;
+        return WC_AFALG_SOCK_E;
     }
     return 0;
 #else
@@ -219,20 +217,24 @@ static int AfalgHashCopy(wolfssl_AFALG_Hash* src, wolfssl_AFALG_Hash* dst)
     XMEMCPY(dst, src, sizeof(wolfssl_AFALG_Hash));
 
 #ifdef WOLFSSL_AFALG_HASH_KEEP
-    dst->msg = (byte*)XMALLOC(src->len, dst->heap, DYNAMIC_TYPE_TMP_BUFFER);
-    if (dst->msg == NULL) {
-        return MEMORY_E;
-    }
-    if (src->len > 0)
+    if (src->len > 0) {
+        dst->msg = (byte*)XMALLOC(src->len, dst->heap, DYNAMIC_TYPE_TMP_BUFFER);
+        if (dst->msg == NULL) {
+            return MEMORY_E;
+        }
         XMEMCPY(dst->msg, src->msg, src->len);
+    }
+    else {
+        dst->msg = NULL;
+    }
 #endif
 
-    dst->rdFd = accept(src->rdFd, NULL, 0);
-    dst->alFd = accept(src->alFd, NULL, 0);
+    dst->rdFd = wc_accept_cloexec(src->rdFd, NULL, NULL);
+    dst->alFd = wc_accept_cloexec(src->alFd, NULL, NULL);
 
-    if (dst->rdFd == -1 || dst->alFd == -1) {
+    if (dst->rdFd == WC_SOCK_NOTSET || dst->alFd == WC_SOCK_NOTSET) {
         AfalgHashFree(dst);
-        return -1;
+        return WC_AFALG_SOCK_E;
     }
 
     return 0;

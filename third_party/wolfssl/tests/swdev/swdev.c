@@ -1,0 +1,1680 @@
+/* swdev.c
+ *
+ * Copyright (C) 2006-2026 wolfSSL Inc.
+ *
+ * This file is part of wolfSSL.
+ *
+ * wolfSSL is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * wolfSSL is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1335, USA
+ */
+
+/* wc_swdev callback. */
+
+#include "swdev.h"
+
+#include <wolfssl/wolfcrypt/settings.h>
+#include <wolfssl/wolfcrypt/types.h>
+#include <wolfssl/wolfcrypt/error-crypt.h>
+#include <wolfssl/wolfcrypt/wc_port.h>
+
+#ifndef NO_RSA
+#include <wolfssl/wolfcrypt/rsa.h>
+#endif
+#ifdef HAVE_ECC
+#include <wolfssl/wolfcrypt/ecc.h>
+#endif
+#ifndef NO_SHA256
+#include <wolfssl/wolfcrypt/sha256.h>
+#endif
+#ifndef NO_AES
+#include <wolfssl/wolfcrypt/aes.h>
+#endif
+#ifdef HAVE_ED25519
+#include <wolfssl/wolfcrypt/ed25519.h>
+#endif
+#ifdef HAVE_CURVE25519
+#include <wolfssl/wolfcrypt/curve25519.h>
+#endif
+#ifdef HAVE_CURVE448
+#include <wolfssl/wolfcrypt/curve448.h>
+#endif
+#ifdef WOLFSSL_HAVE_SLHDSA
+#include <wolfssl/wolfcrypt/wc_slhdsa.h>
+#endif
+#ifdef WOLFSSL_HAVE_MLKEM
+#include <wolfssl/wolfcrypt/wc_mlkem.h>
+#endif
+
+static int swdev_initialized = 0;
+
+static int swdev_ensure_init(void)
+{
+    if (!swdev_initialized) {
+        int ret = wolfCrypt_Init();
+        if (ret != 0)
+            return ret;
+        swdev_initialized = 1;
+    }
+    return 0;
+}
+
+WC_SWDEV_EXPORT void wc_SwDev_InternalCleanup(void)
+{
+    if (swdev_initialized) {
+        wolfCrypt_Cleanup();
+        swdev_initialized = 0;
+    }
+}
+
+#ifndef NO_RSA
+static int swdev_rsa(wc_CryptoInfo* info)
+{
+    switch (info->pk.rsa.type) {
+    case RSA_PUBLIC_ENCRYPT:
+    case RSA_PUBLIC_DECRYPT:
+    case RSA_PRIVATE_ENCRYPT:
+    case RSA_PRIVATE_DECRYPT:
+        return wc_RsaFunction(info->pk.rsa.in, info->pk.rsa.inLen,
+            info->pk.rsa.out, info->pk.rsa.outLen, info->pk.rsa.type,
+            info->pk.rsa.key, info->pk.rsa.rng);
+    default:
+        return CRYPTOCB_UNAVAILABLE;
+    }
+}
+
+#ifdef WOLFSSL_KEY_GEN
+static int swdev_rsa_keygen(wc_CryptoInfo* info)
+{
+    return wc_MakeRsaKey(info->pk.rsakg.key, info->pk.rsakg.size,
+        info->pk.rsakg.e, info->pk.rsakg.rng);
+}
+#endif
+#endif /* !NO_RSA */
+
+#ifdef HAVE_ECC
+static int swdev_ecc_keygen(wc_CryptoInfo* info)
+{
+#ifdef HAVE_ECC_DHE
+    return wc_ecc_make_key_ex(info->pk.eckg.rng, info->pk.eckg.size,
+        info->pk.eckg.key, info->pk.eckg.curveId);
+#else
+    (void)info;
+    return CRYPTOCB_UNAVAILABLE;
+#endif
+}
+
+static int swdev_ecdh(wc_CryptoInfo* info)
+{
+#ifdef HAVE_ECC_DHE
+    return wc_ecc_shared_secret(info->pk.ecdh.private_key,
+        info->pk.ecdh.public_key, info->pk.ecdh.out,
+        info->pk.ecdh.outlen);
+#else
+    (void)info;
+    return CRYPTOCB_UNAVAILABLE;
+#endif
+}
+
+static int swdev_ecc_sign(wc_CryptoInfo* info)
+{
+#ifdef HAVE_ECC_SIGN
+    return wc_ecc_sign_hash(info->pk.eccsign.in, info->pk.eccsign.inlen,
+        info->pk.eccsign.out, info->pk.eccsign.outlen,
+        info->pk.eccsign.rng, info->pk.eccsign.key);
+#else
+    (void)info;
+    return CRYPTOCB_UNAVAILABLE;
+#endif
+}
+
+static int swdev_ecc_verify(wc_CryptoInfo* info)
+{
+#ifdef HAVE_ECC_VERIFY
+    return wc_ecc_verify_hash(info->pk.eccverify.sig,
+        info->pk.eccverify.siglen, info->pk.eccverify.hash,
+        info->pk.eccverify.hashlen, info->pk.eccverify.res,
+        info->pk.eccverify.key);
+#else
+    (void)info;
+    return CRYPTOCB_UNAVAILABLE;
+#endif
+}
+
+static int swdev_ecc_get_size(wc_CryptoInfo* info)
+{
+    int sz = wc_ecc_size((ecc_key*)info->pk.ecc_get_size.key);
+    if (sz <= 0)
+        return sz; /* propagate negative error */
+    *info->pk.ecc_get_size.keySize = sz;
+    return 0;
+}
+
+static int swdev_ecc_get_sig_size(wc_CryptoInfo* info)
+{
+    int sz = wc_ecc_sig_size(info->pk.ecc_get_sig_size.key);
+    if (sz <= 0)
+        return sz;
+    *info->pk.ecc_get_sig_size.sigSize = sz;
+    return 0;
+}
+
+static int swdev_ecc_make_pub(wc_CryptoInfo* info)
+{
+    int        ret;
+    ecc_key*   key = info->pk.ecc_make_pub.key;
+    ecc_point* pub = wc_ecc_new_point_h(key->heap);
+
+    if (pub == NULL)
+        return MEMORY_E;
+
+    /* derive Q = d*G in software, then emit X9.63 uncompressed bytes. The
+     * point is serialized with the curve size from key->dp so custom-curve
+     * keys (idx == ECC_CUSTOM_IDX) work too; wc_ecc_export_point_der rejects
+     * negative curve indices. */
+    ret = wc_ecc_make_pub(key, pub);
+    if (ret == 0) {
+        byte*  out     = info->pk.ecc_make_pub.pubOut;
+        word32 curveSz = (word32)key->dp->size;
+        word32 ptSz    = 1 + 2 * curveSz;
+        word32 xSz     = curveSz;
+        word32 ySz     = curveSz;
+
+        if (*info->pk.ecc_make_pub.pubOutSz < ptSz) {
+            ret = BUFFER_E;
+        }
+        else {
+            out[0] = ECC_POINT_UNCOMP;
+            ret = wc_export_int(pub->x, out + 1, &xSz, curveSz,
+                WC_TYPE_UNSIGNED_BIN);
+            if (ret == MP_OKAY)
+                ret = wc_export_int(pub->y, out + 1 + curveSz, &ySz, curveSz,
+                    WC_TYPE_UNSIGNED_BIN);
+            if (ret == MP_OKAY)
+                *info->pk.ecc_make_pub.pubOutSz = ptSz;
+        }
+    }
+
+    wc_ecc_del_point_h(pub, key->heap);
+    return ret;
+}
+
+#ifdef HAVE_ECC_CHECK_KEY
+static int swdev_ecc_check_pub(wc_CryptoInfo* info)
+{
+    ecc_key* key = info->pk.ecc_check_pub.key;
+    int      ret = 0;
+    int      validatedFromWire = 0;
+
+    if (info->pk.ecc_check_pub.pubKeySz == 0) {
+        return ECC_INF_E;
+    }
+#ifdef HAVE_ECC_KEY_IMPORT
+    if (key->idx >= 0) {
+        WC_DECLARE_VAR(pubOnly, ecc_key, 1, key->heap);
+        WC_ALLOC_VAR(pubOnly, ecc_key, 1, key->heap);
+        if (!WC_VAR_OK(pubOnly))
+            ret = MEMORY_E;
+        else
+            ret = wc_ecc_init_ex(pubOnly, key->heap, INVALID_DEVID);
+        if (ret == 0) {
+            ret = wc_ecc_import_x963_ex(info->pk.ecc_check_pub.pubKey,
+                info->pk.ecc_check_pub.pubKeySz, pubOnly, key->dp->id);
+            if (ret == 0 &&
+                    wc_ecc_cmp_point(&pubOnly->pubkey, &key->pubkey) != MP_EQ) {
+                /* wire bytes disagree with key->pubkey */
+                ret = BAD_STATE_E;
+            }
+            if (ret == 0)
+                ret = wc_ecc_check_key(pubOnly);
+            wc_ecc_free(pubOnly);
+        }
+        WC_FREE_VAR(pubOnly, key->heap);
+        validatedFromWire = 1;
+    }
+#endif
+    if (ret == 0 && (!validatedFromWire ||
+            (info->pk.ecc_check_pub.checkPriv &&
+             key->type == ECC_PRIVATEKEY))) {
+        ret = wc_ecc_check_key(key);
+    }
+    return ret;
+}
+#endif /* HAVE_ECC_CHECK_KEY */
+#endif /* HAVE_ECC */
+
+#ifdef HAVE_ED25519
+#ifdef HAVE_ED25519_MAKE_KEY
+static int swdev_ed25519_keygen(wc_CryptoInfo* info)
+{
+    return wc_ed25519_make_key(info->pk.ed25519kg.rng,
+        info->pk.ed25519kg.size, info->pk.ed25519kg.key);
+}
+#endif
+
+#ifdef HAVE_ED25519_SIGN
+static int swdev_ed25519_sign(wc_CryptoInfo* info)
+{
+    return wc_ed25519_sign_msg_ex(info->pk.ed25519sign.in,
+        info->pk.ed25519sign.inLen, info->pk.ed25519sign.out,
+        info->pk.ed25519sign.outLen, info->pk.ed25519sign.key,
+        info->pk.ed25519sign.type, info->pk.ed25519sign.context,
+        info->pk.ed25519sign.contextLen);
+}
+#endif
+
+#ifdef HAVE_ED25519_VERIFY
+static int swdev_ed25519_verify(wc_CryptoInfo* info)
+{
+    return wc_ed25519_verify_msg_ex(info->pk.ed25519verify.sig,
+        info->pk.ed25519verify.sigLen, info->pk.ed25519verify.msg,
+        info->pk.ed25519verify.msgLen, info->pk.ed25519verify.res,
+        info->pk.ed25519verify.key, info->pk.ed25519verify.type,
+        info->pk.ed25519verify.context, info->pk.ed25519verify.contextLen);
+}
+#endif
+
+#ifdef HAVE_ED25519_MAKE_KEY
+static int swdev_ed25519_make_pub(wc_CryptoInfo* info)
+{
+    if (info->pk.ed25519makepub.pubOutSz != ED25519_PUB_KEY_SIZE)
+        return BUFFER_E;
+    return wc_ed25519_make_public(info->pk.ed25519makepub.key,
+        info->pk.ed25519makepub.pubOut, info->pk.ed25519makepub.pubOutSz);
+}
+#endif
+
+static int swdev_ed25519_check_key(wc_CryptoInfo* info)
+{
+    ed25519_key* key = info->pk.ed25519checkkey.key;
+    int ret = 0;
+    int validatedFromWire = 0;
+
+#ifdef HAVE_ED25519_KEY_IMPORT
+    {
+        WC_DECLARE_VAR(pubOnly, ed25519_key, 1, key->heap);
+
+        /* vault-style consumption: rebuild a public-only key from the wire
+         * bytes and validate it, proving the serialized form is sufficient.
+         * trusted=0 runs the full public-key validation during import. */
+        WC_ALLOC_VAR(pubOnly, ed25519_key, 1, key->heap);
+        if (!WC_VAR_OK(pubOnly))
+            return MEMORY_E;
+        ret = wc_ed25519_init_ex(pubOnly, key->heap, INVALID_DEVID);
+        if (ret == 0) {
+            ret = wc_ed25519_import_public_ex(info->pk.ed25519checkkey.pubKey,
+                info->pk.ed25519checkkey.pubKeySz, pubOnly, 0);
+        }
+        wc_ed25519_free(pubOnly);
+        WC_FREE_VAR(pubOnly, key->heap);
+        validatedFromWire = 1;
+    }
+#endif
+    /* private part (and public-only validation when the import path is
+     * unavailable): validate via the key handle */
+    if (ret == 0 && (!validatedFromWire ||
+            info->pk.ed25519checkkey.checkPriv)) {
+        ret = wc_ed25519_check_key(key);
+    }
+    return ret;
+}
+#endif /* HAVE_ED25519 */
+
+#ifdef HAVE_CURVE25519
+static int swdev_curve25519_keygen(wc_CryptoInfo* info)
+{
+    return wc_curve25519_make_key(info->pk.curve25519kg.rng,
+        info->pk.curve25519kg.size, info->pk.curve25519kg.key);
+}
+
+#ifdef HAVE_CURVE25519_SHARED_SECRET
+static int swdev_curve25519(wc_CryptoInfo* info)
+{
+    return wc_curve25519_shared_secret_ex(info->pk.curve25519.private_key,
+        info->pk.curve25519.public_key, info->pk.curve25519.out,
+        info->pk.curve25519.outlen, info->pk.curve25519.endian);
+}
+#endif /* HAVE_CURVE25519_SHARED_SECRET */
+
+static int swdev_curve25519_make_pub(wc_CryptoInfo* info)
+{
+    return wc_curve25519_make_pub((int)info->pk.curve25519makepub.pubSz,
+        info->pk.curve25519makepub.pub,
+        (int)info->pk.curve25519makepub.privSz,
+        info->pk.curve25519makepub.priv);
+}
+
+static int swdev_curve25519_generic(wc_CryptoInfo* info)
+{
+    return wc_curve25519_generic((int)info->pk.curve25519generic.pubSz,
+        info->pk.curve25519generic.pub,
+        (int)info->pk.curve25519generic.privSz,
+        info->pk.curve25519generic.priv,
+        (int)info->pk.curve25519generic.basepointSz,
+        info->pk.curve25519generic.basepoint);
+}
+#endif /* HAVE_CURVE25519 */
+
+#ifdef HAVE_CURVE448
+static int swdev_curve448_keygen(wc_CryptoInfo* info)
+{
+    return wc_curve448_make_key(info->pk.curve448kg.rng,
+        info->pk.curve448kg.size, info->pk.curve448kg.key);
+}
+
+#ifdef HAVE_CURVE448_SHARED_SECRET
+static int swdev_curve448(wc_CryptoInfo* info)
+{
+    return wc_curve448_shared_secret_ex(info->pk.curve448.private_key,
+        info->pk.curve448.public_key, info->pk.curve448.out,
+        info->pk.curve448.outlen, info->pk.curve448.endian);
+}
+#endif /* HAVE_CURVE448_SHARED_SECRET */
+
+static int swdev_curve448_make_pub(wc_CryptoInfo* info)
+{
+    return wc_curve448_make_pub((int)info->pk.curve448makepub.pubSz,
+        info->pk.curve448makepub.pub,
+        (int)info->pk.curve448makepub.privSz,
+        info->pk.curve448makepub.priv);
+}
+
+static int swdev_curve448_generic(wc_CryptoInfo* info)
+{
+    return wc_curve448_generic((int)info->pk.curve448generic.pubSz,
+        info->pk.curve448generic.pub,
+        (int)info->pk.curve448generic.privSz,
+        info->pk.curve448generic.priv,
+        (int)info->pk.curve448generic.basepointSz,
+        info->pk.curve448generic.basepoint);
+}
+#endif /* HAVE_CURVE448 */
+#ifdef WOLFSSL_HAVE_SLHDSA
+/* Take the key over for the duration of one operation.
+ *
+ * The key handed across the callback boundary still carries the device id, so
+ * the software calls below would dispatch straight back into swdev. Detach it
+ * and hand the old value back to the caller to restore.
+ *
+ * The parent library skips deriving the SHA-2 midstates from PK.seed when the
+ * software implementation is stripped, so re-import the public key here to
+ * bring them up to date. Importing the public key only sets the public flag,
+ * which is already set, so it is safe for private keys too.
+ */
+static int swdev_slhdsa_take(SlhDsaKey* key, int* devId)
+{
+    int ret = 0;
+
+    *devId = INVALID_DEVID;
+    if ((key == NULL) || (key->params == NULL))
+        return BAD_FUNC_ARG;
+
+    *devId = key->devId;
+    key->devId = INVALID_DEVID;
+
+    if ((key->flags & WC_SLHDSA_FLAG_PUBLIC) != 0) {
+        byte pub[2 * WC_SLHDSA_MAX_SEED];
+        word32 pubSz = 2U * key->params->n;
+
+        /* Stage through a local buffer: import copies into the key and the
+         * source would otherwise be the destination. */
+        XMEMCPY(pub, key->sk + 2 * key->params->n, pubSz);
+        ret = wc_SlhDsaKey_ImportPublic(key, pub, pubSz);
+    }
+
+    return ret;
+}
+
+static void swdev_slhdsa_give_back(SlhDsaKey* key, int devId)
+{
+    if (key != NULL)
+        key->devId = devId;
+}
+
+#ifndef WOLFSSL_SLHDSA_VERIFY_ONLY
+static int swdev_slhdsa_keygen(wc_CryptoInfo* info)
+{
+    SlhDsaKey* key = (SlhDsaKey*)info->pk.pqc_sig_kg.key;
+    const byte* seed = info->pk.pqc_sig_kg.seed;
+    int devId;
+    int ret;
+
+    ret = swdev_slhdsa_take(key, &devId);
+    if (ret == 0) {
+        if (seed != NULL) {
+            byte n = key->params->n;
+
+            if (info->pk.pqc_sig_kg.seedSz != 3U * (word32)n) {
+                ret = BUFFER_E;
+            }
+            else {
+                ret = wc_SlhDsaKey_MakeKeyWithRandom(key, seed, n, seed + n, n,
+                    seed + 2 * n, n);
+            }
+        }
+        else {
+            ret = wc_SlhDsaKey_MakeKey(key, info->pk.pqc_sig_kg.rng);
+        }
+    }
+    swdev_slhdsa_give_back(key, devId);
+
+    return ret;
+}
+
+static int swdev_slhdsa_sign(wc_CryptoInfo* info)
+{
+    SlhDsaKey* key = (SlhDsaKey*)info->pk.pqc_sign.key;
+    const byte* addRnd = info->pk.pqc_sign.addRnd;
+    enum wc_HashType hashType = (enum wc_HashType)info->pk.pqc_sign.preHashType;
+    int devId;
+    int ret;
+
+    ret = swdev_slhdsa_take(key, &devId);
+    if (ret == 0) {
+        if (hashType == WC_HASH_TYPE_NONE) {
+            /* Pure SLH-DSA. */
+            if (addRnd != NULL) {
+                ret = wc_SlhDsaKey_SignWithRandom(key,
+                    info->pk.pqc_sign.context, info->pk.pqc_sign.contextLen,
+                    info->pk.pqc_sign.in, info->pk.pqc_sign.inlen,
+                    info->pk.pqc_sign.out, info->pk.pqc_sign.outlen, addRnd);
+            }
+            else {
+                ret = wc_SlhDsaKey_Sign(key, info->pk.pqc_sign.context,
+                    info->pk.pqc_sign.contextLen, info->pk.pqc_sign.in,
+                    info->pk.pqc_sign.inlen, info->pk.pqc_sign.out,
+                    info->pk.pqc_sign.outlen, info->pk.pqc_sign.rng);
+            }
+        }
+        else {
+            /* HashSLH-DSA over a caller supplied digest. */
+            if (addRnd != NULL) {
+                ret = wc_SlhDsaKey_SignHashWithRandom(key,
+                    info->pk.pqc_sign.context, info->pk.pqc_sign.contextLen,
+                    info->pk.pqc_sign.in, info->pk.pqc_sign.inlen, hashType,
+                    info->pk.pqc_sign.out, info->pk.pqc_sign.outlen, addRnd);
+            }
+            else {
+                ret = wc_SlhDsaKey_SignHash(key, info->pk.pqc_sign.context,
+                    info->pk.pqc_sign.contextLen, info->pk.pqc_sign.in,
+                    info->pk.pqc_sign.inlen, hashType, info->pk.pqc_sign.out,
+                    info->pk.pqc_sign.outlen, info->pk.pqc_sign.rng);
+            }
+        }
+    }
+    swdev_slhdsa_give_back(key, devId);
+
+    return ret;
+}
+
+static int swdev_slhdsa_sign_msg(wc_CryptoInfo* info)
+{
+    SlhDsaKey* key = (SlhDsaKey*)info->pk.pqc_sign.key;
+    int devId;
+    int ret;
+
+    ret = swdev_slhdsa_take(key, &devId);
+    if (ret == 0) {
+        ret = wc_SlhDsaKey_SignMsgWithRandom(key, info->pk.pqc_sign.in,
+            info->pk.pqc_sign.inlen, info->pk.pqc_sign.out,
+            info->pk.pqc_sign.outlen, info->pk.pqc_sign.addRnd);
+    }
+    swdev_slhdsa_give_back(key, devId);
+
+    return ret;
+}
+
+#endif /* !WOLFSSL_SLHDSA_VERIFY_ONLY */
+
+static int swdev_slhdsa_verify(wc_CryptoInfo* info)
+{
+    SlhDsaKey* key = (SlhDsaKey*)info->pk.pqc_verify.key;
+    enum wc_HashType hashType =
+        (enum wc_HashType)info->pk.pqc_verify.preHashType;
+    int devId;
+    int ret;
+
+    ret = swdev_slhdsa_take(key, &devId);
+    if (ret == 0) {
+        if (hashType == WC_HASH_TYPE_NONE) {
+            ret = wc_SlhDsaKey_Verify(key, info->pk.pqc_verify.context,
+                info->pk.pqc_verify.contextLen, info->pk.pqc_verify.msg,
+                info->pk.pqc_verify.msglen, info->pk.pqc_verify.sig,
+                info->pk.pqc_verify.siglen);
+        }
+        else {
+            ret = wc_SlhDsaKey_VerifyHash(key, info->pk.pqc_verify.context,
+                info->pk.pqc_verify.contextLen, info->pk.pqc_verify.msg,
+                info->pk.pqc_verify.msglen, hashType, info->pk.pqc_verify.sig,
+                info->pk.pqc_verify.siglen);
+        }
+    }
+    swdev_slhdsa_give_back(key, devId);
+
+    /* A bad signature is reported through res, not the return code. */
+    if (ret == WC_NO_ERR_TRACE(SIG_VERIFY_E)) {
+        *info->pk.pqc_verify.res = 0;
+        ret = 0;
+    }
+    else if (ret == 0) {
+        *info->pk.pqc_verify.res = 1;
+    }
+
+    return ret;
+}
+
+static int swdev_slhdsa_verify_msg(wc_CryptoInfo* info)
+{
+    SlhDsaKey* key = (SlhDsaKey*)info->pk.pqc_verify.key;
+    int devId;
+    int ret;
+
+    ret = swdev_slhdsa_take(key, &devId);
+    if (ret == 0) {
+        ret = wc_SlhDsaKey_VerifyMsg(key, info->pk.pqc_verify.msg,
+            info->pk.pqc_verify.msglen, info->pk.pqc_verify.sig,
+            info->pk.pqc_verify.siglen);
+    }
+    swdev_slhdsa_give_back(key, devId);
+
+    /* A bad signature is reported through res, not the return code. */
+    if (ret == WC_NO_ERR_TRACE(SIG_VERIFY_E)) {
+        *info->pk.pqc_verify.res = 0;
+        ret = 0;
+    }
+    else if (ret == 0) {
+        *info->pk.pqc_verify.res = 1;
+    }
+
+    return ret;
+}
+
+#ifndef WOLFSSL_SLHDSA_VERIFY_ONLY
+static int swdev_slhdsa_check_priv_key(wc_CryptoInfo* info)
+{
+    SlhDsaKey* key = (SlhDsaKey*)info->pk.pqc_sig_check.key;
+    int devId;
+    int ret;
+
+    /* The public key travels alongside the private key data, so check the
+     * caller's copy agrees before recomputing the root from the seeds. */
+    if ((info->pk.pqc_sig_check.pubKey != NULL) &&
+            (info->pk.pqc_sig_check.pubKeySz != 2U * key->params->n)) {
+        return BUFFER_E;
+    }
+
+    ret = swdev_slhdsa_take(key, &devId);
+    if (ret == 0) {
+        ret = wc_SlhDsaKey_CheckKey(key);
+    }
+    swdev_slhdsa_give_back(key, devId);
+
+    return ret;
+}
+
+#endif /* !WOLFSSL_SLHDSA_VERIFY_ONLY */
+
+/* Dispatch a PQC signature operation, declining the families swdev has no
+ * handler for so the caller can fall back. */
+static int swdev_pqc_sig(wc_CryptoInfo* info, int type, int pkType)
+{
+    if (type != WC_PQC_SIG_TYPE_SLHDSA)
+        return CRYPTOCB_UNAVAILABLE;
+
+    switch (pkType) {
+#ifndef WOLFSSL_SLHDSA_VERIFY_ONLY
+    case WC_PK_TYPE_PQC_SIG_KEYGEN:
+    case WC_PK_TYPE_PQC_SIG_KEYGEN_SEED:
+        return swdev_slhdsa_keygen(info);
+    case WC_PK_TYPE_PQC_SIG_SIGN:
+        return swdev_slhdsa_sign(info);
+    case WC_PK_TYPE_PQC_SIG_SIGN_MSG:
+        return swdev_slhdsa_sign_msg(info);
+    case WC_PK_TYPE_PQC_SIG_CHECK_PRIV_KEY:
+        return swdev_slhdsa_check_priv_key(info);
+#endif /* !WOLFSSL_SLHDSA_VERIFY_ONLY */
+    case WC_PK_TYPE_PQC_SIG_VERIFY:
+        return swdev_slhdsa_verify(info);
+    case WC_PK_TYPE_PQC_SIG_VERIFY_MSG:
+        return swdev_slhdsa_verify_msg(info);
+    default:
+        return CRYPTOCB_UNAVAILABLE;
+    }
+}
+#endif /* WOLFSSL_HAVE_SLHDSA */
+
+#ifdef WOLFSSL_HAVE_MLKEM
+#ifndef WOLFSSL_MLKEM_NO_MAKE_KEY
+static int swdev_mlkem_keygen(wc_CryptoInfo* info)
+{
+    return wc_MlKemKey_MakeKey((MlKemKey*)info->pk.pqc_kem_kg.key,
+        info->pk.pqc_kem_kg.rng);
+}
+#endif
+
+#ifndef WOLFSSL_MLKEM_NO_ENCAPSULATE
+static int swdev_mlkem_encaps(wc_CryptoInfo* info)
+{
+    MlKemKey* key = (MlKemKey*)info->pk.pqc_encaps.key;
+    word32 ctSz = 0;
+    int ret;
+
+    ret = wc_MlKemKey_CipherTextSize(key, &ctSz);
+    if ((ret == 0) && ((info->pk.pqc_encaps.ciphertextLen != ctSz) ||
+            (info->pk.pqc_encaps.sharedSecretLen != WC_ML_KEM_SS_SZ))) {
+        ret = BUFFER_E;
+    }
+    if (ret == 0) {
+        ret = wc_MlKemKey_Encapsulate(key, info->pk.pqc_encaps.ciphertext,
+            info->pk.pqc_encaps.sharedSecret, info->pk.pqc_encaps.rng);
+    }
+
+    return ret;
+}
+#endif
+
+#ifndef WOLFSSL_MLKEM_NO_DECAPSULATE
+static int swdev_mlkem_decaps(wc_CryptoInfo* info)
+{
+    if (info->pk.pqc_decaps.sharedSecretLen != WC_ML_KEM_SS_SZ)
+        return BUFFER_E;
+    return wc_MlKemKey_Decapsulate((MlKemKey*)info->pk.pqc_decaps.key,
+        info->pk.pqc_decaps.sharedSecret, info->pk.pqc_decaps.ciphertext,
+        info->pk.pqc_decaps.ciphertextLen);
+}
+#endif
+
+/* Dispatch a PQC KEM operation, declining the families swdev has no handler
+ * for so the caller can fall back. */
+static int swdev_pqc_kem(wc_CryptoInfo* info, int type, int pkType)
+{
+    if (type != WC_PQC_KEM_TYPE_MLKEM)
+        return CRYPTOCB_UNAVAILABLE;
+
+    switch (pkType) {
+#ifndef WOLFSSL_MLKEM_NO_MAKE_KEY
+    case WC_PK_TYPE_PQC_KEM_KEYGEN:
+        return swdev_mlkem_keygen(info);
+#endif
+#ifndef WOLFSSL_MLKEM_NO_ENCAPSULATE
+    case WC_PK_TYPE_PQC_KEM_ENCAPS:
+        return swdev_mlkem_encaps(info);
+#endif
+#ifndef WOLFSSL_MLKEM_NO_DECAPSULATE
+    case WC_PK_TYPE_PQC_KEM_DECAPS:
+        return swdev_mlkem_decaps(info);
+#endif
+    default:
+        return CRYPTOCB_UNAVAILABLE;
+    }
+}
+#endif /* WOLFSSL_HAVE_MLKEM */
+
+#if defined(WOLFSSL_SHAKE128) || defined(WOLFSSL_SHAKE256)
+/* Copy sponge state between the caller's wc_Shake and swdev's shadow */
+static void swdev_shake_copy_state(wc_Shake* dst, const wc_Shake* src)
+{
+    XMEMCPY(dst->s, src->s, sizeof(dst->s));
+    XMEMCPY(dst->t, src->t, sizeof(dst->t));
+    dst->i = src->i;
+#ifdef WOLFSSL_HASH_FLAGS
+    dst->flags = src->flags;
+#endif
+}
+
+static int swdev_shake_op(const wc_CryptoInfo* info)
+{
+#ifdef WOLF_CRYPTO_CB_SHAKE_XOF
+    return info->hash.shakeOp;
+#else
+    (void)info;
+    return WC_SHAKE_OP_NONE;
+#endif
+}
+
+typedef struct swdev_shake_funcs {
+    int    type;
+    word32 rate;
+    int    (*initFn)(wc_Shake*, void*, int);
+    int    (*updateFn)(wc_Shake*, const byte*, word32);
+    int    (*finalFn)(wc_Shake*, byte*, word32);
+    int    (*absorbFn)(wc_Shake*, const byte*, word32);
+    int    (*squeezeFn)(wc_Shake*, byte*, word32);
+    void   (*freeFn)(wc_Shake*);
+} swdev_shake_funcs;
+
+static const swdev_shake_funcs swdev_shake_table[] = {
+#ifdef WOLFSSL_SHAKE128
+    { WC_HASH_TYPE_SHAKE128, WC_SHA3_128_COUNT * 8U, wc_InitShake128,
+      wc_Shake128_Update, wc_Shake128_Final, wc_Shake128_Absorb,
+      wc_Shake128_SqueezeBlocks, wc_Shake128_Free },
+#endif
+#ifdef WOLFSSL_SHAKE256
+    { WC_HASH_TYPE_SHAKE256, WC_SHA3_256_COUNT * 8U, wc_InitShake256,
+      wc_Shake256_Update, wc_Shake256_Final, wc_Shake256_Absorb,
+      wc_Shake256_SqueezeBlocks, wc_Shake256_Free },
+#endif
+};
+
+/* SHAKE handler. When shakeOp is WC_SHAKE_OP_NONE, update and final operations
+ * are determined by hash.digest. Otherwise hash.shakeOp selects the op. */
+static int swdev_shake(wc_CryptoInfo* info)
+{
+    wc_Shake* shake = info->hash.sha3;
+    wc_Shake  shadow;
+    const swdev_shake_funcs* f = NULL;
+    size_t    idx;
+    int       ret;
+
+    if (shake == NULL)
+        return BAD_FUNC_ARG;
+
+    for (idx = 0; idx < sizeof(swdev_shake_table) /
+            sizeof(swdev_shake_table[0]); idx++) {
+        if (swdev_shake_table[idx].type == info->hash.type) {
+            f = &swdev_shake_table[idx];
+            break;
+        }
+    }
+    if (f == NULL)
+        return CRYPTOCB_UNAVAILABLE;
+
+    ret = f->initFn(&shadow, NULL, INVALID_DEVID);
+    if (ret != 0)
+        return ret;
+
+    swdev_shake_copy_state(&shadow, shake);
+
+    switch (swdev_shake_op(info)) {
+    case WC_SHAKE_OP_ABSORB:
+        ret = f->absorbFn(&shadow, info->hash.in, info->hash.inSz);
+        break;
+
+    case WC_SHAKE_OP_SQUEEZE:
+        /* outSz is the byte count; the API takes whole blocks. */
+        if ((info->hash.outSz % f->rate) != 0) {
+            ret = BAD_FUNC_ARG;
+            break;
+        }
+        ret = f->squeezeFn(&shadow, info->hash.digest,
+            info->hash.outSz / f->rate);
+        break;
+
+    default:
+        if (info->hash.in != NULL) {
+            ret = f->updateFn(&shadow, info->hash.in, info->hash.inSz);
+        }
+        if ((ret == 0) && (info->hash.digest != NULL)) {
+            ret = f->finalFn(&shadow, info->hash.digest, info->hash.outSz);
+        }
+        break;
+    }
+
+    if (ret == 0) {
+        swdev_shake_copy_state(shake, &shadow);
+    }
+
+    f->freeFn(&shadow);
+
+    return ret;
+}
+#endif /* WOLFSSL_SHAKE128 || WOLFSSL_SHAKE256 */
+
+#ifndef NO_SHA256
+/* Copy hash state between caller's wc_Sha256 and swdev's shadow, leaving
+ * admin fields (heap, devId, devCtx, W, async, HW ctx) per-side. */
+static void swdev_sha256_copy_state(wc_Sha256* dst, const wc_Sha256* src)
+{
+    XMEMCPY(dst->digest, src->digest, sizeof(dst->digest));
+    XMEMCPY(dst->buffer, src->buffer, sizeof(dst->buffer));
+    dst->buffLen = src->buffLen;
+    dst->loLen   = src->loLen;
+    dst->hiLen   = src->hiLen;
+#if defined(WC_C_DYNAMIC_FALLBACK) && defined(HAVE_FIPS) && FIPS_VERSION3_LT(7,0,0)
+    dst->sha_method = src->sha_method;
+#endif
+#ifdef WOLFSSL_HASH_FLAGS
+    dst->flags = src->flags;
+#endif
+}
+
+/* Run the op on a per-call shadow wc_Sha256 owned by swdev, copying state
+ * in and out around it. The caller's struct, allocated by libwolfssl with
+ * the software init stripped, can't be used directly. */
+static int swdev_sha256(wc_CryptoInfo* info)
+{
+    wc_Sha256* sha256 = info->hash.sha256;
+    wc_Sha256 shadow;
+    int ret;
+
+    if (sha256 == NULL)
+        return BAD_FUNC_ARG;
+
+    ret = wc_InitSha256(&shadow);
+    if (ret != 0)
+        return ret;
+
+    swdev_sha256_copy_state(&shadow, sha256);
+
+    if (info->hash.in != NULL) {
+        ret = wc_Sha256Update(&shadow, info->hash.in, info->hash.inSz);
+        if (ret != 0)
+            goto out;
+    }
+
+    if (info->hash.digest != NULL) {
+        ret = wc_Sha256Final(&shadow, info->hash.digest);
+        if (ret != 0)
+            goto out;
+    }
+
+    swdev_sha256_copy_state(sha256, &shadow);
+
+out:
+    wc_Sha256Free(&shadow);
+    return ret;
+}
+
+#ifdef WOLFSSL_SHA224
+/* SHA-224 is SHA-256 with a different IV/truncation; wc_Sha224 is a typedef
+ * of wc_Sha256, so the same shadow/copy-state dance applies. */
+static int swdev_sha224(wc_CryptoInfo* info)
+{
+    wc_Sha224* sha224 = info->hash.sha224;
+    wc_Sha224 shadow;
+    int ret;
+
+    if (sha224 == NULL)
+        return BAD_FUNC_ARG;
+
+    ret = wc_InitSha224(&shadow);
+    if (ret != 0)
+        return ret;
+
+    swdev_sha256_copy_state((wc_Sha256*)&shadow, (const wc_Sha256*)sha224);
+
+    if (info->hash.in != NULL) {
+        ret = wc_Sha224Update(&shadow, info->hash.in, info->hash.inSz);
+        if (ret != 0)
+            goto out;
+    }
+
+    if (info->hash.digest != NULL) {
+        ret = wc_Sha224Final(&shadow, info->hash.digest);
+        if (ret != 0)
+            goto out;
+    }
+
+    swdev_sha256_copy_state((wc_Sha256*)sha224, (const wc_Sha256*)&shadow);
+
+out:
+    wc_Sha224Free(&shadow);
+    return ret;
+}
+#endif /* WOLFSSL_SHA224 */
+#endif /* !NO_SHA256 */
+
+#if defined(WOLFSSL_SHA512) || defined(WOLFSSL_SHA384)
+/* Copy hash state between caller's wc_Sha512 and swdev's shadow, leaving
+ * admin fields (heap, devId, devCtx, W, async, HW ctx) per-side. The same
+ * helper works for SHA-384, SHA-512/224, SHA-512/256 since they all typedef
+ * to wc_Sha512. */
+static void swdev_sha512_copy_state(wc_Sha512* dst, const wc_Sha512* src)
+{
+    XMEMCPY(dst->digest, src->digest, sizeof(dst->digest));
+    XMEMCPY(dst->buffer, src->buffer, sizeof(dst->buffer));
+    dst->buffLen = src->buffLen;
+    dst->loLen   = src->loLen;
+    dst->hiLen   = src->hiLen;
+#if defined(WC_C_DYNAMIC_FALLBACK) && defined(HAVE_FIPS) && FIPS_VERSION3_LT(7,0,0)
+    dst->sha_method = src->sha_method;
+#endif
+#ifdef WOLFSSL_HASH_FLAGS
+    dst->flags = src->flags;
+#endif
+#if defined(WOLFSSL_SHA512_HASHTYPE)
+    dst->hashType = src->hashType;
+#endif
+}
+#endif /* WOLFSSL_SHA512 || WOLFSSL_SHA384 */
+
+#ifdef WOLFSSL_SHA512
+static int swdev_sha512(wc_CryptoInfo* info)
+{
+    wc_Sha512* sha512 = info->hash.sha512;
+    wc_Sha512 shadow;
+    int ret;
+
+    if (sha512 == NULL)
+        return BAD_FUNC_ARG;
+
+    ret = wc_InitSha512(&shadow);
+    if (ret != 0)
+        return ret;
+
+    swdev_sha512_copy_state(&shadow, sha512);
+
+    if (info->hash.in != NULL) {
+        ret = wc_Sha512Update(&shadow, info->hash.in, info->hash.inSz);
+        if (ret != 0)
+            goto out;
+    }
+
+    if (info->hash.digest != NULL) {
+        ret = wc_Sha512Final(&shadow, info->hash.digest);
+        if (ret != 0)
+            goto out;
+    }
+
+    swdev_sha512_copy_state(sha512, &shadow);
+
+out:
+    wc_Sha512Free(&shadow);
+    return ret;
+}
+
+#if !defined(WOLFSSL_NOSHA512_224) && \
+    !defined(WOLFSSL_SWDEV_SHA512_GENERAL_ONLY)
+static int swdev_sha512_224(wc_CryptoInfo* info)
+{
+    wc_Sha512 shadow;
+    wc_Sha512* sha = info->hash.sha512;
+    int ret;
+
+    if (sha == NULL)
+        return BAD_FUNC_ARG;
+
+    ret = wc_InitSha512_224(&shadow);
+    if (ret != 0)
+        return ret;
+
+    swdev_sha512_copy_state(&shadow, sha);
+
+    if (info->hash.in != NULL) {
+        ret = wc_Sha512_224Update(&shadow, info->hash.in, info->hash.inSz);
+        if (ret != 0)
+            goto out;
+    }
+    if (info->hash.digest != NULL) {
+        ret = wc_Sha512_224Final(&shadow, info->hash.digest);
+        if (ret != 0)
+            goto out;
+    }
+
+    swdev_sha512_copy_state(sha, &shadow);
+
+out:
+    wc_Sha512_224Free(&shadow);
+    return ret;
+}
+#endif
+
+#if !defined(WOLFSSL_NOSHA512_256) && \
+    !defined(WOLFSSL_SWDEV_SHA512_GENERAL_ONLY)
+static int swdev_sha512_256(wc_CryptoInfo* info)
+{
+    wc_Sha512 shadow;
+    wc_Sha512* sha = info->hash.sha512;
+    int ret;
+
+    if (sha == NULL)
+        return BAD_FUNC_ARG;
+
+    ret = wc_InitSha512_256(&shadow);
+    if (ret != 0)
+        return ret;
+
+    swdev_sha512_copy_state(&shadow, sha);
+
+    if (info->hash.in != NULL) {
+        ret = wc_Sha512_256Update(&shadow, info->hash.in, info->hash.inSz);
+        if (ret != 0)
+            goto out;
+    }
+    if (info->hash.digest != NULL) {
+        ret = wc_Sha512_256Final(&shadow, info->hash.digest);
+        if (ret != 0)
+            goto out;
+    }
+
+    swdev_sha512_copy_state(sha, &shadow);
+
+out:
+    wc_Sha512_256Free(&shadow);
+    return ret;
+}
+#endif
+#endif /* WOLFSSL_SHA512 */
+
+#if defined(WOLFSSL_SHA384) && !defined(WOLFSSL_SWDEV_SHA512_GENERAL_ONLY)
+/* SHA-384 is SHA-512 with a different IV/truncation; wc_Sha384 is a typedef
+ * of wc_Sha512, so the shadow/copy-state dance is identical to swdev_sha512.
+ * When WOLFSSL_SWDEV_SHA512_GENERAL_ONLY is set this is omitted so swdev declines
+ * SHA-384 and the cryptocb dispatcher's SHA-512 fallback path is exercised. */
+static int swdev_sha384(wc_CryptoInfo* info)
+{
+    wc_Sha384* sha384 = info->hash.sha384;
+    wc_Sha384 shadow;
+    int ret;
+
+    if (sha384 == NULL)
+        return BAD_FUNC_ARG;
+
+    ret = wc_InitSha384(&shadow);
+    if (ret != 0)
+        return ret;
+
+    swdev_sha512_copy_state(&shadow, sha384);
+
+    if (info->hash.in != NULL) {
+        ret = wc_Sha384Update(&shadow, info->hash.in, info->hash.inSz);
+        if (ret != 0)
+            goto out;
+    }
+    if (info->hash.digest != NULL) {
+        ret = wc_Sha384Final(&shadow, info->hash.digest);
+        if (ret != 0)
+            goto out;
+    }
+
+    swdev_sha512_copy_state(sha384, &shadow);
+
+out:
+    wc_Sha384Free(&shadow);
+    return ret;
+}
+#endif /* WOLFSSL_SHA384 && !WOLFSSL_SWDEV_SHA512_GENERAL_ONLY */
+
+#ifndef NO_AES
+/* Rebuild a software AES shadow from the caller's raw devKey, since the
+ * caller's Aes has no software round-key schedule under CB_ONLY_AES. */
+static int swdev_aes_shadow_init(Aes* shadow, const Aes* aes, int dir)
+{
+    int ret;
+
+    if (shadow == NULL || aes == NULL)
+        return BAD_FUNC_ARG;
+    if (aes->keylen <= 0 || aes->keylen > (int)sizeof(aes->devKey))
+        return BAD_FUNC_ARG;
+
+    ret = wc_AesInit(shadow, aes->heap, INVALID_DEVID);
+    if (ret != 0)
+        return ret;
+
+    ret = wc_AesSetKey(shadow, (const byte*)aes->devKey,
+        (word32)aes->keylen, (const byte*)aes->reg, dir);
+    if (ret != 0) {
+        wc_AesFree(shadow);
+        return ret;
+    }
+
+    XMEMCPY(shadow->tmp, aes->tmp, sizeof(shadow->tmp));
+#if defined(WOLFSSL_AES_COUNTER) || defined(WOLFSSL_AES_CFB) || \
+    defined(WOLFSSL_AES_OFB) || defined(WOLFSSL_AES_XTS) || \
+    defined(WOLFSSL_AES_CTS)
+    shadow->left = aes->left;
+#endif
+
+    return 0;
+}
+
+static void swdev_aes_shadow_sync(Aes* dst, const Aes* src)
+{
+    XMEMCPY(dst->reg, src->reg, sizeof(dst->reg));
+    XMEMCPY(dst->tmp, src->tmp, sizeof(dst->tmp));
+#if defined(WOLFSSL_AES_COUNTER) || defined(WOLFSSL_AES_CFB) || \
+    defined(WOLFSSL_AES_OFB) || defined(WOLFSSL_AES_XTS) || \
+    defined(WOLFSSL_AES_CTS)
+    dst->left = src->left;
+#endif
+}
+
+#ifdef HAVE_AES_CBC
+static int swdev_aes_cbc(wc_CryptoInfo* info)
+{
+    Aes* aes = info->cipher.aescbc.aes;
+    byte* out = info->cipher.aescbc.out;
+    const byte* in = info->cipher.aescbc.in;
+    word32 sz = info->cipher.aescbc.sz;
+    Aes shadow;
+    int ret;
+
+    ret = swdev_aes_shadow_init(&shadow, aes,
+        info->cipher.enc ? AES_ENCRYPTION : AES_DECRYPTION);
+    if (ret != 0)
+        return ret;
+
+    if (info->cipher.enc)
+        ret = wc_AesCbcEncrypt(&shadow, out, in, sz);
+#ifdef HAVE_AES_DECRYPT
+    else
+        ret = wc_AesCbcDecrypt(&shadow, out, in, sz);
+#else
+    else
+        ret = CRYPTOCB_UNAVAILABLE;
+#endif
+    swdev_aes_shadow_sync(aes, &shadow);
+    wc_AesFree(&shadow);
+    return ret;
+}
+#endif /* HAVE_AES_CBC */
+
+#ifdef WOLFSSL_AES_COUNTER
+static int swdev_aes_ctr(wc_CryptoInfo* info)
+{
+    Aes* aes = info->cipher.aesctr.aes;
+    Aes shadow;
+    int ret;
+
+    ret = swdev_aes_shadow_init(&shadow, aes, AES_ENCRYPTION);
+    if (ret != 0)
+        return ret;
+
+    ret = wc_AesCtrEncrypt(&shadow, info->cipher.aesctr.out,
+        info->cipher.aesctr.in, info->cipher.aesctr.sz);
+    swdev_aes_shadow_sync(aes, &shadow);
+    wc_AesFree(&shadow);
+    return ret;
+}
+#endif
+
+#ifdef WOLFSSL_AES_CFB
+static int swdev_aes_cfb(wc_CryptoInfo* info)
+{
+    Aes* aes = info->cipher.aescfb.aes;
+    byte* out = info->cipher.aescfb.out;
+    const byte* in = info->cipher.aescfb.in;
+    word32 sz = info->cipher.aescfb.sz;
+    Aes shadow;
+    int ret;
+
+    /* CFB is a stream mode built on the forward cipher, so the shadow key
+     * schedule is always AES_ENCRYPTION (as for CTR), even when decrypting. */
+    ret = swdev_aes_shadow_init(&shadow, aes, AES_ENCRYPTION);
+    if (ret != 0)
+        return ret;
+
+    if (info->cipher.enc)
+        ret = wc_AesCfbEncrypt(&shadow, out, in, sz);
+#ifdef HAVE_AES_DECRYPT
+    else
+        ret = wc_AesCfbDecrypt(&shadow, out, in, sz);
+#else
+    else
+        ret = CRYPTOCB_UNAVAILABLE;
+#endif
+    swdev_aes_shadow_sync(aes, &shadow);
+    wc_AesFree(&shadow);
+    return ret;
+}
+#endif /* WOLFSSL_AES_CFB */
+
+#ifdef WOLFSSL_AES_OFB
+static int swdev_aes_ofb(wc_CryptoInfo* info)
+{
+    Aes* aes = info->cipher.aesofb.aes;
+    byte* out = info->cipher.aesofb.out;
+    const byte* in = info->cipher.aesofb.in;
+    word32 sz = info->cipher.aesofb.sz;
+    Aes shadow;
+    int ret;
+
+    /* OFB is a stream mode built on the forward cipher, so the shadow key
+     * schedule is always AES_ENCRYPTION (as for CTR), even when decrypting. */
+    ret = swdev_aes_shadow_init(&shadow, aes, AES_ENCRYPTION);
+    if (ret != 0)
+        return ret;
+
+    if (info->cipher.enc)
+        ret = wc_AesOfbEncrypt(&shadow, out, in, sz);
+#ifdef HAVE_AES_DECRYPT
+    else
+        ret = wc_AesOfbDecrypt(&shadow, out, in, sz);
+#else
+    else
+        ret = CRYPTOCB_UNAVAILABLE;
+#endif
+    swdev_aes_shadow_sync(aes, &shadow);
+    wc_AesFree(&shadow);
+    return ret;
+}
+#endif /* WOLFSSL_AES_OFB */
+
+#if defined(HAVE_AES_ECB) || defined(WOLFSSL_AES_DIRECT)
+static int swdev_aes_ecb(wc_CryptoInfo* info)
+{
+    Aes* aes = info->cipher.aesecb.aes;
+    byte* out = info->cipher.aesecb.out;
+    const byte* in = info->cipher.aesecb.in;
+    word32 sz = info->cipher.aesecb.sz;
+    Aes shadow;
+    int ret;
+
+    ret = swdev_aes_shadow_init(&shadow, aes,
+        info->cipher.enc ? AES_ENCRYPTION : AES_DECRYPTION);
+    if (ret != 0)
+        return ret;
+
+#ifdef HAVE_AES_ECB
+    if (info->cipher.enc)
+        ret = wc_AesEcbEncrypt(&shadow, out, in, sz);
+#ifdef HAVE_AES_DECRYPT
+    else
+        ret = wc_AesEcbDecrypt(&shadow, out, in, sz);
+#else
+    else
+        ret = CRYPTOCB_UNAVAILABLE;
+#endif
+#elif defined(WOLFSSL_AES_DIRECT)
+    if (sz != WC_AES_BLOCK_SIZE) {
+        ret = CRYPTOCB_UNAVAILABLE;
+    }
+    else if (info->cipher.enc) {
+        ret = wc_AesEncryptDirect(&shadow, out, in);
+    }
+#ifdef HAVE_AES_DECRYPT
+    else {
+        ret = wc_AesDecryptDirect(&shadow, out, in);
+    }
+#else
+    else {
+        ret = CRYPTOCB_UNAVAILABLE;
+    }
+#endif
+#else
+    (void)out;
+    (void)in;
+    (void)sz;
+    ret = CRYPTOCB_UNAVAILABLE;
+#endif
+
+    wc_AesFree(&shadow);
+    return ret;
+}
+#endif /* HAVE_AES_ECB || WOLFSSL_AES_DIRECT */
+
+#if defined(HAVE_AES_KEYWRAP) && !defined(SWDEV_AES_ONLYECB)
+/* AES Key Wrap (RFC 3394) and, when built, Key Wrap with Padding (RFC 5649).
+ * enc selects wrap (forward cipher) vs unwrap (inverse cipher); pad selects the
+ * RFC 5649 variant. The wrap/unwrap helpers return the produced byte count,
+ * which the cryptocb contract reports via outResSz with a 0 return.  Gated like
+ * swdev_aes_gcm so SWDEV_AES_ONLYECB instead forces the parent's CB_ONLY_AES
+ * host-side key wrap (block ops dispatch back through cryptocb ECB). */
+static int swdev_aes_keywrap(wc_CryptoInfo* info)
+{
+    Aes* aes = info->cipher.aeskeywrap.aes;
+    const byte* in = info->cipher.aeskeywrap.in;
+    word32 inSz = info->cipher.aeskeywrap.inSz;
+    byte* out = info->cipher.aeskeywrap.out;
+    word32 outSz = info->cipher.aeskeywrap.outSz;
+    const byte* iv = info->cipher.aeskeywrap.iv;
+    Aes shadow;
+    int ret;
+    int dir;
+
+    if (info->cipher.enc)
+        dir = AES_ENCRYPTION;
+    else
+        dir = AES_DECRYPTION;
+
+    ret = swdev_aes_shadow_init(&shadow, aes, dir);
+    if (ret != 0)
+        return ret;
+
+    if (info->cipher.enc) {
+#ifdef WOLFSSL_AES_KEYWRAP_PADDING
+        if (info->cipher.aeskeywrap.pad)
+            ret = wc_AesKeyWrap_Pad_ex(&shadow, in, inSz, out, outSz, iv);
+        else
+#endif
+            ret = wc_AesKeyWrap_ex(&shadow, in, inSz, out, outSz, iv);
+    }
+    else {
+#ifdef WOLFSSL_AES_KEYWRAP_PADDING
+        if (info->cipher.aeskeywrap.pad)
+            ret = wc_AesKeyUnWrap_Pad_ex(&shadow, in, inSz, out, outSz, iv);
+        else
+#endif
+            ret = wc_AesKeyUnWrap_ex(&shadow, in, inSz, out, outSz, iv);
+    }
+
+    wc_AesFree(&shadow);
+
+    if (ret < 0)
+        return ret;
+
+    /* success: report produced length; cryptocb returns outResSz on ret==0 */
+    info->cipher.aeskeywrap.outResSz = (word32)ret;
+    return 0;
+}
+#endif /* HAVE_AES_KEYWRAP && !SWDEV_AES_ONLYECB */
+
+/* SWDEV_AES_ONLYECB: when defined, swdev's AES backend returns
+ * CRYPTOCB_UNAVAILABLE for AES-GCM so the parent's CB_ONLY_AES host-side
+ * GCM software path runs (GHASH on the host; AES-CTR blocks dispatch back
+ * through cryptocb ECB). Without this macro, swdev handles GCM end-to-end
+ * and the host-side software path is never exercised. */
+#if defined(HAVE_AESGCM) && !defined(SWDEV_AES_ONLYECB)
+static int swdev_aes_gcm(wc_CryptoInfo* info)
+{
+    Aes* aes = info->cipher.enc ? info->cipher.aesgcm_enc.aes :
+        info->cipher.aesgcm_dec.aes;
+    Aes shadow;
+    int ret;
+
+    if (aes == NULL || aes->keylen <= 0 || aes->keylen > (int)sizeof(aes->devKey))
+        return BAD_FUNC_ARG;
+
+    ret = wc_AesInit(&shadow, aes->heap, INVALID_DEVID);
+    if (ret != 0)
+        return ret;
+
+    ret = wc_AesGcmSetKey(&shadow, (const byte*)aes->devKey, (word32)aes->keylen);
+    if (ret != 0) {
+        wc_AesFree(&shadow);
+        return ret;
+    }
+
+    if (info->cipher.enc) {
+        ret = wc_AesGcmEncrypt(&shadow,
+            info->cipher.aesgcm_enc.out, info->cipher.aesgcm_enc.in,
+            info->cipher.aesgcm_enc.sz,
+            info->cipher.aesgcm_enc.iv, info->cipher.aesgcm_enc.ivSz,
+            info->cipher.aesgcm_enc.authTag,
+            info->cipher.aesgcm_enc.authTagSz,
+            info->cipher.aesgcm_enc.authIn,
+            info->cipher.aesgcm_enc.authInSz);
+    }
+    else {
+        ret = wc_AesGcmDecrypt(&shadow, info->cipher.aesgcm_dec.out,
+            info->cipher.aesgcm_dec.in, info->cipher.aesgcm_dec.sz,
+            info->cipher.aesgcm_dec.iv, info->cipher.aesgcm_dec.ivSz,
+            info->cipher.aesgcm_dec.authTag,
+            info->cipher.aesgcm_dec.authTagSz,
+            info->cipher.aesgcm_dec.authIn,
+            info->cipher.aesgcm_dec.authInSz);
+    }
+
+    wc_AesFree(&shadow);
+    return ret;
+}
+#endif /* HAVE_AESGCM && !SWDEV_AES_ONLYECB */
+
+#ifdef HAVE_AESCCM
+static int swdev_aes_ccm(wc_CryptoInfo* info)
+{
+    Aes* aes = info->cipher.enc ? info->cipher.aesccm_enc.aes :
+        info->cipher.aesccm_dec.aes;
+    Aes shadow;
+    int ret;
+
+    if (aes == NULL || aes->keylen <= 0 || aes->keylen > (int)sizeof(aes->devKey))
+        return BAD_FUNC_ARG;
+
+    ret = wc_AesInit(&shadow, aes->heap, INVALID_DEVID);
+    if (ret != 0)
+        return ret;
+
+    ret = wc_AesCcmSetKey(&shadow, (const byte*)aes->devKey, (word32)aes->keylen);
+    if (ret != 0) {
+        wc_AesFree(&shadow);
+        return ret;
+    }
+
+    if (info->cipher.enc) {
+        ret = wc_AesCcmEncrypt(&shadow,
+            info->cipher.aesccm_enc.out, info->cipher.aesccm_enc.in,
+            info->cipher.aesccm_enc.sz,
+            info->cipher.aesccm_enc.nonce,
+            info->cipher.aesccm_enc.nonceSz,
+            info->cipher.aesccm_enc.authTag,
+            info->cipher.aesccm_enc.authTagSz,
+            info->cipher.aesccm_enc.authIn,
+            info->cipher.aesccm_enc.authInSz);
+    }
+#ifdef HAVE_AES_DECRYPT
+    else {
+        ret = wc_AesCcmDecrypt(&shadow, info->cipher.aesccm_dec.out,
+            info->cipher.aesccm_dec.in, info->cipher.aesccm_dec.sz,
+            info->cipher.aesccm_dec.nonce,
+            info->cipher.aesccm_dec.nonceSz,
+            info->cipher.aesccm_dec.authTag,
+            info->cipher.aesccm_dec.authTagSz,
+            info->cipher.aesccm_dec.authIn,
+            info->cipher.aesccm_dec.authInSz);
+    }
+#else
+    else {
+        ret = CRYPTOCB_UNAVAILABLE;
+    }
+#endif
+
+    wc_AesFree(&shadow);
+    return ret;
+}
+#endif /* HAVE_AESCCM */
+#endif /* !NO_AES */
+
+WC_SWDEV_EXPORT int wc_SwDev_Callback(int devId, wc_CryptoInfo* info,
+    void* ctx)
+{
+    int ret;
+
+    (void)devId;
+    (void)ctx;
+
+    if (info == NULL)
+        return BAD_FUNC_ARG;
+
+    ret = swdev_ensure_init();
+    if (ret != 0)
+        return ret;
+
+    switch (info->algo_type) {
+#if !defined(NO_RSA) || defined(HAVE_ECC) || defined(HAVE_ED25519) || \
+    defined(HAVE_CURVE25519) || defined(HAVE_CURVE448) || \
+    defined(WOLFSSL_HAVE_SLHDSA) || defined(WOLFSSL_HAVE_MLKEM)
+    case WC_ALGO_TYPE_PK:
+        switch (info->pk.type) {
+    #ifndef NO_RSA
+        case WC_PK_TYPE_RSA:
+            return swdev_rsa(info);
+        #ifdef WOLFSSL_KEY_GEN
+        case WC_PK_TYPE_RSA_KEYGEN:
+            return swdev_rsa_keygen(info);
+        #endif
+    #endif /* !NO_RSA */
+    #ifdef HAVE_ECC
+        case WC_PK_TYPE_EC_KEYGEN:
+            return swdev_ecc_keygen(info);
+        case WC_PK_TYPE_ECDH:
+            return swdev_ecdh(info);
+        case WC_PK_TYPE_ECDSA_SIGN:
+            return swdev_ecc_sign(info);
+        case WC_PK_TYPE_ECDSA_VERIFY:
+            return swdev_ecc_verify(info);
+        case WC_PK_TYPE_EC_GET_SIZE:
+            return swdev_ecc_get_size(info);
+        case WC_PK_TYPE_EC_GET_SIG_SIZE:
+            return swdev_ecc_get_sig_size(info);
+        case WC_PK_TYPE_EC_MAKE_PUB:
+            return swdev_ecc_make_pub(info);
+    #ifdef HAVE_ECC_CHECK_KEY
+        case WC_PK_TYPE_EC_CHECK_PUB_KEY:
+            return swdev_ecc_check_pub(info);
+    #endif
+    #endif /* HAVE_ECC */
+    #ifdef HAVE_ED25519
+        #ifdef HAVE_ED25519_MAKE_KEY
+        case WC_PK_TYPE_ED25519_KEYGEN:
+            return swdev_ed25519_keygen(info);
+        #endif
+        #ifdef HAVE_ED25519_SIGN
+        case WC_PK_TYPE_ED25519_SIGN:
+            return swdev_ed25519_sign(info);
+        #endif
+        #ifdef HAVE_ED25519_VERIFY
+        case WC_PK_TYPE_ED25519_VERIFY:
+            return swdev_ed25519_verify(info);
+        #endif
+        #ifdef HAVE_ED25519_MAKE_KEY
+        case WC_PK_TYPE_ED25519_MAKE_PUB:
+            return swdev_ed25519_make_pub(info);
+        #endif
+        case WC_PK_TYPE_ED25519_CHECK_KEY:
+            return swdev_ed25519_check_key(info);
+    #endif /* HAVE_ED25519 */
+    #ifdef HAVE_CURVE25519
+        case WC_PK_TYPE_CURVE25519_KEYGEN:
+            return swdev_curve25519_keygen(info);
+        #ifdef HAVE_CURVE25519_SHARED_SECRET
+        case WC_PK_TYPE_CURVE25519:
+            return swdev_curve25519(info);
+        #endif
+        case WC_PK_TYPE_CURVE25519_MAKE_PUB:
+            return swdev_curve25519_make_pub(info);
+        case WC_PK_TYPE_CURVE25519_GENERIC:
+            return swdev_curve25519_generic(info);
+    #endif /* HAVE_CURVE25519 */
+    #ifdef HAVE_CURVE448
+        case WC_PK_TYPE_CURVE448_KEYGEN:
+            return swdev_curve448_keygen(info);
+        #ifdef HAVE_CURVE448_SHARED_SECRET
+        case WC_PK_TYPE_CURVE448:
+            return swdev_curve448(info);
+        #endif
+        case WC_PK_TYPE_CURVE448_MAKE_PUB:
+            return swdev_curve448_make_pub(info);
+        case WC_PK_TYPE_CURVE448_GENERIC:
+            return swdev_curve448_generic(info);
+    #endif /* HAVE_CURVE448 */
+    #ifdef WOLFSSL_HAVE_SLHDSA
+        #ifndef WOLFSSL_SLHDSA_VERIFY_ONLY
+        case WC_PK_TYPE_PQC_SIG_KEYGEN:
+        case WC_PK_TYPE_PQC_SIG_KEYGEN_SEED:
+            return swdev_pqc_sig(info, info->pk.pqc_sig_kg.type,
+                info->pk.type);
+        case WC_PK_TYPE_PQC_SIG_SIGN:
+        case WC_PK_TYPE_PQC_SIG_SIGN_MSG:
+            return swdev_pqc_sig(info, info->pk.pqc_sign.type, info->pk.type);
+        case WC_PK_TYPE_PQC_SIG_CHECK_PRIV_KEY:
+            return swdev_pqc_sig(info, info->pk.pqc_sig_check.type,
+                info->pk.type);
+        #endif /* !WOLFSSL_SLHDSA_VERIFY_ONLY */
+        case WC_PK_TYPE_PQC_SIG_VERIFY:
+        case WC_PK_TYPE_PQC_SIG_VERIFY_MSG:
+            return swdev_pqc_sig(info, info->pk.pqc_verify.type, info->pk.type);
+    #endif /* WOLFSSL_HAVE_SLHDSA */
+    #ifdef WOLFSSL_HAVE_MLKEM
+        case WC_PK_TYPE_PQC_KEM_KEYGEN:
+            return swdev_pqc_kem(info, info->pk.pqc_kem_kg.type,
+                info->pk.type);
+        case WC_PK_TYPE_PQC_KEM_ENCAPS:
+            return swdev_pqc_kem(info, info->pk.pqc_encaps.type,
+                info->pk.type);
+        case WC_PK_TYPE_PQC_KEM_DECAPS:
+            return swdev_pqc_kem(info, info->pk.pqc_decaps.type,
+                info->pk.type);
+    #endif /* WOLFSSL_HAVE_MLKEM */
+        default:
+            return CRYPTOCB_UNAVAILABLE;
+        }
+#endif
+#if !defined(NO_SHA256) || defined(WOLFSSL_SHA512) || \
+    defined(WOLFSSL_SHA384) || defined(WOLFSSL_SHAKE128) || \
+    defined(WOLFSSL_SHAKE256)
+    case WC_ALGO_TYPE_HASH:
+        switch (info->hash.type) {
+    #ifndef NO_SHA256
+        case WC_HASH_TYPE_SHA256:
+            return swdev_sha256(info);
+    #endif
+    #ifdef WOLFSSL_SHA224
+        case WC_HASH_TYPE_SHA224:
+            return swdev_sha224(info);
+    #endif
+    #ifdef WOLFSSL_SHA512
+        case WC_HASH_TYPE_SHA512:
+            return swdev_sha512(info);
+        #if !defined(WOLFSSL_NOSHA512_224) && \
+            !defined(WOLFSSL_SWDEV_SHA512_GENERAL_ONLY)
+        case WC_HASH_TYPE_SHA512_224:
+            return swdev_sha512_224(info);
+        #endif
+        #if !defined(WOLFSSL_NOSHA512_256) && \
+            !defined(WOLFSSL_SWDEV_SHA512_GENERAL_ONLY)
+        case WC_HASH_TYPE_SHA512_256:
+            return swdev_sha512_256(info);
+        #endif
+    #endif
+    #if defined(WOLFSSL_SHA384) && \
+        !defined(WOLFSSL_SWDEV_SHA512_GENERAL_ONLY)
+        case WC_HASH_TYPE_SHA384:
+            return swdev_sha384(info);
+    #endif
+    #if defined(WOLFSSL_SHAKE128) || defined(WOLFSSL_SHAKE256)
+        #ifdef WOLFSSL_SHAKE128
+        case WC_HASH_TYPE_SHAKE128:
+        #endif
+        #ifdef WOLFSSL_SHAKE256
+        case WC_HASH_TYPE_SHAKE256:
+        #endif
+            return swdev_shake(info);
+    #endif
+        default:
+            return CRYPTOCB_UNAVAILABLE;
+        }
+#endif
+#ifndef NO_AES
+    case WC_ALGO_TYPE_CIPHER:
+        switch (info->cipher.type) {
+    #ifdef HAVE_AES_CBC
+        case WC_CIPHER_AES_CBC:
+            return swdev_aes_cbc(info);
+    #endif
+    #ifdef WOLFSSL_AES_COUNTER
+        case WC_CIPHER_AES_CTR:
+            return swdev_aes_ctr(info);
+    #endif
+    #ifdef WOLFSSL_AES_CFB
+        case WC_CIPHER_AES_CFB:
+            return swdev_aes_cfb(info);
+    #endif
+    #ifdef WOLFSSL_AES_OFB
+        case WC_CIPHER_AES_OFB:
+            return swdev_aes_ofb(info);
+    #endif
+    #if defined(HAVE_AES_ECB) || defined(WOLFSSL_AES_DIRECT)
+        case WC_CIPHER_AES_ECB:
+            return swdev_aes_ecb(info);
+    #endif
+    #if defined(HAVE_AESGCM) && !defined(SWDEV_AES_ONLYECB)
+        case WC_CIPHER_AES_GCM:
+            return swdev_aes_gcm(info);
+    #endif
+    #ifdef HAVE_AESCCM
+        case WC_CIPHER_AES_CCM:
+            return swdev_aes_ccm(info);
+    #endif
+    #if defined(HAVE_AES_KEYWRAP) && !defined(SWDEV_AES_ONLYECB)
+        case WC_CIPHER_AES_KEYWRAP:
+            return swdev_aes_keywrap(info);
+    #endif
+        default:
+            return CRYPTOCB_UNAVAILABLE;
+        }
+#endif /* !NO_AES */
+    default:
+        return CRYPTOCB_UNAVAILABLE;
+    }
+}

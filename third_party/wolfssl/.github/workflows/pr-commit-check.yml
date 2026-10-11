@@ -1,0 +1,66 @@
+name: PR commit message checks
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches: [ '**' ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+# END OF COMMON SECTION
+
+jobs:
+  commit-messages:
+    if: ${{ (github.repository_owner == 'wolfssl') && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Reject AI attribution trailers
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          fail=0
+          while IFS= read -r sha; do
+            [ -z "$sha" ] && continue
+            trailers=$(git log -1 --format=%B "$sha" | git interpret-trailers --parse)
+            if echo "$trailers" | \
+               grep -iE '^(Co-authored-by|Signed-off-by):.*<?noreply@(anthropic|openai)\.com>?[[:space:]]*$' >/dev/null; then
+              echo "::error::Commit $sha contains a Co-authored-by or Signed-off-by trailer for a disallowed AI vendor"
+              git log -1 --format='  %h %s' "$sha"
+              fail=1
+            fi
+            if echo "$trailers" | \
+               grep -iE '^(Co-authored-by|Signed-off-by):.*<?[0-9]+\+Copilot@users\.noreply\.github\.com>?[[:space:]]*$' >/dev/null; then
+              echo "::error::Commit $sha contains a Co-authored-by or Signed-off-by trailer for GitHub Copilot"
+              git log -1 --format='  %h %s' "$sha"
+              fail=1
+            fi
+            if echo "$trailers" | \
+               grep -iE '^(Co-authored-by|Signed-off-by):.*\[bot\]@users\.noreply\.github\.com>?[[:space:]]*$' >/dev/null; then
+              echo "::error::Commit $sha contains a Co-authored-by or Signed-off-by trailer for a bot account"
+              git log -1 --format='  %h %s' "$sha"
+              fail=1
+            fi
+            author_email=$(git log -1 --format=%ae "$sha")
+            if echo "$author_email" | \
+               grep -iE '\[bot\]@users\.noreply\.github\.com$' >/dev/null; then
+              echo "::error::Commit $sha is authored by a bot account ($author_email)"
+              git log -1 --format='  %h %s' "$sha"
+              fail=1
+            fi
+          done < <(git rev-list "$BASE_SHA".."$HEAD_SHA")
+          if [ "$fail" -ne 0 ]; then
+            echo "One or more commits contain disallowed AI attribution; please amend them out."
+            exit 1
+          fi
+          echo "No disallowed AI attribution found."

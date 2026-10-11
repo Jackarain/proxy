@@ -1,12 +1,12 @@
 /* wc_afalg.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -19,18 +19,20 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1335, USA
  */
 
-#ifdef HAVE_CONFIG_H
-    #include <config.h>
+#if defined(__linux__) && !defined(_GNU_SOURCE)
+    #define _GNU_SOURCE 1
 #endif
 
-#include <wolfssl/wolfcrypt/settings.h>
-#include <wolfssl/wolfcrypt/error-crypt.h>
-#include <wolfssl/wolfcrypt/logging.h>
+#include <wolfssl/wolfcrypt/libwolfssl_sources.h>
 
 #if defined(WOLFSSL_AFALG) || defined(WOLFSSL_AFALG_XILINX)
 
 #include <wolfssl/wolfcrypt/port/af_alg/wc_afalg.h>
 #include <linux/if_alg.h>
+#include <sys/socket.h>
+#include <errno.h>
+#include <fcntl.h>
+
 
 
 /* Sets the type of socket address to use */
@@ -40,7 +42,7 @@ void wc_Afalg_SockAddr(struct sockaddr_alg* in, const char* type, const char* na
     int nameSz = (int)XSTRLEN(name) + 1; /* +1 for null terminator */
 
     if (typeSz > (int)sizeof(in->salg_type) ||
-		    nameSz > (int)sizeof(in->salg_name)) {
+                    nameSz > (int)sizeof(in->salg_name)) {
         WOLFSSL_MSG("type or name was too large");
         return;
     }
@@ -62,7 +64,7 @@ int wc_Afalg_Accept(struct sockaddr_alg* in, int inSz, int sock)
         return WC_AFALG_SOCK_E;
     }
 
-    return accept(sock, NULL, 0);
+    return wc_accept_cloexec(sock, NULL, NULL);
 }
 
 
@@ -72,7 +74,8 @@ int wc_Afalg_Socket(void)
 {
     int sock;
 
-    if ((sock = socket(AF_ALG, SOCK_SEQPACKET, 0)) < 0) {
+    sock = wc_socket_cloexec(AF_ALG, SOCK_SEQPACKET, 0);
+    if (sock < 0) {
         WOLFSSL_MSG("Failed to get AF_ALG socket");
         return WC_AFALG_SOCK_E;
     }

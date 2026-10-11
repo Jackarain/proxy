@@ -1,12 +1,12 @@
 /* sha3.h
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -27,6 +27,7 @@
 
 #include <wolfssl/wolfcrypt/settings.h>
 #include <wolfssl/wolfcrypt/types.h>
+#include <wolfssl/wolfcrypt/sha3.h>
 
 #ifdef WOLFSSL_PREFIX
 #include "prefix_sha.h"
@@ -41,7 +42,11 @@
  * to Sha3 is expected to also be 16 byte aligned addresses.  */
 struct WOLFSSL_SHA3_CTX {
     /* big enough to hold wolfcrypt Sha3, but check on init */
+#ifdef WOLFSSL_SHA3
+    ALIGN16 void* holder[sizeof(wc_Sha3)];
+#else
     ALIGN16 void* holder[(424 + WC_ASYNC_DEV_SIZE) / sizeof(void*)];
+#endif
 };
 
 #ifndef WOLFSSL_NOSHA3_224

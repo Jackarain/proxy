@@ -1,12 +1,12 @@
 /* tls_threaded.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -88,6 +88,20 @@ static const char msgHTTPIndex[] =
     "<p>wolfSSL has successfully performed handshake!</p>\n"
     "</body>\n"
     "</html>\n";
+
+#ifdef HAVE_FIPS
+static void myFipsCb(int ok, int err, const char* hash)
+{
+    printf("in my Fips callback, ok = %d, err = %d\n", ok, err);
+    printf("message = %s\n", wc_GetErrorString(err));
+    printf("hash = %s\n", hash);
+
+    if (err == IN_CORE_FIPS_E) {
+        printf("In core integrity hash check failure, copy above hash\n");
+        printf("into verifyCore[] in fips_test.c and rebuild\n");
+    }
+}
+#endif
 
 /* wolfSSL client wants to read data from the server. */
 static int recv_client(WOLFSSL* ssl, char* buff, int sz, void* ctx)
@@ -573,8 +587,15 @@ int main()
     struct timespec utctime;
     utctime.tv_sec = 1658510212; /* Friday, July 22, 2022 5:16:52 PM GMT */
     utctime.tv_nsec = 0;
+#ifdef SYS_CLOCK_REALTIME
+    sys_clock_settime(SYS_CLOCK_REALTIME, &utctime);
+#else
     clock_settime(CLOCK_REALTIME, &utctime);
+#endif
 
+#ifdef HAVE_FIPS
+    wolfCrypt_SetCb_fips(myFipsCb);
+#endif
     wolfSSL_Init();
 #ifdef DEBUG_WOLFSSL
     wolfSSL_Debugging_ON();

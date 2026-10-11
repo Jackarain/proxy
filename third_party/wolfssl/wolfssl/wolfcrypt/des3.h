@@ -1,12 +1,12 @@
 /* des3.h
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -113,6 +113,7 @@ struct Des3 {
     void*  devCtx;
 #endif
     void* heap;
+    WC_BITFIELD keySet:1;    /* set to 1 once a key has been configured */
 };
 
 #ifndef WC_DES3_TYPE_DEFINED
@@ -134,9 +135,16 @@ WOLFSSL_API int  wc_Des_EcbEncrypt(Des* des, byte* out,
 WOLFSSL_API int wc_Des3_EcbEncrypt(Des3* des, byte* out,
                                    const byte* in, word32 sz);
 
+#ifdef FREESCALE_MMCAU /* Has separate encrypt/decrypt functions */
+WOLFSSL_API int wc_Des_EcbDecrypt(Des* des, byte* out,
+                                   const byte* in, word32 sz);
+WOLFSSL_API int wc_Des3_EcbDecrypt(Des3* des, byte* out,
+                                   const byte* in, word32 sz);
+#else
 /* ECB decrypt same process as encrypt but with decrypt key */
 #define wc_Des_EcbDecrypt  wc_Des_EcbEncrypt
 #define wc_Des3_EcbDecrypt wc_Des3_EcbEncrypt
+#endif
 
 WOLFSSL_API int  wc_Des3_SetKey(Des3* des, const byte* key,
                                 const byte* iv,int dir);

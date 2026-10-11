@@ -1,12 +1,12 @@
 /* hpke.c
  *
- * Copyright (C) 2006-2022 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -23,16 +23,11 @@
  * TODO: Add X448 and ChaCha20
  */
 
-#ifdef HAVE_CONFIG_H
-    #include <config.h>
-#endif
-
-#include <wolfssl/wolfcrypt/settings.h>
+#include <wolfssl/wolfcrypt/libwolfssl_sources.h>
 
 #if defined(HAVE_HPKE) && (defined(HAVE_ECC) || defined(HAVE_CURVE25519)) && \
     defined(HAVE_AESGCM)
 
-#include <wolfssl/wolfcrypt/error-crypt.h>
 #include <wolfssl/wolfcrypt/ecc.h>
 #include <wolfssl/wolfcrypt/curve25519.h>
 #include <wolfssl/wolfcrypt/curve448.h>
@@ -50,23 +45,7 @@
     #include <wolfcrypt/src/misc.c>
 #endif
 
-const int hpkeSupportedKem[HPKE_SUPPORTED_KEM_LEN] = {
-    DHKEM_P256_HKDF_SHA256,
-    DHKEM_P384_HKDF_SHA384,
-    DHKEM_P521_HKDF_SHA512,
-    DHKEM_X25519_HKDF_SHA256,
-};
-
-const int hpkeSupportedKdf[HPKE_SUPPORTED_KDF_LEN] = {
-    HKDF_SHA256,
-    HKDF_SHA384,
-    HKDF_SHA512,
-};
-
-const int hpkeSupportedAead[HPKE_SUPPORTED_AEAD_LEN] = {
-    HPKE_AES_128_GCM,
-    HPKE_AES_256_GCM,
-};
+#include <wolfssl/wolfcrypt/wc_compat.h>
 
 static const char* KEM_STR = "KEM";
 static const int   KEM_STR_LEN = 3;
@@ -106,13 +85,12 @@ static int I2OSP(int n, int w, byte* out)
 {
     int i;
 
-    if (w <= 0 || w > 32) {
+    if (w <= 0 || w > 32 || n < 0) {
         return MP_VAL;
     }
 
     /* if width is less than int max check that n is less than w bytes max */
-    /* if width is greater than int max check that n is less than int max */
-    if ((w < 4 && n > ((1 << (w * 8)) - 1)) || (w >= 4 && n > 0x7fffffff)) {
+    if (w < 4 && n > ((1 << (w * 8)) - 1)) {
         return MP_VAL;
     }
 
@@ -138,9 +116,9 @@ int wc_HpkeInit(Hpke* hpke, int kem, int kdf, int aead, void* heap)
     }
 
     XMEMSET(hpke, 0, sizeof(*hpke));
-    hpke->kem = (word32)kem;
-    hpke->kdf = (word32)kdf;
-    hpke->aead = (word32)aead;
+    hpke->kem = (word16)kem;
+    hpke->kdf = (word16)kdf;
+    hpke->aead = (word16)aead;
     hpke->heap = heap;
 
     /* set kem_suite_id */
@@ -172,52 +150,67 @@ int wc_HpkeInit(Hpke* hpke, int kem, int kdf, int aead, void* heap)
     if (ret == 0) {
         switch (kem) {
 #if defined(HAVE_ECC)
-#if defined(WOLFSSL_SHA224) || !defined(NO_SHA256)
+#if (!defined(NO_ECC256) || defined(HAVE_ALL_CURVES)) && !defined(NO_SHA256)
         case DHKEM_P256_HKDF_SHA256:
-            hpke->curve_id = ECC_SECP256R1;
+            hpke->curveId = ECC_SECP256R1;
             hpke->Nsecret = WC_SHA256_DIGEST_SIZE;
-            hpke->Nh = WC_SHA256_DIGEST_SIZE;
-            hpke->Ndh = (word32)wc_ecc_get_curve_size_from_id(hpke->curve_id);
+            hpke->kemDigest = WC_SHA256;
+            ret = wc_ecc_get_curve_size_from_id(hpke->curveId);
+            if (ret < 0) {
+                break;
+            }
+            hpke->Ndh = (word32)ret;
+            ret = 0;
             hpke->Npk = 1 + hpke->Ndh * 2;
             break;
 #endif
 
-#ifdef WOLFSSL_SHA384
+#if (defined(HAVE_ECC384) || defined(HAVE_ALL_CURVES)) && \
+    defined(WOLFSSL_SHA384)
         case DHKEM_P384_HKDF_SHA384:
-            hpke->curve_id = ECC_SECP384R1;
+            hpke->curveId = ECC_SECP384R1;
             hpke->Nsecret = WC_SHA384_DIGEST_SIZE;
-            hpke->Nh = WC_SHA384_DIGEST_SIZE;
-            hpke->Ndh = (word32)wc_ecc_get_curve_size_from_id(hpke->curve_id);
+            hpke->kemDigest = WC_SHA384;
+            ret = wc_ecc_get_curve_size_from_id(hpke->curveId);
+            if (ret < 0) {
+                break;
+            }
+            hpke->Ndh = (word32)ret;
+            ret = 0;
             hpke->Npk = 1 + hpke->Ndh * 2;
             break;
 #endif
 
-#if defined(WOLFSSL_SHA384) || defined(WOLFSSL_SHA512)
+#if (defined(HAVE_ECC521) || defined(HAVE_ALL_CURVES)) && \
+    defined(WOLFSSL_SHA512)
         case DHKEM_P521_HKDF_SHA512:
-            hpke->curve_id = ECC_SECP521R1;
+            hpke->curveId = ECC_SECP521R1;
             hpke->Nsecret = WC_SHA512_DIGEST_SIZE;
-            hpke->Nh = WC_SHA512_DIGEST_SIZE;
-            hpke->Ndh = (word32)wc_ecc_get_curve_size_from_id(hpke->curve_id);
+            hpke->kemDigest = WC_SHA512;
+            ret = wc_ecc_get_curve_size_from_id(hpke->curveId);
+            if (ret < 0) {
+                break;
+            }
+            hpke->Ndh = (word32)ret;
+            ret = 0;
             hpke->Npk = 1 + hpke->Ndh * 2;
             break;
 #endif
-#endif
+#endif /* HAVE_ECC */
 
-#if defined(HAVE_CURVE25519) &&\
-    (defined(WOLFSSL_SHA224) || !defined(NO_SHA256))
+#if defined(HAVE_CURVE25519) && !defined(NO_SHA256)
         case DHKEM_X25519_HKDF_SHA256:
             hpke->Nsecret = WC_SHA256_DIGEST_SIZE;
-            hpke->Nh = WC_SHA256_DIGEST_SIZE;
+            hpke->kemDigest = WC_SHA256;
             hpke->Ndh = CURVE25519_KEYSIZE;
             hpke->Npk = CURVE25519_PUB_KEY_SIZE;
             break;
 #endif
 
-#if defined(HAVE_CURVE448) &&\
-    (defined(WOLFSSL_SHA384) || defined(WOLFSSL_SHA512))
+#if defined(HAVE_CURVE448) && defined(WOLFSSL_SHA512)
         case DHKEM_X448_HKDF_SHA512:
             hpke->Nsecret = WC_SHA512_DIGEST_SIZE;
-            hpke->Nh = WC_SHA512_DIGEST_SIZE;
+            hpke->kemDigest = WC_SHA512;
             /* size of x448 shared secret */
             hpke->Ndh = 64;
             hpke->Npk = CURVE448_PUB_KEY_SIZE;
@@ -233,17 +226,26 @@ int wc_HpkeInit(Hpke* hpke, int kem, int kdf, int aead, void* heap)
 
     if (ret == 0) {
         switch (kdf) {
+#if !defined(NO_SHA256)
         case HKDF_SHA256:
-            hpke->kdf_digest = WC_SHA256;
+            hpke->Nh = WC_SHA256_DIGEST_SIZE;
+            hpke->kdfDigest = WC_SHA256;
             break;
+#endif
 
+#ifdef WOLFSSL_SHA384
         case HKDF_SHA384:
-            hpke->kdf_digest = WC_SHA384;
+            hpke->Nh = WC_SHA384_DIGEST_SIZE;
+            hpke->kdfDigest = WC_SHA384;
             break;
+#endif
 
+#ifdef WOLFSSL_SHA512
         case HKDF_SHA512:
-            hpke->kdf_digest = WC_SHA512;
+            hpke->Nh = WC_SHA512_DIGEST_SIZE;
+            hpke->kdfDigest = WC_SHA512;
             break;
+#endif
 
         default:
             ret = BAD_FUNC_ARG;
@@ -253,26 +255,26 @@ int wc_HpkeInit(Hpke* hpke, int kem, int kdf, int aead, void* heap)
 
     if (ret == 0) {
         switch (aead) {
+#ifdef WOLFSSL_AES_128
         case HPKE_AES_128_GCM:
             hpke->Nk = AES_128_KEY_SIZE;
             hpke->Nn = GCM_NONCE_MID_SZ;
-            hpke->Nt = AES_BLOCK_SIZE;
+            hpke->Nt = WC_AES_BLOCK_SIZE;
             break;
+#endif
 
+#ifdef WOLFSSL_AES_256
         case HPKE_AES_256_GCM:
             hpke->Nk = AES_256_KEY_SIZE;
             hpke->Nn = GCM_NONCE_MID_SZ;
-            hpke->Nt = AES_BLOCK_SIZE;
+            hpke->Nt = WC_AES_BLOCK_SIZE;
             break;
+#endif
 
         default:
             ret = BAD_FUNC_ARG;
             break;
         }
-    }
-
-    if ((int)hpke->Ndh < 0) {
-        return (int)hpke->Ndh;
     }
 
     return ret;
@@ -289,26 +291,34 @@ int wc_HpkeGenerateKeyPair(Hpke* hpke, void** keypair, WC_RNG* rng)
 
     switch (hpke->kem) {
 #if defined(HAVE_ECC)
+    #if (!defined(NO_ECC256) || defined(HAVE_ALL_CURVES)) && !defined(NO_SHA256)
         case DHKEM_P256_HKDF_SHA256:
             *keypair = wc_ecc_key_new(hpke->heap);
             if (*keypair != NULL)
                 ret = wc_ecc_make_key_ex(rng, 32, (ecc_key*)*keypair,
                     ECC_SECP256R1);
             break;
+#endif
+    #if (defined(HAVE_ECC384) || defined(HAVE_ALL_CURVES)) && \
+        defined(WOLFSSL_SHA384)
         case DHKEM_P384_HKDF_SHA384:
             *keypair = wc_ecc_key_new(hpke->heap);
             if (*keypair != NULL)
                 ret = wc_ecc_make_key_ex(rng, 48, (ecc_key*)*keypair,
                     ECC_SECP384R1);
             break;
+    #endif
+    #if (defined(HAVE_ECC521) || defined(HAVE_ALL_CURVES)) && \
+        defined(WOLFSSL_SHA512)
         case DHKEM_P521_HKDF_SHA512:
             *keypair = wc_ecc_key_new(hpke->heap);
             if (*keypair != NULL)
                 ret = wc_ecc_make_key_ex(rng, 66, (ecc_key*)*keypair,
                   ECC_SECP521R1);
             break;
+    #endif
 #endif
-#if defined(HAVE_CURVE25519)
+#if defined(HAVE_CURVE25519) && !defined(NO_SHA256)
         case DHKEM_X25519_HKDF_SHA256:
             *keypair = XMALLOC(sizeof(curve25519_key), hpke->heap,
                 DYNAMIC_TYPE_CURVE25519);
@@ -321,8 +331,10 @@ int wc_HpkeGenerateKeyPair(Hpke* hpke, void** keypair, WC_RNG* rng)
             }
             break;
 #endif
+#if defined(HAVE_CURVE448) && defined(WOLFSSL_SHA512)
         case DHKEM_X448_HKDF_SHA512:
             /* TODO: Add X448 */
+#endif
         default:
             ret = BAD_FUNC_ARG;
             break;
@@ -332,7 +344,7 @@ int wc_HpkeGenerateKeyPair(Hpke* hpke, void** keypair, WC_RNG* rng)
         ret = MEMORY_E;
 
     if (ret != 0 && *keypair != NULL) {
-        wc_HpkeFreeKey(hpke, (word16)hpke->kem, *keypair, hpke->heap);
+        wc_HpkeFreeKey(hpke, hpke->kem, *keypair, hpke->heap);
         *keypair = NULL;
     }
 
@@ -361,15 +373,18 @@ int wc_HpkeSerializePublicKey(Hpke* hpke, void* key, byte* out, word16* outSz)
             ret = wc_ecc_export_x963_ex((ecc_key*)key, out, &tmpOutSz, 0);
             break;
 #endif
-#if defined(HAVE_CURVE25519)
+#if defined(HAVE_CURVE25519) && !defined(NO_SHA256)
         case DHKEM_X25519_HKDF_SHA256:
             ret = wc_curve25519_export_public_ex((curve25519_key*)key, out,
                 &tmpOutSz, EC25519_LITTLE_ENDIAN);
             break;
 #endif
+#if defined(HAVE_CURVE448) && defined(WOLFSSL_SHA512)
         case DHKEM_X448_HKDF_SHA512:
+            /* TODO: Add X448 */
+#endif
         default:
-            ret = -1;
+            ret = BAD_FUNC_ARG;
             break;
     }
 
@@ -403,11 +418,11 @@ int wc_HpkeDeserializePublicKey(Hpke* hpke, void** key, const byte* in,
             if (*key != NULL) {
                 /* import the x963 key */
                 ret = wc_ecc_import_x963_ex(in, inSz, (ecc_key*)*key,
-                    hpke->curve_id);
+                    hpke->curveId);
             }
             break;
 #endif
-#if defined(HAVE_CURVE25519)
+#if defined(HAVE_CURVE25519) && !defined(NO_SHA256)
         case DHKEM_X25519_HKDF_SHA256:
             *key = XMALLOC(sizeof(curve25519_key), hpke->heap,
                 DYNAMIC_TYPE_CURVE25519);
@@ -420,9 +435,12 @@ int wc_HpkeDeserializePublicKey(Hpke* hpke, void** key, const byte* in,
             }
             break;
 #endif
+#if defined(HAVE_CURVE448) && defined(WOLFSSL_SHA512)
         case DHKEM_X448_HKDF_SHA512:
+            /* TODO: Add X448 */
+#endif
         default:
-            ret = -1;
+            ret = BAD_FUNC_ARG;
             break;
     }
 
@@ -430,7 +448,7 @@ int wc_HpkeDeserializePublicKey(Hpke* hpke, void** key, const byte* in,
         ret = MEMORY_E;
 
     if (ret != 0 && *key != NULL) {
-        wc_HpkeFreeKey(hpke, (word16)hpke->kem, *key, hpke->heap);
+        wc_HpkeFreeKey(hpke, hpke->kem, *key, hpke->heap);
         *key = NULL;
     }
 
@@ -449,14 +467,16 @@ void wc_HpkeFreeKey(Hpke* hpke, word16 kem, void* keypair, void* heap)
             wc_ecc_key_free((ecc_key*)keypair);
             break;
 #endif
-#if defined(HAVE_CURVE25519)
+#if defined(HAVE_CURVE25519) && !defined(NO_SHA256)
         case DHKEM_X25519_HKDF_SHA256:
             wc_curve25519_free((curve25519_key*)keypair);
             XFREE(keypair, heap, DYNAMIC_TYPE_CURVE25519);
             break;
 #endif
+#if defined(HAVE_CURVE448) && defined(WOLFSSL_SHA512)
         case DHKEM_X448_HKDF_SHA512:
             /* TODO: Add X448 */
+#endif
         default:
             break;
     }
@@ -465,28 +485,41 @@ void wc_HpkeFreeKey(Hpke* hpke, word16 kem, void* keypair, void* heap)
 }
 
 static int wc_HpkeLabeledExtract(Hpke* hpke, byte* suite_id,
-    word32 suite_id_len, byte* salt, word32 salt_len, byte* label,
+    word32 suite_id_len, int digest, byte* salt, word32 salt_len, byte* label,
     word32 label_len, byte* ikm, word32 ikm_len, byte* out)
 {
     int ret;
     byte* labeled_ikm_p;
-#ifndef WOLFSSL_SMALL_STACK
-    byte labeled_ikm[MAX_HPKE_LABEL_SZ];
-#else
-    byte* labeled_ikm;
-#endif
+    word32 remaining;
+    WC_DECLARE_VAR(labeled_ikm, byte, MAX_HPKE_LABEL_SZ, 0);
 
     if (hpke == NULL) {
         return BAD_FUNC_ARG;
     }
 
-#ifdef WOLFSSL_SMALL_STACK
-    labeled_ikm = (byte*)XMALLOC(MAX_HPKE_LABEL_SZ, hpke->heap,
-        DYNAMIC_TYPE_TMP_BUFFER);
-    if (labeled_ikm == NULL) {
-        return MEMORY_E;
+    /* check that sum of len's will not overflow */
+    remaining = (word32)MAX_HPKE_LABEL_SZ;
+    if ((word32)HPKE_VERSION_STR_LEN > remaining) {
+        return BUFFER_E;
     }
-#endif
+    remaining -= (word32)HPKE_VERSION_STR_LEN;
+
+    if (suite_id_len > remaining) {
+        return BUFFER_E;
+    }
+    remaining -= suite_id_len;
+
+    if (label_len > remaining) {
+        return BUFFER_E;
+    }
+    remaining -= label_len;
+
+    if (ikm_len > remaining) {
+        return BUFFER_E;
+    }
+
+    WC_ALLOC_VAR_EX(labeled_ikm, byte, MAX_HPKE_LABEL_SZ, hpke->heap,
+        DYNAMIC_TYPE_TMP_BUFFER, return MEMORY_E);
 
     /* concat the labeled_ikm */
     /* version */
@@ -509,13 +542,11 @@ static int wc_HpkeLabeledExtract(Hpke* hpke, byte* suite_id,
 
     /* call extract */
     PRIVATE_KEY_UNLOCK();
-    ret = wc_HKDF_Extract(hpke->kdf_digest, salt, salt_len, labeled_ikm,
+    ret = wc_HKDF_Extract(digest, salt, salt_len, labeled_ikm,
         (word32)(size_t)(labeled_ikm_p - labeled_ikm), out);
     PRIVATE_KEY_LOCK();
 
-#ifdef WOLFSSL_SMALL_STACK
-    XFREE(labeled_ikm, hpke->heap, DYNAMIC_TYPE_TMP_BUFFER);
-#endif
+    WC_FREE_VAR_EX(labeled_ikm, hpke->heap, DYNAMIC_TYPE_TMP_BUFFER);
 
     return ret;
 }
@@ -523,28 +554,41 @@ static int wc_HpkeLabeledExtract(Hpke* hpke, byte* suite_id,
 /* do hkdf expand with the format specified in the hpke rfc, return 0 or
  * error */
 static int wc_HpkeLabeledExpand(Hpke* hpke, byte* suite_id, word32 suite_id_len,
-    byte* prk, word32 prk_len, byte* label, word32 label_len, byte* info,
-    word32 infoSz, word32 L, byte* out)
+    int digest, byte* prk, word32 prk_len, byte* label, word32 label_len,
+    byte* info, word32 infoSz, word32 L, byte* out)
 {
     int ret;
     byte* labeled_info_p;
-#ifndef WOLFSSL_SMALL_STACK
-    byte labeled_info[MAX_HPKE_LABEL_SZ];
-#else
-    byte* labeled_info;
-#endif
+    word32 remaining;
+    WC_DECLARE_VAR(labeled_info, byte, MAX_HPKE_LABEL_SZ, 0);
 
     if (hpke == NULL) {
         return BAD_FUNC_ARG;
     }
 
-#ifdef WOLFSSL_SMALL_STACK
-    labeled_info = (byte*)XMALLOC(MAX_HPKE_LABEL_SZ, hpke->heap,
-        DYNAMIC_TYPE_TMP_BUFFER);
-    if (labeled_info == NULL) {
-        return MEMORY_E;
+    /* check that sum of len's will not overflow */
+    remaining = (word32)MAX_HPKE_LABEL_SZ;
+    if (2U + (word32)HPKE_VERSION_STR_LEN > remaining) {
+        return BUFFER_E;
     }
-#endif
+    remaining -= 2U + (word32)HPKE_VERSION_STR_LEN;
+
+    if (suite_id_len > remaining) {
+        return BUFFER_E;
+    }
+    remaining -= suite_id_len;
+
+    if (label_len > remaining) {
+        return BUFFER_E;
+    }
+    remaining -= label_len;
+
+    if (infoSz > remaining) {
+        return BUFFER_E;
+    }
+
+    WC_ALLOC_VAR_EX(labeled_info, byte, MAX_HPKE_LABEL_SZ, hpke->heap,
+        DYNAMIC_TYPE_TMP_BUFFER, return MEMORY_E);
 
     /* copy length */
     ret = I2OSP((int)L, 2, labeled_info);
@@ -569,16 +613,12 @@ static int wc_HpkeLabeledExpand(Hpke* hpke, byte* suite_id, word32 suite_id_len,
 
         /* call expand */
         PRIVATE_KEY_UNLOCK();
-        ret = wc_HKDF_Expand(hpke->kdf_digest,
-            prk, prk_len,
-            labeled_info, (word32)(size_t)(labeled_info_p - labeled_info),
-            out, L);
+        ret = wc_HKDF_Expand(digest, prk, prk_len, labeled_info,
+                (word32)(size_t)(labeled_info_p - labeled_info), out, L);
         PRIVATE_KEY_LOCK();
     }
 
-#ifdef WOLFSSL_SMALL_STACK
-    XFREE(labeled_info, hpke->heap, DYNAMIC_TYPE_TMP_BUFFER);
-#endif
+    WC_FREE_VAR_EX(labeled_info, hpke->heap, DYNAMIC_TYPE_TMP_BUFFER);
 
     return ret;
 }
@@ -590,6 +630,10 @@ static int wc_HpkeContextComputeNonce(Hpke* hpke, HpkeBaseContext* context,
 {
     int ret;
     byte seq_bytes[HPKE_Nn_MAX];
+
+    if (hpke == NULL || context == NULL) {
+        return BAD_FUNC_ARG;
+    }
 
     /* convert the sequence into a byte string with the same length as the
      * nonce */
@@ -607,39 +651,39 @@ static int wc_HpkeExtractAndExpand( Hpke* hpke, byte* dh, word32 dh_len,
 {
     int ret;
     /* max length is the largest hmac digest possible */
-#ifndef WOLFSSL_SMALL_STACK
-    byte eae_prk[WC_MAX_DIGEST_SIZE];
-#else
-    byte* eae_prk;
-#endif
+    WC_DECLARE_VAR(eae_prk, byte, WC_MAX_DIGEST_SIZE, 0);
 
     if (hpke == NULL) {
         return BAD_FUNC_ARG;
     }
 
-#ifdef WOLFSSL_SMALL_STACK
-    eae_prk = (byte*)XMALLOC(WC_MAX_DIGEST_SIZE, hpke->heap,
-        DYNAMIC_TYPE_DIGEST);
-    if (eae_prk == NULL) {
-        return MEMORY_E;
-    }
+    WC_ALLOC_VAR_EX(eae_prk, byte, WC_MAX_DIGEST_SIZE, hpke->heap,
+        DYNAMIC_TYPE_DIGEST, return MEMORY_E);
+#ifdef WOLFSSL_CHECK_MEM_ZERO
+    XMEMSET(eae_prk, 0xff, WC_MAX_DIGEST_SIZE);
+    wc_MemZero_Add("wc_HpkeExtractAndExpand eae_prk", eae_prk,
+        WC_MAX_DIGEST_SIZE);
 #endif
 
     /* extract */
     ret = wc_HpkeLabeledExtract(hpke, hpke->kem_suite_id,
-        sizeof( hpke->kem_suite_id ), NULL, 0, (byte*)EAE_PRK_LABEL_STR,
-        EAE_PRK_LABEL_STR_LEN, dh, dh_len, eae_prk);
+        sizeof( hpke->kem_suite_id ), hpke->kemDigest, NULL, 0,
+        (byte*)EAE_PRK_LABEL_STR, EAE_PRK_LABEL_STR_LEN, dh, dh_len, eae_prk);
 
     /* expand */
-    if ( ret == 0 )
+    if ( ret == 0 ) {
         ret = wc_HpkeLabeledExpand(hpke, hpke->kem_suite_id,
-            sizeof( hpke->kem_suite_id ), eae_prk, hpke->Nh,
-            (byte*)SHARED_SECRET_LABEL_STR, SHARED_SECRET_LABEL_STR_LEN,
-            kemContext, kem_context_length, hpke->Nsecret, sharedSecret);
+            sizeof( hpke->kem_suite_id ), hpke->kemDigest, eae_prk,
+            hpke->Nsecret, (byte*)SHARED_SECRET_LABEL_STR,
+            SHARED_SECRET_LABEL_STR_LEN, kemContext, kem_context_length,
+            hpke->Nsecret, sharedSecret);
+    }
 
-#ifdef WOLFSSL_SMALL_STACK
-    XFREE(eae_prk, hpke->heap, DYNAMIC_TYPE_DIGEST);
+    ForceZero(eae_prk, WC_MAX_DIGEST_SIZE);
+#if !defined(WOLFSSL_SMALL_STACK) && defined(WOLFSSL_CHECK_MEM_ZERO)
+    wc_MemZero_Check(eae_prk, WC_MAX_DIGEST_SIZE);
 #endif
+    WC_FREE_VAR_EX(eae_prk, hpke->heap, DYNAMIC_TYPE_DIGEST);
 
     return ret;
 }
@@ -676,6 +720,11 @@ static int wc_HpkeKeyScheduleBase(Hpke* hpke, HpkeBaseContext* context,
         return MEMORY_E;
     }
 #endif
+#ifdef WOLFSSL_CHECK_MEM_ZERO
+    XMEMSET(secret, 0xff, WC_MAX_DIGEST_SIZE);
+    wc_MemZero_Add("wc_HpkeKeyScheduleBase secret", secret,
+        WC_MAX_DIGEST_SIZE);
+#endif
 
     /* set the sequence to 0 */
     context->seq = 0;
@@ -685,35 +734,37 @@ static int wc_HpkeKeyScheduleBase(Hpke* hpke, HpkeBaseContext* context,
 
     /* extract psk_id, which for base is null */
     ret = wc_HpkeLabeledExtract(hpke, hpke->hpke_suite_id,
-        sizeof( hpke->hpke_suite_id ), NULL, 0, (byte*)PSK_ID_HASH_LABEL_STR,
-        PSK_ID_HASH_LABEL_STR_LEN, NULL, 0, key_schedule_context + 1);
+        sizeof( hpke->hpke_suite_id ), hpke->kdfDigest, NULL, 0,
+        (byte*)PSK_ID_HASH_LABEL_STR, PSK_ID_HASH_LABEL_STR_LEN, NULL, 0,
+        key_schedule_context + 1);
 
     /* extract info */
     if (ret == 0) {
         ret = wc_HpkeLabeledExtract(hpke, hpke->hpke_suite_id,
-            sizeof( hpke->hpke_suite_id ), NULL, 0, (byte*)INFO_HASH_LABEL_STR,
-            INFO_HASH_LABEL_STR_LEN, info, infoSz,
+            sizeof( hpke->hpke_suite_id ), hpke->kdfDigest, NULL, 0,
+            (byte*)INFO_HASH_LABEL_STR, INFO_HASH_LABEL_STR_LEN, info, infoSz,
             key_schedule_context + 1 + hpke->Nh);
     }
 
     /* extract secret */
     if (ret == 0) {
         ret = wc_HpkeLabeledExtract(hpke, hpke->hpke_suite_id,
-            sizeof( hpke->hpke_suite_id ), sharedSecret, hpke->Nsecret,
-            (byte*)SECRET_LABEL_STR, SECRET_LABEL_STR_LEN, NULL, 0, secret);
+            sizeof( hpke->hpke_suite_id ), hpke->kdfDigest, sharedSecret,
+            hpke->Nsecret, (byte*)SECRET_LABEL_STR, SECRET_LABEL_STR_LEN,
+            NULL, 0, secret);
     }
 
     /* expand key */
     if (ret == 0)
         ret = wc_HpkeLabeledExpand(hpke, hpke->hpke_suite_id,
-            sizeof( hpke->hpke_suite_id ), secret, hpke->Nh,
+            sizeof( hpke->hpke_suite_id ), hpke->kdfDigest, secret, hpke->Nh,
             (byte*)KEY_LABEL_STR, KEY_LABEL_STR_LEN, key_schedule_context,
             1 + 2 * hpke->Nh, hpke->Nk, context->key);
 
     /* expand nonce */
     if (ret == 0) {
         ret = wc_HpkeLabeledExpand(hpke, hpke->hpke_suite_id,
-            sizeof( hpke->hpke_suite_id ), secret, hpke->Nh,
+            sizeof( hpke->hpke_suite_id ), hpke->kdfDigest, secret, hpke->Nh,
             (byte*)BASE_NONCE_LABEL_STR, BASE_NONCE_LABEL_STR_LEN,
             key_schedule_context, 1 + 2 * hpke->Nh, hpke->Nn,
             context->base_nonce);
@@ -722,15 +773,19 @@ static int wc_HpkeKeyScheduleBase(Hpke* hpke, HpkeBaseContext* context,
     /* expand exporter_secret */
     if (ret == 0) {
         ret = wc_HpkeLabeledExpand(hpke, hpke->hpke_suite_id,
-            sizeof( hpke->hpke_suite_id ), secret, hpke->Nh,
+            sizeof( hpke->hpke_suite_id ), hpke->kdfDigest, secret, hpke->Nh,
             (byte*)EXP_LABEL_STR, EXP_LABEL_STR_LEN, key_schedule_context,
             1 + 2 * hpke->Nh, hpke->Nh, context->exporter_secret);
     }
 
-#ifdef WOLFSSL_SMALL_STACK
-    XFREE(key_schedule_context, hpke->heap, DYNAMIC_TYPE_TMP_BUFFER);
-    XFREE(secret, hpke->heap, DYNAMIC_TYPE_DIGEST);
+    ForceZero(key_schedule_context, 1 + 2 * WC_MAX_DIGEST_SIZE);
+    ForceZero(secret, WC_MAX_DIGEST_SIZE);
+#if !defined(WOLFSSL_SMALL_STACK) && defined(WOLFSSL_CHECK_MEM_ZERO)
+    wc_MemZero_Check(secret, WC_MAX_DIGEST_SIZE);
 #endif
+    WC_FREE_VAR_EX(key_schedule_context, hpke->heap,
+        DYNAMIC_TYPE_TMP_BUFFER);
+    WC_FREE_VAR_EX(secret, hpke->heap, DYNAMIC_TYPE_DIGEST);
 
     return ret;
 }
@@ -740,8 +795,9 @@ static int wc_HpkeEncap(Hpke* hpke, void* ephemeralKey, void* receiverKey,
     byte* sharedSecret)
 {
     int ret;
-#ifdef ECC_TIMING_RESISTANT
+#if defined(ECC_TIMING_RESISTANT) && defined(HAVE_ECC)
     WC_RNG* rng;
+    WC_RNG* prevRng;
 #endif
     word32 dh_len;
     word16 receiverPubKeySz;
@@ -773,6 +829,11 @@ static int wc_HpkeEncap(Hpke* hpke, void* ephemeralKey, void* receiverKey,
     }
 #endif
 
+#ifdef WOLFSSL_CHECK_MEM_ZERO
+    XMEMSET(dh, 0xff, hpke->Ndh);
+    wc_MemZero_Add("wc_HpkeEncap dh", dh, hpke->Ndh);
+#endif
+
     /* generate dh */
     dh_len = hpke->Ndh;
 
@@ -790,28 +851,34 @@ static int wc_HpkeEncap(Hpke* hpke, void* ephemeralKey, void* receiverKey,
                 break;
             }
 
-            wc_ecc_set_rng((ecc_key*)ephemeralKey, rng);
+            prevRng = ((ecc_key*)ephemeralKey)->rng;
+            (void)wc_ecc_set_rng((ecc_key*)ephemeralKey, rng);
 #endif
 
             ret = wc_ecc_shared_secret((ecc_key*)ephemeralKey,
                 (ecc_key*)receiverKey, dh, &dh_len);
 
 #ifdef ECC_TIMING_RESISTANT
+            /* The key belongs to the caller, so put back whatever RNG it had
+             * before this RNG is freed. */
+            (void)wc_ecc_set_rng((ecc_key*)ephemeralKey, prevRng);
             wc_rng_free(rng);
 #endif
             break;
 #endif
-#if defined(HAVE_CURVE25519)
+#if defined(HAVE_CURVE25519) && !defined(NO_SHA256)
         case DHKEM_X25519_HKDF_SHA256:
             ret = wc_curve25519_shared_secret_ex((curve25519_key*)ephemeralKey,
                 (curve25519_key*)receiverKey, dh, &dh_len,
                 EC25519_LITTLE_ENDIAN);
             break;
 #endif
+#if defined(HAVE_CURVE448) && defined(WOLFSSL_SHA512)
         case DHKEM_X448_HKDF_SHA512:
             /* TODO: Add X448 */
+#endif
         default:
-            ret = -1;
+            ret = BAD_FUNC_ARG;
             break;
     }
 
@@ -831,10 +898,13 @@ static int wc_HpkeEncap(Hpke* hpke, void* ephemeralKey, void* receiverKey,
             hpke->Npk * 2, sharedSecret);
     }
 
-#ifdef WOLFSSL_SMALL_STACK
-    XFREE(dh, hpke->heap, DYNAMIC_TYPE_TMP_BUFFER);
-    XFREE(kemContext, hpke->heap, DYNAMIC_TYPE_TMP_BUFFER);
+    ForceZero(dh, hpke->Ndh);
+    ForceZero(kemContext, hpke->Npk * 2);
+#if !defined(WOLFSSL_SMALL_STACK) && defined(WOLFSSL_CHECK_MEM_ZERO)
+    wc_MemZero_Check(dh, hpke->Ndh);
 #endif
+    WC_FREE_VAR_EX(dh, hpke->heap, DYNAMIC_TYPE_TMP_BUFFER);
+    WC_FREE_VAR_EX(kemContext, hpke->heap, DYNAMIC_TYPE_TMP_BUFFER);
 
     return ret;
 }
@@ -844,11 +914,7 @@ static int wc_HpkeSetupBaseSender(Hpke* hpke, HpkeBaseContext* context,
     void* ephemeralKey, void* receiverKey, byte* info, word32 infoSz)
 {
     int ret;
-#ifndef WOLFSSL_SMALL_STACK
-    byte sharedSecret[HPKE_Nsecret_MAX];
-#else
-    byte* sharedSecret;
-#endif
+    WC_DECLARE_VAR(sharedSecret, byte, HPKE_Nsecret_MAX, 0);
 
     if (hpke == NULL) {
         return BAD_FUNC_ARG;
@@ -857,6 +923,15 @@ static int wc_HpkeSetupBaseSender(Hpke* hpke, HpkeBaseContext* context,
 #ifdef WOLFSSL_SMALL_STACK
     sharedSecret = (byte*)XMALLOC(hpke->Nsecret, hpke->heap,
         DYNAMIC_TYPE_TMP_BUFFER);
+    if (sharedSecret == NULL) {
+        return MEMORY_E;
+    }
+#endif
+
+#ifdef WOLFSSL_CHECK_MEM_ZERO
+    XMEMSET(sharedSecret, 0xff, hpke->Nsecret);
+    wc_MemZero_Add("wc_HpkeSetupBaseSender sharedSecret", sharedSecret,
+        hpke->Nsecret);
 #endif
 
     /* encap */
@@ -868,70 +943,88 @@ static int wc_HpkeSetupBaseSender(Hpke* hpke, HpkeBaseContext* context,
             infoSz);
     }
 
-#ifdef WOLFSSL_SMALL_STACK
-    XFREE(sharedSecret, hpke->heap, DYNAMIC_TYPE_TMP_BUFFER);
+#if defined(HAVE_SECRET_CALLBACK) && defined(HAVE_ECH)
+    if (ret == 0 && hpke->echSecret != NULL) {
+        XMEMCPY(hpke->echSecret, sharedSecret, hpke->Nsecret);
+    }
 #endif
+    ForceZero(sharedSecret, hpke->Nsecret);
+#if !defined(WOLFSSL_SMALL_STACK) && defined(WOLFSSL_CHECK_MEM_ZERO)
+    wc_MemZero_Check(sharedSecret, hpke->Nsecret);
+#endif
+    WC_FREE_VAR_EX(sharedSecret, hpke->heap, DYNAMIC_TYPE_TMP_BUFFER);
 
     return ret;
 }
 
-/* encrypt a message using an hpke base context, return 0 or error */
-static int wc_HpkeContextSealBase(Hpke* hpke, HpkeBaseContext* context,
+/* give SetupBaseSender a more intuitive and wolfCrypt friendly name */
+int wc_HpkeInitSealContext(Hpke* hpke, HpkeBaseContext* context,
+    void* ephemeralKey, void* receiverKey, byte* info, word32 infoSz)
+{
+    if (hpke == NULL || context == NULL || ephemeralKey == NULL ||
+        receiverKey == NULL || (info == NULL && infoSz != 0)) {
+        return BAD_FUNC_ARG;
+    }
+
+    /* zero out all fields */
+    XMEMSET(context, 0, sizeof(HpkeBaseContext));
+
+    return wc_HpkeSetupBaseSender(hpke, context, ephemeralKey, receiverKey,
+        info, infoSz);
+}
+
+/* encrypt a message using an hpke base context, return 0 or error.
+ * out must hold at least ptSz + hpke->Nt bytes: ptSz bytes of ciphertext
+ * followed by the hpke->Nt byte AEAD tag written at out + ptSz. hpke->Nt is
+ * 16 for the supported AES-GCM AEADs. No output length is taken, so the
+ * caller is responsible for sizing out. */
+int wc_HpkeContextSealBase(Hpke* hpke, HpkeBaseContext* context,
     byte* aad, word32 aadSz, byte* plaintext, word32 ptSz, byte* out)
 {
     int ret;
     byte nonce[HPKE_Nn_MAX];
-#ifndef WOLFSSL_SMALL_STACK
-    Aes aes_key[1];
-#else
-    Aes* aes_key;
-#endif
-
-    if (hpke == NULL) {
+    WC_DECLARE_VAR(aes, Aes, 1, 0);
+    if (hpke == NULL || context == NULL || (aad == NULL && aadSz != 0) ||
+        plaintext == NULL || out == NULL) {
         return BAD_FUNC_ARG;
     }
 
-#ifdef WOLFSSL_SMALL_STACK
-    aes_key = (Aes*)XMALLOC(sizeof(Aes), hpke->heap, DYNAMIC_TYPE_AES);
-    if (aes_key == NULL) {
-        return MEMORY_E;
-    }
-#endif
+    /* RFC 9180 requires error on sequence overflow. */
+    if (context->seq == WC_MAX_SINT_OF(int))
+        return SEQ_OVERFLOW_E;
 
-    ret = wc_AesInit(aes_key, hpke->heap, INVALID_DEVID);
+    WC_ALLOC_VAR_EX(aes, Aes, 1, hpke->heap, DYNAMIC_TYPE_AES,
+        return MEMORY_E);
+    ret = wc_AesInit(aes, hpke->heap, INVALID_DEVID);
     if (ret == 0) {
+        /* compute nonce */
         ret = wc_HpkeContextComputeNonce(hpke, context, nonce);
         if (ret == 0) {
-            ret = wc_AesGcmSetKey(aes_key, context->key, hpke->Nk);
+            ret = wc_AesGcmSetKey(aes, context->key, hpke->Nk);
         }
         if (ret == 0) {
-            ret = wc_AesGcmEncrypt(aes_key, out, plaintext, ptSz, nonce,
+            ret = wc_AesGcmEncrypt(aes, out, plaintext, ptSz, nonce,
                 hpke->Nn, out + ptSz, hpke->Nt, aad, aadSz);
         }
+        /* increment sequence for non one shot */
         if (ret == 0) {
             context->seq++;
         }
-        wc_AesFree(aes_key);
+        wc_AesFree(aes);
     }
-
-#ifdef WOLFSSL_SMALL_STACK
-    XFREE(aes_key, hpke->heap, DYNAMIC_TYPE_AES);
-#endif
-
+    WC_FREE_VAR_EX(aes, hpke->heap, DYNAMIC_TYPE_AES);
     return ret;
 }
 
-/* encrypt a message using the provided ephemeral and receiver kem keys */
+/* encrypt a message using the provided ephemeral and receiver kem keys.
+ * ciphertext must hold at least ptSz + hpke->Nt bytes (ciphertext plus the
+ * in-line AEAD tag); see wc_HpkeContextSealBase. */
 int wc_HpkeSealBase(Hpke* hpke, void* ephemeralKey, void* receiverKey,
     byte* info, word32 infoSz, byte* aad, word32 aadSz, byte* plaintext,
     word32 ptSz, byte* ciphertext)
 {
     int ret;
-#ifdef WOLFSSL_SMALL_STACK
-    HpkeBaseContext* context;
-#else
-    HpkeBaseContext context[1];
-#endif
+    WC_DECLARE_VAR(context, HpkeBaseContext, 1, 0);
 
     /* check that all the buffers are non NULL or optional with 0 length */
     if (hpke == NULL || ephemeralKey == NULL || receiverKey == NULL ||
@@ -940,12 +1033,12 @@ int wc_HpkeSealBase(Hpke* hpke, void* ephemeralKey, void* receiverKey,
         return BAD_FUNC_ARG;
     }
 
-#ifdef WOLFSSL_SMALL_STACK
-    context = (HpkeBaseContext*)XMALLOC(sizeof(HpkeBaseContext), hpke->heap,
-        DYNAMIC_TYPE_TMP_BUFFER);
-    if (context == NULL) {
-        return MEMORY_E;
-    }
+    WC_ALLOC_VAR_EX(context, HpkeBaseContext, 1, hpke->heap,
+        DYNAMIC_TYPE_TMP_BUFFER, return MEMORY_E);
+#ifdef WOLFSSL_CHECK_MEM_ZERO
+    XMEMSET(context, 0xff, sizeof(HpkeBaseContext));
+    wc_MemZero_Add("wc_HpkeSealBase context", context,
+        sizeof(HpkeBaseContext));
 #endif
 
     PRIVATE_KEY_UNLOCK();
@@ -962,20 +1055,152 @@ int wc_HpkeSealBase(Hpke* hpke, void* ephemeralKey, void* receiverKey,
 
     PRIVATE_KEY_LOCK();
 
-#ifdef WOLFSSL_SMALL_STACK
-    XFREE(context, hpke->heap, DYNAMIC_TYPE_TMP_BUFFER);
+    ForceZero(context, sizeof(HpkeBaseContext));
+#if !defined(WOLFSSL_SMALL_STACK) && defined(WOLFSSL_CHECK_MEM_ZERO)
+    wc_MemZero_Check(context, sizeof(HpkeBaseContext));
 #endif
+    WC_FREE_VAR_EX(context, hpke->heap, DYNAMIC_TYPE_TMP_BUFFER);
 
     return ret;
 }
+
+#if (defined(HAVE_ECC) && defined(ECC_TIMING_RESISTANT)) ||                    \
+    (defined(HAVE_CURVE25519) && !defined(NO_SHA256) &&                       \
+     defined(WOLFSSL_CURVE25519_BLINDING))
+/* Try to make a private-only copy of a receiver key.
+ *
+ * The shared secret computation needs an RNG and the only way to hand it one
+ * is the key's own rng field, so without a copy it would have to write to an
+ * object it does not own. The ECH server passes the key its WOLFSSL_CTX shares
+ * between every connection made from it, where that write races the other
+ * connections: each saves what it finds and restores it afterwards, so one of
+ * them ends up holding an RNG another has already freed.
+ *
+ * Only a plain software key is copied. A key carrying a device id has to keep
+ * reaching that device, and both a copy without the id and an import that
+ * provisions the device would be worse than the write this avoids. Such a key
+ * computes its shared secret on the device, which never reads key->rng, so
+ * leaving it alone costs nothing.
+ *
+ * @param [in]  hpke  HPKE object, for the KEM in use and the heap hint.
+ * @param [in]  key   Receiver key to copy.
+ * @param [out] copy  The copy, to be released with wc_HpkeFreeKey().
+ * @return  1 when copy holds a usable copy of the private key.
+ * @return  0 when no copy could be made and the original has to be used.
+ */
+static int wc_HpkeCopyPrivateKey(Hpke* hpke, void* key, void** copy)
+{
+    int ret = WC_NO_ERR_TRACE(NOT_COMPILED_IN);
+#if defined(HAVE_ECC) && defined(ECC_TIMING_RESISTANT)
+    byte eccPriv[ECC_MAXSIZE];
+    word32 eccPrivSz = (word32)sizeof(eccPriv);
+#endif
+#if defined(HAVE_CURVE25519) && !defined(NO_SHA256) &&                        \
+    defined(WOLFSSL_CURVE25519_BLINDING)
+    byte x25519Priv[CURVE25519_KEYSIZE];
+    word32 x25519PrivSz = (word32)sizeof(x25519Priv);
+#endif
+
+    *copy = NULL;
+
+    switch (hpke->kem)
+    {
+#if defined(HAVE_ECC) && defined(ECC_TIMING_RESISTANT)
+        case DHKEM_P256_HKDF_SHA256:
+        case DHKEM_P384_HKDF_SHA384:
+        case DHKEM_P521_HKDF_SHA512:
+            if (((ecc_key*)key)->dp == NULL)
+                break;
+        /* A key only carries a device id where there is a device to dispatch
+         * to. Everywhere else wc_ecc_shared_secret() is software only, so
+         * there is nothing a copy could take away. */
+        #if defined(PLUTON_CRYPTO_ECC) || defined(WOLF_CRYPTO_CB)
+            if (((ecc_key*)key)->devId != INVALID_DEVID)
+                break;
+        #endif
+
+            ret = wc_ecc_export_private_only((ecc_key*)key, eccPriv,
+                &eccPrivSz);
+            if (ret == 0) {
+                *copy = wc_ecc_key_new_ex(hpke->heap, INVALID_DEVID);
+                if (*copy == NULL)
+                    ret = MEMORY_E;
+            }
+            if (ret == 0) {
+                /* The public part is not needed: the shared secret takes its
+                 * point from the ephemeral key. */
+                ret = wc_ecc_import_private_key_ex(eccPriv, eccPrivSz, NULL, 0,
+                    (ecc_key*)*copy, ((ecc_key*)key)->dp->id);
+            }
+            ForceZero(eccPriv, sizeof(eccPriv));
+            break;
+#endif
+#if defined(HAVE_CURVE25519) && !defined(NO_SHA256) &&                        \
+    defined(WOLFSSL_CURVE25519_BLINDING)
+        case DHKEM_X25519_HKDF_SHA256:
+        /* As above, the field only exists where a device can be dispatched
+         * to. */
+        #ifdef WOLF_CRYPTO_CB
+            if (((curve25519_key*)key)->devId != INVALID_DEVID)
+                break;
+        #endif
+
+            ret = wc_curve25519_export_private_raw_ex((curve25519_key*)key,
+                x25519Priv, &x25519PrivSz, EC25519_LITTLE_ENDIAN);
+            if (ret == 0) {
+                *copy = XMALLOC(sizeof(curve25519_key), hpke->heap,
+                    DYNAMIC_TYPE_CURVE25519);
+                if (*copy == NULL) {
+                    ret = MEMORY_E;
+                }
+                else {
+                    ret = wc_curve25519_init_ex((curve25519_key*)*copy,
+                        hpke->heap, INVALID_DEVID);
+                    if (ret != 0) {
+                        /* Never initialized, so it must not be freed as a
+                         * key. */
+                        XFREE(*copy, hpke->heap, DYNAMIC_TYPE_CURVE25519);
+                        *copy = NULL;
+                    }
+                }
+            }
+            if (ret == 0) {
+                ret = wc_curve25519_import_private_ex(x25519Priv, x25519PrivSz,
+                    (curve25519_key*)*copy, EC25519_LITTLE_ENDIAN);
+            }
+            ForceZero(x25519Priv, sizeof(x25519Priv));
+            break;
+#endif
+        default:
+            break;
+    }
+
+    if (ret != 0 && *copy != NULL) {
+        wc_HpkeFreeKey(hpke, hpke->kem, *copy, hpke->heap);
+        *copy = NULL;
+    }
+
+    return ret == 0;
+}
+#endif
 
 /* compute the shared secret from the ephemeral and receiver kem keys */
 static int wc_HpkeDecap(Hpke* hpke, void* receiverKey, const byte* pubKey,
     word16 pubKeySz, byte* sharedSecret)
 {
     int ret;
-#ifdef ECC_TIMING_RESISTANT
+#ifdef HAVE_ECC
+    ecc_key* eccPriv;
+#endif
+#if defined(HAVE_CURVE25519) && !defined(NO_SHA256)
+    curve25519_key* x25519Priv;
+#endif
+#if (defined(HAVE_ECC) && defined(ECC_TIMING_RESISTANT)) ||                    \
+    (defined(HAVE_CURVE25519) && !defined(NO_SHA256) &&                       \
+     defined(WOLFSSL_CURVE25519_BLINDING))
     WC_RNG* rng;
+    WC_RNG* prevRng = NULL;
+    void* privCopy = NULL;
 #endif
     word32 dh_len;
     word16 receiverPubKeySz;
@@ -1005,6 +1230,11 @@ static int wc_HpkeDecap(Hpke* hpke, void* receiverKey, const byte* pubKey,
     }
 #endif
 
+#ifdef WOLFSSL_CHECK_MEM_ZERO
+    XMEMSET(dh, 0xff, hpke->Ndh);
+    wc_MemZero_Add("wc_HpkeDecap dh", dh, hpke->Ndh);
+#endif
+
     /* deserialize ephemeralKey from pubKey */
     ret = wc_HpkeDeserializePublicKey(hpke, &ephemeralKey, pubKey, pubKeySz);
 
@@ -1018,39 +1248,90 @@ static int wc_HpkeDecap(Hpke* hpke, void* receiverKey, const byte* pubKey,
             case DHKEM_P256_HKDF_SHA256:
             case DHKEM_P384_HKDF_SHA384:
             case DHKEM_P521_HKDF_SHA512:
+                eccPriv = (ecc_key*)receiverKey;
 #ifdef ECC_TIMING_RESISTANT
                 rng = wc_rng_new(NULL, 0, hpke->heap);
 
-                if (rng == NULL)
-                    return RNG_FAILURE_E;
+                if (rng == NULL) {
+                    ret = RNG_FAILURE_E;
+                    break;
+                }
 
-                wc_ecc_set_rng((ecc_key*)receiverKey, rng);
+                /* Work on a copy so that installing the RNG does not write to
+                 * the caller's key. A key that cannot be copied has its
+                 * private part in a device, and that device computes the
+                 * shared secret without ever reading key->rng, so using it as
+                 * it is costs nothing. */
+                if (wc_HpkeCopyPrivateKey(hpke, receiverKey, &privCopy))
+                    eccPriv = (ecc_key*)privCopy;
+                else
+                    prevRng = eccPriv->rng;
+                (void)wc_ecc_set_rng(eccPriv, rng);
 #endif
 
-                ret = wc_ecc_shared_secret((ecc_key*)receiverKey,
-                    (ecc_key*)ephemeralKey, dh, &dh_len);
+                ret = wc_ecc_shared_secret(eccPriv, (ecc_key*)ephemeralKey, dh,
+                    &dh_len);
 
 #ifdef ECC_TIMING_RESISTANT
+                if (privCopy != NULL) {
+                    wc_HpkeFreeKey(hpke, hpke->kem, privCopy, hpke->heap);
+                    privCopy = NULL;
+                }
+                else {
+                    /* The key belongs to the caller, so put back whatever RNG
+                     * it had before this RNG is freed. */
+                    (void)wc_ecc_set_rng(eccPriv, prevRng);
+                }
                 wc_rng_free(rng);
 #endif
                 break;
 #endif
-#if defined(HAVE_CURVE25519)
+#if defined(HAVE_CURVE25519) && !defined(NO_SHA256)
             case DHKEM_X25519_HKDF_SHA256:
-                ret = wc_curve25519_shared_secret_ex(
-                    (curve25519_key*)receiverKey, (curve25519_key*)ephemeralKey,
-                    dh, &dh_len, EC25519_LITTLE_ENDIAN);
+                x25519Priv = (curve25519_key*)receiverKey;
+            #ifdef WOLFSSL_CURVE25519_BLINDING
+                rng = wc_rng_new(NULL, 0, hpke->heap);
+
+                if (rng == NULL) {
+                    ret = RNG_FAILURE_E;
+                    break;
+                }
+
+                /* As above: prefer a copy so the caller's key is left alone. */
+                if (wc_HpkeCopyPrivateKey(hpke, receiverKey, &privCopy))
+                    x25519Priv = (curve25519_key*)privCopy;
+                else
+                    prevRng = x25519Priv->rng;
+                (void)wc_curve25519_set_rng(x25519Priv, rng);
+            #endif
+                ret = wc_curve25519_shared_secret_ex(x25519Priv,
+                    (curve25519_key*)ephemeralKey, dh, &dh_len,
+                    EC25519_LITTLE_ENDIAN);
+            #ifdef WOLFSSL_CURVE25519_BLINDING
+                if (privCopy != NULL) {
+                    wc_HpkeFreeKey(hpke, hpke->kem, privCopy, hpke->heap);
+                    privCopy = NULL;
+                }
+                else {
+                    /* The key belongs to the caller, so put back whatever RNG
+                     * it had before this RNG is freed. */
+                    (void)wc_curve25519_set_rng(x25519Priv, prevRng);
+                }
+                wc_rng_free(rng);
+            #endif
                 break;
 #endif
+#if defined(HAVE_CURVE448) && defined(WOLFSSL_SHA512)
             case DHKEM_X448_HKDF_SHA512:
                 /* TODO: Add X448 */
+#endif
             default:
-                ret = -1;
+                ret = BAD_FUNC_ARG;
                 break;
         }
 
     if (ephemeralKey != NULL)
-        wc_HpkeFreeKey(hpke, (word16)hpke->kem, ephemeralKey, hpke->heap);
+        wc_HpkeFreeKey(hpke, hpke->kem, ephemeralKey, hpke->heap);
 
     if (ret == 0) {
         /* copy pubKey into kemContext */
@@ -1067,10 +1348,13 @@ static int wc_HpkeDecap(Hpke* hpke, void* receiverKey, const byte* pubKey,
             hpke->Npk * 2, sharedSecret);
     }
 
-#ifdef WOLFSSL_SMALL_STACK
-    XFREE(dh, hpke->heap, DYNAMIC_TYPE_TMP_BUFFER);
-    XFREE(kemContext, hpke->heap, DYNAMIC_TYPE_TMP_BUFFER);
+    ForceZero(dh, hpke->Ndh);
+    ForceZero(kemContext, hpke->Npk * 2);
+#if !defined(WOLFSSL_SMALL_STACK) && defined(WOLFSSL_CHECK_MEM_ZERO)
+    wc_MemZero_Check(dh, hpke->Ndh);
 #endif
+    WC_FREE_VAR_EX(dh, hpke->heap, DYNAMIC_TYPE_TMP_BUFFER);
+    WC_FREE_VAR_EX(kemContext, hpke->heap, DYNAMIC_TYPE_TMP_BUFFER);
 
     return ret;
 }
@@ -1081,18 +1365,14 @@ static int wc_HpkeSetupBaseReceiver(Hpke* hpke, HpkeBaseContext* context,
     word32 infoSz)
 {
     int ret;
-#ifndef WOLFSSL_SMALL_STACK
-    byte sharedSecret[HPKE_Nsecret_MAX];
-#else
-    byte* sharedSecret;
-#endif
+    WC_DECLARE_VAR(sharedSecret, byte, HPKE_Nsecret_MAX, 0);
 
-#ifdef WOLFSSL_SMALL_STACK
-    sharedSecret = (byte*)XMALLOC(hpke->Nsecret, hpke->heap,
-        DYNAMIC_TYPE_TMP_BUFFER);
-    if (sharedSecret == NULL) {
-        return MEMORY_E;
-    }
+    WC_ALLOC_VAR_EX(sharedSecret, byte, hpke->Nsecret, hpke->heap,
+        DYNAMIC_TYPE_TMP_BUFFER, return MEMORY_E);
+#ifdef WOLFSSL_CHECK_MEM_ZERO
+    XMEMSET(sharedSecret, 0xff, hpke->Nsecret);
+    wc_MemZero_Add("wc_HpkeSetupBaseReceiver sharedSecret", sharedSecret,
+        hpke->Nsecret);
 #endif
 
     /* decap */
@@ -1104,56 +1384,70 @@ static int wc_HpkeSetupBaseReceiver(Hpke* hpke, HpkeBaseContext* context,
             infoSz);
     }
 
-#ifdef WOLFSSL_SMALL_STACK
-    XFREE(sharedSecret, hpke->heap, DYNAMIC_TYPE_TMP_BUFFER);
+#if defined(HAVE_SECRET_CALLBACK) && defined(HAVE_ECH)
+    if (ret == 0 && hpke->echSecret != NULL) {
+        XMEMCPY(hpke->echSecret, sharedSecret, hpke->Nsecret);
+    }
 #endif
+    ForceZero(sharedSecret, hpke->Nsecret);
+#if !defined(WOLFSSL_SMALL_STACK) && defined(WOLFSSL_CHECK_MEM_ZERO)
+    wc_MemZero_Check(sharedSecret, hpke->Nsecret);
+#endif
+    WC_FREE_VAR_EX(sharedSecret, hpke->heap, DYNAMIC_TYPE_TMP_BUFFER);
 
     return ret;
 }
 
-/* decrypt a message using a setup hpke context, return 0 or error */
-static int wc_HpkeContextOpenBase(Hpke* hpke, HpkeBaseContext* context,
-    byte* aad, word32 aadSz, byte* ciphertext, word32 ctSz, byte* out)
+/* give SetupBaseReceiver a more intuitive and wolfCrypt friendly name */
+int wc_HpkeInitOpenContext(Hpke* hpke, HpkeBaseContext* context,
+    void* receiverKey, const byte* pubKey, word16 pubKeySz, byte* info,
+    word32 infoSz)
 {
-    int ret;
-    byte nonce[HPKE_Nn_MAX];
-#ifndef WOLFSSL_SMALL_STACK
-    Aes aes_key[1];
-#else
-    Aes* aes_key;
-#endif
-
-    if (hpke == NULL) {
+    if (hpke == NULL || context == NULL || receiverKey == NULL || pubKey == NULL
+        || (info == NULL && infoSz != 0)) {
         return BAD_FUNC_ARG;
     }
 
-    XMEMSET(nonce, 0, sizeof(nonce));
-#ifdef WOLFSSL_SMALL_STACK
-    aes_key = (Aes*)XMALLOC(sizeof(Aes), hpke->heap, DYNAMIC_TYPE_AES);
-    if (aes_key == NULL) {
-        return MEMORY_E;
-    }
-#endif
+    return wc_HpkeSetupBaseReceiver(hpke, context, receiverKey, pubKey,
+        pubKeySz, info, infoSz);
+}
 
+/* decrypt a message using a setup hpke context, return 0 or error */
+int wc_HpkeContextOpenBase(Hpke* hpke, HpkeBaseContext* context, byte* aad,
+    word32 aadSz, byte* ciphertext, word32 ctSz, byte* out)
+{
+    int ret;
+    byte nonce[HPKE_Nn_MAX];
+    WC_DECLARE_VAR(aes, Aes, 1, 0);
+    if (hpke == NULL || context == NULL || (aad == NULL && aadSz != 0) ||
+        ciphertext == NULL || out == NULL) {
+        return BAD_FUNC_ARG;
+    }
+
+    /* RFC 9180 requires error on sequence overflow. */
+    if (context->seq == WC_MAX_SINT_OF(int))
+        return SEQ_OVERFLOW_E;
+
+    XMEMSET(nonce, 0, sizeof(nonce));
+    WC_ALLOC_VAR_EX(aes, Aes, 1, hpke->heap, DYNAMIC_TYPE_AES,
+        return MEMORY_E);
+    /* compute nonce */
     ret = wc_HpkeContextComputeNonce(hpke, context, nonce);
     if (ret == 0)
-        ret = wc_AesInit(aes_key, hpke->heap, INVALID_DEVID);
+        ret = wc_AesInit(aes, hpke->heap, INVALID_DEVID);
     if (ret == 0) {
-        ret = wc_AesGcmSetKey(aes_key, context->key, hpke->Nk);
+        ret = wc_AesGcmSetKey(aes, context->key, hpke->Nk);
         if (ret == 0) {
-            ret = wc_AesGcmDecrypt(aes_key, out, ciphertext, ctSz, nonce,
+            ret = wc_AesGcmDecrypt(aes, out, ciphertext, ctSz, nonce,
                 hpke->Nn, ciphertext + ctSz, hpke->Nt, aad, aadSz);
         }
+        /* increment sequence for non one shot */
         if (ret == 0) {
             context->seq++;
         }
-        wc_AesFree(aes_key);
+        wc_AesFree(aes);
     }
-
-#ifdef WOLFSSL_SMALL_STACK
-    XFREE(aes_key, hpke->heap, DYNAMIC_TYPE_AES);
-#endif
-
+    WC_FREE_VAR_EX(aes, hpke->heap, DYNAMIC_TYPE_AES);
     return ret;
 }
 
@@ -1164,11 +1458,7 @@ int wc_HpkeOpenBase(Hpke* hpke, void* receiverKey, const byte* pubKey,
     byte* ciphertext, word32 ctSz, byte* plaintext)
 {
     int ret;
-#ifndef WOLFSSL_SMALL_STACK
-    HpkeBaseContext context[1];
-#else
-    HpkeBaseContext* context;
-#endif
+    WC_DECLARE_VAR(context, HpkeBaseContext, 1, 0);
 
     /* check that all the buffer are non NULL or optional with 0 length */
     if (hpke == NULL || receiverKey == NULL || pubKey == NULL ||
@@ -1178,12 +1468,12 @@ int wc_HpkeOpenBase(Hpke* hpke, void* receiverKey, const byte* pubKey,
         return BAD_FUNC_ARG;
     }
 
-#ifdef WOLFSSL_SMALL_STACK
-    context = (HpkeBaseContext*)XMALLOC(sizeof(HpkeBaseContext), hpke->heap,
-        DYNAMIC_TYPE_TMP_BUFFER);
-    if (context == NULL) {
-        return MEMORY_E;
-    }
+    WC_ALLOC_VAR_EX(context, HpkeBaseContext, 1, hpke->heap,
+        DYNAMIC_TYPE_TMP_BUFFER, return MEMORY_E);
+#ifdef WOLFSSL_CHECK_MEM_ZERO
+    XMEMSET(context, 0xff, sizeof(HpkeBaseContext));
+    wc_MemZero_Add("wc_HpkeOpenBase context", context,
+        sizeof(HpkeBaseContext));
 #endif
 
     PRIVATE_KEY_UNLOCK();
@@ -1200,11 +1490,133 @@ int wc_HpkeOpenBase(Hpke* hpke, void* receiverKey, const byte* pubKey,
 
     PRIVATE_KEY_LOCK();
 
-#ifdef WOLFSSL_SMALL_STACK
-    XFREE(context, hpke->heap, DYNAMIC_TYPE_TMP_BUFFER);
+    ForceZero(context, sizeof(HpkeBaseContext));
+#if !defined(WOLFSSL_SMALL_STACK) && defined(WOLFSSL_CHECK_MEM_ZERO)
+    wc_MemZero_Check(context, sizeof(HpkeBaseContext));
 #endif
+    WC_FREE_VAR_EX(context, hpke->heap, DYNAMIC_TYPE_TMP_BUFFER);
 
     return ret;
 }
+
+/* return the encrypted length of the KEM
+ * return 0 otherwise */
+WOLFSSL_LOCAL word16 wc_HpkeKemGetEncLen(word16 kemId)
+{
+    switch (kemId)
+    {
+#if defined(HAVE_ECC)
+#if (!defined(NO_ECC256) || defined(HAVE_ALL_CURVES)) && !defined(NO_SHA256)
+    case DHKEM_P256_HKDF_SHA256:
+        return DHKEM_P256_ENC_LEN;
+#endif
+#if (defined(HAVE_ECC384) || defined(HAVE_ALL_CURVES)) && \
+    defined(WOLFSSL_SHA384)
+    case DHKEM_P384_HKDF_SHA384:
+        return DHKEM_P384_ENC_LEN;
+#endif
+#if (defined(HAVE_ECC521) || defined(HAVE_ALL_CURVES)) && \
+    defined(WOLFSSL_SHA512)
+    case DHKEM_P521_HKDF_SHA512:
+        return DHKEM_P521_ENC_LEN;
+#endif
+#endif /* HAVE_ECC */
+#if defined(HAVE_CURVE25519) && !defined(NO_SHA256)
+    case DHKEM_X25519_HKDF_SHA256:
+        return DHKEM_X25519_ENC_LEN;
+#endif
+    default:
+        return 0;
+    }
+}
+
+/* return true if hpke is compiled with support for the given KEM
+ * return false otherwise */
+WOLFSSL_LOCAL int wc_HpkeKemIsSupported(word16 kemId)
+{
+    switch (kemId) {
+#if defined(HAVE_ECC)
+#if (!defined(NO_ECC256) || defined(HAVE_ALL_CURVES)) && !defined(NO_SHA256)
+    case DHKEM_P256_HKDF_SHA256:
+#endif
+#if (defined(HAVE_ECC384) || defined(HAVE_ALL_CURVES)) && \
+    defined(WOLFSSL_SHA384)
+    case DHKEM_P384_HKDF_SHA384:
+#endif
+#if (defined(HAVE_ECC521) || defined(HAVE_ALL_CURVES)) && \
+    defined(WOLFSSL_SHA512)
+    case DHKEM_P521_HKDF_SHA512:
+#endif
+#endif /* HAVE_ECC */
+#if defined(HAVE_CURVE25519) && !defined(NO_SHA256)
+    case DHKEM_X25519_HKDF_SHA256:
+#endif
+        return 1;
+
+    default:
+        return 0;
+    }
+}
+
+/* return true if hpke is compiled with support for the given KDF
+ * return false otherwise */
+WOLFSSL_LOCAL int wc_HpkeKdfIsSupported(word16 kdfId)
+{
+    switch (kdfId) {
+#if !defined(NO_SHA256)
+    case HKDF_SHA256:
+#endif
+#ifdef WOLFSSL_SHA384
+    case HKDF_SHA384:
+#endif
+#ifdef WOLFSSL_SHA512
+    case HKDF_SHA512:
+#endif
+        return 1;
+
+    default:
+        return 0;
+    }
+}
+
+/* return true if hpke is compiled with support for the given AEAD
+ * return false otherwise */
+WOLFSSL_LOCAL int wc_HpkeAeadIsSupported(word16 aeadId)
+{
+    switch (aeadId) {
+#ifdef WOLFSSL_AES_128
+    case HPKE_AES_128_GCM:
+#endif
+#ifdef WOLFSSL_AES_256
+    case HPKE_AES_256_GCM:
+#endif
+        return 1;
+
+    default:
+        return 0;
+    }
+}
+
+#if defined(HAVE_SECRET_CALLBACK) && defined(HAVE_ECH)
+WOLFSSL_LOCAL int wc_HpkeInitEchSecret(Hpke* hpke)
+{
+    if (hpke == NULL)
+        return BAD_FUNC_ARG;
+    hpke->echSecret = (byte*)XMALLOC(hpke->Nsecret, hpke->heap,
+        DYNAMIC_TYPE_SECRET);
+    if (hpke->echSecret == NULL)
+        return MEMORY_E;
+    return 0;
+}
+
+WOLFSSL_LOCAL void wc_HpkeFreeEchSecret(Hpke* hpke)
+{
+    if (hpke == NULL || hpke->echSecret == NULL)
+        return;
+    ForceZero(hpke->echSecret, hpke->Nsecret);
+    XFREE(hpke->echSecret, hpke->heap, DYNAMIC_TYPE_SECRET);
+    hpke->echSecret = NULL;
+}
+#endif /* HAVE_SECRET_CALLBACK && HAVE_ECH */
 
 #endif /* HAVE_HPKE && (HAVE_ECC || HAVE_CURVE25519) && HAVE_AESGCM */

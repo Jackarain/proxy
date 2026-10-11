@@ -1,12 +1,12 @@
 /* tls_server.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -83,7 +83,8 @@ static int tls_server(void)
 
     if ((ctx = wolfSSL_CTX_new(wolfTLSv1_2_server_method())) == NULL) {
         printf("CTXnew failed.\n");
-        goto fail;
+        ret = -1;
+        goto cleanup;
     }
 
     /*------------------------------------------------------------------------*/
@@ -104,9 +105,9 @@ static int tls_server(void)
     /* end peer auth option*/
     /*---------------------*/
     if ((ret = wolfSSL_CTX_set_cipher_list(ctx, "ECDHE-ECDSA-AES128-SHA256")) != WOLFSSL_SUCCESS) {
-        wolfSSL_CTX_free(ctx);
         printf("CTXset_cipher_list failed, error: %d\n", ret);
-        goto fail;
+        ret = -1;
+        goto cleanup;
     }
     /*------------------------------------------------------------------------*/
     /* END CIPHER SUITE OPTIONS */
@@ -117,8 +118,8 @@ static int tls_server(void)
     if ((ssl = wolfSSL_new(ctx)) == NULL) {
         error = wolfSSL_get_error(ssl, 0);
         printf("wolfSSL_new failed %d\n", error);
-        wolfSSL_CTX_free(ctx);
-        return -1;
+        ret = -1;
+        goto cleanup;
     }
 
     /* non blocking accept and connect */
@@ -132,7 +133,8 @@ static int tls_server(void)
             if (error != WOLFSSL_ERROR_WANT_READ && error != WOLFSSL_ERROR_WANT_WRITE) {
                 /* Fail */
                 printf("wolfSSL accept failed with return code %d\n", error);
-                goto fail;
+                ret = -1;
+                goto cleanup;
             }
         }
         /* Success */
@@ -148,7 +150,8 @@ static int tls_server(void)
                 /* Can put print here, the server enters a loop waiting to read
                  * a confirmation message at this point */
                 // printf("server read failed\n");
-                goto fail;
+                ret = -1;
+                goto cleanup;
             }
             continue;
         }
@@ -169,21 +172,22 @@ static int tls_server(void)
         if (ret != XSTRLEN(reply)) {
             if (error != WOLFSSL_ERROR_WANT_READ && error != WOLFSSL_ERROR_WANT_WRITE) {
                 /* Write failed */
-                goto fail;
+                ret = -1;
+                goto cleanup;
             }
         }
         /* Write succeeded */
         break;
     }
 
-    return 0;
+    ret = 0;
 
-fail:
+cleanup:
     wolfSSL_shutdown(ssl);
     wolfSSL_free(ssl);
     wolfSSL_CTX_free(ctx);
 
-    return -1;
+    return ret;
 }
 #endif /* !WOLFCRYPT_ONLY && !NO_WOLFSSL_SERVER */
 

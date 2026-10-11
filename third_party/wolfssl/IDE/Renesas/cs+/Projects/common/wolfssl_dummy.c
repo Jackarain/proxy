@@ -1,12 +1,12 @@
 /* wolfssl_dummy.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -51,12 +51,17 @@ int strncasecmp(const char *s1, const char * s2, unsigned int sz)
             return 1;
         }
     }
-    return 0;	
+    return 0;
 }
-    
-void abort(void) 
+
+void abort(void)
 {
     while(1);
 }
 
+/* dummy return true when char is alphanumeric character */
+int isascii(const char *s)
+{
+    return isalnum(s);
+}
 

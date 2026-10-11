@@ -1,12 +1,12 @@
 /* pic32mz-crypt.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -245,22 +245,26 @@ static int Pic32Crypto(const byte* pIn, int inLen, word32* pOut, int outLen,
 
         wolfSSL_CryptHwMutexUnLock();
 
-        /* copy result to output */
-    #if PIC32_NO_OUT_SWAP
-        /* swap bytes */
-        ByteReverseWords(out, (word32*)out_p, outLen);
-    #elif defined(_SYS_DEVCON_LOCAL_H)
-        /* sync cache */
-        SYS_DEVCON_DataCacheInvalidate((word32)out, outLen);
-    #else
-        XMEMCPY(out, out_p, outLen);
-    #endif
+        if (ret == 0) {
+            /* copy result to output */
+        #if PIC32_NO_OUT_SWAP
+            /* swap bytes */
+            ByteReverseWords(out, (word32*)out_p, outLen);
+        #elif defined(_SYS_DEVCON_LOCAL_H)
+            /* sync cache */
+            SYS_DEVCON_DataCacheInvalidate((word32)out, outLen);
+        #else
+            XMEMCPY(out, out_p, outLen);
+        #endif
+        }
     }
 
     /* handle unaligned */
     if (isDynamic) {
-        /* return result */
-        XMEMCPY(pOut, out, outLen);
+        if (ret == 0) {
+            /* return result */
+            XMEMCPY(pOut, out, outLen);
+        }
 
         /* free dynamic buffers */
         XFREE(in, NULL, DYNAMIC_TYPE_AES_BUFFER);
@@ -308,11 +312,14 @@ typedef struct {
 static pic32mz_desc gLHDesc __attribute__((coherent));
 static uint8_t gLHDataBuf[PIC32MZ_MAX_BD][PIC32_BLOCK_SIZE] __attribute__((aligned (4), coherent));
 
-static void reset_engine(int algo)
+static int reset_engine(int algo)
 {
     int i;
+    int ret;
 
-    wolfSSL_CryptHwMutexLock();
+    ret = wolfSSL_CryptHwMutexLock();
+    if (ret != 0)
+        return ret;
 
     /* Software reset */
     CECON = 1 << 6;
@@ -360,12 +367,17 @@ static void reset_engine(int algo)
 #else
     CECON = 0xa7;
 #endif
+
+    return 0;
 }
 
-static void update_engine(const byte *input, word32 len, word32 *hash)
+#define ENGINE_MAX_CHECKS       0xffffff
+
+static int update_engine(const byte *input, word32 len, word32 *hash)
 {
     int total;
-    
+    int checks;
+
     gLHDesc.bd[gLHDesc.currBd].UPDPTR = KVA_TO_PA(hash);
 
     /* Add the data to the current buffer. If the buffer fills, start processing it
@@ -386,7 +398,11 @@ static void update_engine(const byte *input, word32 len, word32 *hash)
             if (gLHDesc.currBd >= PIC32MZ_MAX_BD)
                 gLHDesc.currBd = 0;
             /* Wait until the engine has processed the new BD. */
-            while (gLHDesc.bd[gLHDesc.currBd].BD_CTRL.DESC_EN);
+            checks = 0;
+            while (gLHDesc.bd[gLHDesc.currBd].BD_CTRL.DESC_EN &&
+                   ++checks < ENGINE_MAX_CHECKS) ;
+            if (checks == ENGINE_MAX_CHECKS)
+                return -1;
             gLHDesc.bd[gLHDesc.currBd].UPDPTR = KVA_TO_PA(hash);
             gLHDesc.dbPtr = 0;
         }
@@ -416,6 +432,8 @@ static void update_engine(const byte *input, word32 len, word32 *hash)
             }
         }
     }
+
+    return 0;
 }
 
 static void start_engine(void)
@@ -435,27 +453,34 @@ static void start_engine(void)
     gLHDesc.bd[gLHDesc.currBd].BD_CTRL.DESC_EN = 1;
 }
 
-void wait_engine(char *hash, int hash_sz)
+static int wait_engine(word32 *hash, word32 hash_sz)
 {
     int i;
     unsigned int engineRunning;
+    int checks = 0;
 
     do {
         engineRunning = 0;
         for (i = 0; i < PIC32MZ_MAX_BD; i++) {
             engineRunning = engineRunning || gLHDesc.bd[i].BD_CTRL.DESC_EN;
         }
-    } while (engineRunning);
+    } while (engineRunning && (++checks < ENGINE_MAX_CHECKS));
 
-#if PIC32_NO_OUT_SWAP
-    /* swap bytes */
-    ByteReverseWords(hash, KVA0_TO_KVA1(hash), hash_sz);
-#else
-    /* copy output - hardware already swapped */
-    XMEMCPY(hash, KVA0_TO_KVA1(hash), hash_sz);
-#endif
+    if (!engineRunning) {
+    #if PIC32_NO_OUT_SWAP
+        /* swap bytes */
+        ByteReverseWords(hash, KVA0_TO_KVA1(hash), hash_sz);
+    #else
+        /* copy output - hardware already swapped */
+        XMEMCPY(hash, KVA0_TO_KVA1(hash), hash_sz);
+    #endif
+    }
 
     wolfSSL_CryptHwMutexUnLock();
+
+    if (engineRunning)
+       return -1;
+    return 0;
 }
 
 #endif /* WOLFSSL_PIC32MZ_LARGE_HASH */
@@ -466,12 +491,35 @@ int wc_Pic32Hash(const byte* in, int inLen, word32* out, int outLen, int algo)
         NULL, 0, NULL, 0);
 }
 
-int wc_Pic32HashCopy(hashUpdCache* src, hashUpdCache* dst)
+/* Give a hash context that was shallow copied from src its own copy of the
+ * cached message. The caller has already copied the whole hash struct, so
+ * dst->buf still points at src's storage: either src's embedded block buffer
+ * (srcStdBuf), whose contents the struct copy already placed in dstStdBuf,
+ * or a heap buffer that has to be duplicated here. Sharing the buffer would
+ * let an update or final on one context corrupt the other's message. */
+int wc_Pic32HashCopy(hashUpdCache* src, hashUpdCache* dst,
+    const byte* srcStdBuf, byte* dstStdBuf, void* heap)
 {
-    /* mark destination as copy, so cache->buf is not free'd */
-    if (dst) {
-        dst->isCopy = 1;
+    if (src == NULL || dst == NULL)
+        return BAD_FUNC_ARG;
+
+    if (src->buf == NULL) {
+        dst->buf = NULL;
     }
+    else if (src->buf == srcStdBuf) {
+        dst->buf = dstStdBuf;
+    }
+    else {
+        dst->buf = (byte*)XMALLOC(src->bufLen, heap, DYNAMIC_TYPE_HASH_TMP);
+        if (dst->buf == NULL) {
+            dst->updLen = dst->bufLen = 0;
+            return MEMORY_E;
+        }
+        XMEMCPY(dst->buf, src->buf, src->updLen);
+    }
+    dst->updLen = src->updLen;
+    dst->bufLen = src->bufLen;
+
     return 0;
 }
 
@@ -487,10 +535,15 @@ static int wc_Pic32HashUpdate(hashUpdCache* cache, byte* stdBuf, int stdBufLen,
     /* if final length is set then pass straight to hardware */
     if (cache->finalLen) {
         if (cache->bufLen == 0) {
-            reset_engine(algo);
+            ret = reset_engine(algo);
+            if (ret != 0)
+                return ret;
             gLHDesc.msgSize = cache->finalLen;
         }
-        update_engine(data, len, digest);
+        if (update_engine(data, len, digest) != 0) {
+            wolfSSL_CryptHwMutexUnLock();
+            return ASYNC_OP_E;
+        }
         cache->bufLen += len; /* track progress for blockType */
         return 0;
     }
@@ -498,7 +551,9 @@ static int wc_Pic32HashUpdate(hashUpdCache* cache, byte* stdBuf, int stdBufLen,
 
     /* cache updates */
     /* calculate new len */
-    newLenUpd = cache->updLen + len;
+    newLenUpd = (word32)cache->updLen + (word32)len;
+    if (newLenUpd < (word32)cache->updLen)
+        return MEMORY_E;
 
     /* calculate padded len - pad buffer at 64-bytes for hardware */
     newLenPad = newLenUpd;
@@ -516,7 +571,7 @@ static int wc_Pic32HashUpdate(hashUpdCache* cache, byte* stdBuf, int stdBufLen,
         /* alloc buffer */
         newBuf = (byte*)XMALLOC(newLenPad, heap, DYNAMIC_TYPE_HASH_TMP);
         if (newBuf == NULL) {
-            if (cache->buf != stdBuf && !cache->isCopy) {
+            if (cache->buf != stdBuf) {
                 XFREE(cache->buf, heap, DYNAMIC_TYPE_HASH_TMP);
                 cache->buf = NULL;
                 cache->updLen = cache->bufLen = 0;
@@ -524,7 +579,6 @@ static int wc_Pic32HashUpdate(hashUpdCache* cache, byte* stdBuf, int stdBufLen,
             return MEMORY_E;
         }
         isNewBuf = 1;
-        cache->isCopy = 0; /* no longer using copy buffer */
     }
     else {
         /* use existing buffer */
@@ -561,7 +615,13 @@ static int wc_Pic32HashFinal(hashUpdCache* cache, byte* stdBuf,
         /* Only submit to hardware if update data provided matches expected */
         if (cache->bufLen == cache->finalLen) {
             start_engine();
-            wait_engine((char*)digest, digestSz);
+            if (wait_engine(digest, (word32)digestSz) != 0) {
+                if (cache->buf && cache->buf != stdBuf) {
+                    XFREE(cache->buf, heap, DYNAMIC_TYPE_HASH_TMP);
+                    cache->buf = NULL;
+                }
+                return ASYNC_OP_E;
+            }
             XMEMCPY(hash, digest, digestSz);
         }
         else {
@@ -607,7 +667,7 @@ static int wc_Pic32HashFinal(hashUpdCache* cache, byte* stdBuf,
             }
         }
 
-        if (cache->buf && cache->buf != stdBuf && !cache->isCopy) {
+        if (cache->buf && cache->buf != stdBuf) {
             XFREE(cache->buf, heap, DYNAMIC_TYPE_HASH_TMP);
             cache->buf = NULL;
         }
@@ -619,9 +679,9 @@ static int wc_Pic32HashFinal(hashUpdCache* cache, byte* stdBuf,
     return ret;
 }
 
-static void wc_Pic32HashFree(hashUpdCache* cache, void* heap)
+static void wc_Pic32HashFree(hashUpdCache* cache, void* stdBuf, void* heap)
 {
-    if (cache && cache->buf && !cache->isCopy) {
+    if (cache && cache->buf && cache->buf != stdBuf) {
         XFREE(cache->buf, heap, DYNAMIC_TYPE_HASH_TMP);
         cache->buf = NULL;
     }
@@ -675,7 +735,7 @@ static void wc_Pic32HashFree(hashUpdCache* cache, void* heap)
     void wc_Md5Pic32Free(wc_Md5* md5)
     {
         if (md5) {
-            wc_Pic32HashFree(&md5->cache, md5->heap);
+            wc_Pic32HashFree(&md5->cache, (byte*)md5->buffer, md5->heap);
         }
     }
 #endif /* !NO_MD5 */
@@ -726,7 +786,7 @@ static void wc_Pic32HashFree(hashUpdCache* cache, void* heap)
     void wc_ShaPic32Free(wc_Sha* sha)
     {
         if (sha) {
-            wc_Pic32HashFree(&sha->cache, sha->heap);
+            wc_Pic32HashFree(&sha->cache, (byte*)sha->buffer, sha->heap);
         }
     }
 #endif /* !NO_SHA */
@@ -777,7 +837,7 @@ static void wc_Pic32HashFree(hashUpdCache* cache, void* heap)
     void wc_Sha256Pic32Free(wc_Sha256* sha256)
     {
         if (sha256) {
-            wc_Pic32HashFree(&sha256->cache, sha256->heap);
+            wc_Pic32HashFree(&sha256->cache, (byte*)sha256->buffer, sha256->heap);
         }
     }
 #endif /* !NO_SHA256 */

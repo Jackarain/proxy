@@ -1,12 +1,12 @@
 /* port.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -19,31 +19,130 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1335, USA
  */
 
-
-#ifdef HAVE_CONFIG_H
-    #include <config.h>
+#if (defined(__linux__) || defined(__ANDROID__)) && \
+    !defined(WOLFSSL_LINUXKM) && !defined(WOLFSSL_ZEPHYR) && \
+    !defined(_GNU_SOURCE)
+    #define _GNU_SOURCE 1
+#elif defined(__FreeBSD__)
+    /* for __FreeBSD_version */
+    #include <sys/param.h>
+#elif (defined(__CYGWIN__) || defined(__MSYS__)) && !defined(_GNU_SOURCE)
+    /* dladdr and Dl_info, for the RNG fork handler pin, hide behind it */
+    #define _GNU_SOURCE 1
 #endif
 
-#include <wolfssl/wolfcrypt/settings.h>
-#include <wolfssl/wolfcrypt/types.h>
-#include <wolfssl/wolfcrypt/error-crypt.h>
-#include <wolfssl/wolfcrypt/logging.h>
-#include <wolfssl/wolfcrypt/wc_port.h>
+/*
+wolfCrypt Porting Build Options:
+
+Threading/Mutex options:
+ * SINGLE_THREADED:     No-op mutex/threading implementations   default: off
+ * WOLFSSL_PTHREADS:    Use pthread-based mutex/threading       default: off
+ *                      (auto-detected on most POSIX systems)
+ * WOLFSSL_MUTEX_INITIALIZER: Use static mutex initialization   default: off
+ * WC_MUTEX_OPS_INLINE: Use inlined mutex operations            default: off
+ * WOLFSSL_USER_MUTEX:  User-provided mutex implementation      default: off
+ * WOLFSSL_COND:        Enable condition variable support       default: off
+ * WOLFSSL_USE_RWLOCK:  Enable reader-writer lock support       default: off
+ * WOLFSSL_THREAD_NO_JOIN: Create threads without join          default: off
+ * WOLFSSL_ALGO_HW_MUTEX: Per-algorithm hardware mutex locks    default: off
+ *                      Controls AES, hash, PK, and RNG mutexes.
+ * WOLFSSL_CRYPT_HW_MUTEX: Cryptography hardware mutex          default: off
+ *                      Master control for all HW mutex init.
+ * NO_AES_MUTEX:        Disable AES hardware mutex              default: off
+ * NO_HASH_MUTEX:       Disable hash hardware mutex             default: off
+ * NO_PK_MUTEX:         Disable public-key hardware mutex       default: off
+ * NO_RNG_MUTEX:        Disable RNG hardware mutex              default: off
+ *
+ * Memory options:
+ * USE_WOLFSSL_MEMORY:  Enable custom memory allocation hooks   default: on
+ * WOLFSSL_STATIC_MEMORY: Use static memory pools instead of    default: off
+ *                      dynamic allocation.
+ * WOLFSSL_TRACK_MEMORY: Enable memory allocation tracking      default: off
+ * WOLFSSL_TRACK_MEMORY_VERBOSE: Verbose memory tracking output default: off
+ * WOLFSSL_FORCE_MALLOC_FAIL_TEST: Force malloc failures for    default: off
+ *                      testing error handling paths.
+ * WOLFSSL_MEM_FAIL_COUNT: Count malloc failures for testing    default: off
+ * WOLFSSL_CHECK_MEM_ZERO: Verify sensitive memory is zeroed    default: off
+ *                      on free. Debug tool for key material.
+ *
+ * Filesystem options:
+ * NO_FILESYSTEM:       Disable all filesystem operations       default: off
+ * NO_WOLFSSL_DIR:      Disable directory listing/iteration     default: off
+ *
+ * Time options:
+ * WOLFSSL_GMTIME:      Provide custom gmtime implementation    default: off
+ * HAVE_TIME_T_TYPE:    Platform provides time_t                default: auto
+ * TIME_OVERRIDES:      Application provides custom time funcs  default: off
+ * USER_TICKS:          Application provides tick counter       default: off
+ * USE_WOLF_TM:         Use wolfSSL struct tm definition        default: off
+ *
+ * String function options:
+ * STRING_USER:         User provides all string functions      default: off
+ * USE_WOLF_STRTOK:     Use wolfSSL strtok implementation       default: off
+ * USE_WOLF_STRSEP:     Use wolfSSL strsep implementation       default: off
+ * USE_WOLF_STRLCPY:    Use wolfSSL strlcpy implementation      default: off
+ * USE_WOLF_STRLCAT:    Use wolfSSL strlcat implementation      default: off
+ * USE_WOLF_STRCASECMP: Use wolfSSL strcasecmp implementation   default: off
+ * USE_WOLF_STRNCASECMP:Use wolfSSL strncasecmp implementation  default: off
+ * USE_WOLF_STRDUP:     Use wolfSSL strdup implementation       default: off
+ *
+ * Atomic operation options:
+ * WOLFSSL_ATOMIC_OPS:  Enable atomic operations for thread     default: off
+ *                      safety without full mutexes.
+ * WOLFSSL_USER_DEFINED_ATOMICS: User-provided atomic impl     default: off
+ * WOLFSSL_HAVE_ATOMIC_H: Has C11 atomic.h header              default: off
+ *
+ * Socket options:
+ * HAVE_ACCEPT4:        Use accept4() for close-on-exec accept  default: auto
+ *                      (configure/CMake detect it; set it for
+ *                      musl or another unrecognised libc)
+ *
+ * General options:
+ * WOLFCRYPT_ONLY:      Exclude TLS/SSL, wolfCrypt only build   default: off
+ * WOLFSSL_LEANPSK:     Lean PSK build, minimal features        default: off
+ * WOLF_C89:            C89 compatibility mode                  default: off
+ * WOLFSSL_SMALL_STACK: Reduce stack usage by allocating from   default: off
+ *                      heap instead. Slower but needed for
+ *                      constrained environments.
+ * DEBUG_WOLFSSL_VERBOSE: Enable verbose debug logging           default: off
+ */
+
+#include <wolfssl/wolfcrypt/libwolfssl_sources.h>
+
+#ifdef __APPLE__
+    #include <AvailabilityMacros.h>
+#endif
+
+#include <wolfssl/wolfcrypt/cpuid.h>
+#ifdef HAVE_ENTROPY_MEMUSE
+    #include <wolfssl/wolfcrypt/wolfentropy.h>
+#endif
 #ifdef HAVE_ECC
     #include <wolfssl/wolfcrypt/ecc.h>
 #endif
 #ifdef WOLFSSL_ASYNC_CRYPT
     #include <wolfssl/wolfcrypt/async.h>
 #endif
-
-/* IPP header files for library initialization */
-#ifdef HAVE_FAST_RSA
-    #include <ipp.h>
-    #include <ippcp.h>
+#ifndef WC_NO_RNG
+    /* random.h defines HAVE_HASHDRBG itself, so no HAVE_HASHDRBG test here */
+    #include <wolfssl/wolfcrypt/random.h>
+    #ifdef WC_RNG_LOCK_ATFORK
+        #include <dlfcn.h>      /* the pin, which the handlers require */
+        #include <pthread.h>    /* pthread_atfork, cancel state */
+        #include <semaphore.h>  /* the one unlock a fork child may call */
+        #include <errno.h>      /* EINTR from sem_wait */
+    #endif
 #endif
 
 #ifdef FREESCALE_LTC_TFM
     #include <wolfssl/wolfcrypt/port/nxp/ksdk_port.h>
+#endif
+
+#if defined(WOLFSSL_MAX3266X) || defined(WOLFSSL_MAX3266X_OLD)
+    #include <wolfssl/wolfcrypt/port/maxim/max3266x.h>
+#ifdef WOLF_CRYPTO_CB
+    #include <wolfssl/wolfcrypt/port/maxim/max3266x-cryptocb.h>
+#endif
 #endif
 
 #ifdef WOLFSSL_PSOC6_CRYPTO
@@ -55,20 +154,29 @@
 #endif
 
 #if defined(WOLFSSL_ATMEL) || defined(WOLFSSL_ATECC508A) || \
-    defined(WOLFSSL_ATECC608A)
+    defined(WOLFSSL_ATECC608A) || \
+    defined(WOLFSSL_MICROCHIP_TA100)
     #include <wolfssl/wolfcrypt/port/atmel/atmel.h>
 #endif
 #if defined(WOLFSSL_RENESAS_TSIP)
-    #include <wolfssl/wolfcrypt/port/Renesas/renesas-tsip-crypt.h>
+    #include <wolfssl/wolfcrypt/port/Renesas/renesas_tsip_internal.h>
 #endif
 #if defined(WOLFSSL_RENESAS_FSPSM)
-    #include <wolfssl/wolfcrypt/port/Renesas/renesas-fspsm-crypt.h>
+    #include <wolfssl/wolfcrypt/port/Renesas/renesas_fspsm_internal.h>
 #endif
 #if defined(WOLFSSL_RENESAS_RX64_HASH)
     #include <wolfssl/wolfcrypt/port/Renesas/renesas-rx64-hw-crypt.h>
 #endif
-#if defined(WOLFSSL_STSAFEA100)
+#ifdef WOLFSSL_STSAFE
     #include <wolfssl/wolfcrypt/port/st/stsafe.h>
+#endif
+
+#if defined(WOLFSSL_TROPIC01)
+    #include <wolfssl/wolfcrypt/port/tropicsquare/tropic01.h>
+#endif
+
+#if defined(WOLFSSL_SILABS_CRYPTOCB)
+    #include <wolfssl/wolfcrypt/port/silabs/silabs_cryptocb.h>
 #endif
 
 #if (defined(OPENSSL_EXTRA) || defined(HAVE_WEBSERVER)) \
@@ -84,6 +192,9 @@
 #if defined(WOLFSSL_CAAM)
     #include <wolfssl/wolfcrypt/port/caam/wolfcaam.h>
 #endif
+#if defined(WOLFSSL_SEC_QORIQ)
+    #include <wolfssl/wolfcrypt/port/nxp/sec_qoriq.h>
+#endif
 #if defined(HAVE_ARIA)
     #include <wolfssl/wolfcrypt/port/aria/aria-cryptocb.h>
 #endif
@@ -94,8 +205,19 @@
     #include <wolfssl/wolfcrypt/port/nxp/dcp_port.h>
 #endif
 
+#ifdef WOLFSSL_NXP_CASPER
+    #include <wolfssl/wolfcrypt/port/nxp/casper_port.h>
+#endif
+#ifdef WOLFSSL_NXP_HASHCRYPT
+    #include <wolfssl/wolfcrypt/port/nxp/hashcrypt_port.h>
+#endif
+
 #ifdef WOLF_CRYPTO_CB
     #include <wolfssl/wolfcrypt/cryptocb.h>
+#endif
+
+#if defined(WOLFSSL_VERSAL_GEN2_ASU)
+    #include <wolfssl/wolfcrypt/port/xilinx/versal_gen2_asu/asu_cryptocb.h>
 #endif
 
 #ifdef HAVE_INTEL_QA_SYNC
@@ -128,8 +250,514 @@
 #endif
 
 
-/* prevent multiple mutex initializations */
-static volatile int initRefCount = 0;
+#if defined(FREERTOS) && defined(WOLFSSL_ESPIDF)
+    #include <freertos/FreeRTOS.h>
+    #include <freertos/task.h>
+    /* The Espressif-specific platform include: */
+    #include <pthread.h>
+#endif
+
+#if defined(WOLFSSL_ZEPHYR)
+#if defined(CONFIG_BOARD_NATIVE_POSIX) || defined(CONFIG_BOARD_NATIVE_SIM)
+#include "native_rtc.h"
+#endif
+#endif
+
+/* Internal APIs for counting initialization depth, with initialization/cleanup
+ * races fully mitigated
+ */
+int wc_local_InitUp(wc_init_state_t *s)
+{
+    union wc_init_state_bitfields exp_wc_init_state, new_wc_init_state;
+    exp_wc_init_state.u = WOLFSSL_ATOMIC_LOAD(*s);
+
+    /* Mitigate races on init/shutdown by looping, unless
+     * WC_INIT_ERROR_WHEN_CONTENDED.
+     */
+    for (;;) {
+        wc_static_assert(WC_INIT_STATE_STATE_BITS < sizeof(WC_ATOMIC_UINT_ARG) * 8);
+#ifdef CHAR_BIT
+        wc_static_assert(WC_INIT_STATE_STATE_BITS + WC_INIT_STATE_COUNT_BITS <=
+                         sizeof(WC_ATOMIC_UINT_ARG) * CHAR_BIT);
+#endif
+        if (exp_wc_init_state.c.count ==
+            (((WC_ATOMIC_UINT_ARG)1 << WC_INIT_STATE_COUNT_BITS)
+             - (WC_ATOMIC_UINT_ARG)1))
+        {
+            return SEQ_OVERFLOW_E;
+        }
+        new_wc_init_state = exp_wc_init_state;
+        if (exp_wc_init_state.c.state == WC_INIT_STATE_UNINITED) {
+            if (exp_wc_init_state.c.count != 0)
+                return BAD_STATE_E;
+            new_wc_init_state.c.state = WC_INIT_STATE_INITING;
+        }
+        else if (exp_wc_init_state.c.state >= WC_INIT_STATE_BAD_STATE) {
+            wc_static_assert(WC_INIT_STATE_BAD_STATE > WC_INIT_STATE_UNINITED &&
+                             WC_INIT_STATE_BAD_STATE > WC_INIT_STATE_INITING &&
+                             WC_INIT_STATE_BAD_STATE > WC_INIT_STATE_INITED &&
+                             WC_INIT_STATE_BAD_STATE > WC_INIT_STATE_CLEANING_UP);
+            return BAD_STATE_E;
+        }
+        else {
+            if (exp_wc_init_state.c.count == 0)
+                return BAD_STATE_E;
+            /* Force expected state to _INITED -- if actual value upon cmpxchg
+             * doesn't match (normally either _INITING or _CLEANING_UP), we'll
+             * spin until the transient state resolves to _INITED or _UNINITED
+             * (when the competing thread calls wc_local_InitUpDone() or
+             * wc_local_InitDownDone(), respectively).
+             */
+            exp_wc_init_state.c.state = WC_INIT_STATE_INITED;
+            new_wc_init_state.c.state = WC_INIT_STATE_INITED;
+        }
+        ++new_wc_init_state.c.count;
+        /* if another thread entered _STATE_INITING or _CLEANING_UP, this will
+         * fail and spin.
+         */
+        if (wolfSSL_Atomic_Uint_CompareExchange(s,
+                                                &exp_wc_init_state.u,
+                                                new_wc_init_state.u))
+            break;
+#ifdef WC_INIT_ERROR_WHEN_CONTENDED
+        return BUSY_E;
+#else
+        WC_RELAX_LONG_LOOP(); /* not really long. */
+#endif
+    }
+    return new_wc_init_state.c.state;
+}
+
+int wc_local_InitUpDone(wc_init_state_t *s)
+{
+    union wc_init_state_bitfields cur_wc_init_state;
+    cur_wc_init_state.u = WOLFSSL_ATOMIC_LOAD(*s);
+    if (cur_wc_init_state.c.state != WC_INIT_STATE_INITING)
+        return BAD_FUNC_ARG;
+    cur_wc_init_state.c.state = WC_INIT_STATE_INITED;
+    /* Note, because WC_INIT_STATE_INITING functions as a mutex on the module
+     * state, we can use a plain _STORE() to release the module into its _INITED
+     * state.
+     */
+    WOLFSSL_ATOMIC_STORE(*s, cur_wc_init_state.u);
+    return 0;
+}
+
+int wc_local_InitDown(wc_init_state_t *s)
+{
+    union wc_init_state_bitfields exp_wc_init_state, new_wc_init_state;
+
+    exp_wc_init_state.u = WOLFSSL_ATOMIC_LOAD(*s);
+
+    /* Mitigate races on init/shutdown by looping, unless
+     * WC_INIT_ERROR_WHEN_CONTENDED.
+     */
+    for (;;) {
+        if (exp_wc_init_state.c.state >= WC_INIT_STATE_BAD_STATE) {
+            /* wc_static_assert above in wc_local_InitUp() protects the logic of
+             * the inequality test.
+             */
+            return BAD_STATE_E;
+        }
+        else if (exp_wc_init_state.c.state == WC_INIT_STATE_UNINITED) {
+            if (exp_wc_init_state.c.count == 0) {
+                /* thread attempted to wc_local_InitDown() without a matching
+                 * previous wc_local_InitUp().
+                 */
+                return ALREADY_E; /* backward compat */
+            }
+            else {
+                /* nonzero .count with _STATE_UNINITED is impossible. */
+                return BAD_STATE_E;
+            }
+        }
+        else if (exp_wc_init_state.c.state == WC_INIT_STATE_INITING) {
+            /* _INITING is impossible here unless a thread calls
+             * wc_local_InitDown() before (or without) successfully calling
+             * wc_local_InitUpDone().
+             */
+            return BAD_FUNC_ARG;
+        }
+        else if (exp_wc_init_state.c.state == WC_INIT_STATE_CLEANING_UP) {
+            if (exp_wc_init_state.c.count == 1) {
+                /* thread attempted to wc_local_InitDown() without a matching
+                 * previous wc_local_InitUp().
+                 */
+                return ALREADY_E; /* backward compat */
+            }
+            else {
+                /* _CLEANING_UP is impossible with .count != 1. */
+                return BAD_STATE_E;
+            }
+        }
+        else if (exp_wc_init_state.c.count == 0) {
+            /* zero count with state != _UNINITED is impossible. */
+            return BAD_STATE_E;
+        }
+        new_wc_init_state = exp_wc_init_state;
+        if (exp_wc_init_state.c.count == 1) {
+            new_wc_init_state.c.state = WC_INIT_STATE_CLEANING_UP;
+            /* don't zero until end. */
+        }
+        else
+            --new_wc_init_state.c.count;
+        if (wolfSSL_Atomic_Uint_CompareExchange(s,
+                                                &exp_wc_init_state.u,
+                                                new_wc_init_state.u))
+            break;
+#ifdef WC_INIT_ERROR_WHEN_CONTENDED
+        return BUSY_E;
+#else
+        WC_RELAX_LONG_LOOP(); /* not really long. */
+#endif
+    }
+
+    return new_wc_init_state.c.state;
+}
+
+int wc_local_InitDownDone(wc_init_state_t *s)
+{
+    union wc_init_state_bitfields cur_wc_init_state;
+    cur_wc_init_state.u = WOLFSSL_ATOMIC_LOAD(*s);
+    if (cur_wc_init_state.c.state != WC_INIT_STATE_CLEANING_UP)
+        return BAD_FUNC_ARG;
+    cur_wc_init_state.c.state = WC_INIT_STATE_UNINITED;
+    cur_wc_init_state.c.count = 0;
+    /* Note, because WC_INIT_STATE_CLEANING_UP functions as a mutex on the
+     * module state, we can use a plain _STORE() to release the module into its
+     * _UNINITED state.
+     */
+    WOLFSSL_ATOMIC_STORE(*s, cur_wc_init_state.u);
+    return 0;
+}
+
+static WC_DECLARE_INIT_STATE(wolfcrypt_init_state);
+
+#if defined(__aarch64__) && defined(WOLFSSL_ARMASM_BARRIER_DETECT)
+int aarch64_use_sb = 0;
+#endif
+
+#ifdef WC_RNG_HAVE_AUTO_LOCK
+/* Cancellation off while a lock is held, so a cancel cannot strand it.  Where
+ * the platform has no cancellation both are empty and the value is unused.
+ */
+WOLFSSL_LOCAL int wc_CancelDisable(void)
+{
+#ifdef PTHREAD_CANCEL_DISABLE
+    int old = PTHREAD_CANCEL_ENABLE;   /* what a failed call leaves behind */
+    (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &old);
+#else
+    int old = 0;
+#endif
+    return old;
+}
+
+WOLFSSL_LOCAL void wc_CancelRestore(int state)
+{
+#ifdef PTHREAD_CANCEL_DISABLE
+    (void)pthread_setcancelstate(state, NULL);
+#else
+    (void)state;
+#endif
+}
+#endif /* WC_RNG_HAVE_AUTO_LOCK */
+
+#ifdef WC_RNG_LOCK_ATFORK
+#if !defined(RTLD_NOLOAD) || !defined(RTLD_NODELETE)
+    #error "WC_RNG_AUTOFORK needs RTLD_NOLOAD and RTLD_NODELETE"
+#endif
+/* The fork handlers can never be unregistered, so the image that holds them
+ * is pinned against dlclose() before they are registered. */
+WOLFSSL_LOCAL void wc_PinImage(void* fn)
+{
+    Dl_info info;
+    const char* name;   /* a pointer on most libcs, an array on Cygwin */
+    if (dladdr(fn, &info) == 0 || (name = info.dli_fname) == NULL ||
+        name[0] == '\0' ||
+        dlopen(name, RTLD_NOLOAD | RTLD_NODELETE | RTLD_LAZY) == NULL) {
+        /* no dlopen() handle means no dlclose() can reach this image */
+        WOLFSSL_MSG("RNG fork handlers: no dlopen handle, nothing to pin");
+    }
+}
+
+/* One lock per object, held with an unnamed semaphore so a fork child can
+ * release it: sem_post() is async-signal-safe, pthread_mutex_unlock() is not. */
+struct wc_ForkLock {
+    sem_t sem;
+    void* heap;
+    struct wc_ForkLock* next;
+    struct wc_ForkLock** prev;   /* the link that leads here */
+    /* Read once per lock acquire, written once per fork: a load, never a
+     * read-modify-write, so no contended line and no bus traffic. */
+    wolfSSL_Atomic_Int broken;   /* fails closed; a lone child or dead sem */
+    /* Set by prepare, cleared by parent and child: no other thread reads it. */
+    int forkState;   /* one of the WC_FORK_LOCK_* values */
+    int cancel;   /* the holder's cancel state, back on exit */
+};
+
+/* Real thread local storage, not the do-nothing THREAD_LS_T fallback. */
+#if defined(HAVE_THREAD_LS) && !defined(NO_THREAD_LS) && \
+    !defined(FREERTOS) && !defined(FREERTOS_TCP) && !defined(WOLFSSL_ZEPHYR)
+    #define WC_FORK_LOCK_HAVE_TLS
+#endif
+
+#ifndef WC_FORK_LOCK_HAVE_TLS
+    /* Without it the prepare handler cannot tell which locks this thread
+     * holds, and a fork() from a seed callback would wait on itself. */
+    #error "the RNG fork handlers need thread local storage"
+#endif
+/* What this thread holds.  Only this thread touches it, so no atomics.
+ * The library never nests these; the spare slots cover a callback that does. */
+#define WC_FORK_MINE_MAX 4   /* past this, taking the lock is refused */
+static THREAD_LS_T wc_ForkLock* forkMine[WC_FORK_MINE_MAX];
+
+/* Returns 0 when there is no slot left to record it in. */
+static int ForkMineAdd(wc_ForkLock* lock)
+{
+    int i;
+    for (i = 0; i < WC_FORK_MINE_MAX; i++) {
+        if (forkMine[i] == NULL) {
+            forkMine[i] = lock;
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static void ForkMineDrop(wc_ForkLock* lock)
+{
+    int i;
+    for (i = 0; i < WC_FORK_MINE_MAX; i++) {
+        if (forkMine[i] == lock) {
+            forkMine[i] = NULL;
+            return;
+        }
+    }
+}
+
+/* Does the calling thread hold this one? */
+static int ForkMineHeld(const wc_ForkLock* lock)
+{
+    int i;
+    for (i = 0; i < WC_FORK_MINE_MAX; i++) {
+        if (forkMine[i] == lock) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static wc_ForkLock* forkList = NULL;   /* every live lock, under forkListSem */
+static sem_t forkListSem;
+static wolfSSL_Atomic_Int forkListDead =
+    WOLFSSL_ATOMIC_INITIALIZER(0);   /* registry unusable: handlers back off */
+static pthread_once_t forkOnce = PTHREAD_ONCE_INIT;
+static int forkOnceRet = 0;
+
+/* sem_wait() is a cancellation point; a cancel here would strand the lock. */
+static int ForkSemWait(sem_t* s)
+{
+    int ret = 0;
+    int old = PTHREAD_CANCEL_ENABLE;
+    (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &old);
+    while (sem_wait(s) != 0) {
+        if (errno != EINTR) {
+            ret = BAD_MUTEX_E;
+            break;
+        }
+    }
+    (void)pthread_setcancelstate(old, NULL);
+    return ret;
+}
+
+/* Before fork(): the forking thread takes the registry and every lock. */
+static void ForkPrepare(void)
+{
+    wc_ForkLock* n;
+    if (WOLFSSL_ATOMIC_LOAD(forkListDead))
+        return;
+    if (ForkSemWait(&forkListSem) != 0) {
+        WOLFSSL_ATOMIC_STORE(forkListDead, 1); /* nothing held, and never again */
+        return;
+    }
+    for (n = forkList; n != NULL; n = n->next) {
+        if (WOLFSSL_ATOMIC_LOAD(n->broken)) {
+            continue;
+        }
+        /* Waiting on one this thread already holds would never return.  The
+         * child's only thread is this one, and it releases it as usual. */
+        if (ForkMineHeld(n)) {
+            n->forkState = WC_FORK_LOCK_OWNED;
+            continue;
+        }
+        if (ForkSemWait(&n->sem) != 0) {
+            WOLFSSL_ATOMIC_STORE(n->broken, 1);
+        }
+        else {
+            n->forkState = WC_FORK_LOCK_TAKEN;
+        }
+    }
+}
+
+/* After fork() in the parent: give back exactly what prepare took.
+ * Re-reading broken here could post a lock prepare never held. */
+static void ForkParent(void)
+{
+    wc_ForkLock* n;
+    if (WOLFSSL_ATOMIC_LOAD(forkListDead))
+        return;
+    for (n = forkList; n != NULL; n = n->next) {
+        if (n->forkState == WC_FORK_LOCK_TAKEN) {
+            (void)sem_post(&n->sem);
+        }
+        /* An owned one needs nothing: its holder still has it. */
+        n->forkState = WC_FORK_LOCK_UNTAKEN;
+    }
+    (void)sem_post(&forkListSem);
+}
+
+/* Child after fork(): stores and sem_post() only, all POSIX allows here.
+ * An untaken lock fails closed; an owned one is freed by this thread. */
+static void ForkChild(void)
+{
+    wc_ForkLock* n;
+    for (n = forkList; n != NULL; n = n->next) {   /* forward links stay whole */
+        if (n->forkState == WC_FORK_LOCK_TAKEN) {
+            (void)sem_post(&n->sem);
+        }
+        else if (n->forkState == WC_FORK_LOCK_UNTAKEN) {
+            WOLFSSL_ATOMIC_STORE(n->broken, 1);
+        }
+        n->forkState = WC_FORK_LOCK_UNTAKEN;
+    }
+    if (!WOLFSSL_ATOMIC_LOAD(forkListDead))
+        (void)sem_post(&forkListSem);
+}
+
+static void ForkLockInitOnce(void)
+{
+    /* pin first: the handlers can never be unregistered */
+    wc_PinImage((void*)(wc_ptr_t)ForkPrepare);
+    forkOnceRet = (sem_init(&forkListSem, 0, 1) == 0) ? 0 : BAD_MUTEX_E;
+    if (forkOnceRet == 0 &&
+        pthread_atfork(ForkPrepare, ForkParent, ForkChild) != 0)
+    {
+        (void)sem_destroy(&forkListSem);
+        forkOnceRet = MEMORY_E;
+    }
+}
+
+WOLFSSL_LOCAL int wc_ForkLockInit(void)
+{
+    (void)pthread_once(&forkOnce, ForkLockInitOnce);
+    return forkOnceRet;
+}
+
+WOLFSSL_LOCAL int wc_ForkLock_New(wc_ForkLock** lock, void* heap)
+{
+    wc_ForkLock* n;
+    int ret = wc_ForkLockInit();
+    if (ret != 0)
+        return ret;
+    if (WOLFSSL_ATOMIC_LOAD(forkListDead)) {
+        WOLFSSL_MSG("wc_ForkLock_New: registry dead since a fork");
+        return BAD_MUTEX_E;
+    }
+    n = (wc_ForkLock*)XMALLOC(sizeof(*n), heap, DYNAMIC_TYPE_RNG);
+    if (n == NULL)
+        return MEMORY_E;
+    XMEMSET(n, 0, sizeof(*n));
+    n->heap = heap;
+    if (ForkSemWait(&forkListSem) != 0) {
+        XFREE(n, heap, DYNAMIC_TYPE_RNG);
+        return BAD_MUTEX_E;
+    }
+    ret = (sem_init(&n->sem, 0, 1) == 0) ? 0 : BAD_MUTEX_E;
+    if (ret == 0) {
+        n->next = forkList;
+        n->prev = &forkList;
+        if (forkList != NULL)
+            forkList->prev = &n->next;
+        forkList = n;
+    }
+    (void)sem_post(&forkListSem);
+    if (ret != 0) {
+        XFREE(n, heap, DYNAMIC_TYPE_RNG);
+        return ret;
+    }
+    *lock = n;
+    return 0;
+}
+
+/* Safe on a NULL lock that was never created. */
+WOLFSSL_LOCAL void wc_ForkLock_Free(wc_ForkLock** lock)
+{
+    wc_ForkLock* n;
+    if (lock == NULL || *lock == NULL)
+        return;
+    n = *lock;
+    if (WOLFSSL_ATOMIC_LOAD(forkListDead) || ForkSemWait(&forkListSem) != 0) {
+        /* No registry to unlink under, so the node stays on the list and
+         * is leaked; broken keeps every later handler off it. */
+        WOLFSSL_ATOMIC_STORE(n->broken, 1);
+        WOLFSSL_MSG("wc_ForkLock_Free: registry unavailable, node leaked");
+        *lock = NULL;
+        return;
+    }
+    *n->prev = n->next;
+    if (n->next != NULL)
+        n->next->prev = n->prev;
+    (void)sem_post(&forkListSem);
+    (void)sem_destroy(&n->sem);
+    XFREE(n, n->heap, DYNAMIC_TYPE_RNG);
+    *lock = NULL;
+}
+
+/* Cancellation stays off while the lock is held: a reseed reads a device,
+ * a cancellation point, and a cancelled holder would strand every fork(). */
+WOLFSSL_API int wc_ForkLock_Enter(wc_ForkLock* lock)
+{
+    int old = PTHREAD_CANCEL_ENABLE;
+    int ret;
+    if (lock == NULL)
+        return 0;
+    if (WOLFSSL_ATOMIC_LOAD(lock->broken))
+        return BAD_MUTEX_E;
+    (void)pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &old);
+    ret = ForkSemWait(&lock->sem);
+    if (ret != 0) {
+        (void)pthread_setcancelstate(old, NULL);
+    }
+    else if (!ForkMineAdd(lock)) {
+        /* Unrecorded means prepare would wait on a lock this thread holds,
+         * so refuse it here rather than hand back a fork() that hangs. */
+        (void)sem_post(&lock->sem);
+        (void)pthread_setcancelstate(old, NULL);
+        ret = BAD_MUTEX_E;
+    }
+    else {
+        lock->cancel = old;
+    }
+    return ret;
+}
+
+WOLFSSL_API   void wc_ForkLock_Exit(wc_ForkLock* lock)
+{
+    int old;
+    if (lock == NULL)
+        return;
+    old = lock->cancel;
+    ForkMineDrop(lock);
+    (void)sem_post(&lock->sem);
+    (void)pthread_setcancelstate(old, NULL);
+}
+
+WOLFSSL_API   void wc_ForkLock_SetBroken(wc_ForkLock* lock, int broken)
+{
+    if (lock != NULL)
+        WOLFSSL_ATOMIC_STORE(lock->broken, broken);
+}
+#endif
 
 /* Used to initialize state for wolfcrypt
    return 0 on success
@@ -137,9 +765,43 @@ static volatile int initRefCount = 0;
 WOLFSSL_ABI
 int wolfCrypt_Init(void)
 {
-    int ret = 0;
-    if (initRefCount == 0) {
+    int ret;
+#if defined(HAVE_THREAD_LS) && !defined(NO_THREAD_LS) && defined(__GNUC__)
+    /* If thread-local storage is available, use it to prevent deadlock on
+     * recursion.  We only do this when __GNUC__ -- this code is known to cause
+     * internal compiler faults on Watcom, and is probably problematic on other
+     * non-_GNUC__ targets besides.
+     */
+    static THREAD_LS_T int in_init = 0;
+    if (in_init)
+        return DEADLOCK_AVERTED_E;
+    #define WOLFCRYPT_INIT_RAISE_BAD_STATE() do {                \
+            in_init = 0;                                         \
+            WC_INIT_STATE_RAISE_BAD_STATE(wolfcrypt_init_state); \
+            return ret;                                          \
+    } while (0)
+#else
+    #define WOLFCRYPT_INIT_RAISE_BAD_STATE() do {                \
+            WC_INIT_STATE_RAISE_BAD_STATE(wolfcrypt_init_state); \
+            return ret;                                          \
+    } while (0)
+#endif
+
+    ret = wc_local_InitUp(&wolfcrypt_init_state);
+    if (ret < 0)
+        return ret;
+    else if (ret == WC_INIT_STATE_INITED)
+        return 0;
+    else {
         WOLFSSL_ENTER("wolfCrypt_Init");
+
+#if defined(HAVE_THREAD_LS) && !defined(NO_THREAD_LS) && defined(__GNUC__)
+        in_init = 1;
+#endif
+
+    #if defined(__aarch64__) && defined(WOLFSSL_ARMASM_BARRIER_DETECT)
+        aarch64_use_sb = IS_AARCH64_SB(cpuid_get_flags());
+    #endif
 
     #ifdef WOLFSSL_CHECK_MEM_ZERO
         /* Initialize the mutex for access to the list of memory locations that
@@ -178,8 +840,8 @@ int wolfCrypt_Init(void)
         if( ret != TSIP_SUCCESS ) {
             WOLFSSL_MSG("RENESAS TSIP Open failed");
             /* not return 1 since WOLFSSL_SUCCESS=1*/
-            ret = -1;/* FATAL ERROR */
-            return ret;
+            ret = WC_FAILURE;
+            WOLFCRYPT_INIT_RAISE_BAD_STATE();
         }
     #endif
 
@@ -188,8 +850,8 @@ int wolfCrypt_Init(void)
     if( ret != 0 ) {
         WOLFSSL_MSG("Renesas RX64 HW Open failed");
         /* not return 1 since WOLFSSL_SUCCESS=1*/
-        ret = -1;/* FATAL ERROR */
-        return ret;
+        ret = WC_FAILURE;
+        WOLFCRYPT_INIT_RAISE_BAD_STATE();
     }
     #endif
 
@@ -198,8 +860,8 @@ int wolfCrypt_Init(void)
         if( ret != FSP_SUCCESS ) {
             WOLFSSL_MSG("RENESAS SCE Open failed");
             /* not return 1 since WOLFSSL_SUCCESS=1*/
-            ret = -1;/* FATAL ERROR */
-            return ret;
+            ret = WC_FAILURE;
+            WOLFCRYPT_INIT_RAISE_BAD_STATE();
         }
     #endif
 
@@ -207,15 +869,15 @@ int wolfCrypt_Init(void)
         ret = InitMemoryTracker();
         if (ret != 0) {
             WOLFSSL_MSG("InitMemoryTracker failed");
-            return ret;
+            WOLFCRYPT_INIT_RAISE_BAD_STATE();
         }
     #endif
 
-    #ifdef WOLFSSL_LINUXKM_USE_SAVE_VECTOR_REGISTERS
-        ret = allocate_wolfcrypt_linuxkm_fpu_states();
+    #if defined(WOLFSSL_USE_SAVE_VECTOR_REGISTERS) && defined(WOLFSSL_LINUXKM)
+        ret = wc_linuxkm_allocate_svr_states();
         if (ret != 0) {
-            WOLFSSL_MSG("allocate_wolfcrypt_linuxkm_fpu_states failed");
-            return ret;
+            WOLFSSL_MSG("wc_linuxkm_allocate_svr_states failed");
+            WOLFCRYPT_INIT_RAISE_BAD_STATE();
         }
     #endif
 
@@ -224,21 +886,25 @@ int wolfCrypt_Init(void)
         ret = wolfSSL_CryptHwMutexInit();
         if (ret != 0) {
             WOLFSSL_MSG("Hw crypt mutex init failed");
-            return ret;
+            WOLFCRYPT_INIT_RAISE_BAD_STATE();
         }
     #endif
 
-    /* if defined have fast RSA then initialize Intel IPP */
-    #ifdef HAVE_FAST_RSA
-        WOLFSSL_MSG("Attempting to use optimized IPP Library");
-        if ((ret = ippInit()) != ippStsNoErr) {
-            /* possible to get a CPU feature support status on optimized IPP
-              library but still use default library and see competitive speeds */
-            WOLFSSL_MSG("Warning when trying to set up optimization");
-            WOLFSSL_MSG(ippGetStatusString(ret));
-            WOLFSSL_MSG("Using default fast IPP library");
-            ret = 0;
-            (void)ret; /* suppress not read warning */
+    #if defined(HAVE_HASHDRBG) && !defined(WC_NO_RNG) && \
+        !defined(HAVE_SELFTEST) && \
+        (!defined(HAVE_FIPS) || FIPS_VERSION3_GE(7,0,0))
+        ret = wc_DrbgState_MutexInit();
+        if (ret != 0) {
+            WOLFSSL_MSG("DRBG state mutex init failed");
+            WOLFCRYPT_INIT_RAISE_BAD_STATE();
+        }
+    #endif
+    #ifdef WC_RNG_LOCK_ATFORK
+        /* here, before the app has threads, so no fork can race it */
+        ret = wc_ForkLockInit();
+        if (ret != 0) {
+            WOLFSSL_MSG("RNG fork handler registration failed");
+            WOLFCRYPT_INIT_RAISE_BAD_STATE();
         }
     #endif
 
@@ -246,16 +912,51 @@ int wolfCrypt_Init(void)
         ret = ksdk_port_init();
         if (ret != 0) {
             WOLFSSL_MSG("KSDK port init failed");
-            return ret;
+            WOLFCRYPT_INIT_RAISE_BAD_STATE();
+        }
+    #endif
+
+    /* Crypto Callbacks only works on AES for MAX32666/5 HW */
+    #if defined(MAX3266X_AES) && defined(WOLF_CRYPTO_CB)
+        ret = wc_CryptoCb_RegisterDevice(WOLFSSL_MAX3266X_DEVID, wc_MxcCryptoCb,
+                                            NULL);
+        if (ret != 0) {
+            WOLFCRYPT_INIT_RAISE_BAD_STATE();
+        }
+    #endif
+
+    /* Register the Versal Gen2 ASU device so wolfCrypt operations route to the
+     * ASU hardware. Registering also brings the ASU client up. */
+    #if defined(WOLFSSL_VERSAL_GEN2_ASU) && defined(WOLF_CRYPTO_CB)
+        ret = wc_AsuCryptoCb_RegisterDevice(WOLFSSL_VERSAL_GEN2_ASU_DEVID);
+        if (ret != 0) {
+            WOLFCRYPT_INIT_RAISE_BAD_STATE();
+        }
+    #endif
+
+    /* Register the Silicon Labs Secure Element device so wolfCrypt operations
+     * route to the SE. sl_se_init() runs further down in this function. */
+    #if defined(WOLFSSL_SILABS_CRYPTOCB) && defined(WOLF_CRYPTO_CB)
+        ret = wc_SilabsCryptoCb_RegisterDevice(WOLFSSL_SILABS_DEVID);
+        if (ret != 0) {
+            WOLFCRYPT_INIT_RAISE_BAD_STATE();
+        }
+    #endif
+    #if defined(MAX3266X_RTC)
+        ret = wc_MXC_RTC_Init();
+        if (ret != 0) {
+            WOLFSSL_MSG("MXC RTC Init Failed");
+            ret = WC_HW_E;
+            WOLFCRYPT_INIT_RAISE_BAD_STATE();
         }
     #endif
 
     #if defined(WOLFSSL_ATMEL) || defined(WOLFSSL_ATECC508A) || \
-        defined(WOLFSSL_ATECC608A)
+        defined(WOLFSSL_ATECC608A) || defined(WOLFSSL_MICROCHIP_TA100)
         ret = atmel_init();
         if (ret != 0) {
             WOLFSSL_MSG("CryptoAuthLib init failed");
-            return ret;
+            WOLFCRYPT_INIT_RAISE_BAD_STATE();
         }
     #endif
     #if defined(WOLFSSL_CRYPTOCELL)
@@ -263,18 +964,28 @@ int wolfCrypt_Init(void)
         ret = cc310_Init();
         if (ret != 0) {
             WOLFSSL_MSG("CRYPTOCELL init failed");
-            return ret;
+            WOLFCRYPT_INIT_RAISE_BAD_STATE();
         }
     #endif
-    #if defined(WOLFSSL_STSAFEA100)
-        stsafe_interface_init();
+    #ifdef WOLFSSL_STSAFE
+        ret = stsafe_interface_init();
+        if (ret != 0) {
+            WOLFSSL_MSG("STSAFE init failed");
+            WOLFCRYPT_INIT_RAISE_BAD_STATE();
+        }
     #endif
-
+    #if defined(WOLFSSL_TROPIC01)
+        ret = Tropic01_Init();
+        if (ret != 0) {
+            WOLFSSL_MSG("Tropic01 init failed");
+            WOLFCRYPT_INIT_RAISE_BAD_STATE();
+        }
+    #endif
     #if defined(WOLFSSL_PSOC6_CRYPTO)
         ret = psoc6_crypto_port_init();
         if (ret != 0) {
             WOLFSSL_MSG("PSoC6 crypto engine init failed");
-            return ret;
+            WOLFCRYPT_INIT_RAISE_BAD_STATE();
         }
     #endif
 
@@ -282,20 +993,29 @@ int wolfCrypt_Init(void)
         ret = maxq10xx_port_init();
         if (ret != 0) {
             WOLFSSL_MSG("MAXQ10xx port init failed");
-            return ret;
+            WOLFCRYPT_INIT_RAISE_BAD_STATE();
         }
     #endif
 
-    #ifdef WOLFSSL_SILABS_SE_ACCEL
+    #ifdef WOLFSSL_SILABS_SE_TYPES
         /* init handles if it is already initialized */
         ret = sl_se_init();
+        if (ret != 0) {
+            WOLFSSL_MSG("SiLabs SE Manager init failed");
+            WOLFCRYPT_INIT_RAISE_BAD_STATE();
+        }
     #endif
 
     #if defined(WOLFSSL_SE050) && defined(WOLFSSL_SE050_INIT)
-        ret = wc_se050_init(NULL);
-        if (ret != 0) {
-            WOLFSSL_MSG("SE050 init failed");
-            return ret;
+        /* An application may need runtime SCP03 keys to open the SE05x
+         * before calling wolfCrypt_Init(). Keep that configured session
+         * instead of trying to replace it with the compiled-in defaults. */
+        if (wc_se050_get_session() == NULL) {
+            ret = wc_se050_init(NULL);
+            if (ret != 0) {
+                WOLFSSL_MSG("SE050 init failed");
+                WOLFCRYPT_INIT_RAISE_BAD_STATE();
+            }
         }
     #endif
 
@@ -314,22 +1034,30 @@ int wolfCrypt_Init(void)
     #if defined(OPENSSL_EXTRA) || defined(DEBUG_WOLFSSL_VERBOSE)
         if ((ret = wc_LoggingInit()) != 0) {
             WOLFSSL_MSG("Error creating logging mutex");
-            return ret;
+            WOLFCRYPT_INIT_RAISE_BAD_STATE();
         }
     #endif
 
     #if defined(WOLFSSL_HAVE_PSA)
-        if ((ret = wc_psa_init()) != 0)
-            return ret;
+        if ((ret = wc_psa_init()) != 0) {
+            WOLFCRYPT_INIT_RAISE_BAD_STATE();
+        }
     #endif
 
-#ifdef HAVE_ENTROPY_MEMUSE
-    ret = Entropy_Init();
-    if (ret != 0) {
-        WOLFSSL_MSG("Error initializing entropy");
-        return ret;
-    }
-#endif
+    #if defined(USE_WINDOWS_API) && defined(WIN_REUSE_CRYPT_HANDLE)
+        /* A failure here should not happen, but if it does the actual RNG seed
+         * call will fail. This init is for a shared crypt provider handle for
+         * RNG */
+        (void)wc_WinCryptHandleInit();
+    #endif
+
+    #ifdef HAVE_ENTROPY_MEMUSE
+        ret = Entropy_Init();
+        if (ret != 0) {
+            WOLFSSL_MSG("Error initializing entropy");
+            WOLFCRYPT_INIT_RAISE_BAD_STATE();
+        }
+    #endif
 
 #ifdef HAVE_ECC
     #ifdef FP_ECC
@@ -338,7 +1066,14 @@ int wolfCrypt_Init(void)
     #ifdef ECC_CACHE_CURVE
         if ((ret = wc_ecc_curve_cache_init()) != 0) {
             WOLFSSL_MSG("Error creating curve cache");
-            return ret;
+            WOLFCRYPT_INIT_RAISE_BAD_STATE();
+        }
+    #endif
+    #if defined(HAVE_OID_ENCODING) && (!defined(HAVE_FIPS) || \
+            (defined(FIPS_VERSION_GE) && FIPS_VERSION_GE(6,0)))
+        if ((ret = wc_ecc_oid_cache_init()) != 0) {
+            WOLFSSL_MSG("Error creating ECC oid cache");
+            WOLFCRYPT_INIT_RAISE_BAD_STATE();
         }
     #endif
 #endif
@@ -352,44 +1087,75 @@ int wolfCrypt_Init(void)
         }
         if (ret != SSP_SUCCESS) {
             WOLFSSL_MSG("Error opening SCE");
-            return -1; /* FATAL_ERROR */
+            ret = WC_FAILURE;
+            WOLFCRYPT_INIT_RAISE_BAD_STATE();
         }
 #endif
 
 #if defined(WOLFSSL_DEVCRYPTO)
         if ((ret = wc_DevCryptoInit()) != 0) {
-            return ret;
+            WOLFCRYPT_INIT_RAISE_BAD_STATE();
         }
 #endif
 
 #if defined(WOLFSSL_CAAM)
         if ((ret = wc_caamInit()) != 0) {
-            return ret;
+            WOLFCRYPT_INIT_RAISE_BAD_STATE();
+        }
+#endif
+
+#if defined(WOLFSSL_SEC_QORIQ)
+        /* A part without the security engine is not an error: the SEC is
+         * only fitted on the "E" orderable variants, and everything simply
+         * stays in software there. */
+        ret = wc_SecQoriqInit();
+        if (ret == WC_NO_ERR_TRACE(NOT_COMPILED_IN)) {
+            ret = 0;
+        }
+        else if (ret != 0) {
+            WOLFCRYPT_INIT_RAISE_BAD_STATE();
         }
 #endif
 
 #if defined(HAVE_ARIA)
         if ((ret = wc_AriaInit()) != 0) {
-            return ret;
+            WOLFCRYPT_INIT_RAISE_BAD_STATE();
         }
 #endif
 
 #ifdef WOLFSSL_IMXRT_DCP
         if ((ret = wc_dcp_init()) != 0) {
-            return ret;
+            WOLFCRYPT_INIT_RAISE_BAD_STATE();
+        }
+#endif
+
+#ifdef WOLFSSL_NXP_CASPER
+        if ((ret = wc_casper_init()) != 0) {
+            WOLFCRYPT_INIT_RAISE_BAD_STATE();
+        }
+#endif
+#ifdef WOLFSSL_NXP_HASHCRYPT
+        if ((ret = wc_hashcrypt_init()) != 0) {
+            WOLFCRYPT_INIT_RAISE_BAD_STATE();
         }
 #endif
 
 #if defined(WOLFSSL_DSP) && !defined(WOLFSSL_DSP_BUILD)
         if ((ret = wolfSSL_InitHandle()) != 0) {
-            return ret;
+            WOLFCRYPT_INIT_RAISE_BAD_STATE();
         }
         rpcmem_init();
 #endif
-    }
-    initRefCount++;
 
-    return ret;
+
+#undef WOLFCRYPT_INIT_RAISE_BAD_STATE
+
+#if defined(HAVE_THREAD_LS) && !defined(NO_THREAD_LS) && defined(__GNUC__)
+        in_init = 0;
+#endif
+        return wc_local_InitUpDone(&wolfcrypt_init_state);
+    }
+    /* not reached */
 }
 
 #if defined(WOLFSSL_TRACK_MEMORY_VERBOSE) && !defined(WOLFSSL_STATIC_MEMORY)
@@ -410,13 +1176,27 @@ long wolfCrypt_heap_peakBytes_checkpoint(void) {
 WOLFSSL_ABI
 int wolfCrypt_Cleanup(void)
 {
-    int ret = 0;
+    int ret;
 
-    initRefCount--;
-    if (initRefCount < 0)
-        initRefCount = 0;
+    ret = wc_local_InitDown(&wolfcrypt_init_state);
+    if (ret < 0) {
+        if (ret == WC_NO_ERR_TRACE(ALREADY_E))
+            WOLFSSL_MSG("wolfCrypt_Cleanup() called during or after prior final cleanup.");
+        else if (ret == WC_NO_ERR_TRACE(BAD_STATE_E))
+            WOLFSSL_MSG("wolfCrypt_Cleanup() failed: bad internal state.");
+#ifdef WC_INIT_ERROR_WHEN_CONTENDED
+        else if (ret == WC_NO_ERR_TRACE(BUSY_E))
+            WOLFSSL_MSG("wolfCrypt_Cleanup() failed with BUSY_E -- retry.");
+#endif
+        else
+            WOLFSSL_MSG("wolfCrypt_Cleanup() failed with unexpected error.");
+        return ret;
+    }
+    else if (ret == WC_INIT_STATE_INITED)
+        return 0;
+    else {
+        ret = 0;
 
-    if (initRefCount == 0) {
         WOLFSSL_ENTER("wolfCrypt_Cleanup");
 
 #ifdef HAVE_ECC
@@ -426,10 +1206,18 @@ int wolfCrypt_Cleanup(void)
     #ifdef ECC_CACHE_CURVE
         wc_ecc_curve_cache_free();
     #endif
+    #if defined(HAVE_OID_ENCODING) && (!defined(HAVE_FIPS) || \
+            (defined(FIPS_VERSION_GE) && FIPS_VERSION_GE(6,0)))
+        wc_ecc_oid_cache_free();
+    #endif
 #endif /* HAVE_ECC */
 
     #if defined(OPENSSL_EXTRA) || defined(DEBUG_WOLFSSL_VERBOSE)
-        ret = wc_LoggingCleanup();
+        {
+            int ret2 = wc_LoggingCleanup();
+            if (ret == 0)
+                ret = ret2;
+        }
     #endif
 
     #if defined(WOLFSSL_TRACK_MEMORY) && !defined(WOLFSSL_STATIC_MEMORY)
@@ -459,11 +1247,41 @@ int wolfCrypt_Cleanup(void)
     #if defined(WOLFSSL_CAAM)
         wc_caamFree();
     #endif
+    #if defined(WOLFSSL_SEC_QORIQ)
+        wc_SecQoriqFree();
+    #endif
     #if defined(WOLFSSL_CRYPTOCELL)
         cc310_Free();
     #endif
-    #ifdef WOLFSSL_SILABS_SE_ACCEL
-        ret = sl_se_deinit();
+    /* Unregister before sl_se_deinit(). wc_CryptoCb_Cleanup() further down
+     * would also clear the device, but it runs after the SE is torn down, so
+     * the unregister command would reach the callback with no SE behind it. */
+    #if defined(WOLFSSL_SILABS_CRYPTOCB) && defined(WOLF_CRYPTO_CB)
+        {
+            int ret2 = wc_SilabsCryptoCb_UnRegisterDevice(WOLFSSL_SILABS_DEVID);
+            if (ret == 0)
+                ret = ret2;
+        }
+    #endif
+    #ifdef WOLFSSL_SILABS_SE_TYPES
+        {
+            int ret2 = sl_se_deinit();
+            if (ret == 0)
+                ret = ret2;
+        }
+    #endif
+    #if defined(WOLFSSL_SE050) && defined(WOLFSSL_SE050_INIT)
+        if (wc_se050_get_session() != NULL) {
+            int ret2 = wc_se050_close();
+
+            /* A session installed with wc_se050_set_config() is owned by the
+             * application and wc_se050_close() deliberately rejects it. */
+            if ((ret == 0) && (ret2 != WC_NO_ERR_TRACE(BAD_STATE_E)))
+                ret = ret2;
+        }
+    #endif
+    #if defined(WOLFSSL_TROPIC01)
+        Tropic01_Deinit();
     #endif
     #if defined(WOLFSSL_RENESAS_TSIP)
         tsip_Close();
@@ -475,16 +1293,26 @@ int wolfCrypt_Cleanup(void)
         rpcmem_deinit();
         wolfSSL_CleanupHandle();
     #endif
-    #ifdef WOLFSSL_LINUXKM_USE_SAVE_VECTOR_REGISTERS
-        free_wolfcrypt_linuxkm_fpu_states();
+    #if defined(WOLFSSL_USE_SAVE_VECTOR_REGISTERS) && defined(WOLFSSL_LINUXKM)
+        wc_linuxkm_free_svr_states();
     #endif
 
     #ifdef HAVE_ENTROPY_MEMUSE
         Entropy_Final();
     #endif
 
+    #if defined(USE_WINDOWS_API) && defined(WIN_REUSE_CRYPT_HANDLE)
+        wc_WinCryptHandleCleanup();
+    #endif
+
     #ifdef WOLF_CRYPTO_CB
         wc_CryptoCb_Cleanup();
+    #endif
+
+    #if defined(HAVE_HASHDRBG) && !defined(WC_NO_RNG) && \
+        !defined(HAVE_SELFTEST) && \
+        (!defined(HAVE_FIPS) || FIPS_VERSION3_GE(7,0,0))
+        wc_DrbgState_MutexFree();
     #endif
 
     #if defined(WOLFSSL_MEM_FAIL_COUNT) && defined(WOLFCRYPT_ONLY)
@@ -495,9 +1323,18 @@ int wolfCrypt_Cleanup(void)
          * must be freed. */
         wc_MemZero_Free();
     #endif
+
+
+        {
+            int ret2 = wc_local_InitDownDone(&wolfcrypt_init_state);
+            if (ret == 0)
+                ret = ret2;
+        }
+
+        return ret;
     }
 
-    return ret;
+    /* not reached */
 }
 
 #ifndef NO_FILESYSTEM
@@ -613,11 +1450,13 @@ int wc_ReadDirFirst(ReadDirCtx* ctx, const char* path, char** name)
     if (name)
         *name = NULL;
 
+    if (ctx != NULL)
+        XMEMSET(ctx, 0, sizeof(ReadDirCtx));
+
     if (ctx == NULL || path == NULL) {
         return BAD_FUNC_ARG;
     }
 
-    XMEMSET(ctx, 0, sizeof(ReadDirCtx));
     pathLen = (int)XSTRLEN(path);
 
 #ifdef USE_WINDOWS_API
@@ -996,6 +1835,15 @@ int z_fs_close(XFILE file)
     return ret;
 }
 
+/* Rewind the file pointer to the beginning of the file */
+/* This is not a 'rewind' is not supported in Zephyr so */
+/* use fs_seek to move the file pointer to the beginning of the file */
+/* calling it z_fs_rewind to avoid future conflicts if rewind is added */
+int z_fs_rewind(XFILE file)
+{
+    return fs_seek(file, 0, FS_SEEK_SET);
+}
+
 #endif /* !NO_FILESYSTEM && !WOLFSSL_ZEPHYR */
 
 #if !defined(WOLFSSL_USER_MUTEX)
@@ -1102,34 +1950,52 @@ char* wc_strsep(char **stringp, const char *delim)
 #ifdef USE_WOLF_STRLCPY
 size_t wc_strlcpy(char *dst, const char *src, size_t dstSize)
 {
-    size_t i;
+    size_t i = 0;
 
-    if (!dstSize)
-        return 0;
-
-    /* Always have to leave a space for NULL */
-    for (i = 0; i < (dstSize - 1) && *src != '\0'; i++) {
-        *dst++ = *src++;
+    if (dstSize != 0) {
+        /* Always have to leave a space for NULL */
+        for (; i < (dstSize - 1) && *src != '\0'; i++) {
+            *dst++ = *src++;
+        }
+        *dst = '\0';
     }
-    *dst = '\0';
 
-    return i; /* return length without NULL */
+    /* strlcpy() returns the length of src, not the number of bytes copied, so
+     * that a caller can detect truncation with (ret >= dstSize). Walk whatever
+     * did not fit -- src already points at the first byte not copied, and at
+     * the whole string when dstSize was 0 (which writes nothing). */
+    while (*src != '\0') {
+        i++;
+        src++;
+    }
+
+    return i; /* length of src, excluding the NULL */
 }
 #endif /* USE_WOLF_STRLCPY */
 
 #ifdef USE_WOLF_STRLCAT
 size_t wc_strlcat(char *dst, const char *src, size_t dstSize)
 {
-    size_t dstLen;
+    size_t dstLen = 0;
 
-    if (!dstSize)
-        return 0;
+    /* Find the end of dst without going past dstSize. XSTRLEN() would run off
+     * the end of a dst that holds no NUL within dstSize -- the very case this
+     * bound exists to contain. */
+    while (dstLen < dstSize && dst[dstLen] != '\0') {
+        dstLen++;
+    }
 
-    dstLen = XSTRLEN(dst);
+    if (dstLen == dstSize) {
+        /* No NUL within dstSize: the length of dst is taken to be dstSize,
+         * nothing is appended, and dst is left un-terminated because there is
+         * no room for the NUL. Only reachable when dstSize is wrong or dst is
+         * not a C string; returning here is what stops the append from running
+         * off the end. */
+        return dstSize + XSTRLEN(src);
+    }
 
-    if (dstSize < dstLen)
-        return dstLen + XSTRLEN(src);
-
+    /* Total length attempted: the initial length of dst plus the length of
+     * src, which is what wc_strlcpy() returns. */
     return dstLen + wc_strlcpy(dst + dstLen, src, dstSize - dstLen);
 }
 #endif /* USE_WOLF_STRLCAT */
@@ -1141,10 +2007,10 @@ int wc_strcasecmp(const char *s1, const char *s2)
     for (;;++s1, ++s2) {
         c1 = *s1;
         if ((c1 >= 'a') && (c1 <= 'z'))
-            c1 -= ('a' - 'A');
+            c1 = (char)(c1 - ('a' - 'A'));
         c2 = *s2;
         if ((c2 >= 'a') && (c2 <= 'z'))
-            c2 -= ('a' - 'A');
+            c2 = (char)(c2 - ('a' - 'A'));
         if ((c1 != c2) || (c1 == 0))
             break;
     }
@@ -1159,10 +2025,10 @@ int wc_strncasecmp(const char *s1, const char *s2, size_t n)
     for (c1 = 0, c2 = 0; n > 0; --n, ++s1, ++s2) {
         c1 = *s1;
         if ((c1 >= 'a') && (c1 <= 'z'))
-            c1 -= ('a' - 'A');
+            c1 = (char)(c1 - ('a' - 'A'));
         c2 = *s2;
         if ((c2 >= 'a') && (c2 <= 'z'))
-            c2 -= ('a' - 'A');
+            c2 = (char)(c2 - ('a' - 'A'));
         if ((c1 != c2) || (c1 == 0))
             break;
     }
@@ -1170,68 +2036,549 @@ int wc_strncasecmp(const char *s1, const char *s2, size_t n)
 }
 #endif /* USE_WOLF_STRNCASECMP */
 
+#ifdef USE_WOLF_STRDUP
+char* wc_strdup_ex(const char *src, int memType) {
+    char *ret = NULL;
+    word32 len = 0;
+
+    if (src) {
+        len = (word32)XSTRLEN(src) + 1; /* Add one for null terminator */
+        ret = (char*)XMALLOC(len, NULL, memType);
+        if (ret != NULL) {
+            XMEMCPY(ret, src, len);
+        }
+    }
+
+    return ret;
+}
+#endif
+
+#ifdef WOLFSSL_WIDE_BYTE
+
+/* Packed octet stream -> one octet per byte cell.  See WC_OCTETS_PER_BYTE in
+ * types.h.  in holds the packed stream, low octet of a cell first, and must not
+ * overlap out.  Returns 0, BAD_FUNC_ARG on NULL, BUFFER_E if either buffer is
+ * short. */
+int wc_UnpackOctets(byte* out, word32 outSz, const byte* in, word32 inSz,
+    word32 octetSz)
+{
+    word32 i;
+
+    if ((out == NULL) || (in == NULL)) {
+        return BAD_FUNC_ARG;
+    }
+    if ((outSz < octetSz) || (inSz < WC_PACKED_CELLS(octetSz))) {
+        return BUFFER_E;
+    }
+
+    for (i = 0; i < octetSz; i++) {
+        out[i] = WC_OCTET((word32)in[i / WC_OCTETS_PER_BYTE] >>
+            ((i % WC_OCTETS_PER_BYTE) * 8));
+    }
+
+    return 0;
+}
+
+/* Inverse of wc_UnpackOctets(), for flash or a byte-oriented peripheral.  in
+ * holds one octet per cell and must not overlap out. */
+int wc_PackOctets(byte* out, word32 outSz, const byte* in, word32 inSz,
+    word32 octetSz)
+{
+    word32 i;
+
+    if ((out == NULL) || (in == NULL)) {
+        return BAD_FUNC_ARG;
+    }
+    if ((outSz < WC_PACKED_CELLS(octetSz)) || (inSz < octetSz)) {
+        return BUFFER_E;
+    }
+
+    XMEMSET(out, 0, WC_PACKED_CELLS(octetSz));   /* zero-fill partial tail */
+    for (i = 0; i < octetSz; i++) {
+        out[i / WC_OCTETS_PER_BYTE] |= (byte)((word32)WC_OCTET(in[i]) <<
+            ((i % WC_OCTETS_PER_BYTE) * 8));
+    }
+
+    return 0;
+}
+
+#endif /* WOLFSSL_WIDE_BYTE */
+
 #ifdef WOLFSSL_ATOMIC_OPS
 
-#ifdef HAVE_C___ATOMIC
-/* Atomic ops using standard C lib */
-#ifdef __cplusplus
-/* C++ using direct calls to compiler built-in functions */
-void wolfSSL_Atomic_Int_Init(wolfSSL_Atomic_Int* c, int i)
+#if defined(WOLFSSL_USER_DEFINED_ATOMICS)
+
+#elif defined(SINGLE_THREADED)
+
+#elif defined(WOLFSSL_BSDKM)
+/* Note: using compiler built-ins like __atomic_fetch_add will technically
+ * build in FreeBSD kernel, but are not commonly used in FreeBSD kernel and
+ * might not be safe or portable.
+ * */
+void wolfSSL_Atomic_Int_Init(wolfSSL_Atomic_Int* c, WC_ATOMIC_INT_ARG i)
 {
     *c = i;
 }
 
-int wolfSSL_Atomic_Int_FetchAdd(wolfSSL_Atomic_Int* c, int i)
+void wolfSSL_Atomic_Uint_Init(wolfSSL_Atomic_Uint* c, WC_ATOMIC_UINT_ARG i)
 {
-    return __atomic_fetch_add(c, i, __ATOMIC_RELAXED);
+    *c = i;
 }
 
-int wolfSSL_Atomic_Int_FetchSub(wolfSSL_Atomic_Int* c, int i)
+WC_ATOMIC_INT_ARG wolfSSL_Atomic_Int_FetchAdd(wolfSSL_Atomic_Int* c,
+                                              WC_ATOMIC_INT_ARG i)
 {
-    return __atomic_fetch_sub(c, i, __ATOMIC_RELAXED);
+    return atomic_fetchadd_int(c, i);
 }
-#else
+
+WC_ATOMIC_INT_ARG wolfSSL_Atomic_Int_FetchSub(wolfSSL_Atomic_Int* c,
+                                              WC_ATOMIC_INT_ARG i)
+{
+    return atomic_fetchadd_int(c, -i);
+}
+
+WC_ATOMIC_INT_ARG wolfSSL_Atomic_Int_AddFetch(wolfSSL_Atomic_Int* c,
+                                              WC_ATOMIC_INT_ARG i)
+{
+    int val = atomic_fetchadd_int(c, i);
+    return val + i;
+}
+
+WC_ATOMIC_INT_ARG wolfSSL_Atomic_Int_SubFetch(wolfSSL_Atomic_Int* c,
+                                              WC_ATOMIC_INT_ARG i)
+{
+    int val = atomic_fetchadd_int(c, -i);
+    return val - i;
+}
+
+WC_ATOMIC_UINT_ARG wolfSSL_Atomic_Uint_FetchAdd(wolfSSL_Atomic_Uint* c,
+                                                WC_ATOMIC_UINT_ARG i)
+{
+    return atomic_fetchadd_int(c, i);
+}
+
+WC_ATOMIC_UINT_ARG wolfSSL_Atomic_Uint_FetchSub(wolfSSL_Atomic_Uint* c,
+                                                WC_ATOMIC_UINT_ARG i)
+{
+    return atomic_fetchadd_int(c, -i);
+}
+
+WC_ATOMIC_UINT_ARG wolfSSL_Atomic_Uint_AddFetch(wolfSSL_Atomic_Uint* c,
+                                                WC_ATOMIC_UINT_ARG i)
+{
+    WC_ATOMIC_UINT_ARG val = atomic_fetchadd_int(c, i);
+    return val + i;
+}
+
+WC_ATOMIC_UINT_ARG wolfSSL_Atomic_Uint_SubFetch(wolfSSL_Atomic_Uint* c,
+                                                WC_ATOMIC_UINT_ARG i)
+{
+    unsigned int val = atomic_fetchadd_int(c, -i);
+    return val - i;
+}
+
+WC_ATOMIC_INT_ARG wolfSSL_Atomic_Int_Exchange(wolfSSL_Atomic_Int* c,
+                                              WC_ATOMIC_INT_ARG new_i)
+{
+    return atomic_swap_int(c, new_i);
+}
+
+int wolfSSL_Atomic_Int_CompareExchange(wolfSSL_Atomic_Int* c,
+                                       WC_ATOMIC_INT_ARG *expected_i,
+                                       WC_ATOMIC_INT_ARG new_i)
+{
+    u_int exp = (u_int) *expected_i;
+    int ret = atomic_fcmpset_int(c, &exp, new_i);
+    *expected_i = (int)exp;
+    return ret;
+}
+
+int wolfSSL_Atomic_Uint_CompareExchange(
+    wolfSSL_Atomic_Uint* c, WC_ATOMIC_UINT_ARG *expected_i,
+    WC_ATOMIC_UINT_ARG new_i)
+{
+    u_int exp = (u_int)*expected_i;
+    int ret = atomic_fcmpset_int(c, &exp, new_i);
+    *expected_i = (unsigned int)exp;
+    return ret;
+}
+
+int wolfSSL_Atomic_Ptr_CompareExchange(
+    void * volatile *c, void **expected_ptr, void *new_ptr)
+{
+    uintptr_t exp = (uintptr_t)*expected_ptr;
+    int ret = atomic_fcmpset_ptr((uintptr_t *)c, &exp, (uintptr_t)new_ptr);
+    *expected_ptr = (void *)exp;
+    return ret;
+}
+
+#elif defined(HAVE_C___ATOMIC) && defined(WOLFSSL_HAVE_ATOMIC_H) && \
+        !defined(__cplusplus)
+
 /* Default C Implementation */
-void wolfSSL_Atomic_Int_Init(wolfSSL_Atomic_Int* c, int i)
+void wolfSSL_Atomic_Int_Init(wolfSSL_Atomic_Int* c, WC_ATOMIC_INT_ARG i)
 {
     atomic_init(c, i);
 }
 
-int wolfSSL_Atomic_Int_FetchAdd(wolfSSL_Atomic_Int* c, int i)
+void wolfSSL_Atomic_Uint_Init(wolfSSL_Atomic_Uint* c, WC_ATOMIC_UINT_ARG i)
+{
+    atomic_init(c, i);
+}
+
+WC_ATOMIC_INT_ARG wolfSSL_Atomic_Int_FetchAdd(wolfSSL_Atomic_Int* c,
+                                              WC_ATOMIC_INT_ARG i)
 {
     return atomic_fetch_add_explicit(c, i, memory_order_relaxed);
 }
 
-int wolfSSL_Atomic_Int_FetchSub(wolfSSL_Atomic_Int* c, int i)
+WC_ATOMIC_INT_ARG wolfSSL_Atomic_Int_FetchSub(wolfSSL_Atomic_Int* c,
+                                              WC_ATOMIC_INT_ARG i)
 {
     return atomic_fetch_sub_explicit(c, i, memory_order_relaxed);
 }
-#endif /* __cplusplus */
 
-#elif defined(_MSC_VER)
+WC_ATOMIC_INT_ARG wolfSSL_Atomic_Int_AddFetch(wolfSSL_Atomic_Int* c,
+                                              WC_ATOMIC_INT_ARG i)
+{
+    WC_ATOMIC_INT_ARG ret =
+        atomic_fetch_add_explicit(c, i, memory_order_relaxed);
+    return ret + i;
+}
 
-/* Default C Implementation */
-void wolfSSL_Atomic_Int_Init(wolfSSL_Atomic_Int* c, int i)
+WC_ATOMIC_INT_ARG wolfSSL_Atomic_Int_SubFetch(wolfSSL_Atomic_Int* c,
+                                              WC_ATOMIC_INT_ARG i)
+{
+    WC_ATOMIC_INT_ARG ret =
+        atomic_fetch_sub_explicit(c, i, memory_order_relaxed);
+    return ret - i;
+}
+
+WC_ATOMIC_INT_ARG wolfSSL_Atomic_Int_Exchange(wolfSSL_Atomic_Int* c,
+                                              WC_ATOMIC_INT_ARG new_i)
+{
+    return atomic_exchange_explicit(c, new_i, memory_order_seq_cst);
+}
+
+int wolfSSL_Atomic_Int_CompareExchange(
+    wolfSSL_Atomic_Int* c, WC_ATOMIC_INT_ARG *expected_i,
+    WC_ATOMIC_INT_ARG new_i)
+{
+    /* For the success path, use full synchronization with barriers --
+     * "Sequentially-consistent ordering" -- so that all threads see the same
+     * "single total modification order of all atomic operations" -- but on
+     * failure we just need to be sure we acquire the value that changed out
+     * from under us.
+     */
+    return atomic_compare_exchange_strong_explicit(
+        c, expected_i, new_i, memory_order_seq_cst, memory_order_acquire);
+}
+
+WC_ATOMIC_UINT_ARG wolfSSL_Atomic_Uint_FetchAdd(wolfSSL_Atomic_Uint* c,
+                                                WC_ATOMIC_UINT_ARG i)
+{
+    return atomic_fetch_add_explicit(c, i, memory_order_relaxed);
+}
+
+WC_ATOMIC_UINT_ARG wolfSSL_Atomic_Uint_FetchSub(wolfSSL_Atomic_Uint* c,
+                                                WC_ATOMIC_UINT_ARG i)
+{
+    return atomic_fetch_sub_explicit(c, i, memory_order_relaxed);
+}
+
+WC_ATOMIC_UINT_ARG wolfSSL_Atomic_Uint_AddFetch(wolfSSL_Atomic_Uint* c,
+                                                WC_ATOMIC_UINT_ARG i)
+{
+    WC_ATOMIC_UINT_ARG ret =
+        atomic_fetch_add_explicit(c, i, memory_order_relaxed);
+    return ret + i;
+}
+
+WC_ATOMIC_UINT_ARG wolfSSL_Atomic_Uint_SubFetch(wolfSSL_Atomic_Uint* c,
+                                                WC_ATOMIC_UINT_ARG i)
+{
+    WC_ATOMIC_UINT_ARG ret =
+        atomic_fetch_sub_explicit(c, i, memory_order_relaxed);
+    return ret - i;
+}
+
+int wolfSSL_Atomic_Uint_CompareExchange(
+    wolfSSL_Atomic_Uint* c, WC_ATOMIC_UINT_ARG *expected_i,
+    WC_ATOMIC_UINT_ARG new_i)
+{
+    /* For the success path, use full synchronization with barriers --
+     * "Sequentially-consistent ordering" -- so that all threads see the same
+     * "single total modification order of all atomic operations" -- but on
+     * failure we just need to be sure we acquire the value that changed out
+     * from under us.
+     */
+    return atomic_compare_exchange_strong_explicit(
+        c, expected_i, new_i, memory_order_seq_cst, memory_order_acquire);
+}
+
+int wolfSSL_Atomic_Ptr_CompareExchange(
+    void * volatile *c, void **expected_ptr, void *new_ptr)
+{
+    /* use gcc-built-in __atomic_compare_exchange_n(), not
+     * atomic_compare_exchange_strong_explicit(), to sidestep _Atomic type
+     * requirements.
+     */
+     if (__atomic_compare_exchange_n(
+             c, expected_ptr, new_ptr,
+#ifdef WOLF_C89
+             0 /* weak */,
+#else
+             (_Bool)0 /* weak */,
+#endif
+             __ATOMIC_SEQ_CST, __ATOMIC_ACQUIRE))
+         return 1;
+     else
+         return 0;
+}
+
+#elif defined(__GNUC__) && defined(__ATOMIC_RELAXED)
+/* direct calls using gcc-style compiler built-ins */
+
+void wolfSSL_Atomic_Int_Init(wolfSSL_Atomic_Int* c, WC_ATOMIC_INT_ARG i)
 {
     *c = i;
 }
 
-int wolfSSL_Atomic_Int_FetchAdd(wolfSSL_Atomic_Int* c, int i)
+void wolfSSL_Atomic_Uint_Init(wolfSSL_Atomic_Uint* c, WC_ATOMIC_UINT_ARG i)
+{
+    *c = i;
+}
+
+WC_ATOMIC_INT_ARG wolfSSL_Atomic_Int_FetchAdd(wolfSSL_Atomic_Int* c,
+                                              WC_ATOMIC_INT_ARG i)
+{
+    return __atomic_fetch_add(c, i, __ATOMIC_RELAXED);
+}
+
+WC_ATOMIC_INT_ARG wolfSSL_Atomic_Int_FetchSub(wolfSSL_Atomic_Int* c,
+                                              WC_ATOMIC_INT_ARG i)
+{
+    return __atomic_fetch_sub(c, i, __ATOMIC_RELAXED);
+}
+
+WC_ATOMIC_INT_ARG wolfSSL_Atomic_Int_AddFetch(wolfSSL_Atomic_Int* c,
+                                              WC_ATOMIC_INT_ARG i)
+{
+    return __atomic_add_fetch(c, i, __ATOMIC_RELAXED);
+}
+
+WC_ATOMIC_INT_ARG wolfSSL_Atomic_Int_SubFetch(wolfSSL_Atomic_Int* c,
+                                              WC_ATOMIC_INT_ARG i)
+{
+    return __atomic_sub_fetch(c, i, __ATOMIC_RELAXED);
+}
+
+WC_ATOMIC_INT_ARG wolfSSL_Atomic_Int_Exchange(wolfSSL_Atomic_Int* c,
+                                              WC_ATOMIC_INT_ARG new_i)
+{
+    return __atomic_exchange_n(c, new_i, __ATOMIC_SEQ_CST);
+}
+
+int wolfSSL_Atomic_Int_CompareExchange(wolfSSL_Atomic_Int* c,
+                                       WC_ATOMIC_INT_ARG *expected_i,
+                                       WC_ATOMIC_INT_ARG new_i)
+{
+    /* For the success path, use full synchronization with barriers --
+     * "Sequentially-consistent ordering" -- so that all threads see the same
+     * "single total modification order of all atomic operations" -- but on
+     * failure we just need to be sure we acquire the value that changed out
+     * from under us.
+     */
+    return __atomic_compare_exchange_n(c, expected_i, new_i, 0 /* weak */,
+                                       __ATOMIC_SEQ_CST, __ATOMIC_ACQUIRE);
+}
+
+WC_ATOMIC_UINT_ARG wolfSSL_Atomic_Uint_FetchAdd(wolfSSL_Atomic_Uint* c,
+                                                WC_ATOMIC_UINT_ARG i)
+{
+    return __atomic_fetch_add(c, i, __ATOMIC_RELAXED);
+}
+
+WC_ATOMIC_UINT_ARG wolfSSL_Atomic_Uint_FetchSub(wolfSSL_Atomic_Uint* c,
+                                                WC_ATOMIC_UINT_ARG i)
+{
+    return __atomic_fetch_sub(c, i, __ATOMIC_RELAXED);
+}
+
+WC_ATOMIC_UINT_ARG wolfSSL_Atomic_Uint_AddFetch(wolfSSL_Atomic_Uint* c,
+                                                WC_ATOMIC_UINT_ARG i)
+{
+    return __atomic_add_fetch(c, i, __ATOMIC_RELAXED);
+}
+
+WC_ATOMIC_UINT_ARG wolfSSL_Atomic_Uint_SubFetch(wolfSSL_Atomic_Uint* c,
+                                                WC_ATOMIC_UINT_ARG i)
+{
+    return __atomic_sub_fetch(c, i, __ATOMIC_RELAXED);
+}
+
+int wolfSSL_Atomic_Uint_CompareExchange(
+    wolfSSL_Atomic_Uint* c, WC_ATOMIC_UINT_ARG *expected_i,
+    WC_ATOMIC_UINT_ARG new_i)
+{
+    /* For the success path, use full synchronization with barriers --
+     * "Sequentially-consistent ordering" -- so that all threads see the same
+     * "single total modification order of all atomic operations" -- but on
+     * failure we just need to be sure we acquire the value that changed out
+     * from under us.
+     */
+    return __atomic_compare_exchange_n(
+        c, expected_i, new_i, 0 /* weak */, __ATOMIC_SEQ_CST, __ATOMIC_ACQUIRE);
+}
+
+int wolfSSL_Atomic_Ptr_CompareExchange(
+    void * volatile *c, void **expected_ptr, void *new_ptr)
+{
+    return __atomic_compare_exchange_n(
+        c, expected_ptr, new_ptr, 0 /* weak */,
+        __ATOMIC_SEQ_CST, __ATOMIC_ACQUIRE);
+}
+
+#elif defined(_MSC_VER) && !defined(WOLFSSL_NOT_WINDOWS_API)
+
+void wolfSSL_Atomic_Int_Init(wolfSSL_Atomic_Int* c, WC_ATOMIC_INT_ARG i)
+{
+    *c = i;
+}
+
+void wolfSSL_Atomic_Uint_Init(wolfSSL_Atomic_Uint* c, WC_ATOMIC_UINT_ARG i)
+{
+    *c = i;
+}
+
+WC_ATOMIC_INT_ARG wolfSSL_Atomic_Int_FetchAdd(wolfSSL_Atomic_Int* c,
+                                              WC_ATOMIC_INT_ARG i)
 {
     return (int)_InterlockedExchangeAdd(c, (long)i);
 }
 
-int wolfSSL_Atomic_Int_FetchSub(wolfSSL_Atomic_Int* c, int i)
+WC_ATOMIC_INT_ARG wolfSSL_Atomic_Int_FetchSub(wolfSSL_Atomic_Int* c,
+                                              WC_ATOMIC_INT_ARG i)
 {
     return (int)_InterlockedExchangeAdd(c, (long)-i);
+}
+
+WC_ATOMIC_INT_ARG wolfSSL_Atomic_Int_AddFetch(wolfSSL_Atomic_Int* c,
+                                              WC_ATOMIC_INT_ARG i)
+{
+    WC_ATOMIC_INT_ARG ret =
+        (WC_ATOMIC_INT_ARG)_InterlockedExchangeAdd(c, (long)i);
+    return ret + i;
+}
+
+WC_ATOMIC_INT_ARG wolfSSL_Atomic_Int_SubFetch(wolfSSL_Atomic_Int* c,
+                                              WC_ATOMIC_INT_ARG i)
+{
+    WC_ATOMIC_INT_ARG ret =
+        (WC_ATOMIC_INT_ARG)_InterlockedExchangeAdd(c, (long)-i);
+    return ret - i;
+}
+
+WC_ATOMIC_INT_ARG wolfSSL_Atomic_Int_Exchange(wolfSSL_Atomic_Int* c,
+                                              WC_ATOMIC_INT_ARG new_i)
+{
+    long actual_i = InterlockedExchange(c, (long)new_i);
+    return (WC_ATOMIC_INT_ARG)actual_i;
+}
+
+int wolfSSL_Atomic_Int_CompareExchange(wolfSSL_Atomic_Int* c,
+                                       WC_ATOMIC_INT_ARG *expected_i,
+                                       WC_ATOMIC_INT_ARG new_i)
+{
+    long actual_i = InterlockedCompareExchange(c, (long)new_i,
+                                               (long)*expected_i);
+    if (actual_i == (long)*expected_i) {
+        return 1;
+    }
+    else {
+        *expected_i = (WC_ATOMIC_INT_ARG)actual_i;
+        return 0;
+    }
+}
+
+WC_ATOMIC_UINT_ARG wolfSSL_Atomic_Uint_FetchAdd(wolfSSL_Atomic_Uint* c,
+                                                WC_ATOMIC_UINT_ARG i)
+{
+    return (WC_ATOMIC_UINT_ARG)_InterlockedExchangeAdd((wolfSSL_Atomic_Int *)c,
+                                                       (long)i);
+}
+
+WC_ATOMIC_UINT_ARG wolfSSL_Atomic_Uint_FetchSub(wolfSSL_Atomic_Uint* c,
+                                                WC_ATOMIC_UINT_ARG i)
+{
+    return (WC_ATOMIC_UINT_ARG)_InterlockedExchangeAdd((wolfSSL_Atomic_Int *)c,
+                                                       -(long)i);
+}
+
+WC_ATOMIC_UINT_ARG wolfSSL_Atomic_Uint_AddFetch(wolfSSL_Atomic_Uint* c,
+                                                WC_ATOMIC_UINT_ARG i)
+{
+    WC_ATOMIC_UINT_ARG ret = (WC_ATOMIC_UINT_ARG)_InterlockedExchangeAdd
+        ((wolfSSL_Atomic_Int *)c, (long)i);
+    return ret + i;
+}
+
+WC_ATOMIC_UINT_ARG wolfSSL_Atomic_Uint_SubFetch(wolfSSL_Atomic_Uint* c,
+                                                WC_ATOMIC_UINT_ARG i)
+{
+    WC_ATOMIC_UINT_ARG ret = (WC_ATOMIC_UINT_ARG)_InterlockedExchangeAdd
+        ((wolfSSL_Atomic_Int *)c, -(long)i);
+    return ret - i;
+}
+
+int wolfSSL_Atomic_Uint_CompareExchange(
+    wolfSSL_Atomic_Uint* c, WC_ATOMIC_UINT_ARG *expected_i,
+    WC_ATOMIC_UINT_ARG new_i)
+{
+    long actual_i = InterlockedCompareExchange(
+        (wolfSSL_Atomic_Int *)c, (long)new_i, (long)*expected_i);
+    if (actual_i == (long)*expected_i) {
+        return 1;
+    }
+    else {
+        *expected_i = (WC_ATOMIC_UINT_ARG)actual_i;
+        return 0;
+    }
+}
+
+int wolfSSL_Atomic_Ptr_CompareExchange(
+    void * volatile * c, void **expected_ptr, void *new_ptr)
+{
+#ifdef _WIN64
+    LONG64 actual_ptr = InterlockedCompareExchange64(
+        (LONG64 *)c, (LONG64)new_ptr, (LONG64)*expected_ptr);
+    if (actual_ptr == (LONG64)*expected_ptr) {
+        return 1;
+    }
+    else {
+        *expected_ptr = (void *)actual_ptr;
+        return 0;
+    }
+#else /* !_WIN64 */
+    LONG actual_ptr = InterlockedCompareExchange(
+        (LONG *)c, (LONG)new_ptr, (LONG)*expected_ptr);
+    if (actual_ptr == (LONG)*expected_ptr) {
+        return 1;
+    }
+    else {
+        *expected_ptr = (void *)actual_ptr;
+        return 0;
+    }
+#endif /* !_WIN64 */
 }
 
 #endif
 
 #endif /* WOLFSSL_ATOMIC_OPS */
 
-#if !defined(SINGLE_THREADED) && !defined(WOLFSSL_ATOMIC_OPS)
-void wolfSSL_RefInit(wolfSSL_Ref* ref, int* err)
+#if !defined(SINGLE_THREADED)
+
+void wolfSSL_RefWithMutexInit(wolfSSL_RefWithMutex* ref, int* err)
 {
     int ret = wc_InitMutex(&ref->mutex);
     if (ret != 0) {
@@ -1242,14 +2589,15 @@ void wolfSSL_RefInit(wolfSSL_Ref* ref, int* err)
     *err = ret;
 }
 
-void wolfSSL_RefFree(wolfSSL_Ref* ref)
+void wolfSSL_RefWithMutexFree(wolfSSL_RefWithMutex* ref)
 {
     if (wc_FreeMutex(&ref->mutex) != 0) {
         WOLFSSL_MSG("Failed to free mutex of reference counting!");
     }
+    ref->count = 0;
 }
 
-void wolfSSL_RefInc(wolfSSL_Ref* ref, int* err)
+void wolfSSL_RefWithMutexInc(wolfSSL_RefWithMutex* ref, int* err)
 {
     int ret = wc_LockMutex(&ref->mutex);
     if (ret != 0) {
@@ -1262,7 +2610,54 @@ void wolfSSL_RefInc(wolfSSL_Ref* ref, int* err)
     *err = ret;
 }
 
-void wolfSSL_RefDec(wolfSSL_Ref* ref, int* isZero, int* err)
+void wolfSSL_RefWithMutexInc2(wolfSSL_RefWithMutex* ref, int *new_count,
+                              int* err)
+{
+    int ret = wc_LockMutex(&ref->mutex);
+    if (ret != 0) {
+        WOLFSSL_MSG("Failed to lock mutex for reference increment!");
+        *new_count = -1;
+    }
+    else {
+        *new_count = ++ref->count;
+        wc_UnLockMutex(&ref->mutex);
+    }
+    *err = ret;
+}
+
+void wolfSSL_RefWithMutexInc_IfAtLeast(wolfSSL_RefWithMutex* ref,
+                                       int cur_at_least, int *new_count,
+                                       int* err)
+{
+    *err = wc_LockMutex(&ref->mutex);
+    if (*err != 0) {
+        WOLFSSL_MSG("Failed to lock mutex for reference increment!");
+        *new_count = -1;
+    }
+    else {
+        if (ref->count < cur_at_least) {
+            *new_count = ref->count;
+            *err = BAD_STATE_E;
+        }
+        else {
+            *new_count = ++ref->count;
+            *err = 0;
+        }
+        wc_UnLockMutex(&ref->mutex);
+    }
+}
+
+int wolfSSL_RefWithMutexLock(wolfSSL_RefWithMutex* ref)
+{
+    return wc_LockMutex(&ref->mutex);
+}
+
+int wolfSSL_RefWithMutexUnlock(wolfSSL_RefWithMutex* ref)
+{
+    return wc_UnLockMutex(&ref->mutex);
+}
+
+void wolfSSL_RefWithMutexDec(wolfSSL_RefWithMutex* ref, int* isZero, int* err)
 {
     int ret = wc_LockMutex(&ref->mutex);
     if (ret != 0) {
@@ -1279,29 +2674,74 @@ void wolfSSL_RefDec(wolfSSL_Ref* ref, int* isZero, int* err)
     }
     *err = ret;
 }
-#endif
+
+void wolfSSL_RefWithMutexDec2(wolfSSL_RefWithMutex* ref, int* new_count,
+                              int* err)
+{
+    int ret = wc_LockMutex(&ref->mutex);
+    if (ret != 0) {
+        WOLFSSL_MSG("Failed to lock mutex for reference decrement!");
+        *new_count = -1;
+    }
+    else {
+        if (ref->count > 0) {
+            ref->count--;
+        }
+        *new_count = ref->count;
+        wc_UnLockMutex(&ref->mutex);
+    }
+    *err = ret;
+}
+
+void wolfSSL_RefWithMutexDec_IfEquals(wolfSSL_RefWithMutex* ref,
+                                      int current_count, int* new_count,
+                                      int* err)
+{
+    *err = wc_LockMutex(&ref->mutex);
+    if (*err != 0) {
+        WOLFSSL_MSG("Failed to lock mutex for reference decrement!");
+        *new_count = -1;
+    }
+    else {
+        if (ref->count != current_count) {
+            *new_count = ref->count;
+            *err = BAD_STATE_E;
+        }
+        else {
+            *new_count = --ref->count;
+            *err = 0;
+        }
+        wc_UnLockMutex(&ref->mutex);
+    }
+}
+
+#endif /* ! SINGLE_THREADED */
 
 #if WOLFSSL_CRYPT_HW_MUTEX
 /* Mutex for protection of cryptography hardware */
-static wolfSSL_Mutex wcCryptHwMutex;
+static wolfSSL_Mutex wcCryptHwMutex
+    WOLFSSL_MUTEX_INITIALIZER_CLAUSE(wcCryptHwMutex);
+#ifndef WOLFSSL_MUTEX_INITIALIZER
 static int wcCryptHwMutexInit = 0;
+#endif
 
 int wolfSSL_CryptHwMutexInit(void)
 {
     int ret = 0;
+#ifndef WOLFSSL_MUTEX_INITIALIZER
     if (wcCryptHwMutexInit == 0) {
         ret = wc_InitMutex(&wcCryptHwMutex);
         if (ret == 0) {
             wcCryptHwMutexInit = 1;
         }
     }
+#endif
     return ret;
 }
 int wolfSSL_CryptHwMutexLock(void)
 {
-    int ret = BAD_MUTEX_E;
     /* Make sure HW Mutex has been initialized */
-    ret = wolfSSL_CryptHwMutexInit();
+    int ret = wolfSSL_CryptHwMutexInit();
     if (ret == 0) {
         ret = wc_LockMutex(&wcCryptHwMutex);
     }
@@ -1309,14 +2749,210 @@ int wolfSSL_CryptHwMutexLock(void)
 }
 int wolfSSL_CryptHwMutexUnLock(void)
 {
-    int ret = BAD_MUTEX_E;
+#ifndef WOLFSSL_MUTEX_INITIALIZER
     if (wcCryptHwMutexInit) {
-        ret = wc_UnLockMutex(&wcCryptHwMutex);
+        return wc_UnLockMutex(&wcCryptHwMutex);
     }
-    return ret;
+    else {
+        return BAD_MUTEX_E;
+    }
+#else
+    /* statically initialized (no runtime init flag) -- always valid to unlock */
+    return wc_UnLockMutex(&wcCryptHwMutex);
+#endif
 }
 #endif /* WOLFSSL_CRYPT_HW_MUTEX */
 
+
+#if WOLFSSL_CRYPT_HW_MUTEX && defined(WOLFSSL_ALGO_HW_MUTEX)
+/* Mutex for protection of cryptography hardware */
+#ifndef NO_RNG_MUTEX
+static wolfSSL_Mutex wcCryptHwRngMutex
+    WOLFSSL_MUTEX_INITIALIZER_CLAUSE(wcCryptHwRngMutex);
+#endif /* NO_RNG_MUTEX */
+#ifndef NO_AES_MUTEX
+static wolfSSL_Mutex wcCryptHwAesMutex
+    WOLFSSL_MUTEX_INITIALIZER_CLAUSE(wcCryptHwAesMutex);
+#endif /* NO_AES_MUTEX */
+#ifndef NO_HASH_MUTEX
+static wolfSSL_Mutex wcCryptHwHashMutex
+    WOLFSSL_MUTEX_INITIALIZER_CLAUSE(wcCryptHwHashMutex);
+#endif /* NO_HASH_MUTEX */
+#ifndef NO_PK_MUTEX
+static wolfSSL_Mutex wcCryptHwPkMutex
+    WOLFSSL_MUTEX_INITIALIZER_CLAUSE(wcCryptHwPkMutex);
+#endif /* NO_PK_MUTEX */
+
+#ifndef WOLFSSL_MUTEX_INITIALIZER
+#ifndef NO_RNG_MUTEX
+static int wcCryptHwRngMutexInit = 0;
+#endif /* NO_RNG_MUTEX */
+#ifndef NO_AES_MUTEX
+static int wcCryptHwAesMutexInit = 0;
+#endif /* NO_AES_MUTEX */
+#ifndef NO_HASH_MUTEX
+static int wcCryptHwHashMutexInit = 0;
+#endif /* NO_HASH_MUTEX */
+#ifndef NO_PK_MUTEX
+static int wcCryptHwPkMutexInit = 0;
+#endif /* NO_PK_MUTEX */
+#endif /* WOLFSSL_MUTEX_INITIALIZER */
+
+
+/* Allows ability to switch to different mutex based on enum type */
+/* hw_mutex_algo, expects the dereferenced Ptrs to be set to NULL */
+static int hwAlgoPtrSet(hw_mutex_algo hwAlgo, wolfSSL_Mutex** wcHwAlgoMutexPtr,
+                                int** wcHwAlgoInitPtr)
+{
+    if (*wcHwAlgoMutexPtr != NULL || *wcHwAlgoInitPtr != NULL) {
+        return BAD_FUNC_ARG;
+    }
+    switch (hwAlgo) {
+        #ifndef NO_RNG_MUTEX
+        case rng_mutex:
+            *wcHwAlgoMutexPtr = &wcCryptHwRngMutex;
+            *wcHwAlgoInitPtr = &wcCryptHwRngMutexInit;
+            break;
+        #endif
+        #ifndef NO_AES_MUTEX
+        case aes_mutex:
+            *wcHwAlgoMutexPtr = &wcCryptHwAesMutex;
+            *wcHwAlgoInitPtr = &wcCryptHwAesMutexInit;
+            break;
+        #endif
+        #ifndef NO_HASH_MUTEX
+        case hash_mutex:
+            *wcHwAlgoMutexPtr = &wcCryptHwHashMutex;
+            *wcHwAlgoInitPtr = &wcCryptHwHashMutexInit;
+            break;
+        #endif
+        #ifndef NO_PK_MUTEX
+        case pk_mutex:
+            *wcHwAlgoMutexPtr = &wcCryptHwPkMutex;
+            *wcHwAlgoInitPtr = &wcCryptHwPkMutexInit;
+            break;
+        #endif
+        default:
+            return BAD_FUNC_ARG;
+    }
+    return 0;
+}
+
+static int hwAlgoMutexInit(hw_mutex_algo hwAlgo)
+{
+    int ret = 0;
+#ifndef WOLFSSL_MUTEX_INITIALIZER
+    wolfSSL_Mutex* wcHwAlgoMutexPtr = NULL;
+    int* wcHwAlgoInitPtr = NULL;
+    ret = hwAlgoPtrSet(hwAlgo, &wcHwAlgoMutexPtr, &wcHwAlgoInitPtr);
+    if (ret != 0) {
+        return ret;
+    }
+    if (*wcHwAlgoInitPtr == 0) {
+        ret = wc_InitMutex(wcHwAlgoMutexPtr);
+        if (ret == 0) {
+            *wcHwAlgoInitPtr = 1;
+        }
+    }
+#endif
+    return ret;
+}
+
+static int hwAlgoMutexLock(hw_mutex_algo hwAlgo)
+{
+    /* Make sure HW Mutex has been initialized */
+    int ret = 0;
+    wolfSSL_Mutex* wcHwAlgoMutexPtr = NULL;
+    int* wcHwAlgoInitPtr = NULL;
+    ret = hwAlgoPtrSet(hwAlgo, &wcHwAlgoMutexPtr, &wcHwAlgoInitPtr);
+    if (ret != 0) {
+        return ret;
+    }
+    ret = hwAlgoMutexInit(hwAlgo);
+    if (ret == 0) {
+        ret = wc_LockMutex(wcHwAlgoMutexPtr);
+    }
+    return ret;
+}
+
+static int hwAlgoMutexUnLock(hw_mutex_algo hwAlgo)
+{
+    wolfSSL_Mutex* wcHwAlgoMutexPtr = NULL;
+    int* wcHwAlgoInitPtr = NULL;
+    if (hwAlgoPtrSet(hwAlgo, &wcHwAlgoMutexPtr, &wcHwAlgoInitPtr) != 0) {
+        return BAD_FUNC_ARG;
+    }
+    if (*wcHwAlgoInitPtr) {
+        return wc_UnLockMutex(wcHwAlgoMutexPtr);
+    }
+    else {
+        return BAD_MUTEX_E;
+    }
+}
+
+/* Wrap around generic hwAlgo* functions and use correct */
+/* global mutex to determine if it can be unlocked/locked */
+#ifndef NO_RNG_MUTEX
+int wolfSSL_HwRngMutexInit(void)
+{
+    return hwAlgoMutexInit(rng_mutex);
+}
+int wolfSSL_HwRngMutexLock(void)
+{
+    return hwAlgoMutexLock(rng_mutex);
+}
+int wolfSSL_HwRngMutexUnLock(void)
+{
+    return hwAlgoMutexUnLock(rng_mutex);
+}
+#endif /* NO_RNG_MUTEX */
+
+#ifndef NO_AES_MUTEX
+int wolfSSL_HwAesMutexInit(void)
+{
+    return hwAlgoMutexInit(aes_mutex);
+}
+int wolfSSL_HwAesMutexLock(void)
+{
+    return hwAlgoMutexLock(aes_mutex);
+}
+int wolfSSL_HwAesMutexUnLock(void)
+{
+    return hwAlgoMutexUnLock(aes_mutex);
+}
+#endif /* NO_AES_MUTEX */
+
+#ifndef NO_HASH_MUTEX
+int wolfSSL_HwHashMutexInit(void)
+{
+    return hwAlgoMutexInit(hash_mutex);
+}
+int wolfSSL_HwHashMutexLock(void)
+{
+    return hwAlgoMutexLock(hash_mutex);
+}
+int wolfSSL_HwHashMutexUnLock(void)
+{
+    return hwAlgoMutexUnLock(hash_mutex);
+}
+#endif /* NO_HASH_MUTEX */
+
+#ifndef NO_PK_MUTEX
+int wolfSSL_HwPkMutexInit(void)
+{
+    return hwAlgoMutexInit(pk_mutex);
+}
+int wolfSSL_HwPkMutexLock(void)
+{
+    return hwAlgoMutexLock(pk_mutex);
+}
+int wolfSSL_HwPkMutexUnLock(void)
+{
+    return hwAlgoMutexUnLock(pk_mutex);
+}
+#endif /* NO_PK_MUTEX */
+
+#endif /* WOLFSSL_CRYPT_HW_MUTEX && defined(WOLFSSL_ALGO_HW_MUTEX) */
 
 /* ---------------------------------------------------------------------------*/
 /* Mutex Ports */
@@ -1362,7 +2998,64 @@ int wolfSSL_CryptHwMutexUnLock(void)
         return compat_mutex_cb;
     }
 #endif /* defined(OPENSSL_EXTRA) || defined(HAVE_WEBSERVER) */
-#ifdef SINGLE_THREADED
+
+#ifndef WOLFSSL_MUTEX_INITIALIZER
+/* Initialize a static mutex exactly once.
+ *
+ * Backstop for callers that reach a subsystem without wolfCrypt_Init(). One
+ * atomic with three states: 0 = uninitialized, 1 = in progress, 2 = ready.
+ * Losers of the race wait for the winner rather than failing, so callers do
+ * not need a retry path. Same pattern as the SP ECC cache locks.
+ *
+ * @param [in]      m     Mutex to initialize.
+ * @param [in, out] flag  Election state, statically zero initialized.
+ * @return  0 on success, or when the mutex is already initialized.
+ * @return  Error from wc_InitMutex() otherwise.
+ */
+int wc_local_InitMutexOnce(wolfSSL_Mutex* m, wc_MutexOnceFlag* flag)
+{
+    int ret = 0;
+#if defined(WOLFSSL_ATOMIC_OPS) && !defined(SINGLE_THREADED)
+    WC_ATOMIC_UINT_ARG expected;
+
+    if (WOLFSSL_ATOMIC_LOAD(*flag) == 2) {
+        return 0;
+    }
+
+    for (;;) {
+        expected = 0;
+        if (wolfSSL_Atomic_Uint_CompareExchange(flag, &expected, 1) == 1) {
+            /* Won the race. On failure reset to 0 so a later call retries. */
+            ret = wc_InitMutex(m);
+            WOLFSSL_ATOMIC_STORE(*flag, (ret == 0) ? 2U : 0U);
+            break;
+        }
+        if (expected == 2) {
+            /* Another thread completed the initialization. */
+            break;
+        }
+        /* Initialization in progress in another thread. */
+        WC_RELAX_LONG_LOOP();
+    }
+#else
+    /* No atomics to elect with: single-threaded cannot race, and opt-out
+     * builds keep their existing behavior. */
+    if (*flag != 2) {
+        ret = wc_InitMutex(m);
+        if (ret == 0) {
+            *flag = 2;
+        }
+    }
+#endif
+    return ret;
+}
+#endif /* !WOLFSSL_MUTEX_INITIALIZER */
+
+#if defined(WC_MUTEX_OPS_INLINE)
+
+    /* defined in headers */
+
+#elif defined(SINGLE_THREADED)
 
     int wc_InitMutex(wolfSSL_Mutex* m)
     {
@@ -1389,6 +3082,99 @@ int wolfSSL_CryptHwMutexUnLock(void)
         (void)m;
         return 0;
     }
+
+#elif defined(__WATCOMC__)
+
+    int wc_InitMutex(wolfSSL_Mutex* m)
+    {
+    #ifdef __OS2__
+        DosCreateMutexSem( NULL, m, 0, FALSE );
+    #elif defined(__NT__)
+        InitializeCriticalSection(m);
+    #elif defined(__LINUX__)
+        if (pthread_mutex_init(m, NULL) )
+            return BAD_MUTEX_E;
+    #endif
+        return 0;
+    }
+
+    int wc_FreeMutex(wolfSSL_Mutex* m)
+    {
+    #ifdef __OS2__
+        DosCloseMutexSem(*m);
+    #elif defined(__NT__)
+        DeleteCriticalSection(m);
+    #elif defined(__LINUX__)
+        if (pthread_mutex_destroy(m) )
+            return BAD_MUTEX_E;
+    #endif
+        return 0;
+    }
+
+    int wc_LockMutex(wolfSSL_Mutex* m)
+    {
+    #ifdef __OS2__
+        DosRequestMutexSem(*m, SEM_INDEFINITE_WAIT);
+    #elif defined(__NT__)
+        EnterCriticalSection(m);
+    #elif defined(__LINUX__)
+        if (pthread_mutex_lock(m) )
+            return BAD_MUTEX_E;
+    #endif
+        return 0;
+    }
+
+    int wc_UnLockMutex(wolfSSL_Mutex* m)
+    {
+    #ifdef __OS2__
+        DosReleaseMutexSem(*m);
+    #elif defined(__NT__)
+        LeaveCriticalSection(m);
+    #elif defined(__LINUX__)
+        if (pthread_mutex_unlock(m) )
+            return BAD_MUTEX_E;
+    #endif
+        return 0;
+    }
+
+    #if defined(WOLFSSL_USE_RWLOCK) && defined(__LINUX__)
+
+    int wc_InitRwLock(wolfSSL_RwLock* m)
+    {
+        if (pthread_rwlock_init(m, NULL) )
+             return BAD_MUTEX_E;
+        return 0;
+    }
+
+    int wc_FreeRwLock(wolfSSL_RwLock* m)
+    {
+        if (pthread_rwlock_destroy(m) )
+            return BAD_MUTEX_E;
+        return 0;
+    }
+
+    int wc_LockRwLock_Wr(wolfSSL_RwLock* m)
+    {
+        if (pthread_rwlock_wrlock(m) )
+            return BAD_MUTEX_E;
+        return 0;
+    }
+
+    int wc_LockRwLock_Rd(wolfSSL_RwLock* m)
+    {
+        if (pthread_rwlock_rdlock(m) )
+            return BAD_MUTEX_E;
+        return 0;
+    }
+
+    int wc_UnLockRwLock(wolfSSL_RwLock* m)
+    {
+        if (pthread_rwlock_unlock(m) == 0)
+            return BAD_MUTEX_E;
+        return 0;
+    }
+
+    #endif
 
 #elif defined(FREERTOS) || defined(FREERTOS_TCP) || \
   defined(FREESCALE_FREE_RTOS)
@@ -1526,7 +3312,7 @@ int wolfSSL_CryptHwMutexUnLock(void)
     static void destruct_key(void *buf)
     {
         if (buf != NULL) {
-            free(buf);
+            XFREE(buf, NULL, DYNAMIC_TYPE_OS_BUF);
         }
     }
 
@@ -1655,7 +3441,7 @@ int wolfSSL_CryptHwMutexUnLock(void)
 
         key_ptr = pthread_getspecific(key_own_hw_mutex);
         if (key_ptr == NULL) {
-            key_ptr = malloc(sizeof(int));
+            key_ptr = XMALLOC(sizeof(int), NULL, DYNAMIC_TYPE_OS_BUF);
             if (key_ptr == NULL) {
                 return MEMORY_E;
             }
@@ -1695,9 +3481,8 @@ int wolfSSL_CryptHwMutexUnLock(void)
 
     int maxq_CryptHwMutexTryLock()
     {
-        int ret = BAD_MUTEX_E;
         /* Make sure HW Mutex has been initialized */
-        ret = wolfSSL_CryptHwMutexInit();
+        int ret = wolfSSL_CryptHwMutexInit();
         if (ret == 0) {
             ret = maxq_LockMutex(&wcCryptHwMutex, 1);
         }
@@ -1813,35 +3598,6 @@ int wolfSSL_CryptHwMutexUnLock(void)
         else
             return BAD_MUTEX_E;
     }
-#elif defined(WOLFSSL_LINUXKM)
-
-    /* Linux kernel mutex routines are voids, alas. */
-
-    int wc_InitMutex(wolfSSL_Mutex* m)
-    {
-        mutex_init(m);
-        return 0;
-    }
-
-    int wc_FreeMutex(wolfSSL_Mutex* m)
-    {
-        mutex_destroy(m);
-        return 0;
-    }
-
-    int wc_LockMutex(wolfSSL_Mutex* m)
-    {
-        mutex_lock(m);
-        return 0;
-    }
-
-
-    int wc_UnLockMutex(wolfSSL_Mutex* m)
-    {
-        mutex_unlock(m);
-        return 0;
-    }
-
 #elif defined(WOLFSSL_VXWORKS)
 
     int wc_InitMutex(wolfSSL_Mutex* m)
@@ -1887,7 +3643,7 @@ int wolfSSL_CryptHwMutexUnLock(void)
 
     int wc_InitMutex(wolfSSL_Mutex* m)
     {
-        if (tx_mutex_create(m, "wolfSSL Mutex", TX_NO_INHERIT) == 0)
+        if (tx_mutex_create(m, (CHAR*)"wolfSSL Mutex", TX_NO_INHERIT) == 0)
             return 0;
         else
             return BAD_MUTEX_E;
@@ -2156,6 +3912,10 @@ int wolfSSL_CryptHwMutexUnLock(void)
 
     int wc_InitMutex(wolfSSL_Mutex* m)
     {
+    #if (defined(HAVE_FIPS) && FIPS_VERSION_EQ(5,2))
+        if (wolfCrypt_GetMode_fips() == FIPS_MODE_INIT)
+            return 0;
+    #endif
         if (_mutex_init(m, NULL) == MQX_EOK)
             return 0;
         else
@@ -2172,6 +3932,13 @@ int wolfSSL_CryptHwMutexUnLock(void)
 
     int wc_LockMutex(wolfSSL_Mutex* m)
     {
+    #if (defined(HAVE_FIPS) && FIPS_VERSION_EQ(5,2))
+        if (m->VALID != MUTEX_VALID) {
+            if (_mutex_init(m, NULL) != MQX_EOK)
+                return BAD_MUTEX_E;
+        }
+    #endif
+
         if (_mutex_lock(m) == MQX_EOK)
             return 0;
         else
@@ -2180,6 +3947,13 @@ int wolfSSL_CryptHwMutexUnLock(void)
 
     int wc_UnLockMutex(wolfSSL_Mutex* m)
     {
+    #if (defined(HAVE_FIPS) && FIPS_VERSION_EQ(5,2))
+        if (m->VALID != MUTEX_VALID) {
+            if (_mutex_init(m, NULL) != MQX_EOK)
+                return BAD_MUTEX_E;
+        }
+    #endif
+
         if (_mutex_unlock(m) == MQX_EOK)
             return 0;
         else
@@ -2444,7 +4218,9 @@ int wolfSSL_CryptHwMutexUnLock(void)
 
 #elif defined(WOLFSSL_CMSIS_RTOS)
 
-    #define CMSIS_NMUTEX 10
+    #ifndef CMSIS_NMUTEX
+        #define CMSIS_NMUTEX 10
+    #endif
     osMutexDef(wolfSSL_mt0);  osMutexDef(wolfSSL_mt1);  osMutexDef(wolfSSL_mt2);
     osMutexDef(wolfSSL_mt3);  osMutexDef(wolfSSL_mt4);  osMutexDef(wolfSSL_mt5);
     osMutexDef(wolfSSL_mt6);  osMutexDef(wolfSSL_mt7);  osMutexDef(wolfSSL_mt8);
@@ -2460,6 +4236,11 @@ int wolfSSL_CryptHwMutexUnLock(void)
     int wc_InitMutex(wolfSSL_Mutex* m)
     {
         int i;
+
+        if(!osKernelRunning()) {
+            return 0;
+        }
+
         for (i=0; i<CMSIS_NMUTEX; i++) {
             if(CMSIS_mutexID[i] == 0) {
                 CMSIS_mutexID[i] = osMutexCreate(CMSIS_mutex[i]);
@@ -2473,6 +4254,11 @@ int wolfSSL_CryptHwMutexUnLock(void)
     int wc_FreeMutex(wolfSSL_Mutex* m)
     {
         int i;
+
+        if(!osKernelRunning()) {
+            return 0;
+        }
+
         osMutexDelete   (*m);
         for (i=0; i<CMSIS_NMUTEX; i++) {
             if(CMSIS_mutexID[i] == (*m)) {
@@ -2485,13 +4271,17 @@ int wolfSSL_CryptHwMutexUnLock(void)
 
     int wc_LockMutex(wolfSSL_Mutex* m)
     {
-        osMutexWait(*m, osWaitForever);
+        if(osKernelRunning()) {
+            osMutexWait(*m, osWaitForever);
+        }
         return(0);
     }
 
     int wc_UnLockMutex(wolfSSL_Mutex* m)
     {
-        osMutexRelease (*m);
+        if(osKernelRunning()) {
+            osMutexRelease (*m);
+        }
         return 0;
     }
 
@@ -2853,7 +4643,8 @@ int wolfSSL_CryptHwMutexUnLock(void)
     #warning No mutex handling defined
 
 #endif
-#if !defined(WOLFSSL_USE_RWLOCK) || defined(SINGLE_THREADED)
+#if !defined(WOLFSSL_USE_RWLOCK) || defined(SINGLE_THREADED) || \
+    (defined(WC_MUTEX_OPS_INLINE) && !defined(WC_RWLOCK_OPS_INLINE))
     int wc_InitRwLock(wolfSSL_RwLock* m)
     {
         return wc_InitMutex(m);
@@ -3118,6 +4909,9 @@ time_t mqx_time(time_t* timer)
 
 #endif /* FREESCALE_MQX || FREESCALE_KSDK_MQX */
 
+#if defined(MAX3266X_RTC)
+    #define XTIME wc_MXC_RTC_Time
+#endif
 
 #if defined(WOLFSSL_TIRTOS) && defined(USER_TIME)
 
@@ -3166,10 +4960,27 @@ time_t xilinx_time(time_t * timer)
 
 time_t z_time(time_t * timer)
 {
-    struct timespec ts;
+    #if defined(CONFIG_BOARD_NATIVE_POSIX) || defined(CONFIG_BOARD_NATIVE_SIM)
+
+    /* native_sim: read the simulator RTC for a real host wall-clock. The
+     * real-target RTC/libc gate below is compiled out under the host libc. */
+    uint32_t nsec = 0;
+    uint64_t sec = 0;
+
+    native_rtc_gettime(RTC_CLOCK_PSEUDOHOSTREALTIME, &nsec, &sec);
+
+    if (timer != NULL)
+        *timer = sec;
+
+    return sec;
+
+    #else
+
+    struct timespec ts = { 0 };
 
     #if defined(CONFIG_RTC) && \
         (defined(CONFIG_PICOLIBC) || defined(CONFIG_NEWLIB_LIBC))
+
     /* Try to obtain the actual time from an RTC */
     static const struct device *rtc = DEVICE_DT_GET(DT_NODELABEL(rtc));
 
@@ -3188,15 +4999,21 @@ time_t z_time(time_t * timer)
             return epochTime;
         }
     }
-    #endif
+    #endif /* CONFIG_RTC && (CONFIG_PICOLIBC || CONFIG_NEWLIB_LIBC) */
 
     /* Fallback to uptime since boot. This works for relative times, but
      * not for ASN.1 date validation */
+    #ifdef SYS_CLOCK_REALTIME
+    if (sys_clock_gettime(SYS_CLOCK_REALTIME, &ts) == 0)
+    #else
     if (clock_gettime(CLOCK_REALTIME, &ts) == 0)
+    #endif
         if (timer != NULL)
             *timer = ts.tv_sec;
 
     return ts.tv_sec;
+
+    #endif /* CONFIG_BOARD_NATIVE_POSIX || CONFIG_BOARD_NATIVE_SIM */
 }
 
 #endif /* WOLFSSL_ZEPHYR */
@@ -3330,18 +5147,19 @@ time_t stm32_hal_time(time_t *t1)
 
 #endif /* !NO_ASN_TIME */
 
-#if !defined(WOLFSSL_LEANPSK) && !defined(STRING_USER)
-char* mystrnstr(const char* s1, const char* s2, unsigned int n)
+#if (!defined(WOLFSSL_LEANPSK) && !defined(STRING_USER)) || \
+    defined(USE_WOLF_STRNSTR)
+char* wolfSSL_strnstr(const char* s1, const char* s2, size_t n)
 {
-    unsigned int s2_len = (unsigned int)XSTRLEN(s2);
+    size_t s2_len = XSTRLEN(s2);
 
     if (s2_len == 0)
-        return (char*)s1;
+        return (char *)(wc_ptr_t)s1;
 
     while (n >= s2_len && s1[0]) {
         if (s1[0] == s2[0])
             if (XMEMCMP(s1, s2, s2_len) == 0)
-                return (char*)s1;
+                return (char *)(wc_ptr_t)s1;
         s1++;
         n--;
     }
@@ -3349,6 +5167,7 @@ char* mystrnstr(const char* s1, const char* s2, unsigned int n)
     return NULL;
 }
 #endif
+
 
 /* custom memory wrappers */
 #ifdef WOLFSSL_NUCLEUS_1_2
@@ -3426,7 +5245,236 @@ char* mystrnstr(const char* s1, const char* s2, unsigned int n)
 
 #ifndef SINGLE_THREADED
 
-#if defined(USE_WINDOWS_API) && !defined(WOLFSSL_PTHREADS)
+/* Environment-specific multi-thread implementation check  */
+#if defined(__WATCOMC__)
+
+    int wolfSSL_NewThread(THREAD_TYPE* thread,
+        THREAD_CB cb, void* arg)
+    {
+        if (thread == NULL || cb == NULL)
+            return BAD_FUNC_ARG;
+    #if defined(__OS2__)
+        *thread = _beginthread(cb, NULL, 0, arg);
+        if (*thread == INVALID_THREAD_VAL) {
+            return MEMORY_E;
+        }
+    #elif defined(__NT__)
+        /* Use _beginthreadex instead of _beginthread because of:
+         *   _beginthreadex is safer to use than _beginthread. If the thread
+         *   that's generated by _beginthread exits quickly, the handle that's
+         *   returned to the caller of _beginthread might be invalid or point
+         *   to another thread. However, the handle that's returned by
+         *   _beginthreadex has to be closed by the caller of _beginthreadex,
+         *   so it's guaranteed to be a valid handle if _beginthreadex didn't
+         *   return an error.*/
+        *thread = _beginthreadex(NULL, 0, cb, arg, 0, NULL);
+        if (*thread == 0) {
+            *thread = INVALID_THREAD_VAL;
+            return MEMORY_E;
+        }
+    #elif defined(__LINUX__)
+        if (pthread_create(thread, NULL, cb, arg))
+            return MEMORY_E;
+    #endif
+        return 0;
+    }
+
+    int wolfSSL_JoinThread(THREAD_TYPE thread)
+    {
+        int ret = 0;
+
+        if (thread == INVALID_THREAD_VAL)
+            return BAD_FUNC_ARG;
+    #if defined(__OS2__)
+        DosWaitThread(&thread, DCWW_WAIT);
+    #elif defined(__NT__)
+        /* We still want to attempt to close the thread handle even on error */
+        if (WaitForSingleObject((HANDLE)thread, INFINITE) == WAIT_FAILED)
+            ret = MEMORY_E;
+        if (CloseHandle((HANDLE)thread) == 0)
+            ret = MEMORY_E;
+    #elif defined(__LINUX__)
+        if (pthread_join(thread, NULL) != 0)
+            ret = MEMORY_E;
+    #endif
+        return ret;
+    }
+
+    #if defined(WOLFSSL_THREAD_NO_JOIN)
+    int wolfSSL_NewThreadNoJoin(THREAD_CB_NOJOIN cb, void* arg)
+    {
+        THREAD_TYPE thread;
+        int ret = 0;
+
+        if (cb == NULL)
+            return BAD_FUNC_ARG;
+    #if defined(__OS2__)
+        thread = _beginthread(cb, NULL, 0, arg);
+        if (thread == INVALID_THREAD_VAL)
+            ret = MEMORY_E;
+    #elif defined(__NT__)
+        thread = _beginthread(cb, 0, arg);
+        if (thread == -1L)
+            ret = MEMORY_E;
+    #elif defined(__LINUX__)
+        XMEMSET(&thread, 0, sizeof(thread));
+        ret = wolfSSL_NewThread(&thread, cb, arg);
+        if (ret == 0)
+            ret = pthread_detach(thread);
+    #endif
+        return ret;
+    }
+    #endif
+
+    #ifdef WOLFSSL_COND
+    int wolfSSL_CondInit(COND_TYPE* cond)
+    {
+        if (cond == NULL)
+            return BAD_FUNC_ARG;
+    #if defined(__MACH__)
+        cond->cond = dispatch_semaphore_create(0);
+        if (cond->cond == NULL)
+            return MEMORY_E;
+
+        /* dispatch_release() fails hard, with Trace/BPT trap signal, if the
+         * sem's internal count is less than the value passed in with
+         * dispatch_semaphore_create().  work around this by initializing
+         * with 0, then incrementing it afterwards.
+         */
+        if (dispatch_semaphore_signal(s->sem) < 0) {
+            dispatch_release(s->sem);
+            return MEMORY_E;
+        }
+    #elif defined(__OS2__)
+        DosCreateMutexSem( NULL, &cond->mutex, 0, FALSE );
+        DosCreateEventSem( NULL, &cond->cond, DCE_POSTONE, FALSE );
+    #elif defined(__NT__)
+        cond->cond = CreateEventA(NULL, FALSE, FALSE, NULL);
+        if (cond->cond == NULL)
+            return MEMORY_E;
+
+        if (wc_InitMutex(&cond->mutex) != 0) {
+            if (CloseHandle(cond->cond) == 0)
+                return MEMORY_E;
+            return MEMORY_E;
+        }
+    #elif defined(__LINUX__)
+        if (pthread_mutex_init(&cond->mutex, NULL) != 0)
+            return MEMORY_E;
+
+        if (pthread_cond_init(&cond->cond, NULL) != 0) {
+            /* Keep compilers happy that we are using the return code */
+            if (pthread_mutex_destroy(&cond->mutex) != 0)
+                return MEMORY_E;
+            return MEMORY_E;
+        }
+    #endif
+        return 0;
+    }
+
+    int wolfSSL_CondFree(COND_TYPE* cond)
+    {
+        if (cond == NULL)
+            return BAD_FUNC_ARG;
+    #if defined(__MACH__)
+        dispatch_release(cond->cond);
+    #elif defined(__OS2__)
+        DosCloseMutexSem(cond->mutex);
+        DosCloseEventSem(cond->cond);
+    #elif defined(__NT__)
+        if (CloseHandle(cond->cond) == 0)
+            return MEMORY_E;
+    #elif defined(__LINUX__)
+        if (pthread_mutex_destroy(&cond->mutex) != 0)
+            return MEMORY_E;
+
+        if (pthread_cond_destroy(&cond->cond) != 0)
+            return MEMORY_E;
+    #endif
+        return 0;
+    }
+
+    int wolfSSL_CondStart(COND_TYPE* cond)
+    {
+        if (cond == NULL)
+            return BAD_FUNC_ARG;
+    #if defined(__MACH__)
+    #elif defined(__OS2__)
+    #elif defined(__NT__)
+        if (wc_LockMutex(&cond->mutex) != 0)
+            return BAD_MUTEX_E;
+    #elif defined(__LINUX__)
+        if (pthread_mutex_lock(&cond->mutex) != 0)
+            return BAD_MUTEX_E;
+    #endif
+        return 0;
+    }
+
+    int wolfSSL_CondSignal(COND_TYPE* cond)
+    {
+        if (cond == NULL)
+            return BAD_FUNC_ARG;
+    #if defined(__MACH__)
+        dispatch_semaphore_signal(cond->cond);
+    #elif defined(__OS2__)
+    #elif defined(__NT__)
+        if (wc_UnLockMutex(&cond->mutex) != 0)
+            return BAD_MUTEX_E;
+
+        if (SetEvent(cond->cond) == 0)
+            return MEMORY_E;
+
+        if (wc_LockMutex(&cond->mutex) != 0)
+            return BAD_MUTEX_E;
+    #elif defined(__LINUX__)
+        if (pthread_cond_signal(&cond->cond) != 0)
+            return MEMORY_E;
+    #endif
+        return 0;
+    }
+
+    int wolfSSL_CondWait(COND_TYPE* cond)
+    {
+        if (cond == NULL)
+            return BAD_FUNC_ARG;
+    #if defined(__MACH__)
+        dispatch_semaphore_wait(cond->cond, DISPATCH_TIME_FOREVER);
+    #elif defined(__OS2__)
+    #elif defined(__NT__)
+        if (wc_UnLockMutex(&cond->mutex) != 0)
+            return BAD_MUTEX_E;
+
+        if (WaitForSingleObject(cond->cond, INFINITE) == WAIT_FAILED)
+            return MEMORY_E;
+
+        if (wc_LockMutex(&cond->mutex) != 0)
+            return BAD_MUTEX_E;
+    #elif defined(__LINUX__)
+        if (pthread_cond_wait(&cond->cond, &cond->mutex) != 0)
+            return MEMORY_E;
+    #endif
+        return 0;
+    }
+
+    int wolfSSL_CondEnd(COND_TYPE* cond)
+    {
+        if (cond == NULL)
+            return BAD_FUNC_ARG;
+    #if defined(__OS2__)
+    #elif defined(__NT__)
+        if (wc_UnLockMutex(&cond->mutex) != 0)
+            return BAD_MUTEX_E;
+    #elif defined(__LINUX__)
+        if (pthread_mutex_unlock(&cond->mutex) != 0)
+            return BAD_MUTEX_E;
+    #endif
+        return 0;
+    }
+    #endif /* WOLFSSL_COND */
+
+
+#elif defined(USE_WINDOWS_API) && !defined(WOLFSSL_PTHREADS) && \
+    !defined(_WIN32_WCE)
     int wolfSSL_NewThread(THREAD_TYPE* thread,
         THREAD_CB cb, void* arg)
     {
@@ -3622,11 +5670,19 @@ char* mystrnstr(const char* s1, const char* s2, unsigned int n)
 
         XMEMSET(thread, 0, sizeof(*thread));
 
-        thread->threadStack = (void *)XMALLOC(WOLFSSL_NETOS_STACK_SZ, NULL,
-                DYNAMIC_TYPE_TMP_BUFFER);
-        if (thread->threadStack == NULL)
+        thread->tid = (TX_THREAD *)XMALLOC(sizeof(TX_THREAD), NULL,
+                DYNAMIC_TYPE_OS_BUF);
+        if (thread->tid == NULL)
             return MEMORY_E;
+        XMEMSET(thread->tid, 0, sizeof(TX_THREAD));
 
+        thread->threadStack = (void *)XMALLOC(WOLFSSL_NETOS_STACK_SZ, NULL,
+                DYNAMIC_TYPE_OS_BUF);
+        if (thread->threadStack == NULL) {
+            XFREE(thread->tid, NULL, DYNAMIC_TYPE_OS_BUF);
+            thread->tid = NULL;
+            return MEMORY_E;
+        }
 
         /* first create the idle thread:
          * ARGS:
@@ -3637,16 +5693,18 @@ char* mystrnstr(const char* s1, const char* s2, unsigned int n)
          * Param6: stack size
          * Param7 and 8: priority level and preempt threshold
          * Param9 and 10: time slice and auto-start indicator */
-        result = tx_thread_create(&thread->tid,
+        result = tx_thread_create(thread->tid,
                            "wolfSSL thread",
                            (entry_functionType)cb, (ULONG)arg,
                            thread->threadStack,
-                           TESTSUITE_THREAD_STACK_SZ,
+                           WOLFSSL_NETOS_STACK_SZ,
                            2, 2,
                            1, TX_AUTO_START);
         if (result != TX_SUCCESS) {
-            free(thread->threadStack);
+            XFREE(thread->threadStack, NULL, DYNAMIC_TYPE_OS_BUF);
             thread->threadStack = NULL;
+            XFREE(thread->tid, NULL, DYNAMIC_TYPE_OS_BUF);
+            thread->tid = NULL;
             return MEMORY_E;
         }
 
@@ -3655,19 +5713,53 @@ char* mystrnstr(const char* s1, const char* s2, unsigned int n)
 
     int wolfSSL_JoinThread(THREAD_TYPE thread)
     {
-        /* TODO: maybe have to use tx_thread_delete? */
-        free(thread.threadStack);
+        UINT state = TX_READY;
+        int ret = 0;
+
+        if (thread.tid == NULL)
+            return BAD_FUNC_ARG;
+
+        /* The thread runs on threadStack, so it has to be done with it before
+         * the stack is released. Wait for the entry function to return, or for
+         * the thread to be terminated by someone else. */
+        while (ret == 0 && state != TX_COMPLETED && state != TX_TERMINATED) {
+            if (tx_thread_info_get(thread.tid, TX_NULL, &state, TX_NULL,
+                        TX_NULL, TX_NULL, TX_NULL, TX_NULL, TX_NULL)
+                    != TX_SUCCESS) {
+                /* The control block is not a thread ThreadX knows about, so
+                 * nothing is running on the stack either. */
+                ret = BAD_STATE_E;
+            }
+            else if (state != TX_COMPLETED && state != TX_TERMINATED) {
+                tx_thread_sleep(1);
+            }
+        }
+
+        /* Unregister the thread before its control block and stack go away. */
+        if (ret == 0 && tx_thread_delete(thread.tid) != TX_SUCCESS) {
+            /* ThreadX still owns the control block and the thread may still be
+             * running on the stack, so neither can be released here. */
+            WOLFSSL_MSG("tx_thread_delete failed, leaking thread resources");
+            return BAD_STATE_E;
+        }
+
+        XFREE(thread.threadStack, NULL, DYNAMIC_TYPE_OS_BUF);
         thread.threadStack = NULL;
-        return 0;
+        XFREE(thread.tid, NULL, DYNAMIC_TYPE_OS_BUF);
+        thread.tid = NULL;
+
+        return ret;
     }
 
 #elif defined(WOLFSSL_ZEPHYR)
+
+    void* wolfsslThreadHeapHint = NULL;
 
     int wolfSSL_NewThread(THREAD_TYPE* thread,
         THREAD_CB cb, void* arg)
     {
         #ifndef WOLFSSL_ZEPHYR_STACK_SZ
-            #define WOLFSSL_ZEPHYR_STACK_SZ (24*1024)
+            #define WOLFSSL_ZEPHYR_STACK_SZ (48*1024)
         #endif
 
         if (thread == NULL || cb == NULL)
@@ -3675,21 +5767,35 @@ char* mystrnstr(const char* s1, const char* s2, unsigned int n)
 
         XMEMSET(thread, 0, sizeof(*thread));
 
+        thread->tid = (struct k_thread*)XMALLOC(
+                Z_KERNEL_STACK_SIZE_ADJUST(sizeof(struct k_thread)),
+                wolfsslThreadHeapHint, DYNAMIC_TYPE_TMP_BUFFER);
+        if (thread->tid == NULL) {
+            WOLFSSL_MSG("error: XMALLOC thread->tid failed");
+            return MEMORY_E;
+        }
+
         /* TODO: Use the following once k_thread_stack_alloc makes it into a
          * release.
          * thread->threadStack = k_thread_stack_alloc(WOLFSSL_ZEPHYR_STACK_SZ,
          *                                            0);
          */
         thread->threadStack = (void*)XMALLOC(
-                Z_KERNEL_STACK_SIZE_ADJUST(WOLFSSL_ZEPHYR_STACK_SZ), 0,
-                                             DYNAMIC_TYPE_TMP_BUFFER);
-        if (thread->threadStack == NULL)
+                Z_KERNEL_STACK_SIZE_ADJUST(WOLFSSL_ZEPHYR_STACK_SZ),
+                wolfsslThreadHeapHint, DYNAMIC_TYPE_TMP_BUFFER);
+        if (thread->threadStack == NULL) {
+            XFREE(thread->tid, wolfsslThreadHeapHint,
+                    DYNAMIC_TYPE_TMP_BUFFER);
+            thread->tid = NULL;
+
+            WOLFSSL_MSG("error: XMALLOC thread->threadStack failed");
             return MEMORY_E;
+        }
 
         /* k_thread_create does not return any error codes */
         /* Casting to k_thread_entry_t should be fine since we just ignore the
          * extra arguments being passed in */
-        k_thread_create(&thread->tid, thread->threadStack,
+        k_thread_create(thread->tid, thread->threadStack,
                 WOLFSSL_ZEPHYR_STACK_SZ, (k_thread_entry_t)cb, arg, NULL, NULL,
                 5, 0, K_NO_WAIT);
 
@@ -3701,9 +5807,13 @@ char* mystrnstr(const char* s1, const char* s2, unsigned int n)
         int ret = 0;
         int err;
 
-        err = k_thread_join(&thread.tid, K_FOREVER);
+        err = k_thread_join(thread.tid, K_FOREVER);
         if (err != 0)
             ret = MEMORY_E;
+
+        XFREE(thread.tid, wolfsslThreadHeapHint,
+                DYNAMIC_TYPE_TMP_BUFFER);
+        thread.tid = NULL;
 
         /* TODO: Use the following once k_thread_stack_free makes it into a
          * release.
@@ -3711,7 +5821,8 @@ char* mystrnstr(const char* s1, const char* s2, unsigned int n)
          * if (err != 0)
          *     ret = MEMORY_E;
          */
-        XFREE(thread.threadStack, NULL, DYNAMIC_TYPE_TMP_BUFFER);
+        XFREE(thread.threadStack, wolfsslThreadHeapHint,
+                DYNAMIC_TYPE_TMP_BUFFER);
         thread.threadStack = NULL;
 
         /* No thread resources to free. Everything is stored in thread.tid */
@@ -3720,11 +5831,82 @@ char* mystrnstr(const char* s1, const char* s2, unsigned int n)
     }
 
 #ifdef WOLFSSL_COND
-    /* Use the pthreads translation layer for signaling */
+    /* Native Zephyr condition variables (k_condvar) over a k_mutex; no POSIX
+     * pthread layer required. Semantics mirror the pthread implementation. */
+    int wolfSSL_CondInit(COND_TYPE* cond)
+    {
+        int ret;
 
+        if (cond == NULL)
+            return BAD_FUNC_ARG;
+
+        ret = wc_InitMutex(&cond->mutex);
+        if (ret == 0) {
+            /* k_condvar_init always returns 0 on Zephyr. */
+            (void)k_condvar_init(&cond->cond);
+        }
+
+        return ret;
+    }
+
+    int wolfSSL_CondFree(COND_TYPE* cond)
+    {
+        if (cond == NULL)
+            return BAD_FUNC_ARG;
+
+        /* k_condvar has no destroy; just release the backing mutex. */
+        return wc_FreeMutex(&cond->mutex);
+    }
+
+    int wolfSSL_CondStart(COND_TYPE* cond)
+    {
+        if (cond == NULL)
+            return BAD_FUNC_ARG;
+
+        if (wc_LockMutex(&cond->mutex) != 0)
+            return BAD_MUTEX_E;
+
+        return 0;
+    }
+
+    int wolfSSL_CondSignal(COND_TYPE* cond)
+    {
+        if (cond == NULL)
+            return BAD_FUNC_ARG;
+
+        /* Caller holds cond->mutex; wake a single waiter. */
+        (void)k_condvar_signal(&cond->cond);
+
+        return 0;
+    }
+
+    int wolfSSL_CondWait(COND_TYPE* cond)
+    {
+        if (cond == NULL)
+            return BAD_FUNC_ARG;
+
+        /* Atomically releases the mutex, blocks, and re-acquires it on wake,
+         * matching pthread_cond_wait semantics. */
+        if (k_condvar_wait(&cond->cond, &cond->mutex, K_FOREVER) != 0)
+            return BAD_MUTEX_E;
+
+        return 0;
+    }
+
+    int wolfSSL_CondEnd(COND_TYPE* cond)
+    {
+        if (cond == NULL)
+            return BAD_FUNC_ARG;
+
+        if (wc_UnLockMutex(&cond->mutex) != 0)
+            return BAD_MUTEX_E;
+
+        return 0;
+    }
 #endif /* WOLFSSL_COND */
 
-#elif defined(WOLFSSL_PTHREADS)
+#elif defined(WOLFSSL_PTHREADS) || \
+     (defined(FREERTOS) && defined(WOLFSSL_ESPIDF))
 
     int wolfSSL_NewThread(THREAD_TYPE* thread,
         THREAD_CB cb, void* arg)
@@ -3738,18 +5920,18 @@ char* mystrnstr(const char* s1, const char* s2, unsigned int n)
         return 0;
     }
 
-#ifdef WOLFSSL_THREAD_NO_JOIN
-    int wolfSSL_NewThreadNoJoin(THREAD_CB_NOJOIN cb, void* arg)
-    {
-        THREAD_TYPE thread;
-        int ret;
-        XMEMSET(&thread, 0, sizeof(thread));
-        ret = wolfSSL_NewThread(&thread, cb, arg);
-        if (ret == 0)
-            ret = pthread_detach(thread);
-        return ret;
-    }
-#endif
+    #ifdef WOLFSSL_THREAD_NO_JOIN
+        int wolfSSL_NewThreadNoJoin(THREAD_CB_NOJOIN cb, void* arg)
+        {
+            THREAD_TYPE thread;
+            int ret;
+            XMEMSET(&thread, 0, sizeof(thread));
+            ret = wolfSSL_NewThread(&thread, cb, arg);
+            if (ret == 0)
+                ret = pthread_detach(thread);
+            return ret;
+        }
+    #endif
 
     int wolfSSL_JoinThread(THREAD_TYPE thread)
     {
@@ -3763,86 +5945,8 @@ char* mystrnstr(const char* s1, const char* s2, unsigned int n)
     }
 
 #ifdef WOLFSSL_COND
-    #ifndef __MACH__
-    /* Generic POSIX conditional */
-    int wolfSSL_CondInit(COND_TYPE* cond)
-    {
-        if (cond == NULL)
-            return BAD_FUNC_ARG;
-
-        if (pthread_mutex_init(&cond->mutex, NULL) != 0)
-            return MEMORY_E;
-
-        if (pthread_cond_init(&cond->cond, NULL) != 0) {
-            /* Keep compilers happy that we are using the return code */
-            if (pthread_mutex_destroy(&cond->mutex) != 0)
-                return MEMORY_E;
-            return MEMORY_E;
-        }
-
-        return 0;
-    }
-
-    int wolfSSL_CondFree(COND_TYPE* cond)
-    {
-        int ret = 0;
-
-        if (cond == NULL)
-            return BAD_FUNC_ARG;
-
-        if (pthread_mutex_destroy(&cond->mutex) != 0)
-            ret = MEMORY_E;
-
-        if (pthread_cond_destroy(&cond->cond) != 0)
-            ret = MEMORY_E;
-
-        return ret;
-    }
-
-    int wolfSSL_CondStart(COND_TYPE* cond)
-    {
-        if (cond == NULL)
-            return BAD_FUNC_ARG;
-
-        if (pthread_mutex_lock(&cond->mutex) != 0)
-            return BAD_MUTEX_E;
-
-        return 0;
-    }
-
-    int wolfSSL_CondSignal(COND_TYPE* cond)
-    {
-        if (cond == NULL)
-            return BAD_FUNC_ARG;
-
-        if (pthread_cond_signal(&cond->cond) != 0)
-            return MEMORY_E;
-
-        return 0;
-    }
-
-    int wolfSSL_CondWait(COND_TYPE* cond)
-    {
-        if (cond == NULL)
-            return BAD_FUNC_ARG;
-
-        if (pthread_cond_wait(&cond->cond, &cond->mutex) != 0)
-            return MEMORY_E;
-
-        return 0;
-    }
-
-    int wolfSSL_CondEnd(COND_TYPE* cond)
-    {
-        if (cond == NULL)
-            return BAD_FUNC_ARG;
-
-        if (pthread_mutex_unlock(&cond->mutex) != 0)
-            return BAD_MUTEX_E;
-
-        return 0;
-    }
-    #else /* __MACH__ */
+    #if defined(__APPLE__) && MAC_OS_X_VERSION_MIN_REQUIRED >= 1060 \
+        && !defined(__ppc__)
     /* Apple style dispatch semaphore */
     int wolfSSL_CondInit(COND_TYPE* cond)
     {
@@ -3934,9 +6038,240 @@ char* mystrnstr(const char* s1, const char* s2, unsigned int n)
 
         return 0;
     }
+
+    #else /* Generic POSIX conditional */
+
+    int wolfSSL_CondInit(COND_TYPE* cond)
+    {
+        if (cond == NULL)
+            return BAD_FUNC_ARG;
+
+        if (pthread_mutex_init(&cond->mutex, NULL) != 0)
+            return MEMORY_E;
+
+        if (pthread_cond_init(&cond->cond, NULL) != 0) {
+            /* Keep compilers happy that we are using the return code */
+            if (pthread_mutex_destroy(&cond->mutex) != 0)
+                return MEMORY_E;
+            return MEMORY_E;
+        }
+
+        return 0;
+    }
+
+    int wolfSSL_CondFree(COND_TYPE* cond)
+    {
+        int ret = 0;
+
+        if (cond == NULL)
+            return BAD_FUNC_ARG;
+
+        if (pthread_mutex_destroy(&cond->mutex) != 0)
+            ret = MEMORY_E;
+
+        if (pthread_cond_destroy(&cond->cond) != 0)
+            ret = MEMORY_E;
+
+        return ret;
+    }
+
+    int wolfSSL_CondStart(COND_TYPE* cond)
+    {
+        if (cond == NULL)
+            return BAD_FUNC_ARG;
+
+        if (pthread_mutex_lock(&cond->mutex) != 0)
+            return BAD_MUTEX_E;
+
+        return 0;
+    }
+
+    int wolfSSL_CondSignal(COND_TYPE* cond)
+    {
+        if (cond == NULL)
+            return BAD_FUNC_ARG;
+
+        if (pthread_cond_signal(&cond->cond) != 0)
+            return MEMORY_E;
+
+        return 0;
+    }
+
+    int wolfSSL_CondWait(COND_TYPE* cond)
+    {
+        if (cond == NULL)
+            return BAD_FUNC_ARG;
+
+        if (pthread_cond_wait(&cond->cond, &cond->mutex) != 0)
+            return MEMORY_E;
+
+        return 0;
+    }
+
+    int wolfSSL_CondEnd(COND_TYPE* cond)
+    {
+        if (cond == NULL)
+            return BAD_FUNC_ARG;
+
+        if (pthread_mutex_unlock(&cond->mutex) != 0)
+            return BAD_MUTEX_E;
+
+        return 0;
+    }
+
     #endif /* __MACH__ */
 #endif /* WOLFSSL_COND */
 
+#endif /* Environment check */
+
+#endif /* not SINGLE_THREADED */
+
+#if (defined(__unix__) || defined(__APPLE__)) && \
+    !defined(WOLFSSL_KERNEL_MODE) && !defined(WOLFSSL_ZEPHYR) && \
+    !defined(WOLFSSL_SGX)
+
+#include <fcntl.h>
+#include <errno.h>
+#include <sys/socket.h>
+#include <unistd.h>
+
+#ifndef O_CLOEXEC
+    #define O_CLOEXEC 0
+#endif
+#ifndef SOCK_CLOEXEC
+    #define SOCK_CLOEXEC 0
 #endif
 
-#endif /* SINGLE_THREADED */
+/* accept4(): HAVE_ACCEPT4 is set by the configure/CMake probe, or in
+ * user_settings.h for a libc not recognised here, such as musl. Recognised:
+ * glibc 2.10, uClibc-ng, bionic API 21, FreeBSD 10. */
+#if (defined(__linux__) || defined(__ANDROID__)) && \
+    (defined(HAVE_ACCEPT4) || \
+     (defined(__USE_GNU) && \
+      ((defined(__GLIBC__) && \
+        (__GLIBC__ > 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ >= 10))) || \
+       (defined(__UCLIBC_LINUX_SPECIFIC__) && (__UCLIBC_MAJOR__ >= 1)) || \
+       (defined(__ANDROID_API__) && (__ANDROID_API__ >= 21)))))
+    #define WC_HAVE_ACCEPT4
+#elif defined(__FreeBSD__) && defined(__BSD_VISIBLE) && __BSD_VISIBLE && \
+    (__FreeBSD_version >= 1000000)
+    #define WC_HAVE_ACCEPT4
+#endif
+
+void wc_set_cloexec(int fd)
+{
+#ifdef FD_CLOEXEC
+    int fdFlags;
+    if (fd < 0)
+        return;
+    fdFlags = fcntl(fd, F_GETFD);
+    if (fdFlags >= 0)
+        (void)fcntl(fd, F_SETFD, fdFlags | FD_CLOEXEC);
+#else
+    (void)fd;
+#endif
+}
+
+int wc_open_cloexec(const char* path, int flags)
+{
+    int fd = open(path, flags | O_CLOEXEC);
+#ifdef FD_CLOEXEC
+    if (fd < 0 && errno == EINVAL) {
+        fd = open(path, flags);
+        wc_set_cloexec(fd);
+    }
+#endif
+    return fd;
+}
+
+/* As wc_open_cloexec(), for flags with O_CREAT, where open() needs a mode. */
+int wc_open_cloexec_mode(const char* path, int flags, int mode)
+{
+    int fd = open(path, flags | O_CLOEXEC, mode);
+#ifdef FD_CLOEXEC
+    if (fd < 0 && errno == EINVAL) {
+        fd = open(path, flags, mode);
+        wc_set_cloexec(fd);
+    }
+#endif
+    return fd;
+}
+
+#if !defined(NO_FILESYSTEM) && defined(XFDOPEN)
+#include <sys/stat.h>
+
+/* Truncate or create path for writing, owner read/write only. */
+XFILE wc_fopen_owner_only(const char* path)
+{
+    XFILE file;
+    int fd = wc_open_cloexec_mode(path, O_RDWR | O_CREAT | O_TRUNC,
+                                  S_IRUSR | S_IWUSR);
+    if (fd < 0)
+        return XBADFILE;
+
+#ifndef WOLFSSL_NO_FCHMOD
+    if (fchmod(fd, S_IRUSR | S_IWUSR) != 0) {
+        close(fd);
+        return XBADFILE;
+    }
+#endif
+
+    file = XFDOPEN(fd, "w+b");
+    if (file == XBADFILE)
+        close(fd);
+
+    return file;
+}
+#endif /* !NO_FILESYSTEM && XFDOPEN */
+
+int wc_socket_cloexec(int domain, int type, int protocol)
+{
+    int fd = socket(domain, type | SOCK_CLOEXEC, protocol);
+#ifdef FD_CLOEXEC
+    if (fd < 0 && errno == EINVAL) {
+        fd = socket(domain, type, protocol);
+        wc_set_cloexec(fd);
+    }
+#endif
+    return fd;
+}
+
+int wc_accept_cloexec(int sockfd, void* addr, void* addrlen)
+{
+    int fd;
+#ifdef WC_HAVE_ACCEPT4
+    fd = accept4(sockfd, (struct sockaddr*)addr, (socklen_t*)addrlen,
+                 SOCK_CLOEXEC);
+    if (fd >= 0)
+        return fd;
+    if (errno != ENOSYS && errno != EINVAL)
+        return fd;
+#endif
+    fd = accept(sockfd, (struct sockaddr*)addr, (socklen_t*)addrlen);
+    wc_set_cloexec(fd);
+    return fd;
+}
+
+#endif /* (__unix__ || __APPLE__) && !WOLFSSL_KERNEL_MODE && !WOLFSSL_ZEPHYR &&
+        * !WOLFSSL_SGX */
+
+#if defined(WOLFSSL_LINUXKM) && defined(CONFIG_ARM64) && \
+    defined(WC_SYM_RELOC_TABLES)
+#ifndef CONFIG_ARCH_TEGRA
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0)
+noinstr void my__alt_cb_patch_nops(struct alt_instr *alt, __le32 *origptr,
+                                   __le32 *updptr, int nr_inst)
+{
+    return WC_PIE_INDIRECT_SYM(alt_cb_patch_nops)
+        (alt, origptr, updptr, nr_inst);
+}
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0) */
+
+void my__queued_spin_lock_slowpath(struct qspinlock *lock, u32 val)
+{
+    return WC_PIE_INDIRECT_SYM(queued_spin_lock_slowpath)
+        (lock, val);
+}
+#endif
+#endif

@@ -1,0 +1,150 @@
+name: OCSP Test
+
+# START OF COMMON SECTION
+on:
+  push:
+    branches: [ 'release/**' ]
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches: [ '*' ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+# END OF COMMON SECTION
+
+jobs:
+  ocsp_stapling:
+    name: ocsp stapling
+    if: ${{ (github.repository_owner == 'wolfssl') && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout wolfSSL
+        uses: actions/checkout@v5
+
+      - name: Build wolfSSL
+        run: autoreconf -ivf && ./configure --enable-ocsp --enable-ocspstapling && make
+
+      - name: Start OCSP responder 1
+        run: openssl ocsp -port 22221 -ndays 1000 -index certs/ocsp/index-intermediate1-ca-issued-certs.txt -rsigner certs/ocsp/ocsp-responder-int1-cert.pem -rkey certs/ocsp/ocsp-responder-int1-key.pem -CA certs/ocsp/intermediate1-ca-cert.pem &
+
+      - name: Start OCSP responder 2
+        run: openssl ocsp -port 22220 -ndays 1000 -index certs/ocsp/index-ca-and-intermediate-cas.txt -rsigner certs/ocsp/ocsp-responder-cert.pem -rkey certs/ocsp/ocsp-responder-key.pem -CA certs/ocsp/root-ca-cert.pem &
+
+      - name: Start TLS server
+        run: ./examples/server/server -p 11111 -c ./certs/ocsp/server1-cert.pem -k ./certs/ocsp/server1-key.pem -d &
+
+      - name: Test Look Up
+        run: ./examples/client/client -A ./certs/ocsp/root-ca-cert.pem -o
+
+  ocsp_ssrf_screen:
+    name: ocsp responder SSRF screening
+    if: ${{ (github.repository_owner == 'wolfssl') && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout wolfSSL
+        uses: actions/checkout@v5
+
+      # Build with the opt-in OCSP responder destination screening enabled
+      # (WOLFSSL_OCSP_SCREEN_RESPONDER). This guards against a certificate AIA
+      # OCSP URL driving an outbound request to an internal address (SSRF,
+      # CWE-918). The screening is off by default, so it is not exercised by
+      # the ocsp_stapling job above (which uses localhost responders).
+      - name: Build wolfSSL with OCSP responder screening enabled
+        run: autoreconf -ivf && ./configure --enable-ocsp CPPFLAGS=-DWOLFSSL_OCSP_SCREEN_RESPONDER && make
+
+      # Run only the boundary unit test, not the localhost OCSP test scripts:
+      # with screening on, 127.0.0.1 responders are (correctly) rejected, so
+      # the stapling scripts do not apply to this build. Assert the test
+      # actually ran (passed) rather than being compiled out and skipped, so a
+      # future build-define change cannot turn this into a false-green signal.
+      - name: Run OCSP destination screening boundary tests
+        run: |
+          ./tests/unit.test -test_wolfIO_OcspDestAllowed | tee out.txt
+          grep -Eq 'test_wolfIO_OcspDestAllowed[^_].*: passed' out.txt
+
+  # The leaf OCSP request built for stapling is cached on the WOLFSSL_CTX and
+  # reused by every later connection on it, with the CTX owning it. None of the
+  # jobs above reach that cache: it is only populated when the SSL shares the
+  # CTX certificate buffer (ssl->buffers.weOwnCert == 0), and OPENSSL_ALL
+  # implies WOLFSSL_COPY_CERT, which gives every SSL its own copy instead.
+  ocsp_ctx_request_cache:
+    name: ocsp ctx request cache (${{ matrix.name }})
+    if: ${{ (github.repository_owner == 'wolfssl') && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Plain stapling build: no OPENSSL_ALL, so no WOLFSSL_COPY_CERT and
+          # the cache is live.
+          - name: default
+            config: --enable-ocsp --enable-ocspstapling --enable-ocspstapling2
+          # The same cache under --enable-all, which pulls in OPENSSL_ALL and
+          # with it the compatibility-layer code paths around the cert manager.
+          # OPENSSL_ALL would otherwise force WOLFSSL_COPY_CERT and take the
+          # cache out of play entirely, so that is turned back off explicitly -
+          # which is what this entry is really here to prove.
+          - name: all, no cert copy
+            config: --enable-all CPPFLAGS=-DWOLFSSL_NO_COPY_CERT
+          # The cache hands one OcspRequest to many connections, so the failure
+          # mode of an ownership mistake is a double free or a use after free at
+          # CTX teardown rather than a wrong answer. ASan is what turns that into
+          # a test failure.
+          - name: asan
+            config: --enable-ocsp --enable-ocspstapling --enable-ocspstapling2 CFLAGS='-fsanitize=address -g' LDFLAGS='-fsanitize=address'
+    steps:
+      - name: workaround high-entropy ASLR
+        # Needed for the ASan build on this runner image; harmless for the rest.
+        run: sudo sysctl vm.mmap_rnd_bits=28
+
+      - name: Checkout wolfSSL
+        uses: actions/checkout@v5
+
+      - name: Build wolfSSL
+        run: autoreconf -ivf && ./configure ${{ matrix.config }} && make
+
+      # Assert on the counters rather than grepping the test name for "passed":
+      # the handshake under test logs to the same stream and splits the name and
+      # the result across lines. Running the one test on its own makes 0/0/1/1
+      # exact, and a build where the cache is compiled out reports 0/1/0/1
+      # instead - so a config change that quietly disables this cannot pass as
+      # green.
+      #
+      # Leak detection is off because wolfSSL's own unit.test has no verified
+      # clean LSan baseline; the double free and use after free this is here to
+      # catch are reported either way.
+      - name: Run the CTX OCSP request cache test
+        env:
+          ASAN_OPTIONS: detect_leaks=0
+        run: |
+          set -o pipefail
+          ./tests/unit.test -test_ocsp_ctx_request_cache | tee out.txt
+          grep -Eq 'Failed/Skipped/Passed/All: 0/0/1/1' out.txt
+
+  ocsp_ssrf_screen_fallback:
+    name: ocsp responder SSRF screening (gethostbyname fallback)
+    if: ${{ (github.repository_owner == 'wolfssl') && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout wolfSSL
+        uses: actions/checkout@v5
+
+      # Force the gethostbyname() resolver fallback (ac_cv_func_getaddrinfo=no)
+      # so the otherwise-untested fallback path of wolfIO_OcspDestAllowed is
+      # exercised. The fallback is IPv4-only and relies on glibc parsing
+      # numeric IPv4 literals locally.
+      - name: Build wolfSSL forcing the gethostbyname resolver fallback
+        run: autoreconf -ivf && ./configure --enable-ocsp ac_cv_func_getaddrinfo=no CPPFLAGS=-DWOLFSSL_OCSP_SCREEN_RESPONDER && make
+
+      - name: Run OCSP destination screening fallback boundary tests
+        run: |
+          ./tests/unit.test -test_wolfIO_OcspDestAllowed_fallback | tee out.txt
+          grep -Eq 'test_wolfIO_OcspDestAllowed_fallback.*: passed' out.txt

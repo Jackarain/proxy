@@ -1,12 +1,12 @@
 /* wolfssl_test_driver.h
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -19,9 +19,9 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1335, USA
  */
 
-#ifndef wolfssl_test_driver_h
-#define wolfssl_test_driver_h
+#ifndef WOLFSSL_TEST_DRIVER_H
+#define WOLFSSL_TEST_DRIVER_H
 
 void wolfssl_test(void);
 
-#endif /* wolfssl_test_driver_h */
+#endif /* WOLFSSL_TEST_DRIVER_H */

@@ -1,12 +1,12 @@
 /* visibility.h
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -33,7 +33,7 @@
 
 #if defined(BUILDING_WOLFSSL)
     #if defined(_MSC_VER) || defined(__MINGW32__) || defined(__CYGWIN__) || \
-        defined(_WIN32_WCE)
+        defined(_WIN32_WCE) || defined(__WATCOMC__)
         #if defined(WOLFSSL_DLL)
             #define WOLFSSL_API __declspec(dllexport)
         #else
@@ -50,8 +50,21 @@
         #define WOLFSSL_API
         #define WOLFSSL_LOCAL
     #endif /* HAVE_VISIBILITY */
-#else /* BUILDING_WOLFSSL */
-    #if defined(_MSC_VER) || defined(__MINGW32__) || defined(__CYGWIN__) || \
+
+    #ifdef WOLFSSL_PRIVATE_TEST_VIS
+        #define WOLFSSL_TEST_VIS WOLFSSL_LOCAL
+    #else
+        #define WOLFSSL_TEST_VIS WOLFSSL_API
+    #endif
+#else /* !BUILDING_WOLFSSL */
+    #if defined(__WATCOMC__)
+        #if defined(WOLFSSL_DLL) && defined(__NT__)
+            #define WOLFSSL_API __declspec(dllimport)
+        #else
+            #define WOLFSSL_API
+        #endif
+        #define WOLFSSL_LOCAL
+    #elif defined(_MSC_VER) || defined(__MINGW32__) || defined(__CYGWIN__) || \
         defined(_WIN32_WCE)
         #if defined(WOLFSSL_DLL)
             #define WOLFSSL_API __declspec(dllimport)
@@ -63,7 +76,25 @@
         #define WOLFSSL_API
         #define WOLFSSL_LOCAL
     #endif
-#endif /* BUILDING_WOLFSSL */
+
+    #if defined(WOLFSSL_VIS_FOR_TESTS)
+        #ifdef WOLFSSL_PRIVATE_TEST_VIS
+            #error WOLFSSL_VIS_FOR_TESTS is unavailable in WOLFSSL_PRIVATE_TEST_VIS builds.
+        #endif
+        #define WOLFSSL_TEST_VIS WOLFSSL_API
+    #else
+        #define WOLFSSL_TEST_VIS WOLFSSL_API WC_DEPRECATED("internal use only")
+    #endif
+
+#endif /* !BUILDING_WOLFSSL */
+
+#ifdef WC_ASM_ATT_HIDDEN
+    /* Use supplied override. */
+#elif defined(__ELF__)
+    #define WC_ASM_ATT_HIDDEN(name) .hidden name
+#else
+    #define WC_ASM_ATT_HIDDEN(name) /* null expansion */
+#endif
 
 /* WOLFSSL_ABI is used for public API symbols that must not change
  * their signature. This tag is used for all APIs that are a

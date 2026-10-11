@@ -1,12 +1,12 @@
 /* wolfevent.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -19,18 +19,12 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1335, USA
  */
 
-#ifdef HAVE_CONFIG_H
-    #include <config.h>
-#endif
-
-#include <wolfssl/wolfcrypt/settings.h>
-
+#include <wolfssl/wolfcrypt/libwolfssl_sources.h>
 
 #ifdef HAVE_WOLF_EVENT
 
 #include <wolfssl/internal.h>
 #include <wolfssl/error-ssl.h>
-#include <wolfssl/wolfcrypt/error-crypt.h>
 
 #include <wolfssl/wolfcrypt/wolfevent.h>
 
@@ -55,7 +49,15 @@ int wolfEvent_Init(WOLF_EVENT* event, WOLF_EVENT_TYPE type, void* context)
 
 int wolfEvent_Poll(WOLF_EVENT* event, WOLF_EVENT_FLAG flags)
 {
-    int ret = BAD_COND_E;
+    int ret = WC_NO_ERR_TRACE(BAD_COND_E);
+
+    /* event/flags are only consumed by the async hardware poll below, which is
+     * compiled out in non-async builds (the event queue core is
+     * async-independent). */
+#ifndef WOLFSSL_ASYNC_CRYPT
+    (void)event;
+    (void)flags;
+#endif
 
     /* Check hardware */
 #ifdef WOLFSSL_ASYNC_CRYPT

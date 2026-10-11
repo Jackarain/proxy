@@ -1,0 +1,563 @@
+name: wolfBoot Integration
+
+on:
+  push:
+    branches: [ 'release/**' ]
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches: [ '*' ]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  WOLFBOOT_REPO: https://github.com/wolfSSL/wolfBoot.git
+  WOLFBOOT_BRANCH: master
+  WOLFBOOT_RENODE_IMAGE: ghcr.io/wolfssl/wolfboot-ci-renode:v1.8
+
+jobs:
+  keytools:
+    name: keytools
+    if: ${{ (github.repository_owner == 'wolfssl') && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout wolfSSL
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - name: Clone wolfBoot and stage tested wolfSSL
+        run: |
+          set -euxo pipefail
+
+          git clone --depth 1 --branch "${WOLFBOOT_BRANCH}" "${WOLFBOOT_REPO}" wolfboot
+
+          # Materialize the wolfSSL checkout as real files under
+          # wolfboot/lib/wolfssl. A symlink to ${GITHUB_WORKSPACE} would
+          # resolve on the host but breaks inside the Renode docker
+          # container, which only bind-mounts the wolfboot tree. Exclude
+          # the cloned wolfboot subdir (self-recursion) and .git/ (size).
+          rm -rf wolfboot/lib/wolfssl
+          mkdir -p wolfboot/lib/wolfssl
+          rsync -a \
+            --exclude=/wolfboot/ \
+            --exclude=/.git/ \
+            "${GITHUB_WORKSPACE}/" wolfboot/lib/wolfssl/
+          test -f wolfboot/lib/wolfssl/wolfssl/wolfcrypt/settings.h
+          test -f wolfboot/lib/wolfssl/wolfcrypt/src/asn.c
+
+      - name: Run wolfBoot keytools integration flow
+        working-directory: wolfboot
+        run: |
+          set -euxo pipefail
+
+          make_clean() {
+            make distclean
+            rm -f private-key.der private-key.pem public-key.der public-rsa2048-key.der
+            rm -f test-app/image_v1.sig test-app/image_v1_digest.bin test-app/image_v2_signed.bin
+            rm -f wolfboot_signing_private_key.der ecc384-priv-key.der keystore.der
+          }
+
+          prepare_sim() {
+            cp config/examples/sim.config .config
+            make include/target.h
+            make -C tools/keytools
+            make -C tools/bin-assemble
+          }
+
+          # ECC256
+          make_clean
+          prepare_sim
+          make SIGN=ECC256 HASH=SHA256
+          rm -f src/keystore.c
+          openssl ecparam -name prime256v1 -genkey -noout -outform DER -out private-key.der
+          openssl ec -in private-key.der -inform DER -pubout -out public-key.der -outform DER
+          ./tools/keytools/keygen --ecc256 -i public-key.der
+          ./tools/keytools/sign --ecc256 --sha-only --sha256 test-app/image.elf public-key.der 1
+          openssl pkeyutl -sign -keyform der -inkey private-key.der -in test-app/image_v1_digest.bin > test-app/image_v1.sig
+          ./tools/keytools/sign --ecc256 --sha256 --manual-sign test-app/image.elf public-key.der 1 test-app/image_v1.sig
+
+          # ED25519
+          make_clean
+          prepare_sim
+          make SIGN=ED25519 HASH=SHA256
+          rm -f src/keystore.c
+          openssl genpkey -algorithm ed25519 -out private-key.der -outform DER
+          openssl pkey -in private-key.der -inform DER -pubout -out public-key.der -outform DER
+          ./tools/keytools/keygen --ed25519 -i public-key.der
+          ./tools/keytools/sign --ed25519 --sha-only --sha256 test-app/image.elf public-key.der 1
+          openssl pkeyutl -sign -keyform der -inkey private-key.der -rawin -in test-app/image_v1_digest.bin > test-app/image_v1.sig
+          ./tools/keytools/sign --ed25519 --sha256 --manual-sign test-app/image.elf public-key.der 1 test-app/image_v1.sig
+
+          # RSA2048
+          make_clean
+          prepare_sim
+          make SIGN=RSA2048 HASH=SHA256
+          rm -f src/keystore.c
+          openssl genrsa -out private-key.pem 2048
+          openssl rsa -in private-key.pem -inform PEM -out private-key.der -outform DER
+          openssl rsa -inform DER -outform DER -in private-key.der -out public-key.der -pubout
+          ./tools/keytools/keygen --rsa2048 -i public-key.der
+          ./tools/keytools/sign --rsa2048 --sha-only --sha256 test-app/image.elf public-key.der 1
+          openssl pkeyutl -sign -keyform der -inkey private-key.der -in test-app/image_v1_digest.bin > test-app/image_v1.sig
+          ./tools/keytools/sign --rsa2048 --sha256 --manual-sign test-app/image.elf public-key.der 1 test-app/image_v1.sig
+
+          # sign --no-ts
+          make_clean
+          prepare_sim
+          make SIGN=ECC256 HASH=SHA256
+          ./tools/keytools/sign --ecc256 --sha256 --no-ts test-app/image.elf wolfboot_signing_private_key.der 2
+
+          # Universal keystore
+          make_clean
+          prepare_sim
+          openssl genrsa -out private-key.pem 2048
+          openssl rsa -in private-key.pem -inform PEM -out private-key.der -outform DER
+          openssl rsa -inform DER -outform DER -in private-key.der -out public-rsa2048-key.der -pubout
+          ./tools/keytools/keygen --rsa2048 -i public-rsa2048-key.der --ecc256 -g wolfboot_signing_private_key.der --ecc384 -g ecc384-priv-key.der
+          make SIGN=ECC256 HASH=SHA256 WOLFBOOT_UNIVERSAL_KEYSTORE=1
+
+  host_smoke:
+    name: host-smoke
+    if: ${{ (github.repository_owner == 'wolfssl') && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout wolfSSL
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - name: Clone wolfBoot and stage tested wolfSSL
+        run: |
+          set -euxo pipefail
+
+          git clone --depth 1 --branch "${WOLFBOOT_BRANCH}" "${WOLFBOOT_REPO}" wolfboot
+
+          # Materialize the wolfSSL checkout as real files under
+          # wolfboot/lib/wolfssl. A symlink to ${GITHUB_WORKSPACE} would
+          # resolve on the host but breaks inside the Renode docker
+          # container, which only bind-mounts the wolfboot tree. Exclude
+          # the cloned wolfboot subdir (self-recursion) and .git/ (size).
+          rm -rf wolfboot/lib/wolfssl
+          mkdir -p wolfboot/lib/wolfssl
+          rsync -a \
+            --exclude=/wolfboot/ \
+            --exclude=/.git/ \
+            "${GITHUB_WORKSPACE}/" wolfboot/lib/wolfssl/
+          test -f wolfboot/lib/wolfssl/wolfssl/wolfcrypt/settings.h
+          test -f wolfboot/lib/wolfssl/wolfcrypt/src/asn.c
+
+      - name: Build and exercise host-side smoke test
+        working-directory: wolfboot
+        run: |
+          set -euo pipefail
+
+          cp config/examples/library.config .config
+          make keysclean
+          make clean
+          make keytools SIGN=ED25519 HASH=SHA256
+          ./tools/keytools/keygen --ed25519 -g wolfboot_signing_private_key.der
+
+          printf 'wolfBoot wolfSSL integration smoke\n' > test.bin
+          ./tools/keytools/sign --ed25519 --sha256 test.bin wolfboot_signing_private_key.der 1
+
+          make test-lib SIGN=ED25519 HASH=SHA256
+
+          # test-lib (hal/library.c) signals the verdict two ways: the golden
+          # path prints "Firmware Valid" and exits 0, a rejected image prints
+          # "Failure %d: Hdr %d, Hash %d, Sig %d" and exits non-zero (255,
+          # from the -1 the verify path returns). The exit code only became
+          # meaningful in wolfBoot 2e918de2; before that every run exited 0
+          # and this step asserted on output alone.
+          #
+          # Both runs disable errexit so the status can be captured and
+          # asserted. A bare $(...) under "set -e" aborts the step at the
+          # assignment, before the output is ever printed -- which is what
+          # made the tamper run look like a golden-path failure.
+
+          set +e
+          success_output=$(./test-lib test_v1_signed.bin 2>&1)
+          success_status=$?
+          set -e
+
+          printf '%s\n' "$success_output"
+          if [ "$success_status" -ne 0 ]; then
+            echo "Expected golden-path success, but test-lib exited $success_status"
+            exit 1
+          fi
+          if ! printf '%s\n' "$success_output" | grep -qF "Firmware Valid"; then
+            echo "Expected golden-path success, but test-lib did not print \"Firmware Valid\""
+            exit 1
+          fi
+
+          truncate -s -1 test_v1_signed.bin
+          printf 'A' >> test_v1_signed.bin
+
+          set +e
+          tamper_output=$(./test-lib test_v1_signed.bin 2>&1)
+          tamper_status=$?
+          set -e
+
+          printf '%s\n' "$tamper_output"
+          if [ "$tamper_status" -eq 0 ]; then
+            echo "Expected tamper rejection, but test-lib exited 0"
+            exit 1
+          fi
+          if printf '%s\n' "$tamper_output" | grep -qF "Firmware Valid"; then
+            echo "Expected tamper rejection, but test-lib reported \"Firmware Valid\""
+            exit 1
+          fi
+          if ! printf '%s\n' "$tamper_output" | grep -qE "^Failure -?[0-9]+: Hdr [0-9]+, Hash [0-9]+, Sig [0-9]+"; then
+            echo "Expected tamper rejection marker (\"Failure N: Hdr X, Hash Y, Sig Z\"), but test-lib output did not contain it"
+            exit 1
+          fi
+
+  renode_multimem_smallstack:
+    name: renode-multimem-smallstack
+    if: ${{ (github.repository_owner == 'wolfssl') && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: read
+
+    steps:
+      - name: Checkout wolfSSL
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - name: Clone wolfBoot and stage tested wolfSSL
+        run: |
+          set -euxo pipefail
+
+          git clone --depth 1 --branch "${WOLFBOOT_BRANCH}" "${WOLFBOOT_REPO}" wolfboot
+
+          # Materialize the wolfSSL checkout as real files under
+          # wolfboot/lib/wolfssl. A symlink to ${GITHUB_WORKSPACE} would
+          # resolve on the host but breaks inside the Renode docker
+          # container, which only bind-mounts the wolfboot tree. Exclude
+          # the cloned wolfboot subdir (self-recursion) and .git/ (size).
+          rm -rf wolfboot/lib/wolfssl
+          mkdir -p wolfboot/lib/wolfssl
+          rsync -a \
+            --exclude=/wolfboot/ \
+            --exclude=/.git/ \
+            "${GITHUB_WORKSPACE}/" wolfboot/lib/wolfssl/
+          test -f wolfboot/lib/wolfssl/wolfssl/wolfcrypt/settings.h
+          test -f wolfboot/lib/wolfssl/wolfcrypt/src/asn.c
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Select config
+        working-directory: wolfboot
+        run: |
+          cp config/examples/nrf52840.config .config && make include/target.h
+
+##### SMALL STACK tests (xmalloc path: most regressions land here)
+
+      - name: Renode Tests SIGN=NONE WOLFBOOT_SMALL_STACK=1
+        working-directory: wolfboot
+        env:
+          DOCKER_IMAGE: ${{ env.WOLFBOOT_RENODE_IMAGE }}
+        run: ./tools/renode/docker-test.sh "SIGN=NONE WOLFBOOT_SMALL_STACK=1"
+
+      - name: Renode Tests ECC256 WOLFBOOT_SMALL_STACK=1
+        working-directory: wolfboot
+        env:
+          DOCKER_IMAGE: ${{ env.WOLFBOOT_RENODE_IMAGE }}
+        run: ./tools/renode/docker-test.sh "SIGN=ECC256 WOLFBOOT_SMALL_STACK=1"
+
+      - name: Renode Tests ECC384 WOLFBOOT_SMALL_STACK=1
+        working-directory: wolfboot
+        env:
+          DOCKER_IMAGE: ${{ env.WOLFBOOT_RENODE_IMAGE }}
+        run: ./tools/renode/docker-test.sh "SIGN=ECC384 WOLFBOOT_SMALL_STACK=1"
+
+      - name: Renode Tests ECC521 WOLFBOOT_SMALL_STACK=1
+        working-directory: wolfboot
+        env:
+          DOCKER_IMAGE: ${{ env.WOLFBOOT_RENODE_IMAGE }}
+        run: ./tools/renode/docker-test.sh "SIGN=ECC521 WOLFBOOT_SMALL_STACK=1"
+
+      - name: Renode Tests ED25519 WOLFBOOT_SMALL_STACK=1
+        working-directory: wolfboot
+        env:
+          DOCKER_IMAGE: ${{ env.WOLFBOOT_RENODE_IMAGE }}
+        run: ./tools/renode/docker-test.sh "SIGN=ED25519 WOLFBOOT_SMALL_STACK=1"
+
+      - name: Renode Tests ED448 WOLFBOOT_SMALL_STACK=1
+        working-directory: wolfboot
+        env:
+          DOCKER_IMAGE: ${{ env.WOLFBOOT_RENODE_IMAGE }}
+        run: ./tools/renode/docker-test.sh "SIGN=ED448 WOLFBOOT_SMALL_STACK=1"
+
+      - name: Renode Tests RSA2048 WOLFBOOT_SMALL_STACK=1
+        working-directory: wolfboot
+        env:
+          DOCKER_IMAGE: ${{ env.WOLFBOOT_RENODE_IMAGE }}
+        run: ./tools/renode/docker-test.sh "SIGN=RSA2048 WOLFBOOT_SMALL_STACK=1"
+
+      - name: Renode Tests RSA3072 WOLFBOOT_SMALL_STACK=1
+        working-directory: wolfboot
+        env:
+          DOCKER_IMAGE: ${{ env.WOLFBOOT_RENODE_IMAGE }}
+        run: ./tools/renode/docker-test.sh "SIGN=RSA3072 WOLFBOOT_SMALL_STACK=1"
+
+      - name: Renode Tests RSA4096 WOLFBOOT_SMALL_STACK=1
+        working-directory: wolfboot
+        env:
+          DOCKER_IMAGE: ${{ env.WOLFBOOT_RENODE_IMAGE }}
+        run: ./tools/renode/docker-test.sh "SIGN=RSA4096 WOLFBOOT_SMALL_STACK=1"
+
+      - name: Renode Tests RSAPSS2048 WOLFBOOT_SMALL_STACK=1
+        working-directory: wolfboot
+        env:
+          DOCKER_IMAGE: ${{ env.WOLFBOOT_RENODE_IMAGE }}
+        run: ./tools/renode/docker-test.sh "SIGN=RSAPSS2048 WOLFBOOT_SMALL_STACK=1"
+
+      - name: Renode Tests RSAPSS3072 WOLFBOOT_SMALL_STACK=1
+        working-directory: wolfboot
+        env:
+          DOCKER_IMAGE: ${{ env.WOLFBOOT_RENODE_IMAGE }}
+        run: ./tools/renode/docker-test.sh "SIGN=RSAPSS3072 WOLFBOOT_SMALL_STACK=1"
+
+      - name: Renode Tests RSAPSS4096 WOLFBOOT_SMALL_STACK=1
+        working-directory: wolfboot
+        env:
+          DOCKER_IMAGE: ${{ env.WOLFBOOT_RENODE_IMAGE }}
+        run: ./tools/renode/docker-test.sh "SIGN=RSAPSS4096 WOLFBOOT_SMALL_STACK=1"
+
+      - name: Upload Output Dir
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          retention-days: 7
+          name: renode-multimem-smallstack-results
+          path: wolfboot/test_results/
+
+  renode_multimem_smallstack_fastmath:
+    name: renode-multimem-smallstack-fastmath
+    if: ${{ (github.repository_owner == 'wolfssl') && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: read
+
+    steps:
+      - name: Checkout wolfSSL
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - name: Clone wolfBoot and stage tested wolfSSL
+        run: |
+          set -euxo pipefail
+
+          git clone --depth 1 --branch "${WOLFBOOT_BRANCH}" "${WOLFBOOT_REPO}" wolfboot
+
+          # Materialize the wolfSSL checkout as real files under
+          # wolfboot/lib/wolfssl. A symlink to ${GITHUB_WORKSPACE} would
+          # resolve on the host but breaks inside the Renode docker
+          # container, which only bind-mounts the wolfboot tree. Exclude
+          # the cloned wolfboot subdir (self-recursion) and .git/ (size).
+          rm -rf wolfboot/lib/wolfssl
+          mkdir -p wolfboot/lib/wolfssl
+          rsync -a \
+            --exclude=/wolfboot/ \
+            --exclude=/.git/ \
+            "${GITHUB_WORKSPACE}/" wolfboot/lib/wolfssl/
+          test -f wolfboot/lib/wolfssl/wolfssl/wolfcrypt/settings.h
+          test -f wolfboot/lib/wolfssl/wolfcrypt/src/asn.c
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Select config
+        working-directory: wolfboot
+        run: |
+          cp config/examples/nrf52840.config .config && make include/target.h
+
+##### SMALL STACK + FAST MATH tests (TFM-backed xmalloc sizing)
+
+      - name: Renode Tests ECC256 SMALL_STACK SPMATH=0
+        working-directory: wolfboot
+        env:
+          DOCKER_IMAGE: ${{ env.WOLFBOOT_RENODE_IMAGE }}
+        run: ./tools/renode/docker-test.sh "SIGN=ECC256 WOLFBOOT_SMALL_STACK=1 SPMATH=0"
+
+      - name: Renode Tests ECC384 SMALL_STACK SPMATH=0
+        working-directory: wolfboot
+        env:
+          DOCKER_IMAGE: ${{ env.WOLFBOOT_RENODE_IMAGE }}
+        run: ./tools/renode/docker-test.sh "SIGN=ECC384 WOLFBOOT_SMALL_STACK=1 SPMATH=0"
+
+      - name: Renode Tests ECC521 SMALL_STACK SPMATH=0
+        working-directory: wolfboot
+        env:
+          DOCKER_IMAGE: ${{ env.WOLFBOOT_RENODE_IMAGE }}
+        run: ./tools/renode/docker-test.sh "SIGN=ECC521 WOLFBOOT_SMALL_STACK=1 SPMATH=0"
+
+      - name: Renode Tests RSA2048 SMALL_STACK SPMATH=0
+        working-directory: wolfboot
+        env:
+          DOCKER_IMAGE: ${{ env.WOLFBOOT_RENODE_IMAGE }}
+        run: ./tools/renode/docker-test.sh "SIGN=RSA2048 WOLFBOOT_SMALL_STACK=1 SPMATH=0"
+
+      - name: Renode Tests RSA3072 SMALL_STACK SPMATH=0
+        working-directory: wolfboot
+        env:
+          DOCKER_IMAGE: ${{ env.WOLFBOOT_RENODE_IMAGE }}
+        run: ./tools/renode/docker-test.sh "SIGN=RSA3072 WOLFBOOT_SMALL_STACK=1 SPMATH=0"
+
+      - name: Renode Tests RSA4096 SMALL_STACK SPMATH=0
+        working-directory: wolfboot
+        env:
+          DOCKER_IMAGE: ${{ env.WOLFBOOT_RENODE_IMAGE }}
+        run: ./tools/renode/docker-test.sh "SIGN=RSA4096 WOLFBOOT_SMALL_STACK=1 SPMATH=0"
+
+      - name: Renode Tests RSAPSS2048 SMALL_STACK SPMATH=0
+        working-directory: wolfboot
+        env:
+          DOCKER_IMAGE: ${{ env.WOLFBOOT_RENODE_IMAGE }}
+        run: ./tools/renode/docker-test.sh "SIGN=RSAPSS2048 WOLFBOOT_SMALL_STACK=1 SPMATH=0"
+
+      - name: Renode Tests RSAPSS3072 SMALL_STACK SPMATH=0
+        working-directory: wolfboot
+        env:
+          DOCKER_IMAGE: ${{ env.WOLFBOOT_RENODE_IMAGE }}
+        run: ./tools/renode/docker-test.sh "SIGN=RSAPSS3072 WOLFBOOT_SMALL_STACK=1 SPMATH=0"
+
+      - name: Renode Tests RSAPSS4096 SMALL_STACK SPMATH=0
+        working-directory: wolfboot
+        env:
+          DOCKER_IMAGE: ${{ env.WOLFBOOT_RENODE_IMAGE }}
+        run: ./tools/renode/docker-test.sh "SIGN=RSAPSS4096 WOLFBOOT_SMALL_STACK=1 SPMATH=0"
+
+      - name: Upload Output Dir
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          retention-days: 7
+          name: renode-multimem-smallstack-fastmath-results
+          path: wolfboot/test_results/
+
+  renode_multimem_smallstack_noasm:
+    name: renode-multimem-smallstack-noasm
+    if: ${{ (github.repository_owner == 'wolfssl') && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: read
+
+    steps:
+      - name: Checkout wolfSSL
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - name: Clone wolfBoot and stage tested wolfSSL
+        run: |
+          set -euxo pipefail
+
+          git clone --depth 1 --branch "${WOLFBOOT_BRANCH}" "${WOLFBOOT_REPO}" wolfboot
+
+          # Materialize the wolfSSL checkout as real files under
+          # wolfboot/lib/wolfssl. A symlink to ${GITHUB_WORKSPACE} would
+          # resolve on the host but breaks inside the Renode docker
+          # container, which only bind-mounts the wolfboot tree. Exclude
+          # the cloned wolfboot subdir (self-recursion) and .git/ (size).
+          rm -rf wolfboot/lib/wolfssl
+          mkdir -p wolfboot/lib/wolfssl
+          rsync -a \
+            --exclude=/wolfboot/ \
+            --exclude=/.git/ \
+            "${GITHUB_WORKSPACE}/" wolfboot/lib/wolfssl/
+          test -f wolfboot/lib/wolfssl/wolfssl/wolfcrypt/settings.h
+          test -f wolfboot/lib/wolfssl/wolfcrypt/src/asn.c
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Select config
+        working-directory: wolfboot
+        run: |
+          cp config/examples/nrf52840.config .config && make include/target.h
+
+##### SMALL STACK + NO_ASM tests (portable C path xmalloc sizing)
+
+      - name: Renode Tests ECC256 SMALL_STACK NO_ASM=1
+        working-directory: wolfboot
+        env:
+          DOCKER_IMAGE: ${{ env.WOLFBOOT_RENODE_IMAGE }}
+        run: ./tools/renode/docker-test.sh "SIGN=ECC256 WOLFBOOT_SMALL_STACK=1 NO_ASM=1"
+
+      - name: Renode Tests ECC384 SMALL_STACK NO_ASM=1
+        working-directory: wolfboot
+        env:
+          DOCKER_IMAGE: ${{ env.WOLFBOOT_RENODE_IMAGE }}
+        run: ./tools/renode/docker-test.sh "SIGN=ECC384 WOLFBOOT_SMALL_STACK=1 NO_ASM=1"
+
+      - name: Renode Tests ECC521 SMALL_STACK NO_ASM=1
+        working-directory: wolfboot
+        env:
+          DOCKER_IMAGE: ${{ env.WOLFBOOT_RENODE_IMAGE }}
+        run: ./tools/renode/docker-test.sh "SIGN=ECC521 WOLFBOOT_SMALL_STACK=1 NO_ASM=1"
+
+      - name: Renode Tests RSA2048 SMALL_STACK NO_ASM=1
+        working-directory: wolfboot
+        env:
+          DOCKER_IMAGE: ${{ env.WOLFBOOT_RENODE_IMAGE }}
+        run: ./tools/renode/docker-test.sh "SIGN=RSA2048 WOLFBOOT_SMALL_STACK=1 NO_ASM=1"
+
+      - name: Renode Tests RSA3072 SMALL_STACK NO_ASM=1
+        working-directory: wolfboot
+        env:
+          DOCKER_IMAGE: ${{ env.WOLFBOOT_RENODE_IMAGE }}
+        run: ./tools/renode/docker-test.sh "SIGN=RSA3072 WOLFBOOT_SMALL_STACK=1 NO_ASM=1"
+
+      - name: Renode Tests RSA4096 SMALL_STACK NO_ASM=1
+        working-directory: wolfboot
+        env:
+          DOCKER_IMAGE: ${{ env.WOLFBOOT_RENODE_IMAGE }}
+        run: ./tools/renode/docker-test.sh "SIGN=RSA4096 WOLFBOOT_SMALL_STACK=1 NO_ASM=1"
+
+      - name: Renode Tests RSAPSS2048 SMALL_STACK NO_ASM=1
+        working-directory: wolfboot
+        env:
+          DOCKER_IMAGE: ${{ env.WOLFBOOT_RENODE_IMAGE }}
+        run: ./tools/renode/docker-test.sh "SIGN=RSAPSS2048 WOLFBOOT_SMALL_STACK=1 NO_ASM=1"
+
+      - name: Renode Tests RSAPSS3072 SMALL_STACK NO_ASM=1
+        working-directory: wolfboot
+        env:
+          DOCKER_IMAGE: ${{ env.WOLFBOOT_RENODE_IMAGE }}
+        run: ./tools/renode/docker-test.sh "SIGN=RSAPSS3072 WOLFBOOT_SMALL_STACK=1 NO_ASM=1"
+
+      - name: Renode Tests RSAPSS4096 SMALL_STACK NO_ASM=1
+        working-directory: wolfboot
+        env:
+          DOCKER_IMAGE: ${{ env.WOLFBOOT_RENODE_IMAGE }}
+        run: ./tools/renode/docker-test.sh "SIGN=RSAPSS4096 WOLFBOOT_SMALL_STACK=1 NO_ASM=1"
+
+      - name: Upload Output Dir
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          retention-days: 7
+          name: renode-multimem-smallstack-noasm-results
+          path: wolfboot/test_results/

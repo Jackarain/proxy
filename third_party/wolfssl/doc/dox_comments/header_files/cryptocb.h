@@ -1,23 +1,44 @@
 /*!
     \ingroup CryptoCb
 
-    \brief This function registers a unique device identifier (devID) and 
-    callback function for offloading crypto operations to external 
+    \brief This function registers a unique device identifier (devID) and
+    callback function for offloading crypto operations to external
     hardware such as Key Store, Secure Element, HSM, PKCS11 or TPM.
 
     For STSAFE with Crypto Callbacks example see
     wolfcrypt/src/port/st/stsafe.c and the wolfSSL_STSAFE_CryptoDevCb function.
 
-    For TPM based crypto callbacks example see the wolfTPM2_CryptoDevCb 
+    For TPM based crypto callbacks example see the wolfTPM2_CryptoDevCb
     function in wolfTPM src/tpm2_wrap.c
+
+    With WOLF_CRYPTO_CB_CMD defined, the callback is invoked during this
+    call with a WC_CRYPTOCB_CMD_TYPE_REGISTER command (and later with
+    WC_CRYPTOCB_CMD_TYPE_UNREGISTER from wc_CryptoCb_UnRegisterDevice). A
+    register command handler may itself call wc_CryptoCb_RegisterDevice to
+    register additional devIds, such as a driver exposing several devices.
+    It must not dispatch through, or re-register, the devId it is being
+    registered with: that devId is not published until this call returns,
+    so a nested registration of it is not caught by the ALREADY_E check and
+    consumes fresh slots until the table fills and BUFFER_E unwinds them.
+    If the handler returns an error other than CRYPTOCB_UNAVAILABLE or
+    NOT_COMPILED_IN, the registration is unwound and the error returned;
+    devIds the handler already registered stay registered and are the
+    caller's to clean up.
 
     \return CRYPTOCB_UNAVAILABLE to fallback to using software crypto
     \return 0 for success
+    \return ALREADY_E if devId is already registered. A devId must be
+    un-registered with wc_CryptoCb_UnRegisterDevice before it can be
+    registered again; re-registering an active devId is not an in-place update.
+    \return BAD_FUNC_ARG if devId is INVALID_DEVID (-2)
     \return negative value for failure
 
     \param devId any unique value, not -2 (INVALID_DEVID)
     \param cb a callback function with prototype:
     typedef int (*CryptoDevCallbackFunc)(int devId, wc_CryptoInfo* info, void* ctx);
+    \param ctx user context handed back to the callback on every invocation.
+    With WOLF_CRYPTO_CB_CMD, a register command handler may replace it by
+    updating info->cmd.ctx on success.
 
     _Example_
     \code
@@ -50,6 +71,17 @@
                             info->pk.rsa.rng);
                         break;
                 }
+            }
+        #endif
+        #if defined(WC_RSA_PSS) && !defined(NO_RSA)
+            if (info->pk.type == WC_PK_TYPE_RSA_PSS) {
+                // RSA-PSS sign/verify
+                ret = wc_RsaPSS_Sign_ex(
+                    info->pk.rsa.in, info->pk.rsa.inLen,
+                    info->pk.rsa.out, *info->pk.rsa.outLen,
+                    WC_HASH_TYPE_SHA256, WC_MGF1SHA256,
+                    RSA_PSS_SALT_LEN_DEFAULT,
+                    info->pk.rsa.key, info->pk.rsa.rng);
             }
         #endif
         #ifdef HAVE_ECC
@@ -90,7 +122,33 @@ int  wc_CryptoCb_RegisterDevice(int devId, CryptoDevCallbackFunc cb, void* ctx);
 /*!
     \ingroup CryptoCb
 
-    \brief This function un-registers a unique device identifier (devID) 
+    \brief This function reports whether a crypto callback device identifier
+    (devID) is currently registered. It is useful for checking registration
+    state before calling wc_CryptoCb_RegisterDevice, which now rejects an
+    already-registered devID with ALREADY_E.
+
+    \return 1 if the device ID is registered
+    \return 0 if the device ID is not registered, or if devId is
+    INVALID_DEVID (-2)
+
+    \param devId the device identifier to query
+
+    _Example_
+    \code
+    if (!wc_CryptoCb_IsDeviceRegistered(devId)) {
+        wc_CryptoCb_RegisterDevice(devId, myCryptoCb_Func, &myCtx);
+    }
+    \endcode
+
+    \sa wc_CryptoCb_RegisterDevice
+    \sa wc_CryptoCb_UnRegisterDevice
+*/
+int wc_CryptoCb_IsDeviceRegistered(int devId);
+
+/*!
+    \ingroup CryptoCb
+
+    \brief This function un-registers a unique device identifier (devID)
     callback function.
 
     \return none No returns.
@@ -109,3 +167,246 @@ int  wc_CryptoCb_RegisterDevice(int devId, CryptoDevCallbackFunc cb, void* ctx);
     \sa wolfSSL_CTX_SetDevId
 */
 void wc_CryptoCb_UnRegisterDevice(int devId);
+
+/*!
+    \ingroup CryptoCb
+    \brief This function returns the default device ID for crypto
+    callbacks. This is useful when you want to get the device ID that
+    was set as the default for the library.
+
+    \return The default device ID, or INVALID_DEVID if no default is set.
+
+    _Example_
+    \code
+    int devId = wc_CryptoCb_DefaultDevID();
+    if (devId != INVALID_DEVID) {
+        // default device ID is set
+    }
+    \endcode
+
+    \sa wc_CryptoCb_RegisterDevice
+    \sa wc_CryptoCb_UnRegisterDevice
+*/
+int wc_CryptoCb_DefaultDevID(void);
+
+/*!
+    \ingroup CryptoCb
+    \brief This function sets a callback for finding crypto devices.
+    The callback is invoked when a device ID needs to be resolved to
+    a device context. This is useful for dynamic device management.
+
+    \return none No returns.
+
+    \param cb callback function with prototype:
+    typedef void* (*CryptoDevCallbackFind)(int devId);
+
+    _Example_
+    \code
+    void* myDeviceFindCb(int devId) {
+        // lookup device context by ID
+        return deviceContext;
+    }
+
+    wc_CryptoCb_SetDeviceFindCb(myDeviceFindCb);
+    \endcode
+
+    \sa wc_CryptoCb_RegisterDevice
+*/
+void wc_CryptoCb_SetDeviceFindCb(CryptoDevCallbackFind cb);
+
+/*!
+    \ingroup CryptoCb
+    \brief This function converts a wc_CryptoInfo structure to a
+    human-readable string for debugging purposes. The string is printed
+    to stdout and describes the cryptographic operation being performed.
+
+    \return none No returns.
+
+    \param info pointer to the wc_CryptoInfo structure to convert
+
+    _Example_
+    \code
+    int myCryptoCb(int devId, wc_CryptoInfo* info, void* ctx) {
+        // print debug info about the operation
+        wc_CryptoCb_InfoString(info);
+
+        // handle the operation
+        return CRYPTOCB_UNAVAILABLE;
+    }
+    \endcode
+
+    \sa wc_CryptoCb_RegisterDevice
+*/
+void wc_CryptoCb_InfoString(wc_CryptoInfo* info);
+
+/*!
+    \ingroup CryptoCb
+
+    \brief Import an AES key into a CryptoCB device for hardware offload.
+
+    This function allows AES keys to be handled by an external device
+    (e.g. Secure Element or HSM). When supported, the device callback stores
+    the key internally and sets an opaque handle in aes->devCtx.
+
+    When CryptoCB AES SetKey support is enabled
+    (WOLF_CRYPTO_CB_AES_SETKEY), wolfCrypt routes AES-GCM operations
+    through the CryptoCB interface.
+
+    **TLS Builds (Default):**
+    - Key bytes ARE stored in wolfCrypt memory (devKey) for fallback
+    - GCM tables ARE generated for software fallback
+    - Provides hardware acceleration with automatic fallback
+
+    **Crypto-Only Builds (--disable-tls):**
+    - Key bytes NOT stored in wolfCrypt memory (true key isolation)
+    - GCM tables skipped (true hardware offload)
+    - Callback must handle all GCM operations (SetKey, Encrypt, Decrypt, Free)
+
+    If the callback returns success (0), full AES-GCM offload is assumed.
+    The callback must handle SetKey, Encrypt, Decrypt, and Free operations.
+
+    \param aes          AES context
+    \param key          Pointer to raw AES key material
+    \param keySz        Size of key in bytes
+
+    \return 0 on success
+    \return CRYPTOCB_UNAVAILABLE if device does not support this operation
+    \return BAD_FUNC_ARG on invalid parameters
+
+    _Example_
+    \code
+    #include <wolfssl/wolfcrypt/cryptocb.h>
+    #include <wolfssl/wolfcrypt/aes.h>
+
+    Aes aes;
+    byte key[32] = { /* 256-bit key */ };
+    int devId = 1;
+
+    /* Register your CryptoCB callback first */
+    wc_CryptoCb_RegisterDevice(devId, myCryptoCallback, NULL);
+
+    wc_AesInit(&aes, NULL, devId);
+    /* wc_AesGcmSetKey internally calls wc_CryptoCb_AesSetKey */
+    if (wc_CryptoCb_AesSetKey(&aes, key, sizeof(key)) == 0) {
+        /* Key successfully imported to device via callback */
+        /* aes.devCtx now contains device handle */
+        /* Full GCM offload is assumed - callback must handle all operations */
+    }
+    \endcode
+
+    \sa wc_CryptoCb_RegisterDevice
+    \sa wc_AesInit
+*/
+int wc_CryptoCb_AesSetKey(Aes* aes, const byte* key, word32 keySz);
+
+/*!
+    \ingroup CryptoCb
+
+    \brief Offload deriving an ECC public key Q = d*G from its private key to a
+    CryptoCB device.
+
+    Used by wc_ecc_make_pub / wc_ecc_make_pub_ex. The callback boundary is
+    math-free: the resulting public point crosses as X9.63 uncompressed bytes
+    (0x04 || X || Y, each ordinate zero-padded to the curve size) in
+    wc_CryptoInfo.pk.ecc_make_pub (\c pubOut / \c pubOutSz). This wrapper performs
+    all bignum (de)serialization, so a device handler only deals with byte arrays
+    and never with wolfCrypt's internal mp_int representation. The private scalar
+    is taken from the ecc_key (resident in a secure element, or key->k); curve
+    identity comes from key->dp.
+
+    \param key    ECC key providing the device id, curve identity, heap hint and
+                  the private scalar
+    \param pubOut [out] resulting affine public point Q = d*G
+
+    \return 0 on success
+    \return CRYPTOCB_UNAVAILABLE if no device handles the operation, or key or
+            pubOut is NULL (wolfCrypt falls back to software, which reports
+            the argument error)
+
+    \sa wc_CryptoCb_RegisterDevice
+    \sa wc_ecc_make_pub
+*/
+int wc_CryptoCb_EccMakePub(ecc_key* key, ecc_point* pubOut);
+
+/*!
+    \ingroup CryptoCb
+
+    \brief Offload validating an ECC key to a CryptoCB device.
+
+    Used by wc_ecc_check_key and the key generation / import validation paths.
+    The public point crosses the (math-free) callback boundary as X9.63
+    uncompressed bytes in wc_CryptoInfo.pk.ecc_check_pub (\c pubKey /
+    \c pubKeySz); this wrapper serializes key->pubkey so a device handler only
+    deals with byte arrays. When the key state is \c ECC_PRIVATEKEY_ONLY,
+    \c pubKey is NULL and \c pubKeySz is 0 so the handler can distinguish "no
+    public point" from an invalid zero-coordinate public point that must be
+    validated and rejected. The caller's intent crosses in \c checkOrder and
+    \c checkPriv.
+
+    \param key        ECC key to validate (curve identity from key->dp)
+    \param checkOrder when 1 the caller requested validation that the point
+                      has the curve order (point * order == infinity)
+    \param checkPriv  when 1 the caller also requested validation of the
+                      private part (scalar range, consistency with the public
+                      point)
+
+    \return 0 if the key is valid
+    \return CRYPTOCB_UNAVAILABLE if no device handles the operation (wolfCrypt
+            falls back to software)
+
+    \sa wc_CryptoCb_RegisterDevice
+    \sa wc_ecc_check_key
+*/
+int wc_CryptoCb_EccCheckPubKey(ecc_key* key, int checkOrder, int checkPriv);
+
+/*!
+    \ingroup CryptoCb
+
+    \brief Offload deriving an Ed25519 public key from its private key to a
+    CryptoCB device.
+
+    Used by wc_ed25519_make_public (and so by key generation and private-key
+    import). The boundary is byte-oriented: the device writes the compressed
+    public key into wc_CryptoInfo.pk.ed25519makepub (\c pubOut /
+    \c pubOutSz, always ED25519_PUB_KEY_SIZE). The private key is taken from
+    the ed25519_key (resident in a secure element, or key->k). On success the
+    caller marks the public key set.
+
+    \param key      Ed25519 key providing the device id, heap hint and the
+                    private key
+    \param pubKey   [out] resulting compressed public key
+    \param pubKeySz size of pubKey buffer, must be ED25519_PUB_KEY_SIZE
+
+    \return 0 on success
+    \return CRYPTOCB_UNAVAILABLE if no device handles the operation, or key or
+            pubKey is NULL or pubKeySz is wrong (wolfCrypt falls back to
+            software, which reports the argument error)
+
+    \sa wc_CryptoCb_RegisterDevice
+    \sa wc_ed25519_make_public
+*/
+int wc_CryptoCb_Ed25519MakePub(ed25519_key* key, byte* pubKey,
+    word32 pubKeySz);
+
+/*!
+    \ingroup CryptoCb
+
+    \brief Offload validating an Ed25519 key to a CryptoCB device.
+
+    Used by wc_ed25519_check_key and the key import validation paths. The
+    public key crosses the callback boundary as its compressed wire bytes in
+    wc_CryptoInfo.pk.ed25519checkkey (\c pubKey / \c pubKeySz), so a device
+    handler only deals with byte arrays. The dispatch only runs when a public
+    key is present; \c checkPriv is 1 when a private key is also set and the
+    device should additionally validate priv/pub consistency.
+
+    \param key Ed25519 key to validate
+
+    \return 0 if the key is valid
+    \return CRYPTOCB_UNAVAILABLE if no device handles the operation (wolfCrypt
+            falls back to software)
+
+    \sa wc_CryptoCb_RegisterDevice
+    \sa wc_ed25519_check_key
+*/
+int wc_CryptoCb_Ed25519CheckKey(ed25519_key* key);

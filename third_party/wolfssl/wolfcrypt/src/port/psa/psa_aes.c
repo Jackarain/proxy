@@ -1,12 +1,12 @@
 /* psa_aes.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -48,7 +48,7 @@ static int wc_psa_aes_import_key(Aes *aes, const uint8_t *key,
     psa_status_t s;
 
     XMEMSET(&key_attr, 0, sizeof(key_attr));
-    aes->key_id = 0;
+    aes->key_id = PSA_KEY_ID_NULL;
     aes->ctx_initialized = 0;
 
     psa_set_key_type(&key_attr, PSA_KEY_TYPE_AES);
@@ -76,7 +76,7 @@ static int wc_psa_aes_import_key(Aes *aes, const uint8_t *key,
  */
 int wc_psa_aes_init(Aes *aes)
 {
-    aes->key_id = 0;
+    aes->key_id = PSA_KEY_ID_NULL;
     aes->ctx_initialized = 0;
     aes->key_need_importing = 0;
     XMEMSET(&aes->psa_ctx, 0, sizeof(aes->psa_ctx));
@@ -117,6 +117,46 @@ int wc_psa_aes_get_key_size(Aes *aes, word32 *keySize)
 }
 
 /**
+ * wc_psa_aes_reset_ctx() - abort the cipher operation in progress, if any
+ * @aes: Aes object
+ *
+ * After a successful call the next wc_psa_aes_encrypt_decrypt() sets up a
+ * fresh operation, re-reading the IV from aes->reg. The imported key (if any)
+ * is left untouched.
+ *
+ * If the abort itself fails, psa_ctx may still hold resources and is no longer
+ * trustworthy for a fresh setup, so the whole object is torn down: the next
+ * operation then fails loudly rather than silently carrying on with the stale
+ * chaining state that this function exists to discard.
+ *
+ * returns: 0 on success, BAD_FUNC_ARG for bad argument, WC_HW_E on PSA error
+ */
+int wc_psa_aes_reset_ctx(Aes *aes)
+{
+    psa_status_t s;
+
+    if (aes == NULL)
+        return BAD_FUNC_ARG;
+
+    if (aes->ctx_initialized == 0)
+        return 0;
+
+    PSA_LOCK();
+    s = psa_cipher_abort(&aes->psa_ctx);
+    PSA_UNLOCK();
+
+    /* cleared before the check so wc_psa_aes_free() below doesn't abort twice */
+    aes->ctx_initialized = 0;
+
+    if (s != PSA_SUCCESS) {
+        wc_psa_aes_free(aes);
+        return WC_HW_E;
+    }
+
+    return 0;
+}
+
+/**
  * wc_psa_aes_set_key() - set key / iv to object *aes
  * @aes: object to set the key into
  * @key: key to import
@@ -137,19 +177,12 @@ int wc_psa_aes_get_key_size(Aes *aes, word32 *keySize)
 int wc_psa_aes_set_key(Aes *aes, const uint8_t *key, size_t key_length,
                        uint8_t *iv,  psa_algorithm_t alg, int dir)
 {
-    psa_status_t s;
     int ret;
 
     /* the object was already used for other encryption. Reset the context */
-    if (aes->ctx_initialized) {
-        PSA_LOCK();
-        s = psa_cipher_abort(&aes->psa_ctx);
-        PSA_UNLOCK();
-        if (s != PSA_SUCCESS)
-            return WC_HW_E;
-
-        aes->ctx_initialized = 0;
-    }
+    ret = wc_psa_aes_reset_ctx(aes);
+    if (ret != 0)
+        return ret;
 
     /* a key was already imported, destroy it first */
     if (aes->key_id != PSA_KEY_ID_NULL) {
@@ -167,9 +200,7 @@ int wc_psa_aes_set_key(Aes *aes, const uint8_t *key, size_t key_length,
         XMEMCPY(aes->key, key, key_length);
         aes->key_need_importing = 1;
     } else {
-        PSA_LOCK();
         ret = wc_psa_aes_import_key(aes, key, key_length, alg, dir);
-        PSA_UNLOCK();
         if (ret != 0)
             return ret;
     }
@@ -227,10 +258,9 @@ int wc_psa_aes_encrypt_decrypt(Aes *aes, const uint8_t *input,
             PSA_UNLOCK();
         }
 
+        aes->ctx_initialized = 1;  /* mark before error check so err: path aborts it */
         if (s != PSA_SUCCESS)
             goto err;
-
-        aes->ctx_initialized = 1;
 
         /* ECB doesn't use IV */
         if (alg != PSA_ALG_ECB_NO_PADDING) {
@@ -284,7 +314,6 @@ int wc_psa_aes_free(Aes *aes)
         aes->ctx_initialized = 0;
     }
 
-    aes->ctx_initialized = 0;
     aes->key_need_importing = 0;
 
     return 0;
@@ -293,7 +322,7 @@ int wc_psa_aes_free(Aes *aes)
 int wc_AesEncrypt(Aes *aes, const byte *inBlock, byte *outBlock)
 {
     return wc_psa_aes_encrypt_decrypt(aes, inBlock, outBlock,
-                                      AES_BLOCK_SIZE, PSA_ALG_ECB_NO_PADDING,
+                                      WC_AES_BLOCK_SIZE, PSA_ALG_ECB_NO_PADDING,
                                       AES_ENCRYPTION);
 }
 
@@ -301,7 +330,7 @@ int wc_AesEncrypt(Aes *aes, const byte *inBlock, byte *outBlock)
 int wc_AesDecrypt(Aes *aes, const byte *inBlock, byte *outBlock)
 {
     return wc_psa_aes_encrypt_decrypt(aes, inBlock, outBlock,
-                                      AES_BLOCK_SIZE, PSA_ALG_ECB_NO_PADDING,
+                                      WC_AES_BLOCK_SIZE, PSA_ALG_ECB_NO_PADDING,
                                       AES_DECRYPTION);
 }
 #endif
@@ -319,7 +348,7 @@ int wc_AesCtrEncrypt(Aes *aes, byte *out, const byte *in, word32 sz)
 int wc_AesCbcEncrypt(Aes *aes, byte *out, const byte *in, word32 sz)
 {
 
-    if (sz % AES_BLOCK_SIZE != 0)
+    if (sz % WC_AES_BLOCK_SIZE != 0)
 #if defined (WOLFSSL_AES_CBC_LENGTH_CHECKS)
         return BAD_LENGTH_E;
 #else
@@ -334,7 +363,7 @@ int wc_AesCbcEncrypt(Aes *aes, byte *out, const byte *in, word32 sz)
 int wc_AesCbcDecrypt(Aes *aes, byte *out, const byte *in, word32 sz)
 {
 
-    if (sz % AES_BLOCK_SIZE != 0)
+    if (sz % WC_AES_BLOCK_SIZE != 0)
 #if defined (WOLFSSL_AES_CBC_LENGTH_CHECKS)
         return BAD_LENGTH_E;
 #else

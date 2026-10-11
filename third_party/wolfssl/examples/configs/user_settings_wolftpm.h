@@ -1,12 +1,12 @@
 /* user_settings_wolftpm.h
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -59,15 +59,15 @@ make
 */
 
 
-#ifndef WOLF_USER_SETTINGS_TPM_H
-#define WOLF_USER_SETTINGS_TPM_H
+#ifndef WOLFSSL_USER_SETTINGS_H
+#define WOLFSSL_USER_SETTINGS_H
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/* enable for low resource options */
-#if 0
+/* Enable for low resource options (smaller, no TLS) */
+#if 0 /* Low resource mode */
     #define USE_LOW_RESOURCE
 #endif
 
@@ -121,7 +121,7 @@ extern "C" {
 #endif
 
 /* Asymmetric */
-#if 1 /* RSA - needed to encrypt salt */
+#if 1 /* RSA - needed for TPM salt encryption */
     #undef  NO_RSA
     #ifdef USE_LOW_RESOURCE
         #define WOLFSSL_RSA_PUBLIC_ONLY
@@ -131,7 +131,7 @@ extern "C" {
 #else
     #define NO_RSA
 #endif
-#ifndef USE_LOW_RESOURCE /* ECC */
+#if 1 /* ECC - needed for TPM ECC operations */
     #define HAVE_ECC
     #define ECC_USER_CURVES /* default to only SECP256R1 */
 #endif
@@ -187,6 +187,7 @@ extern "C" {
 #define NO_PWDBASED
 #define NO_DSA
 #define NO_DES3
+#define NO_DES3_TLS_SUITES
 #define NO_RC4
 #define NO_PSK
 #define NO_MD4
@@ -216,11 +217,10 @@ extern "C" {
     #define NO_SIG_WRAPPER
     #define NO_ASN_TIME
     #define NO_CODING
-    #define NO_BIG_INT
 #endif
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* WOLF_USER_SETTINGS_TPM_H */
+#endif /* WOLFSSL_USER_SETTINGS_H */

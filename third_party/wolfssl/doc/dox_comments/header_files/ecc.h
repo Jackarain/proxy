@@ -116,6 +116,113 @@ int wc_ecc_make_key_ex(WC_RNG* rng, int keysize, ecc_key* key, int curve_id);
 /*!
     \ingroup ECC
 
+    \brief wc_ecc_make_pub computes the public component from an ecc_key with an
+    existing private component.  If pubOut is supplied, the computed public key
+    is stored there, else it is stored in the supplied ecc_key public component
+    slot.
+
+    \return 0 Returned on success.
+    \return ECC_BAD_ARG_E Returned if key is NULL
+    \return BAD_FUNC_ARG Returned if the supplied key is not a valid ecc_key.
+    \return MEMORY_E Returned if there is an error allocating memory while
+    computing the public key
+    \return MP_INIT_E may be returned if there is an error while computing
+    the public key
+    \return MP_READ_E may be returned if there is an error while computing
+    the public key
+    \return MP_CMP_E may be returned if there is an error while computing the
+    public key
+    \return MP_INVMOD_E may be returned if there is an error while computing
+    the public key
+    \return MP_EXPTMOD_E may be returned if there is an error while computing
+    the public key
+    \return MP_MOD_E may be returned if there is an error while computing the
+    public key
+    \return MP_MUL_E may be returned if there is an error while computing the
+    public key
+    \return MP_ADD_E may be returned if there is an error while computing the
+    public key
+    \return MP_MULMOD_E may be returned if there is an error while computing
+    the public key
+    \return MP_TO_E may be returned if there is an error while computing the
+    public key
+    \return MP_MEM may be returned if there is an error while computing the
+    public key
+    \return ECC_OUT_OF_RANGE_E may be returned if there is an error while computing the
+    public key
+    \return ECC_PRIV_KEY_E may be returned if there is an error while computing the
+    public key
+    \return ECC_INF_E may be returned if there is an error while computing the
+    public key
+
+    \param key Pointer to an ecc_key containing a valid private component
+    \param pubOut Optional pointer to an ecc_point struct in which to store
+    the computed public key
+
+    \sa wc_ecc_make_pub_ex
+    \sa wc_ecc_make_key
+*/
+
+int wc_ecc_make_pub(ecc_key* key, ecc_point* pubOut);
+
+/*!
+    \ingroup ECC
+
+    \brief wc_ecc_make_pub_ex computes the public component from an ecc_key with
+    an existing private component.  If pubOut is supplied, the computed public
+    key is stored there, else it is stored in the supplied ecc_key public
+    component slot.  The supplied rng, if non-NULL, is used to blind the private
+    key value used in the computation.
+
+    \return 0 Returned on success.
+    \return ECC_BAD_ARG_E Returned if key is NULL
+    \return BAD_FUNC_ARG Returned if the supplied key is not a valid ecc_key.
+    \return MEMORY_E Returned if there is an error allocating memory while
+    computing the public key
+    \return MP_INIT_E may be returned if there is an error while computing
+    the public key
+    \return MP_READ_E may be returned if there is an error while computing
+    the public key
+    \return MP_CMP_E may be returned if there is an error while computing the
+    public key
+    \return MP_INVMOD_E may be returned if there is an error while computing
+    the public key
+    \return MP_EXPTMOD_E may be returned if there is an error while computing
+    the public key
+    \return MP_MOD_E may be returned if there is an error while computing the
+    public key
+    \return MP_MUL_E may be returned if there is an error while computing the
+    public key
+    \return MP_ADD_E may be returned if there is an error while computing the
+    public key
+    \return MP_MULMOD_E may be returned if there is an error while computing
+    the public key
+    \return MP_TO_E may be returned if there is an error while computing the
+    public key
+    \return MP_MEM may be returned if there is an error while computing the
+    public key
+    \return ECC_OUT_OF_RANGE_E may be returned if there is an error while computing the
+    public key
+    \return ECC_PRIV_KEY_E may be returned if there is an error while computing the
+    public key
+    \return ECC_INF_E may be returned if there is an error while computing the
+    public key
+
+    \param key Pointer to an ecc_key containing a valid private component
+    \param pubOut Optional pointer to an ecc_point struct in which to store
+    the computed public key
+    \param rng Rng to be used in the public key computation
+
+    \sa wc_ecc_make_pub
+    \sa wc_ecc_make_key
+    \sa wc_InitRng
+*/
+
+int wc_ecc_make_pub_ex(ecc_key* key, ecc_point* pubOut, WC_RNG* rng);
+
+/*!
+    \ingroup ECC
+
     \brief Perform sanity checks on ecc key validity.
 
     \return MP_OKAY Success, key is OK.
@@ -209,6 +316,8 @@ void wc_ecc_key_free(ecc_key* key);
     shared key
     \return MP_MEM may be returned if there is an error while computing the
     shared key
+    \return ECC_INF_E returned when the computed shared secret is the point at
+    infinity
 
     \param private_key pointer to the ecc_key structure containing the local
     private key
@@ -250,6 +359,9 @@ int wc_ecc_shared_secret(ecc_key* private_key, ecc_key* public_key, byte* out,
     \ingroup ECC
 
     \brief Create an ECC shared secret between private key and public point.
+    The point is first given full public key validation on the private key's
+    curve with wc_ecc_check_key() (SP 800-56Ar3 5.6.2.3.3). A build without
+    the order check (NO_ECC_CHECK_PUBKEY_ORDER) still checks range and curve.
 
     \return MP_OKAY Indicates success.
     \return BAD_FUNC_ARG Error returned when any arguments are null.
@@ -259,6 +371,8 @@ int wc_ecc_shared_secret(ecc_key* private_key, ecc_key* public_key, byte* out,
     \return MEMORY_E Error to create a new point.
     \return MP_VAL possible when an initialization failure occurs.
     \return MP_MEM possible when an initialization failure occurs.
+    \return IS_POINT_E, ECC_OUT_OF_RANGE_E, ECC_INF_E or MP_VAL when the point
+    fails validation (not on the curve, out of range, or the identity).
 
     \param private_key The private ECC key.
     \param point The point to use (public key).
@@ -436,12 +550,12 @@ int wc_ecc_sign_hash_ex(const byte* in, word32 inlen, WC_RNG* rng,
     \ingroup ECC
 
     \brief This function verifies the ECC signature of a hash to ensure
-    authenticity. It returns the answer through stat, with 1 corresponding
+    authenticity. It returns the answer through res, with 1 corresponding
     to a valid signature, and 0 corresponding to an invalid signature.
 
     \return 0 Returned upon successfully performing the signature
     verification. Note: This does not mean that the signature is verified.
-    The authenticity information is stored instead in stat
+    The authenticity information is stored instead in res
     \return BAD_FUNC_ARG Returned any of the input parameters evaluate to NULL
     \return MEMORY_E Returned if there is an error allocating memory
     \return MP_INIT_E  may be returned if there is an error while computing
@@ -472,7 +586,7 @@ int wc_ecc_sign_hash_ex(const byte* in, word32 inlen, WC_RNG* rng,
     \param hash pointer to the buffer containing the hash of the message
     verified
     \param hashlen length of the hash of the message verified
-    \param stat pointer to the result of the verification. 1 indicates the
+    \param res pointer to the result of the verification. 1 indicates the
     message was successfully verified
     \param key pointer to a public ECC key with which to verify the signature
 
@@ -498,14 +612,14 @@ int wc_ecc_sign_hash_ex(const byte* in, word32 inlen, WC_RNG* rng,
 */
 
 int wc_ecc_verify_hash(const byte* sig, word32 siglen, const byte* hash,
-                    word32 hashlen, int* stat, ecc_key* key);
+                    word32 hashlen, int* res, ecc_key* key);
 
 /*!
     \ingroup ECC
 
-    \brief Verify an ECC signature.  Result is written to stat.
+    \brief Verify an ECC signature.  Result is written to res.
     1 is valid, 0 is invalid.
-    Note: Do not use the return value to test for valid.  Only use stat.
+    Note: Do not use the return value to test for valid.  Only use res.
 
     \return MP_OKAY If successful (even if the signature is not valid)
     \return ECC_BAD_ARG_E Returns if arguments are null or if
@@ -516,20 +630,20 @@ int wc_ecc_verify_hash(const byte* sig, word32 siglen, const byte* hash,
     \param s The signature S component to verify
     \param hash The hash (message digest) that was signed
     \param hashlen The length of the hash (octets)
-    \param stat Result of signature, 1==valid, 0==invalid
+    \param res Result of signature, 1==valid, 0==invalid
     \param key The corresponding public ECC key
 
     _Example_
     \code
     mp_int r;
     mp_int s;
-    int stat;
+    int res;
     byte hash[] = { Some hash }
     ecc_key key;
 
-    if(wc_ecc_verify_hash_ex(&r, &s, hash, hashlen, &stat, &key) == MP_OKAY)
+    if(wc_ecc_verify_hash_ex(&r, &s, hash, hashlen, &res, &key) == MP_OKAY)
     {
-        // Check stat
+        // Check res
     }
     \endcode
 
@@ -537,7 +651,7 @@ int wc_ecc_verify_hash(const byte* sig, word32 siglen, const byte* hash,
 */
 
 int wc_ecc_verify_hash_ex(mp_int *r, mp_int *s, const byte* hash,
-                          word32 hashlen, int* stat, ecc_key* key);
+                          word32 hashlen, int* res, ecc_key* key);
 
 /*!
     \ingroup ECC
@@ -572,8 +686,9 @@ int wc_ecc_init(ecc_key* key);
     \return MEMORY_E Returned if there is an error allocating memory
 
     \param key pointer to the ecc_key object to initialize
-    \param devId ID to use with async hardware
     \param heap pointer to a heap identifier
+    \param devId ID to use with crypto callbacks or async hardware. Set to
+    INVALID_DEVID if not used
 
     _Example_
     \code
@@ -594,8 +709,11 @@ int wc_ecc_init_ex(ecc_key* key, void* heap, int devId);
     \brief This function uses a user defined heap and allocates space for the
     key structure.
 
-    \return 0 Returned upon successfully initializing the ecc_key object
-    \return MEMORY_E Returned if there is an error allocating memory
+    \param heap pointer to a heap identifier
+
+    \return Non-null returned upon successfully allocating and initializing the
+    ecc_key object
+    \return NULL returned if there is an error allocating memory
 
 
     _Example_
@@ -603,12 +721,41 @@ int wc_ecc_init_ex(ecc_key* key, void* heap, int devId);
     wc_ecc_key_new(&heap);
     \endcode
 
+    \sa wc_ecc_key_new_ex
     \sa wc_ecc_make_key
     \sa wc_ecc_key_free
     \sa wc_ecc_init
 */
 
 ecc_key* wc_ecc_key_new(void* heap);
+
+/*!
+    \ingroup ECC
+
+    \brief This function uses a user defined heap and allocates space for the
+    key structure.
+
+    \param heap pointer to a heap identifier
+    \param devId ID to use with crypto callbacks or async hardware. Set to
+    INVALID_DEVID if not used
+
+    \return Non-null returned upon successfully allocating and initializing the
+    ecc_key object
+    \return NULL returned if there is an error allocating memory
+
+
+    _Example_
+    \code
+    wc_ecc_key_new_ex(&heap, MY_DEVID);
+    \endcode
+
+    \sa wc_ecc_key_new
+    \sa wc_ecc_make_key
+    \sa wc_ecc_key_free
+    \sa wc_ecc_init
+*/
+
+ecc_key* wc_ecc_key_new_ex(void* heap, int devId);
 
 /*!
     \ingroup ECC
@@ -778,7 +925,7 @@ void wc_ecc_del_point(ecc_point* p);
     \sa wc_ecc_del_point
 */
 
-int wc_ecc_copy_point(ecc_point* p, ecc_point *r);
+int wc_ecc_copy_point(const ecc_point* p, ecc_point *r);
 
 /*!
     \ingroup ECC
@@ -876,6 +1023,7 @@ int wc_ecc_point_is_at_infinity(ecc_point *p);
     \param k The multiplicand.
     \param G Base point to multiply.
     \param R Destination of product.
+    \param a ECC curve parameter a.
     \param modulus The modulus for the curve.
     \param map If non-zero maps the point back to affine coordinates,
     otherwise it's left in jacobian-montgomery form.
@@ -890,13 +1038,16 @@ int wc_ecc_point_is_at_infinity(ecc_point *p);
     // Setup other arguments
     mp_int multiplicand;
     mp_int modulus;
+    mp_int a;
     int map;
+    int rc;
+    rc = wc_ecc_mulmod(&multiplicand, base, destination, &a, &modulus, map);
     \endcode
 
     \sa none
 */
 
-int wc_ecc_mulmod(mp_int* k, ecc_point *G, ecc_point *R,
+int wc_ecc_mulmod(const mp_int* k, ecc_point *G, ecc_point *R,
                   mp_int* a, mp_int* modulus, int map);
 
 /*!
@@ -960,6 +1111,7 @@ int wc_ecc_mulmod(mp_int* k, ecc_point *G, ecc_point *R,
 
     \sa wc_ecc_export_x963_ex
     \sa wc_ecc_import_x963
+    \sa wc_ecc_make_pub
 */
 
 int wc_ecc_export_x963(ecc_key* key, byte* out, word32* outLen);
@@ -967,23 +1119,25 @@ int wc_ecc_export_x963(ecc_key* key, byte* out, word32* outLen);
 /*!
     \ingroup ECC
 
-    \brief This function exports the ECC key from the ecc_key structure,
+    \brief This function exports the public key from the ecc_key structure,
     storing the result in out. The key will be stored in ANSI X9.63 format.
     It stores the bytes written to the output buffer in outLen. This function
     allows the additional option of compressing the certificate through the
     compressed parameter. When this parameter is true, the key will be stored
     in ANSI X9.63 compressed format.
 
-    \return 0 Returned on successfully exporting the ecc_key
+    \return 0 Returned on successfully exporting the ecc_key public component
+    \return ECC_PRIVATEKEY_ONLY Returned if the ecc_key public component is
+    missing
     \return NOT_COMPILED_IN Returned if the HAVE_COMP_KEY was not enabled at
     compile time, but the key was requested in compressed format
     \return LENGTH_ONLY_E Returned if the output buffer evaluates to NULL, but
     the other two input parameters are valid. Indicates that the function is
-    only returning the length required to store the key
+    only returning the length required to store the public key
     \return ECC_BAD_ARG_E Returned if any of the input parameters are NULL, or
     the key is unsupported (has an invalid index)
     \return BUFFER_E Returned if the output buffer is too small to store the
-    ecc key. If the output buffer is too small, the size needed will be
+    public key. If the output buffer is too small, the size needed will be
     returned in outLen
     \return MEMORY_E Returned if there is an error allocating memory with
     XMALLOC
@@ -1010,9 +1164,9 @@ int wc_ecc_export_x963(ecc_key* key, byte* out, word32* outLen);
 
     \param key pointer to the ecc_key object to export
     \param out pointer to the buffer in which to store the ANSI X9.63
-    formatted key
+    formatted public key
     \param outLen size of the output buffer. On successfully storing the
-    key, will hold the bytes written to the output buffer
+    public key, will hold the bytes written to the output buffer
     \param compressed indicator of whether to store the key in compressed
     format. 1==compressed, 0==uncompressed
 
@@ -1031,6 +1185,7 @@ int wc_ecc_export_x963(ecc_key* key, byte* out, word32* outLen);
 
     \sa wc_ecc_export_x963
     \sa wc_ecc_import_x963
+    \sa wc_ecc_make_pub
 */
 
 int wc_ecc_export_x963_ex(ecc_key* key, byte* out, word32* outLen, int compressed);
@@ -1171,6 +1326,110 @@ int wc_ecc_import_private_key(const byte* priv, word32 privSz, const byte* pub,
 /*!
     \ingroup ECC
 
+    \brief This function imports an STM32 DHUK-protected private key onto an
+    ecc_key for transparent hardware signing. The private scalar is supplied as
+    a chip-bound wrapped blob together with the 256-bit derivation seed; the
+    plaintext scalar is never imported. The key must be bound to the STM32 DHUK
+    crypto-callback device (init with wc_ecc_init_ex(&key, heap, WC_DHUK_DEVID)
+    after registering the device with wc_Stm32_DhukRegister). The curve is set
+    from curve_id, so the key is ready to sign on return. Available only on
+    STM32 builds with WOLFSSL_DHUK and a DHUK-capable SAES (WC_STM32_HAS_DHUK).
+
+    \return 0 Returned on success.
+    \return BAD_FUNC_ARG Returned if key, seed, or wrapped is NULL; if seedSz is
+    not 32; if wrappedLen is zero or not a multiple of the AES block size; if
+    wrappedLen exceeds the on-key blob buffer; if plainLen is zero or larger
+    than wrappedLen; if wrappedLen is larger than plainLen padded to a full
+    AES block; or if plainLen does not match the scalar size of curve_id.
+    \return <0 An error from the curve lookup if curve_id is not supported.
+
+    \param key pointer to the ecc_key (bound to WC_DHUK_DEVID) to import into.
+    \param curve_id curve the scalar belongs to, e.g. ECC_SECP256R1.
+    \param seed pointer to the 256-bit (32-byte) per-key DHUK derivation seed.
+    \param seedSz length of seed in bytes; must be 32.
+    \param wrapped pointer to the DHUK-wrapped private scalar blob.
+    \param wrappedLen length of the wrapped blob; a non-zero multiple of the AES
+    block size, no larger than the on-key buffer.
+    \param plainLen length in bytes of the plaintext scalar inside the blob;
+    must equal the scalar size of curve_id (32 for P-256, 48 for P-384).
+
+    _Example_
+    \code
+    ecc_key key;
+    wc_Stm32_DhukRegister(WC_DHUK_DEVID);
+    wc_ecc_init_ex(&key, NULL, WC_DHUK_DEVID);
+    if (wc_ecc_import_wrapped_private(&key, ECC_SECP256R1, seed, 32, wrapped,
+            wrappedLen, plainLen) == 0) {
+        wc_ecc_sign_hash(hash, hashLen, sig, &sigLen, &rng, &key);
+    }
+    wc_ecc_free(&key);
+    \endcode
+
+    \sa wc_ecc_import_wrapped_private_ex
+    \sa wc_ecc_sign_hash
+    \sa wc_ecc_init_ex
+*/
+int wc_ecc_import_wrapped_private(ecc_key* key, int curve_id,
+                                  const byte* seed, word32 seedSz,
+                                  const byte* wrapped, word32 wrappedLen,
+                                  word32 plainLen);
+
+/*!
+    \ingroup ECC
+
+    \brief This function restores a previously provisioned STM32 CCB-protected
+    ECDSA key onto an ecc_key. The device-bound key is supplied as the wrapped
+    scalar blob plus its AES-GCM iv/tag and the in-clear public key; signing is
+    performed transparently with the scalar unwrapped SAES->PKA in hardware. The
+    key must be bound to the STM32 DHUK/CCB crypto-callback device (init with
+    wc_ecc_init_ex(&key, heap, WC_DHUK_DEVID)). Available only on STM32 builds
+    with WOLFSSL_DHUK and WOLFSSL_STM32_CCB.
+
+    \return 0 Returned on success.
+    \return BAD_FUNC_ARG Returned if key, wrapped, iv, tag, or pub is NULL; if
+    ivLen or tagLen is not 16; if curve_id is not a supported curve; if
+    wrappedLen is zero or exceeds the on-key blob buffer; or if pubLen is not
+    twice the curve modulus size.
+    \return <0 A negative error code may be returned if importing the public key
+    fails.
+
+    \param key pointer to the ecc_key (bound to WC_DHUK_DEVID) to import into.
+    \param curve_id the ECC curve id of the wrapped key (e.g. ECC_SECP256R1).
+    \param wrapped pointer to the CCB wrapped private scalar blob.
+    \param wrappedLen length of the wrapped blob, no larger than the on-key
+    buffer.
+    \param iv pointer to the 16-byte AES-GCM iv of the blob.
+    \param ivLen length of iv in bytes; must be 16.
+    \param tag pointer to the 16-byte AES-GCM authentication tag of the blob.
+    \param tagLen length of tag in bytes; must be 16.
+    \param pub pointer to the public key in uncompressed qx||qy form.
+    \param pubLen length of pub in bytes; must be twice the curve modulus size.
+
+    _Example_
+    \code
+    ecc_key key;
+    wc_Stm32_DhukRegister(WC_DHUK_DEVID);
+    wc_ecc_init_ex(&key, NULL, WC_DHUK_DEVID);
+    if (wc_ecc_import_wrapped_private_ex(&key, ECC_SECP256R1, wrapped,
+            wrappedLen, iv, 16, tag, 16, pub, pubLen) == 0) {
+        wc_ecc_sign_hash(hash, hashLen, sig, &sigLen, &rng, &key);
+    }
+    wc_ecc_free(&key);
+    \endcode
+
+    \sa wc_ecc_import_wrapped_private
+    \sa wc_ecc_make_key_ex
+    \sa wc_ecc_sign_hash
+*/
+int wc_ecc_import_wrapped_private_ex(ecc_key* key, int curve_id,
+                           const byte* wrapped, word32 wrappedLen,
+                           const byte* iv, word32 ivLen,
+                           const byte* tag, word32 tagLen,
+                           const byte* pub, word32 pubLen);
+
+/*!
+    \ingroup ECC
+
     \brief This function converts the R and S portions of an ECC signature
     into a DER-encoded ECDSA signature. This function also stores the length
     written to the output buffer, out, in outlen.
@@ -1237,7 +1496,11 @@ int wc_ecc_rs_to_sig(const char* r, const char* s, byte* out, word32* outlen);
     \ingroup ECC
 
     \brief This function fills an ecc_key structure with the raw components
-    of an ECC signature.
+    of an ECC key.
+
+    \note This function does not check that the imported public point lies on
+    the curve. Define WOLFSSL_VALIDATE_ECC_IMPORT to validate the point on
+    import, or call wc_ecc_check_key before the key is used.
 
     \return 0 Returned upon successfully importing into the ecc_key structure
     \return ECC_BAD_ARG_E Returned if any of the input values evaluate to NULL
@@ -1423,7 +1686,7 @@ int wc_ecc_export_point_der(const int curve_idx, ecc_point* point,
     \sa wc_ecc_export_point_der
 */
 
-int wc_ecc_import_point_der(byte* in, word32 inLen, const int curve_idx,
+int wc_ecc_import_point_der(const byte* in, word32 inLen, const int curve_idx,
                             ecc_point* point);
 
 /*!
@@ -1510,7 +1773,7 @@ int wc_ecc_sig_size_calc(int sz);
     \sa wc_ecc_sig_size_calc
 */
 
-int wc_ecc_sig_size(ecc_key* key);
+int wc_ecc_sig_size(const ecc_key* key);
 
 
 /*!
@@ -1570,7 +1833,7 @@ ecEncCtx* wc_ecc_ctx_new(int flags, WC_RNG* rng);
     \sa wc_ecc_ctx_new
 */
 
-void wc_ecc_ctx_free(ecEncCtx*);
+void wc_ecc_ctx_free(ecEncCtx* ctx);
 
 /*!
     \ingroup ECC
@@ -1598,7 +1861,11 @@ void wc_ecc_ctx_free(ecEncCtx*);
     // do more secure communication
     \endcode
 
+    \note The device id set with wc_ecc_ctx_set_dev_id() (WOLF_CRYPTO_CB
+    builds) is kept across the reset, like the heap hint.
+
     \sa wc_ecc_ctx_new
+    \sa wc_ecc_ctx_set_dev_id
 */
 
 int wc_ecc_ctx_reset(ecEncCtx* ctx, WC_RNG* rng);  /* reset for use again w/o alloc/free */
@@ -1638,6 +1905,70 @@ int wc_ecc_ctx_set_algo(ecEncCtx* ctx, byte encAlgo, byte kdfAlgo,
 /*!
     \ingroup ECC
 
+    \brief This function picks the device that ECIES operations using this
+    context run on. Only available when WOLF_CRYPTO_CB is defined. A context
+    starts at INVALID_DEVID, meaning software: ECIES does not copy the
+    device from the private key, so this must be called for a crypto
+    callback to be reached. The value is used both for the whole-operation
+    ECIES callback and for the KDF, AES and HMAC steps of the software path.
+    Passing a NULL context to wc_ecc_encrypt() or wc_ecc_decrypt() always
+    means software. When WOLF_CRYPTO_CB_FIND is defined, an unset device id
+    still goes through the registered finder, as it does for every other
+    wolfCrypt operation. The setting is kept across wc_ecc_ctx_reset().
+
+    \return 0 Returned upon successfully setting the device id.
+    \return BAD_FUNC_ARG Returned if the given context is NULL.
+
+    \param ctx pointer to the ecEncCtx for which to set the device id
+    \param devId device id to use, or INVALID_DEVID for software
+
+    _Example_
+    \code
+    ecEncCtx* ctx = wc_ecc_ctx_new(REQ_RESP_CLIENT, &rng);
+    if (wc_ecc_ctx_set_dev_id(ctx, myDevId) != 0) {
+	    // error setting device id
+    }
+    \endcode
+
+    \sa wc_ecc_ctx_get_dev_id
+    \sa wc_ecc_ctx_new
+    \sa wc_ecc_ctx_reset
+*/
+
+int wc_ecc_ctx_set_dev_id(ecEncCtx* ctx, int devId);
+
+/*!
+    \ingroup ECC
+
+    \brief This function reads back the device id set with
+    wc_ecc_ctx_set_dev_id(). Crypto callback code can use it to learn which
+    device it was called for. Only available when WOLF_CRYPTO_CB is defined.
+    A context that was never given a device reads back INVALID_DEVID.
+
+    \return 0 Returned upon successfully reading the device id.
+    \return BAD_FUNC_ARG Returned if the given context or output pointer
+    is NULL.
+
+    \param ctx pointer to the ecEncCtx to read the device id from
+    \param devId pointer that receives the device id
+
+    _Example_
+    \code
+    int devId;
+    if (wc_ecc_ctx_get_dev_id(ctx, &devId) != 0) {
+	    // error reading device id
+    }
+    \endcode
+
+    \sa wc_ecc_ctx_set_dev_id
+    \sa wc_ecc_ctx_new
+*/
+
+int wc_ecc_ctx_get_dev_id(ecEncCtx* ctx, int* devId);
+
+/*!
+    \ingroup ECC
+
     \brief This function returns the salt of an ecEncCtx object. This
     function should only be called when the ecEncCtx's state is
     ecSRV_INIT or ecCLI_INIT.
@@ -1668,7 +1999,7 @@ int wc_ecc_ctx_set_algo(ecEncCtx* ctx, byte encAlgo, byte kdfAlgo,
     \sa wc_ecc_ctx_set_kdf_salt
 */
 
-const byte* wc_ecc_ctx_get_own_salt(ecEncCtx*);
+const byte* wc_ecc_ctx_get_own_salt(ecEncCtx* ctx);
 
 /*!
     \ingroup ECC
@@ -1722,7 +2053,7 @@ int wc_ecc_ctx_set_peer_salt(ecEncCtx* ctx, const byte* salt);
 
     \param ctx pointer to the ecEncCtx for which to set the salt
     \param salt pointer to salt buffer
-    \param len length salt in bytes
+    \param sz length salt in bytes
 
     _Example_
     \code
@@ -1742,7 +2073,7 @@ int wc_ecc_ctx_set_peer_salt(ecEncCtx* ctx, const byte* salt);
     \sa wc_ecc_ctx_get_peer_salt
 */
 
-int wc_ecc_ctx_set_kdf_salt(ecEncCtx* ctx, const byte* salt, word32 len);
+int wc_ecc_ctx_set_kdf_salt(ecEncCtx* ctx, const byte* salt, word32 sz);
 
 /*!
     \ingroup ECC
@@ -1811,6 +2142,11 @@ int wc_ecc_ctx_set_info(ecEncCtx* ctx, const byte* info, int sz);
     \param ctx Optional: pointer to an ecEncCtx object specifying different
     encryption algorithms to use
 
+    \note Selecting an AES-GCM DEM algorithm (ecAES_128_GCM, ecAES_256_GCM) in
+    the default IV mode requires the WOLFSSL_ECIES_STATIC_GCM_NONCE build macro;
+    otherwise this function returns NOT_COMPILED_IN. See wc_ecc_encrypt_ex for
+    the full rationale.
+
     _Example_
     \code
     byte msg[] = { initialize with msg to encrypt. Ensure padded to block size };
@@ -1830,8 +2166,13 @@ int wc_ecc_ctx_set_info(ecEncCtx* ctx, const byte* info, int sz);
     }
     \endcode
 
+    \note The device this runs on comes from the context
+    (wc_ecc_ctx_set_dev_id), not from privKey->devId. A NULL context, or one
+    that was never given a device, runs in software.
+
     \sa wc_ecc_encrypt_ex
     \sa wc_ecc_decrypt
+    \sa wc_ecc_ctx_set_dev_id
 */
 
 int wc_ecc_encrypt(ecc_key* privKey, ecc_key* pubKey, const byte* msg,
@@ -1858,6 +2199,9 @@ int wc_ecc_encrypt(ecc_key* privKey, ecc_key* pubKey, const byte* msg,
     small to store the encrypted ciphertext
     \return MEMORY_E Returned if there is an error allocating memory
     for the shared secret key
+    \return NOT_COMPILED_IN Returned if an AES-GCM DEM algorithm
+    (ecAES_128_GCM or ecAES_256_GCM) is requested in the default IV mode
+    without the WOLFSSL_ECIES_STATIC_GCM_NONCE build macro defined
 
     \param privKey pointer to the ecc_key object containing the
     private key to use for encryption
@@ -1873,6 +2217,16 @@ int wc_ecc_encrypt(ecc_key* privKey, ecc_key* pubKey, const byte* msg,
     \param ctx Optional: pointer to an ecEncCtx object specifying different
     encryption algorithms to use
     \param compressed Public key field is to be output in compressed format.
+
+    \note The AES-GCM DEM algorithms (ecAES_128_GCM, ecAES_256_GCM) in the
+    default IV mode use a fixed all-zero GCM nonce. That is safe only because
+    ECIES derives a fresh symmetric key from a fresh ephemeral key on every
+    encryption, so the (key, nonce) pair never repeats; reusing the ephemeral
+    key is catastrophic for AES-GCM. For that reason the fixed-nonce GCM DEM is
+    off by default and must be enabled with the WOLFSSL_ECIES_STATIC_GCM_NONCE
+    build macro, otherwise this function returns NOT_COMPILED_IN for a GCM
+    algorithm. The macro is not needed with WOLFSSL_ECIES_GEN_IV (random
+    per-message nonce) or WOLFSSL_ECIES_OLD (nonce derived from the KDF output).
 
     _Example_
     \code
@@ -1894,8 +2248,13 @@ int wc_ecc_encrypt(ecc_key* privKey, ecc_key* pubKey, const byte* msg,
     }
     \endcode
 
+    \note The device this runs on comes from the context
+    (wc_ecc_ctx_set_dev_id), not from privKey->devId. A NULL context, or one
+    that was never given a device, runs in software.
+
     \sa wc_ecc_encrypt
     \sa wc_ecc_decrypt
+    \sa wc_ecc_ctx_set_dev_id
 */
 
 int wc_ecc_encrypt_ex(ecc_key* privKey, ecc_key* pubKey, const byte* msg,
@@ -1922,6 +2281,9 @@ int wc_ecc_encrypt_ex(ecc_key* privKey, ecc_key* pubKey, const byte* msg,
     small to store the decrypted plaintext
     \return MEMORY_E Returned if there is an error allocating memory
     for the shared secret key
+    \return NOT_COMPILED_IN Returned if an AES-GCM DEM algorithm
+    (ecAES_128_GCM or ecAES_256_GCM) is requested in the default IV mode
+    without the WOLFSSL_ECIES_STATIC_GCM_NONCE build macro defined
 
     \param privKey pointer to the ecc_key object containing the private
     key to use for decryption
@@ -1935,6 +2297,11 @@ int wc_ecc_encrypt_ex(ecc_key* privKey, ecc_key* pubKey, const byte* msg,
     ciphertext, holds the number of bytes written to the output buffer
     \param ctx Optional: pointer to an ecEncCtx object specifying
     different decryption algorithms to use
+
+    \note Selecting an AES-GCM DEM algorithm (ecAES_128_GCM, ecAES_256_GCM) in
+    the default IV mode requires the WOLFSSL_ECIES_STATIC_GCM_NONCE build macro;
+    otherwise this function returns NOT_COMPILED_IN. See wc_ecc_encrypt_ex for
+    the full rationale.
 
     _Example_
     \code
@@ -1957,8 +2324,13 @@ int wc_ecc_encrypt_ex(ecc_key* privKey, ecc_key* pubKey, const byte* msg,
     }
     \endcode
 
+    \note The device this runs on comes from the context
+    (wc_ecc_ctx_set_dev_id), not from privKey->devId. A NULL context, or one
+    that was never given a device, runs in software.
+
     \sa wc_ecc_encrypt
     \sa wc_ecc_encrypt_ex
+    \sa wc_ecc_ctx_set_dev_id
 */
 
 int wc_ecc_decrypt(ecc_key* privKey, ecc_key* pubKey, const byte* msg,
@@ -1968,7 +2340,7 @@ int wc_ecc_decrypt(ecc_key* privKey, ecc_key* pubKey, const byte* msg,
 /*!
     \ingroup ECC
 
-    \brief Enable ECC support for non-blocking operations. Supported for 
+    \brief Enable ECC support for non-blocking operations. Supported for
         Single Precision (SP) math with the following build options:
             WOLFSSL_SP_NONBLOCK
             WOLFSSL_SP_SMALL
@@ -1978,7 +2350,7 @@ int wc_ecc_decrypt(ecc_key* privKey, ecc_key* pubKey, const byte* msg,
     \return 0 Returned upon successfully setting the callback context the input message
 
     \param key pointer to the ecc_key object
-    \param ctx pointer to ecc_nb_ctx_t structure with stack data cache for SP 
+    \param ctx pointer to ecc nb_ctx_t structure with stack data cache for SP
 
     _Example_
     \code
@@ -1998,7 +2370,7 @@ int wc_ecc_decrypt(ecc_key* privKey, ecc_key* pubKey, const byte* msg,
                     &key
                 );
 
-                // TODO: Real-time work can be called here 
+                // TODO: Real-time work can be called here
             } while (ret == FP_WOULDBLOCK);
         }
         wc_ecc_free(&key);
@@ -2006,3 +2378,1256 @@ int wc_ecc_decrypt(ecc_key* privKey, ecc_key* pubKey, const byte* msg,
     \endcode
 */
 int wc_ecc_set_nonblock(ecc_key *key, ecc_nb_ctx_t* ctx);
+
+/*!
+    \ingroup ECC
+
+    \brief Compare a curve which has larger key than specified size or the curve matched curve ID,
+         set a curve with smaller key size to the key.
+
+    \return 0 Returned upon successfully setting the key
+
+    \param keysize Key size in bytes
+    \param curve_id Curve ID
+
+                                                                                                        _Example_
+    \code int ret;
+    ecc_key ecc;
+
+    ret = wc_ecc_init(&ecc);
+    if (ret != 0)
+        return ret;
+        ret = wc_ecc_set_curve(&ecc, 32, ECC_SECP256R1));
+        if (ret != 0)
+            return ret;
+
+    \endcode
+*/
+int wc_ecc_set_curve(ecc_key *key, int keysize, int curve_id);
+
+/*!
+    \ingroup ECC
+    \brief Gets private key mp_int from ECC key.
+
+    \return mp_int pointer on success
+    \return NULL on failure
+
+    \param key ECC key structure
+
+    _Example_
+    \code
+    ecc_key key;
+    mp_int* priv = wc_ecc_key_get_priv(&key);
+    \endcode
+
+    \sa wc_ecc_init
+*/
+mp_int* wc_ecc_key_get_priv(ecc_key* key);
+
+/*!
+    \ingroup ECC
+    \brief Returns number of supported ECC curve sets.
+
+    \return Number of curve sets
+
+    _Example_
+    \code
+    size_t count = wc_ecc_get_sets_count();
+    \endcode
+
+    \sa wc_ecc_get_curve_params
+*/
+size_t wc_ecc_get_sets_count(void);
+
+/*!
+    \ingroup ECC
+    \brief Gets curve name from curve ID.
+
+    \return Curve name string on success
+    \return NULL on failure
+
+    \param curve_id Curve identifier
+
+    _Example_
+    \code
+    const char* name = wc_ecc_get_name(ECC_SECP256R1);
+    \endcode
+
+    \sa wc_ecc_get_curve_id
+*/
+const char* wc_ecc_get_name(int curve_id);
+
+/*!
+    \ingroup ECC
+    \brief Makes ECC key with extended options.
+
+    \return 0 on success
+    \return negative on error
+
+    \param rng Random number generator
+    \param keysize Key size in bytes
+    \param key ECC key structure
+    \param curve_id Curve identifier
+    \param flags Additional flags
+
+    _Example_
+    \code
+    WC_RNG rng;
+    ecc_key key;
+    int ret = wc_ecc_make_key_ex2(&rng, 32, &key,
+                                  ECC_SECP256R1, 0);
+    \endcode
+
+    \sa wc_ecc_make_key_ex
+*/
+int wc_ecc_make_key_ex2(WC_RNG* rng, int keysize, ecc_key* key,
+    int curve_id, int flags);
+
+/*!
+    \ingroup ECC
+    \brief Checks if point is on curve.
+
+    \return 1 if point is on curve
+    \return 0 if not on curve
+    \return negative on error
+
+    \param ecp ECC point
+    \param a Curve parameter a
+    \param b Curve parameter b
+    \param prime Curve prime
+
+    _Example_
+    \code
+    ecc_point* point;
+    mp_int a, b, prime;
+    int ret = wc_ecc_is_point(point, &a, &b, &prime);
+    \endcode
+
+    \sa wc_ecc_point_is_on_curve
+*/
+int wc_ecc_is_point(ecc_point* ecp, mp_int* a, mp_int* b,
+    mp_int* prime);
+
+/*!
+    \ingroup ECC
+    \brief Gets generator point for curve.
+
+    \return 0 on success
+    \return negative on error
+
+    \param ecp ECC point to store generator
+    \param curve_idx Curve index
+
+    _Example_
+    \code
+    ecc_point* gen = wc_ecc_new_point();
+    int ret = wc_ecc_get_generator(gen, 0);
+    \endcode
+
+    \sa wc_ecc_get_curve_params
+*/
+int wc_ecc_get_generator(ecc_point* ecp, int curve_idx);
+
+/*!
+    \ingroup ECC
+    \brief Sets deterministic signing mode.
+
+    \return 0 on success
+    \return negative on error
+
+    \param key ECC key
+    \param flag Enable/disable flag
+
+    _Example_
+    \code
+    ecc_key key;
+    int ret = wc_ecc_set_deterministic(&key, 1);
+    \endcode
+
+    \sa wc_ecc_set_deterministic_ex
+*/
+int wc_ecc_set_deterministic(ecc_key* key, byte flag);
+
+/*!
+    \ingroup ECC
+    \brief Sets deterministic signing with hash type.
+
+    \return 0 on success
+    \return negative on error
+
+    \param key ECC key
+    \param flag Enable/disable flag
+    \param hashType Hash algorithm type
+
+    _Example_
+    \code
+    ecc_key key;
+    int ret = wc_ecc_set_deterministic_ex(&key, 1, WC_HASH_TYPE_SHA256);
+    \endcode
+
+    \sa wc_ecc_set_deterministic
+*/
+int wc_ecc_set_deterministic_ex(ecc_key* key, byte flag,
+    enum wc_HashType hashType);
+
+/*!
+    \ingroup ECC
+    \brief Generates deterministic k value for signing.
+
+    \return 0 on success
+    \return negative on error
+
+    \param hash Hash value
+    \param hashSz Hash size
+    \param hashType Hash algorithm type
+    \param priv Private key
+    \param k Output k value
+    \param order Curve order
+    \param heap Heap hint
+
+    _Example_
+    \code
+    byte hash[32];
+    mp_int priv, k, order;
+    int ret = wc_ecc_gen_deterministic_k(hash, 32,
+                                         WC_HASH_TYPE_SHA256,
+                                         &priv, &k, &order, NULL);
+    \endcode
+
+    \sa wc_ecc_sign_set_k
+*/
+int wc_ecc_gen_deterministic_k(const byte* hash, word32 hashSz,
+    enum wc_HashType hashType, mp_int* priv, mp_int* k,
+    mp_int* order, void* heap);
+
+/*!
+    \ingroup ECC
+    \brief Sets k value for signing.
+
+    \return 0 on success
+    \return negative on error
+
+    \param k K value buffer
+    \param klen K value length
+    \param key ECC key
+
+    _Example_
+    \code
+    byte k[32];
+    ecc_key key;
+    int ret = wc_ecc_sign_set_k(k, sizeof(k), &key);
+    \endcode
+
+    \sa wc_ecc_gen_deterministic_k
+*/
+int wc_ecc_sign_set_k(const byte* k, word32 klen, ecc_key* key);
+
+/*!
+    \ingroup ECC
+    \brief Initializes ECC key with ID.
+
+    \note This API is only available when WOLF_PRIVATE_KEY_ID is defined,
+    which is set for PKCS11 support.
+
+    \return 0 on success
+    \return negative on error
+
+    \param key ECC key
+    \param id ID buffer
+    \param len ID length
+    \param heap Heap hint
+    \param devId Device ID
+
+    _Example_
+    \code
+    ecc_key key;
+    unsigned char id[] = "mykey";
+    int ret = wc_ecc_init_id(&key, id, sizeof(id), NULL,
+                             INVALID_DEVID);
+    \endcode
+
+    \sa wc_ecc_init_label
+*/
+int wc_ecc_init_id(ecc_key* key, unsigned char* id, int len,
+    void* heap, int devId);
+
+/*!
+    \ingroup ECC
+    \brief Initializes ECC key with label.
+
+    \note This API is only available when WOLF_PRIVATE_KEY_ID is defined,
+    which is set for PKCS11 support.
+
+    \return 0 on success
+    \return negative on error
+
+    \param key ECC key
+    \param label Label string
+    \param heap Heap hint
+    \param devId Device ID
+
+    _Example_
+    \code
+    ecc_key key;
+    int ret = wc_ecc_init_label(&key, "mykey", NULL,
+                                INVALID_DEVID);
+    \endcode
+
+    \sa wc_ecc_init_id
+*/
+int wc_ecc_init_label(ecc_key* key, const char* label, void* heap,
+    int devId);
+
+/*!
+    \ingroup ECC
+    \brief Sets flags on ECC key.
+
+    \return 0 on success
+    \return negative on error
+
+    \param key ECC key
+    \param flags Flags to set
+
+    _Example_
+    \code
+    ecc_key key;
+    int ret = wc_ecc_set_flags(&key, WC_ECC_FLAG_COFACTOR);
+    \endcode
+
+    \sa wc_ecc_init
+*/
+int wc_ecc_set_flags(ecc_key* key, word32 flags);
+
+/*!
+    \ingroup ECC
+    \brief Initializes fixed-point cache.
+
+    \return none No returns
+
+    _Example_
+    \code
+    wc_ecc_fp_init();
+    \endcode
+
+    \sa wc_ecc_init
+*/
+void wc_ecc_fp_init(void);
+
+/*!
+    \ingroup ECC
+    \brief Sets RNG for ECC key.
+
+    \return 0 on success
+    \return negative on error
+
+    \param key ECC key
+    \param rng Random number generator
+
+    _Example_
+    \code
+    ecc_key key;
+    WC_RNG rng;
+    int ret = wc_ecc_set_rng(&key, &rng);
+    \endcode
+
+    \sa wc_ecc_make_key
+*/
+int wc_ecc_set_rng(ecc_key* key, WC_RNG* rng);
+
+/*!
+    \ingroup ECC
+    \brief Gets curve index from curve ID.
+
+    \return Curve index on success
+    \return negative on error
+
+    \param curve_id Curve identifier
+
+    _Example_
+    \code
+    int idx = wc_ecc_get_curve_idx(ECC_SECP256R1);
+    \endcode
+
+    \sa wc_ecc_get_curve_id
+*/
+int wc_ecc_get_curve_idx(int curve_id);
+
+/*!
+    \ingroup ECC
+    \brief Gets curve ID from curve index.
+
+    \return Curve ID on success
+    \return negative on error
+
+    \param curve_idx Curve index
+
+    _Example_
+    \code
+    int id = wc_ecc_get_curve_id(0);
+    \endcode
+
+    \sa wc_ecc_get_curve_idx
+*/
+int wc_ecc_get_curve_id(int curve_idx);
+
+/*!
+    \ingroup ECC
+    \brief Gets curve size from curve ID.
+
+    \return Key size in bytes on success
+    \return negative on error
+
+    \param curve_id Curve identifier
+
+    _Example_
+    \code
+    int size = wc_ecc_get_curve_size_from_id(ECC_SECP256R1);
+    \endcode
+
+    \sa wc_ecc_get_curve_id
+*/
+int wc_ecc_get_curve_size_from_id(int curve_id);
+
+/*!
+    \ingroup ECC
+    \brief Gets curve index from curve name.
+
+    \return Curve index on success
+    \return negative on error
+
+    \param curveName Curve name string
+
+    _Example_
+    \code
+    int idx = wc_ecc_get_curve_idx_from_name("SECP256R1");
+    \endcode
+
+    \sa wc_ecc_get_name
+*/
+int wc_ecc_get_curve_idx_from_name(const char* curveName);
+
+/*!
+    \ingroup ECC
+    \brief Gets curve size from curve name.
+
+    \return Key size in bytes on success
+    \return negative on error
+
+    \param curveName Curve name string
+
+    _Example_
+    \code
+    int size = wc_ecc_get_curve_size_from_name("SECP256R1");
+    \endcode
+
+    \sa wc_ecc_get_curve_idx_from_name
+*/
+int wc_ecc_get_curve_size_from_name(const char* curveName);
+
+/*!
+    \ingroup ECC
+    \brief Gets curve ID from curve name.
+
+    \return Curve ID on success
+    \return negative on error
+
+    \param curveName Curve name string
+
+    _Example_
+    \code
+    int id = wc_ecc_get_curve_id_from_name("SECP256R1");
+    \endcode
+
+    \sa wc_ecc_get_name
+*/
+int wc_ecc_get_curve_id_from_name(const char* curveName);
+
+/*!
+    \ingroup ECC
+    \brief Gets curve ID from curve parameters.
+
+    \return Curve ID on success
+    \return negative on error
+
+    \param fieldSize Field size
+    \param prime Prime modulus
+    \param primeSz Prime size
+    \param Af Curve parameter A
+    \param AfSz A size
+    \param Bf Curve parameter B
+    \param BfSz B size
+    \param order Curve order
+    \param orderSz Order size
+    \param Gx Generator X coordinate
+    \param GxSz Gx size
+    \param Gy Generator Y coordinate
+    \param GySz Gy size
+    \param cofactor Curve cofactor
+
+    _Example_
+    \code
+    int id = wc_ecc_get_curve_id_from_params(256, prime, 32,
+                                             Af, 32, Bf, 32,
+                                             order, 32, Gx, 32,
+                                             Gy, 32, 1);
+    \endcode
+
+    \sa wc_ecc_get_curve_params
+*/
+int wc_ecc_get_curve_id_from_params(int fieldSize,
+    const byte* prime, word32 primeSz, const byte* Af, word32 AfSz,
+    const byte* Bf, word32 BfSz, const byte* order, word32 orderSz,
+    const byte* Gx, word32 GxSz, const byte* Gy, word32 GySz,
+    int cofactor);
+
+/*!
+    \ingroup ECC
+    \brief Gets curve ID from domain parameters.
+
+    \return Curve ID on success
+    \return negative on error
+
+    \param dp Domain parameters
+
+    _Example_
+    \code
+    const ecc_set_type* dp;
+    int id = wc_ecc_get_curve_id_from_dp_params(dp);
+    \endcode
+
+    \sa wc_ecc_get_curve_params
+*/
+int wc_ecc_get_curve_id_from_dp_params(const ecc_set_type* dp);
+
+/*!
+    \ingroup ECC
+    \brief Gets curve ID from OID.
+
+    \return Curve ID on success
+    \return negative on error
+
+    \param oid OID buffer
+    \param len OID length
+
+    _Example_
+    \code
+    byte oid[] = {0x2A, 0x86, 0x48, 0xCE, 0x3D, 0x03, 0x01, 0x07};
+    int id = wc_ecc_get_curve_id_from_oid(oid, sizeof(oid));
+    \endcode
+
+    \sa wc_ecc_get_oid
+*/
+int wc_ecc_get_curve_id_from_oid(const byte* oid, word32 len);
+
+/*!
+    \ingroup ECC
+    \brief Gets curve parameters from curve index.
+
+    \return ecc_set_type pointer on success
+    \return NULL on failure
+
+    \param curve_idx Curve index
+
+    _Example_
+    \code
+    const ecc_set_type* params = wc_ecc_get_curve_params(0);
+    \endcode
+
+    \sa wc_ecc_get_curve_idx
+*/
+const ecc_set_type* wc_ecc_get_curve_params(int curve_idx);
+
+/*!
+    \ingroup ECC
+    \brief Allocates new ECC point.
+
+    \return ecc_point pointer on success
+    \return NULL on failure
+
+    _Example_
+    \code
+    ecc_point* point = wc_ecc_new_point();
+    if (point != NULL) {
+        // use point
+        wc_ecc_del_point(point);
+    }
+    \endcode
+
+    \sa wc_ecc_del_point
+*/
+ecc_point* wc_ecc_new_point(void);
+
+/*!
+    \ingroup ECC
+    \brief Allocates new ECC point with heap hint.
+
+    \return ecc_point pointer on success
+    \return NULL on failure
+
+    \param h Heap hint
+
+    _Example_
+    \code
+    ecc_point* point = wc_ecc_new_point_h(NULL);
+    if (point != NULL) {
+        // use point
+        wc_ecc_del_point_h(point, NULL);
+    }
+    \endcode
+
+    \sa wc_ecc_del_point_h
+*/
+ecc_point* wc_ecc_new_point_h(void* h);
+
+/*!
+    \ingroup ECC
+    \brief Frees ECC point with heap hint.
+
+    \return none No returns
+
+    \param p ECC point to free
+    \param h Heap hint
+
+    _Example_
+    \code
+    ecc_point* point = wc_ecc_new_point_h(NULL);
+    // use point
+    wc_ecc_del_point_h(point, NULL);
+    \endcode
+
+    \sa wc_ecc_new_point_h
+*/
+void wc_ecc_del_point_h(ecc_point* p, void* h);
+
+/*!
+    \ingroup ECC
+    \brief Securely zeros ECC point.
+
+    \return none No returns
+
+    \param p ECC point to zero
+
+    _Example_
+    \code
+    ecc_point* point;
+    wc_ecc_forcezero_point(point);
+    \endcode
+
+    \sa wc_ecc_del_point
+*/
+void wc_ecc_forcezero_point(ecc_point* p);
+
+/*!
+    \ingroup ECC
+    \brief Checks if point is on curve.
+
+    \return 1 if on curve
+    \return 0 if not on curve
+    \return negative on error
+
+    \param p ECC point
+    \param curve_idx Curve index
+
+    _Example_
+    \code
+    ecc_point* point;
+    int ret = wc_ecc_point_is_on_curve(point, 0);
+    \endcode
+
+    \sa wc_ecc_is_point
+*/
+int wc_ecc_point_is_on_curve(ecc_point *p, int curve_idx);
+
+/*!
+    \ingroup ECC
+    \brief Imports X9.63 format with curve ID.
+
+    \return 0 on success
+    \return negative on error
+
+    \param in Input buffer
+    \param inLen Input length
+    \param key ECC key
+    \param curve_id Curve identifier
+
+    _Example_
+    \code
+    byte x963[65];
+    ecc_key key;
+    int ret = wc_ecc_import_x963_ex(x963, sizeof(x963), &key,
+                                    ECC_SECP256R1);
+    \endcode
+
+    \sa wc_ecc_import_x963
+*/
+int wc_ecc_import_x963_ex(const byte* in, word32 inLen,
+    ecc_key* key, int curve_id);
+
+/*!
+    \ingroup ECC
+    \brief Imports private key with curve ID.
+
+    \return 0 on success
+    \return negative on error
+
+    \param priv Private key buffer
+    \param privSz Private key size
+    \param pub Public key buffer
+    \param pubSz Public key size
+    \param key ECC key
+    \param curve_id Curve identifier
+
+    _Example_
+    \code
+    byte priv[32], pub[65];
+    ecc_key key;
+    int ret = wc_ecc_import_private_key_ex(priv, 32, pub, 65,
+                                           &key, ECC_SECP256R1);
+    \endcode
+
+    \sa wc_ecc_import_private_key
+*/
+int wc_ecc_import_private_key_ex(const byte* priv, word32 privSz,
+    const byte* pub, word32 pubSz, ecc_key* key, int curve_id);
+
+/*!
+    \ingroup ECC
+    \brief Converts raw r,s to signature.
+
+    \return 0 on success
+    \return negative on error
+
+    \param r R value buffer
+    \param rSz R value size
+    \param s S value buffer
+    \param sSz S value size
+    \param out Output signature buffer
+    \param outlen Output signature length
+
+    _Example_
+    \code
+    byte r[32], s[32], sig[72];
+    word32 sigLen = sizeof(sig);
+    int ret = wc_ecc_rs_raw_to_sig(r, 32, s, 32, sig, &sigLen);
+    \endcode
+
+    \sa wc_ecc_sig_to_rs
+*/
+int wc_ecc_rs_raw_to_sig(const byte* r, word32 rSz, const byte* s,
+    word32 sSz, byte* out, word32* outlen);
+
+/*!
+    \ingroup ECC
+    \brief Converts signature to raw r,s.
+
+    \return 0 on success
+    \return negative on error
+
+    \param sig Signature buffer
+    \param sigLen Signature length
+    \param r R value buffer
+    \param rLen R value length
+    \param s S value buffer
+    \param sLen S value length
+
+    _Example_
+    \code
+    byte sig[72], r[32], s[32];
+    word32 rLen = 32, sLen = 32;
+    int ret = wc_ecc_sig_to_rs(sig, 72, r, &rLen, s, &sLen);
+    \endcode
+
+    \sa wc_ecc_rs_raw_to_sig
+*/
+int wc_ecc_sig_to_rs(const byte* sig, word32 sigLen, byte* r,
+    word32* rLen, byte* s, word32* sLen);
+
+/*!
+    \ingroup ECC
+    \brief Imports raw key with curve ID.
+
+    \note This function does not check that the imported public point lies on
+    the curve. Define WOLFSSL_VALIDATE_ECC_IMPORT to validate the point on
+    import, or call wc_ecc_check_key before the key is used.
+
+    \return 0 on success
+    \return negative on error
+
+    \param key ECC key
+    \param qx X coordinate string
+    \param qy Y coordinate string
+    \param d Private key string
+    \param curve_id Curve identifier
+
+    _Example_
+    \code
+    ecc_key key;
+    int ret = wc_ecc_import_raw_ex(&key, qxStr, qyStr, dStr,
+                                   ECC_SECP256R1);
+    \endcode
+
+    \sa wc_ecc_import_raw
+*/
+int wc_ecc_import_raw_ex(ecc_key* key, const char* qx,
+    const char* qy, const char* d, int curve_id);
+
+/*!
+    \ingroup ECC
+    \brief Imports unsigned key with curve ID.
+
+    \note This function does not check that the imported public point lies on
+    the curve. Define WOLFSSL_VALIDATE_ECC_IMPORT to validate the point on
+    import, or call wc_ecc_check_key before the key is used.
+
+    \return 0 on success
+    \return negative on error
+
+    \param key ECC key
+    \param qx X coordinate buffer
+    \param qy Y coordinate buffer
+    \param d Private key buffer
+    \param curve_id Curve identifier
+
+    _Example_
+    \code
+    ecc_key key;
+    byte qx[32], qy[32], d[32];
+    int ret = wc_ecc_import_unsigned(&key, qx, qy, d,
+                                     ECC_SECP256R1);
+    \endcode
+
+    \sa wc_ecc_import_raw_ex
+*/
+int wc_ecc_import_unsigned(ecc_key* key, const byte* qx,
+    const byte* qy, const byte* d, int curve_id);
+
+/*!
+    \ingroup ECC
+    \brief Exports key with encoding type.
+
+    \return 0 on success
+    \return negative on error
+
+    \param key ECC key
+    \param qx X coordinate buffer
+    \param qxLen X coordinate length
+    \param qy Y coordinate buffer
+    \param qyLen Y coordinate length
+    \param d Private key buffer
+    \param dLen Private key length
+    \param encType Encoding type
+
+    _Example_
+    \code
+    ecc_key key;
+    byte qx[32], qy[32], d[32];
+    word32 qxLen = 32, qyLen = 32, dLen = 32;
+    int ret = wc_ecc_export_ex(&key, qx, &qxLen, qy, &qyLen,
+                               d, &dLen, 0);
+    \endcode
+
+    \sa wc_ecc_export_public_raw
+*/
+int wc_ecc_export_ex(ecc_key* key, byte* qx, word32* qxLen,
+    byte* qy, word32* qyLen, byte* d, word32* dLen, int encType);
+
+/*!
+    \ingroup ECC
+    \brief Exports public key in raw format.
+
+    \return 0 on success
+    \return negative on error
+
+    \param key ECC key
+    \param qx X coordinate buffer
+    \param qxLen X coordinate length
+    \param qy Y coordinate buffer
+    \param qyLen Y coordinate length
+
+    _Example_
+    \code
+    ecc_key key;
+    byte qx[32], qy[32];
+    word32 qxLen = 32, qyLen = 32;
+    int ret = wc_ecc_export_public_raw(&key, qx, &qxLen, qy,
+                                       &qyLen);
+    \endcode
+
+    \sa wc_ecc_export_private_raw
+*/
+int wc_ecc_export_public_raw(ecc_key* key, byte* qx,
+    word32* qxLen, byte* qy, word32* qyLen);
+
+/*!
+    \ingroup ECC
+    \brief Exports private key in raw format.
+
+    \return 0 on success
+    \return negative on error
+
+    \param key ECC key
+    \param qx X coordinate buffer
+    \param qxLen X coordinate length
+    \param qy Y coordinate buffer
+    \param qyLen Y coordinate length
+    \param d Private key buffer
+    \param dLen Private key length
+
+    _Example_
+    \code
+    ecc_key key;
+    byte qx[32], qy[32], d[32];
+    word32 qxLen = 32, qyLen = 32, dLen = 32;
+    int ret = wc_ecc_export_private_raw(&key, qx, &qxLen, qy,
+                                        &qyLen, d, &dLen);
+    \endcode
+
+    \sa wc_ecc_export_public_raw
+*/
+int wc_ecc_export_private_raw(ecc_key* key, byte* qx,
+    word32* qxLen, byte* qy, word32* qyLen, byte* d, word32* dLen);
+
+/*!
+    \ingroup ECC
+    \brief Exports point in DER format with compression.
+
+    \return Size on success
+    \return negative on error
+
+    \param curve_idx Curve index
+    \param point ECC point
+    \param out Output buffer
+    \param outLen Output length
+    \param compressed Compression flag
+
+    _Example_
+    \code
+    ecc_point* point;
+    byte out[65];
+    word32 outLen = sizeof(out);
+    int ret = wc_ecc_export_point_der_ex(0, point, out, &outLen,
+                                         0);
+    \endcode
+
+    \sa wc_ecc_export_point_der
+*/
+int wc_ecc_export_point_der_ex(const int curve_idx,
+    ecc_point* point, byte* out, word32* outLen, int compressed);
+
+/*!
+    \ingroup ECC
+    \brief Imports point from DER format.
+
+    \return 0 on success
+    \return negative on error
+
+    \param in Input buffer
+    \param inLen Input length
+    \param curve_idx Curve index
+    \param point ECC point
+    \param shortKeySize Short key size flag
+
+    _Example_
+    \code
+    byte der[65];
+    ecc_point* point = wc_ecc_new_point();
+    int ret = wc_ecc_import_point_der_ex(der, sizeof(der), 0,
+                                         point, 0);
+    \endcode
+
+    \sa wc_ecc_import_point_der
+*/
+int wc_ecc_import_point_der_ex(const byte* in, word32 inLen,
+    const int curve_idx, ecc_point* point, int shortKeySize);
+
+/*!
+    \ingroup ECC
+    \brief Gets OID for curve.
+
+    \return 0 on success
+    \return negative on error
+
+    \param oidSum OID sum
+    \param oid OID buffer pointer
+    \param oidSz OID size pointer
+
+    _Example_
+    \code
+    const byte* oid;
+    word32 oidSz;
+    int ret = wc_ecc_get_oid(0x2A8648CE3D030107, &oid, &oidSz);
+    \endcode
+
+    \sa wc_ecc_get_curve_id_from_oid
+*/
+int wc_ecc_get_oid(word32 oidSum, const byte** oid, word32* oidSz);
+
+/*!
+    \ingroup ECC
+    \brief Sets custom curve parameters.
+
+    \return 0 on success
+    \return negative on error
+
+    \param key ECC key
+    \param dp Domain parameters
+
+    _Example_
+    \code
+    ecc_key key;
+    ecc_set_type dp;
+    int ret = wc_ecc_set_custom_curve(&key, &dp);
+    \endcode
+
+    \sa wc_ecc_get_curve_params
+*/
+int wc_ecc_set_custom_curve(ecc_key* key, const ecc_set_type* dp);
+
+/*!
+    \ingroup ECC
+    \brief Creates new ECC encryption context.
+
+    \return ecEncCtx pointer on success
+    \return NULL on failure
+
+    \param flags Context flags
+    \param rng Random number generator
+
+    _Example_
+    \code
+    WC_RNG rng;
+    ecEncCtx* ctx = wc_ecc_ctx_new(0, &rng);
+    \endcode
+
+    \sa wc_ecc_ctx_free
+*/
+ecEncCtx* wc_ecc_ctx_new(int flags, WC_RNG* rng);
+
+/*!
+    \ingroup ECC
+    \brief Creates new ECC encryption context with heap.
+
+    \return ecEncCtx pointer on success
+    \return NULL on failure
+
+    \param flags Context flags
+    \param rng Random number generator
+    \param heap Heap hint
+
+    _Example_
+    \code
+    WC_RNG rng;
+    ecEncCtx* ctx = wc_ecc_ctx_new_ex(0, &rng, NULL);
+    \endcode
+
+    \sa wc_ecc_ctx_new
+*/
+ecEncCtx* wc_ecc_ctx_new_ex(int flags, WC_RNG* rng, void* heap);
+
+/*!
+    \ingroup ECC
+    \brief Resets ECC encryption context.
+
+    \return 0 on success
+    \return negative on error
+
+    \param ctx ECC encryption context
+    \param rng Random number generator
+
+    _Example_
+    \code
+    ecEncCtx* ctx;
+    WC_RNG rng;
+    int ret = wc_ecc_ctx_reset(ctx, &rng);
+    \endcode
+
+    \sa wc_ecc_ctx_new
+*/
+int wc_ecc_ctx_reset(ecEncCtx* ctx, WC_RNG* rng);
+
+/*!
+    \ingroup ECC
+    \brief Gets own salt from context.
+
+    \return Salt pointer on success
+    \return NULL on failure
+
+    \param ctx ECC encryption context
+
+    _Example_
+    \code
+    ecEncCtx* ctx;
+    const byte* salt = wc_ecc_ctx_get_own_salt(ctx);
+    \endcode
+
+    \sa wc_ecc_ctx_set_own_salt
+*/
+const byte* wc_ecc_ctx_get_own_salt(ecEncCtx* ctx);
+
+/*!
+    \ingroup ECC
+    \brief Sets own salt in context.
+
+    \return 0 on success
+    \return negative on error
+
+    \param ctx ECC encryption context
+    \param salt Salt buffer
+    \param sz Salt size
+
+    _Example_
+    \code
+    ecEncCtx* ctx;
+    byte salt[16];
+    int ret = wc_ecc_ctx_set_own_salt(ctx, salt, sizeof(salt));
+    \endcode
+
+    \sa wc_ecc_ctx_get_own_salt
+*/
+int wc_ecc_ctx_set_own_salt(ecEncCtx* ctx, const byte* salt,
+    word32 sz);
+
+/*!
+    \ingroup ECC
+    \brief X9.63 Key Derivation Function.
+
+    \return 0 on success
+    \return negative on error
+
+    \param type Hash type
+    \param secret Shared secret
+    \param secretSz Secret size
+    \param sinfo Shared info
+    \param sinfoSz Shared info size
+    \param out Output buffer
+    \param outSz Output size
+
+    _Example_
+    \code
+    byte secret[32], sinfo[10], out[32];
+    int ret = wc_X963_KDF(WC_HASH_TYPE_SHA256, secret, 32,
+                          sinfo, 10, out, 32);
+    \endcode
+
+    \sa wc_ecc_shared_secret
+*/
+int wc_X963_KDF(enum wc_HashType type, const byte* secret,
+    word32 secretSz, const byte* sinfo, word32 sinfoSz,
+    byte* out, word32 outSz);
+
+/*!
+    \ingroup ECC
+    \brief Initializes curve cache.
+
+    \return 0 on success
+    \return negative on error
+
+    _Example_
+    \code
+    int ret = wc_ecc_curve_cache_init();
+    \endcode
+
+    \sa wc_ecc_curve_cache_free
+*/
+int wc_ecc_curve_cache_init(void);
+
+/*!
+    \ingroup ECC
+    \brief Frees curve cache.
+
+    \return none No returns
+
+    _Example_
+    \code
+    wc_ecc_curve_cache_free();
+    \endcode
+
+    \sa wc_ecc_curve_cache_init
+*/
+void wc_ecc_curve_cache_free(void);
+
+/*!
+    \ingroup ECC
+    \brief Generates random k value.
+
+    \return 0 on success
+    \return negative on error
+
+    \param rng Random number generator
+    \param size Key size
+    \param k Output k value
+    \param order Curve order
+
+    _Example_
+    \code
+    WC_RNG rng;
+    mp_int k, order;
+    int ret = wc_ecc_gen_k(&rng, 32, &k, &order);
+    \endcode
+
+    \sa wc_ecc_sign_hash
+*/
+int wc_ecc_gen_k(WC_RNG* rng, int size, mp_int* k, mp_int* order);
+
+/*!
+    \ingroup ECC
+    \brief Sets remote handle for hardware.
+
+    \return 0 on success
+    \return negative on error
+
+    \param key ECC key
+    \param handle Remote handle
+
+    _Example_
+    \code
+    ecc_key key;
+    remote_handle64 handle = 0x1234;
+    int ret = wc_ecc_set_handle(&key, handle);
+    \endcode
+
+    \sa wc_ecc_init
+*/
+int wc_ecc_set_handle(ecc_key* key, remote_handle64 handle);
+
+/*!
+    \ingroup ECC
+    \brief Uses key ID for hardware.
+
+    \return 0 on success
+    \return negative on error
+
+    \param key ECC key
+    \param keyId Key identifier
+    \param flags Flags
+
+    _Example_
+    \code
+    ecc_key key;
+    int ret = wc_ecc_use_key_id(&key, 1, 0);
+    \endcode
+
+    \sa wc_ecc_get_key_id
+*/
+int wc_ecc_use_key_id(ecc_key* key, word32 keyId, word32 flags);
+
+/*!
+    \ingroup ECC
+    \brief Gets key ID from hardware key.
+
+    \return 0 on success
+    \return negative on error
+
+    \param key ECC key
+    \param keyId Key identifier pointer
+
+    _Example_
+    \code
+    ecc_key key;
+    word32 keyId;
+    int ret = wc_ecc_get_key_id(&key, &keyId);
+    \endcode
+
+    \sa wc_ecc_use_key_id
+*/
+int wc_ecc_get_key_id(ecc_key* key, word32* keyId);

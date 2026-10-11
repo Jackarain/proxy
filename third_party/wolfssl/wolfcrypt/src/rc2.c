@@ -1,12 +1,12 @@
 /* rc2.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -19,17 +19,14 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1335, USA
  */
 
+#include <wolfssl/wolfcrypt/libwolfssl_sources.h>
+
 /*
 
 DESCRIPTION
 This library provides the interface to the RC2 encryption algorithm (RFC 2268)
 
 */
-#ifdef HAVE_CONFIG_H
-    #include <config.h>
-#endif
-
-#include <wolfssl/wolfcrypt/settings.h>
 
 #ifdef WC_RC2
 
@@ -41,7 +38,6 @@ This library provides the interface to the RC2 encryption algorithm (RFC 2268)
 #endif
 
 #include <wolfssl/wolfcrypt/rc2.h>
-#include <wolfssl/wolfcrypt/error-crypt.h>
 
 /* Table based on value of PI, defined in RFC 2268 */
 static const byte pitable[256] = {
@@ -175,10 +171,14 @@ int wc_Rc2EcbEncrypt(Rc2* rc2, byte* out, const byte* in, word32 sz)
         return BUFFER_E;
     }
 
-    r10 = (in[1] << 8) | in[0]; /* R[0] */
-    r32 = (in[3] << 8) | in[2]; /* R[1] */
-    r54 = (in[5] << 8) | in[4]; /* R[2] */
-    r76 = (in[7] << 8) | in[6]; /* R[3] */
+    if (rc2->keylen == 0) {
+        return MISSING_KEY;
+    }
+
+    r10 = (word16)((word16)in[1] << 8) | in[0]; /* R[0] */
+    r32 = (word16)((word16)in[3] << 8) | in[2]; /* R[1] */
+    r54 = (word16)((word16)in[5] << 8) | in[4]; /* R[2] */
+    r76 = (word16)((word16)in[7] << 8) | in[6]; /* R[3] */
 
     for (i = 0; i < 16; i++) {
         j = i * 4;
@@ -240,10 +240,14 @@ int wc_Rc2EcbDecrypt(Rc2* rc2, byte* out, const byte* in, word32 sz)
         return BUFFER_E;
     }
 
-    r0 = (in[1] << 8) | in[0];
-    r1 = (in[3] << 8) | in[2];
-    r2 = (in[5] << 8) | in[4];
-    r3 = (in[7] << 8) | in[6];
+    if (rc2->keylen == 0) {
+        return MISSING_KEY;
+    }
+
+    r0 = (word16)((word16)in[1] << 8) | in[0];
+    r1 = (word16)((word16)in[3] << 8) | in[2];
+    r2 = (word16)((word16)in[5] << 8) | in[4];
+    r3 = (word16)((word16)in[7] << 8) | in[6];
 
     for (i = 16; i > 0; i--) {
         j = 4*i - 1;
@@ -283,15 +287,21 @@ int wc_Rc2EcbDecrypt(Rc2* rc2, byte* out, const byte* in, word32 sz)
 int wc_Rc2CbcEncrypt(Rc2* rc2, byte* out, const byte* in, word32 sz)
 {
     int ret;
-    word32 blocks = (sz / RC2_BLOCK_SIZE);
+    word32 blocks;
 
     if (rc2 == NULL || out == NULL || in == NULL) {
         return BAD_FUNC_ARG;
     }
 
-    if (sz == 0) {
-        return 0;
+    if (sz % RC2_BLOCK_SIZE != 0) {
+        return BAD_LENGTH_E;
     }
+
+    if (rc2->keylen == 0) {
+        return MISSING_KEY;
+    }
+
+    blocks = sz / RC2_BLOCK_SIZE;
 
     while (blocks--) {
         xorbuf((byte*)rc2->reg, in, RC2_BLOCK_SIZE);
@@ -312,15 +322,21 @@ int wc_Rc2CbcEncrypt(Rc2* rc2, byte* out, const byte* in, word32 sz)
 int wc_Rc2CbcDecrypt(Rc2* rc2, byte* out, const byte* in, word32 sz)
 {
     int ret;
-    word32 blocks = (sz / RC2_BLOCK_SIZE);
+    word32 blocks;
 
     if (rc2 == NULL || out == NULL || in == NULL) {
         return BAD_FUNC_ARG;
     }
 
-    if (sz == 0) {
-        return 0;
+    if (sz % RC2_BLOCK_SIZE != 0) {
+        return BAD_LENGTH_E;
     }
+
+    if (rc2->keylen == 0) {
+        return MISSING_KEY;
+    }
+
+    blocks = sz / RC2_BLOCK_SIZE;
 
     while (blocks--) {
         XMEMCPY(rc2->tmp, in, RC2_BLOCK_SIZE);
@@ -337,6 +353,14 @@ int wc_Rc2CbcDecrypt(Rc2* rc2, byte* out, const byte* in, word32 sz)
     }
 
     return 0;
+}
+
+
+void wc_Rc2Free(Rc2* rc2)
+{
+    if (rc2 == NULL)
+        return;
+    ForceZero(rc2, sizeof(Rc2));
 }
 
 

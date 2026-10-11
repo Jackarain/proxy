@@ -1,0 +1,66 @@
+/* test_chacha20_poly1305.h
+ *
+ * Copyright (C) 2006-2026 wolfSSL Inc.
+ *
+ * This file is part of wolfSSL.
+ *
+ * wolfSSL is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * wolfSSL is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1335, USA
+ */
+
+#ifndef WOLFCRYPT_TEST_CHACHA20_POLY1305_H
+#define WOLFCRYPT_TEST_CHACHA20_POLY1305_H
+
+#include <tests/api/api_decl.h>
+
+int test_wc_ChaCha20Poly1305_aead(void);
+int test_wc_XChaCha20Poly1305_aead(void);
+int test_wc_XChaCha20Poly1305_BadAuthTag(void);
+int test_wc_ChaCha20Poly1305_MonteCarlo(void);
+int test_wc_ChaCha20Poly1305_Stream(void);
+int test_wc_ChaCha20Poly1305_AeadEdgeCases(void);
+int test_wc_ChaCha20Poly1305_MidStreamState(void);
+int test_wc_ChaCha20Poly1305_ReinitAfterFinal(void);
+int test_wc_ChaCha20Poly1305_InPlace(void);
+int test_wc_ChaCha20Poly1305_UnalignedBuffers(void);
+int test_wc_ChaCha20Poly1305_CrossCipher(void);
+int test_wc_ChaCha20Poly1305_DecisionCoverage(void);
+int test_wc_ChaCha20Poly1305_LargeMessage(void);
+int test_wc_ChaCha20Poly1305_SmallWithAad(void);
+int test_wc_ChaCha20Poly1305_StreamLarge(void);
+int test_wc_ChaCha20Poly1305_Ex(void);
+int test_wc_XChaCha20Poly1305_DecisionCoverage(void);
+int test_wc_XChaCha20Poly1305_LargeBuffer(void);
+
+#define TEST_CHACHA20_POLY1305_DECLS                                                        \
+    TEST_DECL_GROUP("chacha20-poly1305", test_wc_ChaCha20Poly1305_aead),                   \
+    TEST_DECL_GROUP("xchacha20-poly1305", test_wc_XChaCha20Poly1305_aead),                 \
+    TEST_DECL_GROUP("xchacha20-poly1305", test_wc_XChaCha20Poly1305_BadAuthTag),           \
+    TEST_DECL_GROUP("chacha20-poly1305", test_wc_ChaCha20Poly1305_MonteCarlo),             \
+    TEST_DECL_GROUP("chacha20-poly1305", test_wc_ChaCha20Poly1305_Stream),                 \
+    TEST_DECL_GROUP("chacha20-poly1305", test_wc_ChaCha20Poly1305_AeadEdgeCases),          \
+    TEST_DECL_GROUP("chacha20-poly1305", test_wc_ChaCha20Poly1305_MidStreamState),         \
+    TEST_DECL_GROUP("chacha20-poly1305", test_wc_ChaCha20Poly1305_ReinitAfterFinal),       \
+    TEST_DECL_GROUP("chacha20-poly1305", test_wc_ChaCha20Poly1305_InPlace),               \
+    TEST_DECL_GROUP("chacha20-poly1305", test_wc_ChaCha20Poly1305_UnalignedBuffers),      \
+    TEST_DECL_GROUP("chacha20-poly1305", test_wc_ChaCha20Poly1305_CrossCipher),           \
+    TEST_DECL_GROUP("chacha20-poly1305", test_wc_ChaCha20Poly1305_DecisionCoverage),      \
+    TEST_DECL_GROUP("chacha20-poly1305", test_wc_ChaCha20Poly1305_LargeMessage),          \
+    TEST_DECL_GROUP("chacha20-poly1305", test_wc_ChaCha20Poly1305_SmallWithAad),          \
+    TEST_DECL_GROUP("chacha20-poly1305", test_wc_ChaCha20Poly1305_StreamLarge),           \
+    TEST_DECL_GROUP("chacha20-poly1305", test_wc_ChaCha20Poly1305_Ex),                    \
+    TEST_DECL_GROUP("xchacha20-poly1305", test_wc_XChaCha20Poly1305_DecisionCoverage),    \
+    TEST_DECL_GROUP("xchacha20-poly1305", test_wc_XChaCha20Poly1305_LargeBuffer)
+
+#endif /* WOLFCRYPT_TEST_CHACHA20_POLY1305_H */

@@ -1,12 +1,12 @@
 /* main.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -138,11 +138,11 @@ static void SystemClock_Config(void)
     RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
     RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = {0};
 
-    /** Configure the main internal regulator output voltage 
+    /** Configure the main internal regulator output voltage
     */
     __HAL_RCC_PWR_CLK_ENABLE();
     __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
-    /** Initializes the CPU, AHB and APB buses clocks 
+    /** Initializes the CPU, AHB and APB buses clocks
     */
     RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI|RCC_OSCILLATORTYPE_LSI;
     RCC_OscInitStruct.HSIState = RCC_HSI_ON;
@@ -157,7 +157,7 @@ static void SystemClock_Config(void)
     if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
         Error_Handler();
     }
-    /** Initializes the CPU, AHB and APB buses clocks 
+    /** Initializes the CPU, AHB and APB buses clocks
     */
     RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK|RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
     RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
@@ -325,7 +325,7 @@ void Error_Handler(void)
   * @retval None
   */
 void assert_failed(uint8_t *file, uint32_t line)
-{ 
+{
     /* User can add his own implementation to report the file name and line number,
       tex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
 }
@@ -336,7 +336,7 @@ void assert_failed(uint8_t *file, uint32_t line)
 /* Working _sbrk example for .ld based libC malloc/free */
 /* Replace this with one in Core/Src/sysmem.c */
 /* Symbols defined in the linker script */
-extern uint8_t _end; 
+extern uint8_t _end;
 extern uint8_t _estack;
 extern uint32_t _Min_Stack_Size;
 void* _sbrk(ptrdiff_t incr)

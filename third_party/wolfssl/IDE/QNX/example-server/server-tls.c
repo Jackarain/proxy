@@ -1,12 +1,12 @@
 /* server-tls.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -246,7 +246,7 @@ static int TLS_ECDH_callback(WOLFSSL* ssl, struct ecc_key* otherKey,
 int main()
 {
     int                sockfd;
-    int                connd = 0;
+    int                connd = -1;
     struct sockaddr_in servAddr;
     struct sockaddr_in clientAddr;
     socklen_t          size = sizeof(clientAddr);
@@ -379,7 +379,8 @@ int main()
 end:
     /* Cleanup after this connection */
     wolfSSL_free(ssl);      /* Free the wolfSSL object              */
-    close(connd);           /* Close the connection to the client   */
+    if (connd != -1)
+        close(connd);       /* Close the connection to the client   */
     wc_ecc_free(&blackKey);
 
     printf("Shutdown complete\n");

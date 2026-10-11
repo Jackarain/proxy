@@ -1,12 +1,12 @@
 /* armv8-sha512-asm
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -19,145 +19,110 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1335, USA
  */
 
-#ifdef HAVE_CONFIG_H
-    #include <config.h>
-#endif /* HAVE_CONFIG_H */
-#include <wolfssl/wolfcrypt/settings.h>
-
 /* Generated using (from wolfssl):
  *   cd ../scripts
- *   ruby ./sha2/sha512.rb arm64 ../wolfssl/wolfcrypt/src/port/arm/armv8-sha512-asm.S
+ *   ruby ./sha2/sha512.rb arm64 \
+ *       ../wolfssl/wolfcrypt/src/port/arm/armv8-sha512-asm.S
  */
+
+#define WC_FIPS_LL_CRYPTO
+#define _WC_BUILDING_ARMV8_SHA512_ASM_S
+
+#include <wolfssl/wolfcrypt/libwolfssl_sources_asm.h>
+
 #ifdef WOLFSSL_ARMASM
 #ifdef __aarch64__
 #ifndef WOLFSSL_ARMASM_INLINE
-#ifdef WOLFSSL_SHA512
-#ifndef WOLFSSL_ARMASM_CRYPTO_SHA512
+#if defined(WOLFSSL_SHA512) || defined(WOLFSSL_SHA384)
+#ifndef WOLFSSL_ARMASM_NO_NEON
 #ifndef __APPLE__
 	.text
-	.type	L_SHA512_transform_neon_len_k, %object
 	.section	.rodata
+	.type	L_SHA512_transform_neon_len_k, %object
 	.size	L_SHA512_transform_neon_len_k, 640
 #else
 	.section	__DATA,__data
 #endif /* __APPLE__ */
-#ifndef __APPLE__
-	.align	3
-#else
-	.p2align	3
-#endif /* __APPLE__ */
-L_SHA512_transform_neon_len_k:
-	.xword	0x428a2f98d728ae22
-	.xword	0x7137449123ef65cd
-	.xword	0xb5c0fbcfec4d3b2f
-	.xword	0xe9b5dba58189dbbc
-	.xword	0x3956c25bf348b538
-	.xword	0x59f111f1b605d019
-	.xword	0x923f82a4af194f9b
-	.xword	0xab1c5ed5da6d8118
-	.xword	0xd807aa98a3030242
-	.xword	0x12835b0145706fbe
-	.xword	0x243185be4ee4b28c
-	.xword	0x550c7dc3d5ffb4e2
-	.xword	0x72be5d74f27b896f
-	.xword	0x80deb1fe3b1696b1
-	.xword	0x9bdc06a725c71235
-	.xword	0xc19bf174cf692694
-	.xword	0xe49b69c19ef14ad2
-	.xword	0xefbe4786384f25e3
-	.xword	0xfc19dc68b8cd5b5
-	.xword	0x240ca1cc77ac9c65
-	.xword	0x2de92c6f592b0275
-	.xword	0x4a7484aa6ea6e483
-	.xword	0x5cb0a9dcbd41fbd4
-	.xword	0x76f988da831153b5
-	.xword	0x983e5152ee66dfab
-	.xword	0xa831c66d2db43210
-	.xword	0xb00327c898fb213f
-	.xword	0xbf597fc7beef0ee4
-	.xword	0xc6e00bf33da88fc2
-	.xword	0xd5a79147930aa725
-	.xword	0x6ca6351e003826f
-	.xword	0x142929670a0e6e70
-	.xword	0x27b70a8546d22ffc
-	.xword	0x2e1b21385c26c926
-	.xword	0x4d2c6dfc5ac42aed
-	.xword	0x53380d139d95b3df
-	.xword	0x650a73548baf63de
-	.xword	0x766a0abb3c77b2a8
-	.xword	0x81c2c92e47edaee6
-	.xword	0x92722c851482353b
-	.xword	0xa2bfe8a14cf10364
-	.xword	0xa81a664bbc423001
-	.xword	0xc24b8b70d0f89791
-	.xword	0xc76c51a30654be30
-	.xword	0xd192e819d6ef5218
-	.xword	0xd69906245565a910
-	.xword	0xf40e35855771202a
-	.xword	0x106aa07032bbd1b8
-	.xword	0x19a4c116b8d2d0c8
-	.xword	0x1e376c085141ab53
-	.xword	0x2748774cdf8eeb99
-	.xword	0x34b0bcb5e19b48a8
-	.xword	0x391c0cb3c5c95a63
-	.xword	0x4ed8aa4ae3418acb
-	.xword	0x5b9cca4f7763e373
-	.xword	0x682e6ff3d6b2b8a3
-	.xword	0x748f82ee5defb2fc
-	.xword	0x78a5636f43172f60
-	.xword	0x84c87814a1f0ab72
-	.xword	0x8cc702081a6439ec
-	.xword	0x90befffa23631e28
-	.xword	0xa4506cebde82bde9
-	.xword	0xbef9a3f7b2c67915
-	.xword	0xc67178f2e372532b
-	.xword	0xca273eceea26619c
-	.xword	0xd186b8c721c0c207
-	.xword	0xeada7dd6cde0eb1e
-	.xword	0xf57d4f7fee6ed178
-	.xword	0x6f067aa72176fba
-	.xword	0xa637dc5a2c898a6
-	.xword	0x113f9804bef90dae
-	.xword	0x1b710b35131c471b
-	.xword	0x28db77f523047d84
-	.xword	0x32caab7b40c72493
-	.xword	0x3c9ebe0a15c9bebc
-	.xword	0x431d67c49c100d4c
-	.xword	0x4cc5d4becb3e42b6
-	.xword	0x597f299cfc657e2a
-	.xword	0x5fcb6fab3ad6faec
-	.xword	0x6c44198c4a475817
-#ifndef __APPLE__
-	.text
-	.type	L_SHA512_transform_neon_len_ror8, %object
-	.section	.rodata
-	.size	L_SHA512_transform_neon_len_ror8, 16
-#else
-	.section	__DATA,__data
-#endif /* __APPLE__ */
+	# 16-byte aligned, 128-bit aligned
 #ifndef __APPLE__
 	.align	4
 #else
 	.p2align	4
 #endif /* __APPLE__ */
-L_SHA512_transform_neon_len_ror8:
-	.xword	0x7060504030201, 0x80f0e0d0c0b0a09
+L_SHA512_transform_neon_len_k:
+	.quad	0x428a2f98d728ae22,0x7137449123ef65cd
+	.quad	0xb5c0fbcfec4d3b2f,0xe9b5dba58189dbbc
+	.quad	0x3956c25bf348b538,0x59f111f1b605d019
+	.quad	0x923f82a4af194f9b,0xab1c5ed5da6d8118
+	.quad	0xd807aa98a3030242,0x12835b0145706fbe
+	.quad	0x243185be4ee4b28c,0x550c7dc3d5ffb4e2
+	.quad	0x72be5d74f27b896f,0x80deb1fe3b1696b1
+	.quad	0x9bdc06a725c71235,0xc19bf174cf692694
+	.quad	0xe49b69c19ef14ad2,0xefbe4786384f25e3
+	.quad	0x0fc19dc68b8cd5b5,0x240ca1cc77ac9c65
+	.quad	0x2de92c6f592b0275,0x4a7484aa6ea6e483
+	.quad	0x5cb0a9dcbd41fbd4,0x76f988da831153b5
+	.quad	0x983e5152ee66dfab,0xa831c66d2db43210
+	.quad	0xb00327c898fb213f,0xbf597fc7beef0ee4
+	.quad	0xc6e00bf33da88fc2,0xd5a79147930aa725
+	.quad	0x06ca6351e003826f,0x142929670a0e6e70
+	.quad	0x27b70a8546d22ffc,0x2e1b21385c26c926
+	.quad	0x4d2c6dfc5ac42aed,0x53380d139d95b3df
+	.quad	0x650a73548baf63de,0x766a0abb3c77b2a8
+	.quad	0x81c2c92e47edaee6,0x92722c851482353b
+	.quad	0xa2bfe8a14cf10364,0xa81a664bbc423001
+	.quad	0xc24b8b70d0f89791,0xc76c51a30654be30
+	.quad	0xd192e819d6ef5218,0xd69906245565a910
+	.quad	0xf40e35855771202a,0x106aa07032bbd1b8
+	.quad	0x19a4c116b8d2d0c8,0x1e376c085141ab53
+	.quad	0x2748774cdf8eeb99,0x34b0bcb5e19b48a8
+	.quad	0x391c0cb3c5c95a63,0x4ed8aa4ae3418acb
+	.quad	0x5b9cca4f7763e373,0x682e6ff3d6b2b8a3
+	.quad	0x748f82ee5defb2fc,0x78a5636f43172f60
+	.quad	0x84c87814a1f0ab72,0x8cc702081a6439ec
+	.quad	0x90befffa23631e28,0xa4506cebde82bde9
+	.quad	0xbef9a3f7b2c67915,0xc67178f2e372532b
+	.quad	0xca273eceea26619c,0xd186b8c721c0c207
+	.quad	0xeada7dd6cde0eb1e,0xf57d4f7fee6ed178
+	.quad	0x06f067aa72176fba,0x0a637dc5a2c898a6
+	.quad	0x113f9804bef90dae,0x1b710b35131c471b
+	.quad	0x28db77f523047d84,0x32caab7b40c72493
+	.quad	0x3c9ebe0a15c9bebc,0x431d67c49c100d4c
+	.quad	0x4cc5d4becb3e42b6,0x597f299cfc657e2a
+	.quad	0x5fcb6fab3ad6faec,0x6c44198c4a475817
+#ifndef __APPLE__
+	.text
+	.section	.rodata
+	.type	L_SHA512_transform_neon_len_r8, %object
+	.size	L_SHA512_transform_neon_len_r8, 16
+#else
+	.section	__DATA,__data
+#endif /* __APPLE__ */
+	# 16-byte aligned, 128-bit aligned
+#ifndef __APPLE__
+	.align	4
+#else
+	.p2align	4
+#endif /* __APPLE__ */
+L_SHA512_transform_neon_len_r8:
+	.quad	0x0007060504030201,0x080f0e0d0c0b0a09
 #ifndef __APPLE__
 .text
 .globl	Transform_Sha512_Len_neon
+WC_ASM_ATT_HIDDEN(Transform_Sha512_Len_neon)
 .type	Transform_Sha512_Len_neon,@function
 .align	2
 Transform_Sha512_Len_neon:
 #else
 .section	__TEXT,__text
 .globl	_Transform_Sha512_Len_neon
+WC_ASM_ATT_HIDDEN(_Transform_Sha512_Len_neon)
 .p2align	2
 _Transform_Sha512_Len_neon:
 #endif /* __APPLE__ */
 	stp	x29, x30, [sp, #-128]!
 	add	x29, sp, #0
-	str	x17, [x29, #16]
-	str	x19, [x29, #24]
+	stp	x17, x19, [x29, #16]
 	stp	x20, x21, [x29, #32]
 	stp	x22, x23, [x29, #48]
 	stp	x24, x25, [x29, #64]
@@ -169,14 +134,14 @@ _Transform_Sha512_Len_neon:
 	add  x3, x3, :lo12:L_SHA512_transform_neon_len_k
 #else
 	adrp x3, L_SHA512_transform_neon_len_k@PAGE
-	add  x3, x3, :lo12:L_SHA512_transform_neon_len_k@PAGEOFF
+	add  x3, x3, L_SHA512_transform_neon_len_k@PAGEOFF
 #endif /* __APPLE__ */
 #ifndef __APPLE__
-	adrp x27, L_SHA512_transform_neon_len_ror8
-	add  x27, x27, :lo12:L_SHA512_transform_neon_len_ror8
+	adrp x27, L_SHA512_transform_neon_len_r8
+	add  x27, x27, :lo12:L_SHA512_transform_neon_len_r8
 #else
-	adrp x27, L_SHA512_transform_neon_len_ror8@PAGE
-	add  x27, x27, :lo12:L_SHA512_transform_neon_len_ror8@PAGEOFF
+	adrp x27, L_SHA512_transform_neon_len_r8@PAGE
+	add  x27, x27, L_SHA512_transform_neon_len_r8@PAGEOFF
 #endif /* __APPLE__ */
 	ld1	{v11.16b}, [x27]
 	# Load digest into working vars
@@ -188,9 +153,9 @@ _Transform_Sha512_Len_neon:
 L_sha512_len_neon_begin:
 	# Load W
 	# Copy digest to add in at end
-	ld1	{v0.2d, v1.2d, v2.2d, v3.2d}, [x1], #0x40
+	ld1	{v0.16b, v1.16b, v2.16b, v3.16b}, [x1], #0x40
 	mov	x19, x4
-	ld1	{v4.2d, v5.2d, v6.2d, v7.2d}, [x1], #0x40
+	ld1	{v4.16b, v5.16b, v6.16b, v7.16b}, [x1], #0x40
 	mov	x20, x5
 	rev64	v0.16b, v0.16b
 	mov	x21, x6
@@ -1069,21 +1034,14 @@ L_sha512_len_neon_start:
 	add	x6, x6, x21
 	add	x5, x5, x20
 	add	x4, x4, x19
-#ifndef __APPLE__
-	adrp x3, L_SHA512_transform_neon_len_k
-	add  x3, x3, :lo12:L_SHA512_transform_neon_len_k
-#else
-	adrp x3, L_SHA512_transform_neon_len_k@PAGE
-	add  x3, x3, :lo12:L_SHA512_transform_neon_len_k@PAGEOFF
-#endif /* __APPLE__ */
 	subs	w2, w2, #0x80
+	sub	x3, x3, #0x280
 	bne	L_sha512_len_neon_begin
 	stp	x4, x5, [x0]
 	stp	x6, x7, [x0, #16]
 	stp	x8, x9, [x0, #32]
 	stp	x10, x11, [x0, #48]
-	ldr	x17, [x29, #16]
-	ldr	x19, [x29, #24]
+	ldp	x17, x19, [x29, #16]
 	ldp	x20, x21, [x29, #32]
 	ldp	x22, x23, [x29, #48]
 	ldp	x24, x25, [x29, #64]
@@ -1095,110 +1053,73 @@ L_sha512_len_neon_start:
 #ifndef __APPLE__
 	.size	Transform_Sha512_Len_neon,.-Transform_Sha512_Len_neon
 #endif /* __APPLE__ */
-#else
+#ifdef WOLFSSL_ARMASM_CRYPTO_SHA512
 #ifndef __APPLE__
 	.text
-	.type	L_SHA512_transform_crypto_len_k, %object
 	.section	.rodata
-	.size	L_SHA512_transform_crypto_len_k, 640
+	.type	L_SHA512_trans_crypto_len_k, %object
+	.size	L_SHA512_trans_crypto_len_k, 640
 #else
 	.section	__DATA,__data
 #endif /* __APPLE__ */
+	# 16-byte aligned, 128-bit aligned
 #ifndef __APPLE__
-	.align	3
+	.align	4
 #else
-	.p2align	3
+	.p2align	4
 #endif /* __APPLE__ */
-L_SHA512_transform_crypto_len_k:
-	.xword	0x428a2f98d728ae22
-	.xword	0x7137449123ef65cd
-	.xword	0xb5c0fbcfec4d3b2f
-	.xword	0xe9b5dba58189dbbc
-	.xword	0x3956c25bf348b538
-	.xword	0x59f111f1b605d019
-	.xword	0x923f82a4af194f9b
-	.xword	0xab1c5ed5da6d8118
-	.xword	0xd807aa98a3030242
-	.xword	0x12835b0145706fbe
-	.xword	0x243185be4ee4b28c
-	.xword	0x550c7dc3d5ffb4e2
-	.xword	0x72be5d74f27b896f
-	.xword	0x80deb1fe3b1696b1
-	.xword	0x9bdc06a725c71235
-	.xword	0xc19bf174cf692694
-	.xword	0xe49b69c19ef14ad2
-	.xword	0xefbe4786384f25e3
-	.xword	0xfc19dc68b8cd5b5
-	.xword	0x240ca1cc77ac9c65
-	.xword	0x2de92c6f592b0275
-	.xword	0x4a7484aa6ea6e483
-	.xword	0x5cb0a9dcbd41fbd4
-	.xword	0x76f988da831153b5
-	.xword	0x983e5152ee66dfab
-	.xword	0xa831c66d2db43210
-	.xword	0xb00327c898fb213f
-	.xword	0xbf597fc7beef0ee4
-	.xword	0xc6e00bf33da88fc2
-	.xword	0xd5a79147930aa725
-	.xword	0x6ca6351e003826f
-	.xword	0x142929670a0e6e70
-	.xword	0x27b70a8546d22ffc
-	.xword	0x2e1b21385c26c926
-	.xword	0x4d2c6dfc5ac42aed
-	.xword	0x53380d139d95b3df
-	.xword	0x650a73548baf63de
-	.xword	0x766a0abb3c77b2a8
-	.xword	0x81c2c92e47edaee6
-	.xword	0x92722c851482353b
-	.xword	0xa2bfe8a14cf10364
-	.xword	0xa81a664bbc423001
-	.xword	0xc24b8b70d0f89791
-	.xword	0xc76c51a30654be30
-	.xword	0xd192e819d6ef5218
-	.xword	0xd69906245565a910
-	.xword	0xf40e35855771202a
-	.xword	0x106aa07032bbd1b8
-	.xword	0x19a4c116b8d2d0c8
-	.xword	0x1e376c085141ab53
-	.xword	0x2748774cdf8eeb99
-	.xword	0x34b0bcb5e19b48a8
-	.xword	0x391c0cb3c5c95a63
-	.xword	0x4ed8aa4ae3418acb
-	.xword	0x5b9cca4f7763e373
-	.xword	0x682e6ff3d6b2b8a3
-	.xword	0x748f82ee5defb2fc
-	.xword	0x78a5636f43172f60
-	.xword	0x84c87814a1f0ab72
-	.xword	0x8cc702081a6439ec
-	.xword	0x90befffa23631e28
-	.xword	0xa4506cebde82bde9
-	.xword	0xbef9a3f7b2c67915
-	.xword	0xc67178f2e372532b
-	.xword	0xca273eceea26619c
-	.xword	0xd186b8c721c0c207
-	.xword	0xeada7dd6cde0eb1e
-	.xword	0xf57d4f7fee6ed178
-	.xword	0x6f067aa72176fba
-	.xword	0xa637dc5a2c898a6
-	.xword	0x113f9804bef90dae
-	.xword	0x1b710b35131c471b
-	.xword	0x28db77f523047d84
-	.xword	0x32caab7b40c72493
-	.xword	0x3c9ebe0a15c9bebc
-	.xword	0x431d67c49c100d4c
-	.xword	0x4cc5d4becb3e42b6
-	.xword	0x597f299cfc657e2a
-	.xword	0x5fcb6fab3ad6faec
-	.xword	0x6c44198c4a475817
+L_SHA512_trans_crypto_len_k:
+	.quad	0x428a2f98d728ae22,0x7137449123ef65cd
+	.quad	0xb5c0fbcfec4d3b2f,0xe9b5dba58189dbbc
+	.quad	0x3956c25bf348b538,0x59f111f1b605d019
+	.quad	0x923f82a4af194f9b,0xab1c5ed5da6d8118
+	.quad	0xd807aa98a3030242,0x12835b0145706fbe
+	.quad	0x243185be4ee4b28c,0x550c7dc3d5ffb4e2
+	.quad	0x72be5d74f27b896f,0x80deb1fe3b1696b1
+	.quad	0x9bdc06a725c71235,0xc19bf174cf692694
+	.quad	0xe49b69c19ef14ad2,0xefbe4786384f25e3
+	.quad	0x0fc19dc68b8cd5b5,0x240ca1cc77ac9c65
+	.quad	0x2de92c6f592b0275,0x4a7484aa6ea6e483
+	.quad	0x5cb0a9dcbd41fbd4,0x76f988da831153b5
+	.quad	0x983e5152ee66dfab,0xa831c66d2db43210
+	.quad	0xb00327c898fb213f,0xbf597fc7beef0ee4
+	.quad	0xc6e00bf33da88fc2,0xd5a79147930aa725
+	.quad	0x06ca6351e003826f,0x142929670a0e6e70
+	.quad	0x27b70a8546d22ffc,0x2e1b21385c26c926
+	.quad	0x4d2c6dfc5ac42aed,0x53380d139d95b3df
+	.quad	0x650a73548baf63de,0x766a0abb3c77b2a8
+	.quad	0x81c2c92e47edaee6,0x92722c851482353b
+	.quad	0xa2bfe8a14cf10364,0xa81a664bbc423001
+	.quad	0xc24b8b70d0f89791,0xc76c51a30654be30
+	.quad	0xd192e819d6ef5218,0xd69906245565a910
+	.quad	0xf40e35855771202a,0x106aa07032bbd1b8
+	.quad	0x19a4c116b8d2d0c8,0x1e376c085141ab53
+	.quad	0x2748774cdf8eeb99,0x34b0bcb5e19b48a8
+	.quad	0x391c0cb3c5c95a63,0x4ed8aa4ae3418acb
+	.quad	0x5b9cca4f7763e373,0x682e6ff3d6b2b8a3
+	.quad	0x748f82ee5defb2fc,0x78a5636f43172f60
+	.quad	0x84c87814a1f0ab72,0x8cc702081a6439ec
+	.quad	0x90befffa23631e28,0xa4506cebde82bde9
+	.quad	0xbef9a3f7b2c67915,0xc67178f2e372532b
+	.quad	0xca273eceea26619c,0xd186b8c721c0c207
+	.quad	0xeada7dd6cde0eb1e,0xf57d4f7fee6ed178
+	.quad	0x06f067aa72176fba,0x0a637dc5a2c898a6
+	.quad	0x113f9804bef90dae,0x1b710b35131c471b
+	.quad	0x28db77f523047d84,0x32caab7b40c72493
+	.quad	0x3c9ebe0a15c9bebc,0x431d67c49c100d4c
+	.quad	0x4cc5d4becb3e42b6,0x597f299cfc657e2a
+	.quad	0x5fcb6fab3ad6faec,0x6c44198c4a475817
 #ifndef __APPLE__
 .text
 .globl	Transform_Sha512_Len_crypto
+WC_ASM_ATT_HIDDEN(Transform_Sha512_Len_crypto)
 .type	Transform_Sha512_Len_crypto,@function
 .align	2
 Transform_Sha512_Len_crypto:
 #else
 .section	__TEXT,__text
 .globl	_Transform_Sha512_Len_crypto
+WC_ASM_ATT_HIDDEN(_Transform_Sha512_Len_crypto)
 .p2align	2
 _Transform_Sha512_Len_crypto:
 #endif /* __APPLE__ */
@@ -1208,17 +1129,15 @@ _Transform_Sha512_Len_crypto:
 	stp	d10, d11, [x29, #32]
 	stp	d12, d13, [x29, #48]
 	stp	d14, d15, [x29, #64]
-#ifdef __APPLE__
-.arch_extension sha3
-#endif /* __APPLE__ */
 #ifndef __APPLE__
-	adrp x4, L_SHA512_transform_crypto_len_k
-	add  x4, x4, :lo12:L_SHA512_transform_crypto_len_k
+	adrp x4, L_SHA512_trans_crypto_len_k
+	add  x4, x4, :lo12:L_SHA512_trans_crypto_len_k
 #else
-	adrp x4, L_SHA512_transform_crypto_len_k@PAGE
-	add  x4, x4, :lo12:L_SHA512_transform_crypto_len_k@PAGEOFF
+	adrp x4, L_SHA512_trans_crypto_len_k@PAGE
+	add  x4, x4, L_SHA512_trans_crypto_len_k@PAGEOFF
 #endif /* __APPLE__ */
-	# Load first 16 64-bit words of K permanently
+.arch_extension sha3
+	# Load K into vector registers
 	ld1	{v8.2d, v9.2d, v10.2d, v11.2d}, [x4], #0x40
 	ld1	{v12.2d, v13.2d, v14.2d, v15.2d}, [x4], #0x40
 	# Load digest into working vars
@@ -1227,8 +1146,8 @@ _Transform_Sha512_Len_crypto:
 L_sha512_len_crypto_begin:
 	mov	x3, x4
 	# Load W
-	ld1	{v0.2d, v1.2d, v2.2d, v3.2d}, [x1], #0x40
-	ld1	{v4.2d, v5.2d, v6.2d, v7.2d}, [x1], #0x40
+	ld1	{v0.16b, v1.16b, v2.16b, v3.16b}, [x1], #0x40
+	ld1	{v4.16b, v5.16b, v6.16b, v7.16b}, [x1], #0x40
 	rev64	v0.16b, v0.16b
 	rev64	v1.16b, v1.16b
 	rev64	v2.16b, v2.16b
@@ -1733,7 +1652,8 @@ L_sha512_len_crypto_begin:
 	.size	Transform_Sha512_Len_crypto,.-Transform_Sha512_Len_crypto
 #endif /* __APPLE__ */
 #endif /* WOLFSSL_ARMASM_CRYPTO_SHA512 */
-#endif /* WOLFSSL_SHA512 */
+#endif /* !WOLFSSL_ARMASM_NO_NEON */
+#endif /* WOLFSSL_SHA512 || WOLFSSL_SHA384 */
 #endif /* __aarch64__ */
 #endif /* WOLFSSL_ARMASM */
 

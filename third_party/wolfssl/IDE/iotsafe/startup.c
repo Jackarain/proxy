@@ -1,12 +1,12 @@
 /* startup.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -99,7 +99,7 @@ void isr_usagefault(void)
     /* Panic. */
     while(1) ;;
 }
-        
+
 
 void isr_empty(void)
 {
@@ -131,7 +131,7 @@ void (* const IV[])(void) =
 	0,                           // reserved
 	isr_empty,                   // PendSV
 	isr_systick,                 // SysTick
-    
+
     isr_empty,              // NVIC_WWDG_IRQ 0
     isr_empty,              // PVD_IRQ 1
     isr_empty,              // TAMP_STAMP_IRQ 2

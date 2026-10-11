@@ -1,0 +1,459 @@
+name: cross-library (reusable)
+
+# Reusable engine for compile-testing a downstream wolfSSL product against the
+# wolfSSL in this checkout. It builds wolfSSL once from this checkout (the PR
+# merge commit), then builds the product against that install at both the
+# product's default-branch HEAD and its highest release tag. A caller can also
+# select an inline Makefile build/test sequence for a project whose native CI
+# uses one.
+#
+# The wolfSSL build runs once and is shared: the build-wolfssl job installs
+# wolfSSL and uploads it as an artifact, and the compile matrix (head, latest)
+# downloads that artifact instead of rebuilding. This halves the wolfSSL builds
+# per product from two to one.
+
+on:
+  workflow_call:
+    inputs:
+      product:
+        description: 'Short product label (used for the job name)'
+        required: true
+        type: string
+      repo:
+        description: 'Product source: "owner/repo" shorthand or a full git URL'
+        required: true
+        type: string
+      wolfssl_configure:
+        description: 'Configure flags for the local wolfSSL build'
+        required: true
+        type: string
+      product_configure:
+        description: "The product's own ./configure flags"
+        required: false
+        default: ''
+        type: string
+      script:
+        description: 'Build script name under .github/workflows/cross-library/scripts/; defaults to <product>.sh in script mode'
+        required: false
+        default: ''
+        type: string
+      build_mode:
+        description: 'Build implementation: script (default) or makefile (inline in this workflow)'
+        required: false
+        default: 'script'
+        type: string
+      apt_packages:
+        description: 'Extra apt packages needed to build the product'
+        required: false
+        default: ''
+        type: string
+      container:
+        description: 'Container image to build in (e.g. ubuntu:24.04, debian:13)'
+        required: false
+        default: 'ubuntu:24.04'
+        type: string
+
+jobs:
+  # Build wolfSSL once and publish the install dir. Both compile legs (head,
+  # latest) consume it, so this runs a single time per product instead of once
+  # per leg.
+  build-wolfssl:
+    name: Build wolfSSL (${{ inputs.product }})
+    if: ${{ (github.repository_owner == 'wolfssl') && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
+    runs-on: ubuntu-24.04
+    container:
+      image: ${{ inputs.container }}
+    timeout-minutes: 20
+    steps:
+      # Minimal-image containers ship without git/toolchain; install them
+      # before checkout. Product-specific extras come from apt_packages.
+      - name: Install build tools
+        run: |
+          set -eux
+          export DEBIAN_FRONTEND=noninteractive
+          # These containers are bare images with no bash, so this step runs
+          # under `sh` - keep it POSIX. $APT_OPTS is unquoted on purpose so it
+          # word-splits.
+          # A wedged mirror hangs apt instead of failing it. Acquire timeouts
+          # drop a stalled connection (and are what actually detects a wedge),
+          # `timeout` hard-kills apt-get if it wedges outside its own I/O loop,
+          # and the loop then retries - re-reading the mirror list. Two
+          # attempts at 60s+300s fit inside this job's timeout-minutes; apt
+          # resumes from archives/partial/, so a killed transfer is not lost.
+          APT_OPTS="-o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30"
+          for i in 1 2; do
+            # An attempt killed mid-unpack leaves dpkg needing this, or the
+            # next apt-get aborts instantly in debSystem::Lock().
+            dpkg --configure -a >/dev/null 2>&1 || true
+            if timeout -k 10 60 apt-get $APT_OPTS update -q && \
+               timeout -k 10 300 apt-get $APT_OPTS install -y \
+                 --no-install-recommends \
+                 build-essential autoconf automake libtool pkg-config \
+                 git ca-certificates ${{ inputs.apt_packages }}; then
+              break
+            fi
+            test "$i" -lt 2 || { echo "::error::apt-get failed after 2 attempts"; exit 1; }
+            echo "::warning::apt-get failed (attempt $i/2)"
+            sleep 5
+          done
+
+      # Building only needs the commit under test, not history. The break check
+      # that needs history runs in the compile job, not here.
+      - name: Checkout wolfSSL
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+          fetch-tags: false
+
+      # Container job: the bind-mounted workspace is owned by a different uid,
+      # so mark it safe or git refuses to operate on it ("dubious ownership").
+      - name: Mark workspace safe for git
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      # Build wolfSSL and install to a local dir. The configure flags go through
+      # an env var (not inline ${{ }}) so a quoted CFLAGS/C_EXTRA_FLAGS group
+      # survives GitHub's expansion intact; the string is trusted caller input
+      # that build-wolfssl.sh eval's.
+      - name: Build and install wolfSSL
+        env:
+          WOLFSSL_CONFIGURE: ${{ inputs.wolfssl_configure }}
+        run: |
+          .github/workflows/cross-library/scripts/build-wolfssl.sh \
+            "$GITHUB_WORKSPACE" \
+            "$GITHUB_WORKSPACE/wolfssl-install" \
+            "$WOLFSSL_CONFIGURE"
+
+      # Pack as a tar so libtool symlinks, exec bits, and the absolute-path
+      # .la/.pc files survive the artifact round-trip. The compile job unpacks to
+      # the same $GITHUB_WORKSPACE path, so those baked-in paths stay valid.
+      - name: Pack the wolfSSL install
+        run: tar -C "$GITHUB_WORKSPACE" -czf wolfssl-install.tar.gz wolfssl-install
+
+      - name: Upload the wolfSSL install
+        uses: actions/upload-artifact@v4
+        with:
+          name: wolfssl-install-${{ inputs.product }}
+          path: wolfssl-install.tar.gz
+          retention-days: 1
+
+  # Compile the product against the shared wolfSSL, once per ref_mode:
+  #   head    -> HEAD of the product's default branch (master/main, auto-detected)
+  #   latest  -> the product's highest version tag (polled at run time)
+  compile:
+    name: Compile ${{ inputs.product }} (${{ matrix.ref_mode }})
+    needs: build-wolfssl
+    runs-on: ubuntu-24.04
+    container:
+      image: ${{ inputs.container }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        ref_mode: [ head, latest ]
+    steps:
+      # Minimal-image containers ship without git/toolchain; install them
+      # before checkout. Product-specific extras come from apt_packages.
+      - name: Install build tools
+        run: |
+          set -eux
+          export DEBIAN_FRONTEND=noninteractive
+          # These containers are bare images with no bash, so this step runs
+          # under `sh` - keep it POSIX. $APT_OPTS is unquoted on purpose so it
+          # word-splits.
+          # A wedged mirror hangs apt instead of failing it. Acquire timeouts
+          # drop a stalled connection (and are what actually detects a wedge),
+          # `timeout` hard-kills apt-get if it wedges outside its own I/O loop,
+          # and the loop then retries - re-reading the mirror list. Two
+          # attempts at 60s+300s fit inside this job's timeout-minutes; apt
+          # resumes from archives/partial/, so a killed transfer is not lost.
+          APT_OPTS="-o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30"
+          for i in 1 2; do
+            # An attempt killed mid-unpack leaves dpkg needing this, or the
+            # next apt-get aborts instantly in debSystem::Lock().
+            dpkg --configure -a >/dev/null 2>&1 || true
+            if timeout -k 10 60 apt-get $APT_OPTS update -q && \
+               timeout -k 10 300 apt-get $APT_OPTS install -y \
+                 --no-install-recommends \
+                 build-essential autoconf automake libtool pkg-config \
+                 git ca-certificates ${{ inputs.apt_packages }}; then
+              break
+            fi
+            test "$i" -lt 2 || { echo "::error::apt-get failed after 2 attempts"; exit 1; }
+            echo "::warning::apt-get failed (attempt $i/2)"
+            sleep 5
+          done
+
+      # This job does not build wolfSSL, but the latest leg still checks out
+      # wolfSSL history because check-break.sh scans commit messages here. The
+      # head leg never waives a break, so a depth-1 checkout is enough for it.
+      - name: Checkout wolfSSL
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+          fetch-tags: false
+
+      # This is a container job: the workspace is a host bind-mount owned by a
+      # different uid than the (root) container user, so git refuses to operate
+      # on it ("detected dubious ownership") unless it is marked safe. actions/
+      # checkout marks it safe only under its own *temporary* HOME, which our
+      # run: steps (HOME=/github/home) do not inherit, so check-break.sh's
+      # `git tag`/`git log` would fail and, with stderr hidden, look like "no
+      # break declared". Mark it safe under this HOME for all following steps.
+      - name: Mark workspace safe for git
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      # The `latest` leg is the only one that reads wolfSSL history: it needs the
+      # commit messages check-break.sh scans (the last two release cycles) plus
+      # the two newest release tags, and no file contents, so --filter=tree:0
+      # fetches commits+tags only and turns a 912 MiB full clone into ~1 MiB on
+      # top of the source. The exclude boundary is the THIRD-newest release, not
+      # the scan base, because --shallow-exclude severs the ref it names and
+      # severing the scan base would drop it from `git tag --merged HEAD` and
+      # silently halve the window. Tags come in by explicit refspec (never
+      # --tags, which re-pulls every tag's history), and note a server without
+      # uploadpack.allowFilter silently ignores the filter and clones in full.
+      - name: Deepen wolfSSL history for the break check
+        if: ${{ matrix.ref_mode == 'latest' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Release-tag selection MUST agree with check-break.sh's
+          # `--list 'v*-stable' --sort=-v:refname`. `sort -Vr` matches git's
+          # -v:refname on this tag set (verified incl. double-digit minors,
+          # e.g. v5.9.10 > v5.9.2). The assertion below catches any drift.
+          mapfile -t T < <(git ls-remote --tags --refs origin 'v*-stable' \
+              | sed 's#.*refs/tags/##' | sort -Vr)
+          echo "Newest release tags: ${T[*]:0:3}"
+
+          if [ "${#T[@]}" -lt 3 ]; then
+            echo "Fewer than three release tags; falling back to full history."
+            git fetch --unshallow --filter=tree:0 --tags origin
+          else
+            # Fetch by ref (not raw SHA) so this does not depend on the server
+            # allowing reachable-SHA1-in-want.
+            git fetch --no-tags --filter=tree:0 --shallow-exclude="${T[2]}" origin \
+                "$GITHUB_REF" \
+                "refs/tags/${T[0]}:refs/tags/${T[0]}" \
+                "refs/tags/${T[1]}:refs/tags/${T[1]}"
+          fi
+
+          # Fail LOUD if this step and check-break.sh disagree on the scan base.
+          # check-break.sh:61 falls back to the NEWEST tag when the second line
+          # is missing, which would quietly halve the window rather than error.
+          rel="$(git tag --merged HEAD --sort=-v:refname --list 'v*-stable')"
+          base="$(printf '%s\n' "$rel" | sed -n '2p')"
+          echo "Deepened to $(git rev-list --count HEAD) commits; scan base='${base}'"
+
+          # The fetch above deepens whatever "$GITHUB_REF" resolves to NOW, but
+          # actions/checkout pinned a SHA when the job started. GitHub can
+          # regenerate refs/pull/N/merge in between -- a new commit object with
+          # the same parents -- and then FETCH_HEAD is not HEAD, HEAD keeps its
+          # depth-1 graft, and no tag is reachable from it. Deepen the ref we are
+          # actually on before giving up. Re-running the job cannot clear this:
+          # a re-run replays the same pinned SHA.
+          if [ -z "$base" ]; then
+            echo "Scan base empty (merge ref moved under the checkout?);" \
+                 "retrying with a full deepen."
+            git fetch --unshallow --filter=tree:0 --tags origin
+            rel="$(git tag --merged HEAD --sort=-v:refname --list 'v*-stable')"
+            base="$(printf '%s\n' "$rel" | sed -n '2p')"
+            echo "Re-deepened to $(git rev-list --count HEAD) commits;" \
+                 "scan base='${base}'"
+          fi
+
+          if [ -z "$base" ]; then
+            echo "::error::Deepen produced no usable scan base; check-break.sh would scan the wrong window."
+            printf 'Release tags merged into HEAD: %s\n' "${rel:-<none>}"
+            exit 1
+          fi
+
+      - name: Download the wolfSSL install
+        uses: actions/download-artifact@v4
+        with:
+          name: wolfssl-install-${{ inputs.product }}
+
+      # Unpack to the same path wolfSSL was built at, keeping the .la/.pc
+      # absolute paths valid.
+      - name: Unpack the wolfSSL install
+        run: tar -C "$GITHUB_WORKSPACE" -xzf wolfssl-install.tar.gz
+
+      # Resolve the concrete ref to compile: the highest tag (latest) or the
+      # default branch (head). Used both for the build and the break check.
+      - name: Resolve product ref
+        id: ref
+        env:
+          REPO: ${{ inputs.repo }}
+        run: |
+          ref="$(.github/workflows/cross-library/scripts/resolve-ref.sh "$REPO" "${{ matrix.ref_mode }}")"
+          echo "Resolved ${{ matrix.ref_mode }} ref for $REPO: $ref"
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+
+      # Build the product. Script-mode products use their existing adapters;
+      # Makefile-mode products run the same commands as their native CI here so
+      # their integration is reviewable without a second product-specific file.
+      # A build failure is allowed ONLY if a wolfSSL commit since the last release
+      # tag declared it with a breaks-<product>=<ref> token (see check-break.sh);
+      # otherwise the job fails, forcing intentional breaks to be recorded in a
+      # commit. The output gates the optional maintained-HEAD smoke test.
+      # PRODUCT_CONFIGURE is intentionally unquoted so multiple flags split.
+      - name: Compile ${{ inputs.product }} against wolfSSL
+        id: product_build
+        shell: bash
+        env:
+          BUILD_MODE: ${{ inputs.build_mode }}
+          REPO: ${{ inputs.repo }}
+          PRODUCT_CONFIGURE: ${{ inputs.product_configure }}
+          PRODUCT: ${{ inputs.product }}
+          PRODUCT_SCRIPT: ${{ inputs.script }}
+          REF: ${{ steps.ref.outputs.ref }}
+          MODE: ${{ matrix.ref_mode }}
+        run: |
+          S=.github/workflows/cross-library/scripts
+          set +e
+          (
+            set -euo pipefail
+            case "$BUILD_MODE:$PRODUCT" in
+              script:*)
+                # Keep the allowed adapter list explicit: workflow_call inputs
+                # must not select an arbitrary executable from the checkout.
+                product_script="${PRODUCT_SCRIPT:-${PRODUCT}.sh}"
+                case "$product_script" in
+                  wolfclu.sh|wolfmqtt.sh|wolfpkcs11.sh|wolfprovider.sh|wolfssh.sh|wolftpm.sh)
+                    ;;
+                  *)
+                    echo "::error::unsupported cross-library product script: $product_script"
+                    exit 2
+                    ;;
+                esac
+                # shellcheck disable=SC2086  # $PRODUCT_CONFIGURE must word-split into flags
+                "$S/$product_script" -t "$REF" \
+                  "$GITHUB_WORKSPACE/wolfssl-install" "$REPO" $PRODUCT_CONFIGURE
+                ;;
+              makefile:wolfcose)
+                case "$REPO" in
+                  *://*|git@*) product_url="$REPO" ;;
+                  *) product_url="https://github.com/${REPO}.git" ;;
+                esac
+                git clone --depth 1 --branch "$REF" "$product_url" wolfCOSE
+                cd wolfCOSE
+                # Match wolfCOSE's hosted Makefile build, explicitly using the
+                # staged wolfSSL instead of a host /usr/local installation.
+                cflags="-std=c99 -DHAVE_ANONYMOUS_INLINE_AGGREGATES=1 -Os"
+                cflags+=" -Wall -Wextra -Wpedantic -Wshadow -Wconversion"
+                cflags+=" -Wvla -Werror=vla -ffunction-sections -fdata-sections -fstack-usage"
+                cflags+=" -I./include -isystem $GITHUB_WORKSPACE/wolfssl-install/include"
+                ldflags="-L$GITHUB_WORKSPACE/wolfssl-install/lib -Wl,-rpath,$GITHUB_WORKSPACE/wolfssl-install/lib -lwolfssl"
+                make "-j$(nproc)" CFLAGS="$cflags" LDFLAGS="$ldflags"
+                ;;
+              makefile:wolfip)
+                case "$REPO" in
+                  *://*|git@*) product_url="$REPO" ;;
+                  *) product_url="https://github.com/${REPO}.git" ;;
+                esac
+                git clone --depth 1 --branch "$REF" "$product_url" wolfip
+                cd wolfip
+                # wolfIP v1.0 predates generic WOLFSSL_PREFIX support on Linux,
+                # so point its header probe and link step at the staged install.
+                export WOLFSSL_PREFIX="$GITHUB_WORKSPACE/wolfssl-install"
+                export PKG_CONFIG_PATH="$WOLFSSL_PREFIX/lib/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
+                export EXTRA_CFLAGS="${EXTRA_CFLAGS:+$EXTRA_CFLAGS }-I$WOLFSSL_PREFIX/include"
+                export LDFLAGS="${LDFLAGS:+$LDFLAGS }-L$WOLFSSL_PREFIX/lib -Wl,-rpath,$WOLFSSL_PREFIX/lib"
+                if [ "$REF" = "v1.0" ]; then
+                  # v1.0 predates EXTRA_CFLAGS on Linux, so its header probe
+                  # sees only CFLAGS. Keep its native warning/thread flags.
+                  legacy_cflags="-Wall -Werror -Wextra -I. -D_GNU_SOURCE"
+                  legacy_cflags+=" -g -ggdb -Wdeclaration-after-statement"
+                  legacy_cflags+=" -I$WOLFSSL_PREFIX/include -DWOLFSSL_USE_OPTIONS_H"
+                  legacy_ldflags="-pthread -L$WOLFSSL_PREFIX/lib -Wl,-rpath,$WOLFSSL_PREFIX/lib"
+                  make "-j$(nproc)" build/test-wolfssl \
+                    CFLAGS="$legacy_cflags" LDFLAGS="$legacy_ldflags"
+                else
+                  make "-j$(nproc)" build/test-wolfssl
+                fi
+                ;;
+              *)
+                echo "::error::unsupported cross-library build mode/product: $BUILD_MODE/$PRODUCT"
+                exit 2
+                ;;
+            esac
+          )
+          rc=$?
+          set -e
+
+          # The breaks-<product>= mechanism applies ONLY to the latest release
+          # tag. A head/master break is never waivable, never consults the
+          # ledger, and must be fixed.
+          if [ "$rc" -eq 0 ]; then
+            echo "compiled=true" >> "$GITHUB_OUTPUT"
+            if [ "$MODE" = "latest" ] && "$S/check-break.sh" "$PRODUCT" "$REF" >/tmp/brk 2>/dev/null; then
+              echo "::warning::$PRODUCT ($REF) compiled OK but a break is still declared, remove the stale breaks-$PRODUCT=$REF token:"
+              cat /tmp/brk
+            fi
+            exit 0
+          fi
+
+          echo "===== $PRODUCT ($REF) failed to compile against this wolfSSL ====="
+
+          if [ "$MODE" = "latest" ]; then
+            # Released, immutable tag: allowed only if the exact tag is declared.
+            if "$S/check-break.sh" "$PRODUCT" "$REF"; then
+              echo "compiled=false" >> "$GITHUB_OUTPUT"
+              echo "::warning::$PRODUCT $REF failed to compile, but this break is DECLARED (see above). Treating as a known/tracked break."
+              exit 0
+            fi
+            echo "::error::$PRODUCT $REF (latest release) no longer compiles against this wolfSSL and no break is declared."
+            echo "That tag is a released version and cannot be changed. If wolfSSL is intentionally dropping"
+            echo "compatibility with it, record the break so CI tracks it and this job passes. Add this exact"
+            echo "token to a commit message in this PR (the release must be named explicitly):"
+            echo "    breaks-$PRODUCT=$REF"
+            echo "Otherwise, rework the change so $PRODUCT $REF still builds."
+          else
+            # Product master/HEAD: NEVER waivable, no breaks- declaration exists.
+            echo "::error::$PRODUCT $REF (default branch) no longer compiles against this wolfSSL."
+            echo "A master/HEAD break cannot be waived; there is no breaks- declaration for it."
+            echo "$PRODUCT $REF must stay compatible with wolfSSL master. Fix it by either:"
+            echo "  * reworking this PR so $PRODUCT $REF builds against wolfSSL master again, or"
+            echo "  * putting up a matching fix on $PRODUCT's $REF branch, then re-running this job."
+          fi
+          exit 1
+
+      # The Makefile-mode smoke suite covers the maintained default-branch HEAD,
+      # after a real successful build. Older releases retain compile-only
+      # coverage because their own runtime suites may not support the current
+      # wolfSSL baseline.
+      - name: Run ${{ inputs.product }} smoke tests
+        if: ${{ inputs.build_mode == 'makefile' && matrix.ref_mode == 'head' && steps.product_build.outputs.compiled == 'true' }}
+        shell: bash
+        env:
+          PRODUCT: ${{ inputs.product }}
+          WOLFSSL_INSTALL: ${{ github.workspace }}/wolfssl-install
+        run: |
+          set -euxo pipefail
+          case "$PRODUCT" in
+            wolfcose)
+              cd "$GITHUB_WORKSPACE/wolfCOSE"
+              export LD_LIBRARY_PATH="$WOLFSSL_INSTALL/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+              cflags="-std=c99 -DHAVE_ANONYMOUS_INLINE_AGGREGATES=1 -Os"
+              cflags+=" -Wall -Wextra -Wpedantic -Wshadow -Wconversion"
+              cflags+=" -Wvla -Werror=vla -ffunction-sections -fdata-sections -fstack-usage"
+              cflags+=" -I./include -isystem $WOLFSSL_INSTALL/include"
+              ldflags="-L$WOLFSSL_INSTALL/lib -Wl,-rpath,$WOLFSSL_INSTALL/lib -lwolfssl"
+              make test CFLAGS="$cflags" LDFLAGS="$ldflags"
+              make tool-test CFLAGS="$cflags" LDFLAGS="$ldflags"
+              ;;
+            wolfip)
+              cd "$GITHUB_WORKSPACE/wolfip"
+              export WOLFSSL_PREFIX="$WOLFSSL_INSTALL"
+              export PKG_CONFIG_PATH="$WOLFSSL_PREFIX/lib/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
+              export EXTRA_CFLAGS="${EXTRA_CFLAGS:+$EXTRA_CFLAGS }-I$WOLFSSL_PREFIX/include"
+              export LDFLAGS="${LDFLAGS:+$LDFLAGS }-L$WOLFSSL_PREFIX/lib -Wl,-rpath,$WOLFSSL_PREFIX/lib"
+              export LD_LIBRARY_PATH="$WOLFSSL_PREFIX/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+              make "-j$(nproc)" unit-esp
+              ./build/test/unit-esp
+              ;;
+            *)
+              echo "::error::unsupported cross-library smoke test"
+              exit 1
+              ;;
+          esac

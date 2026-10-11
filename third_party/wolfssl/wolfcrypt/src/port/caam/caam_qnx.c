@@ -1,12 +1,12 @@
 /* caam_qnx.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -36,6 +36,7 @@
 #include <wolfssl/version.h>
 
 #include <errno.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -55,6 +56,16 @@ static void* localMemory = NULL;
 static unsigned int localPhy = 0;
 sem_t localMemSem;
 
+static void caamZeroMemory(void* mem, size_t len)
+{
+    volatile unsigned char* p = (volatile unsigned char*)mem;
+
+    while (len > 0U) {
+        *p++ = 0;
+        len--;
+    }
+}
+
 /* Can be overridden, variable for how large of a local buffer to have.
  * This allows for large performance gains when avoiding mapping new memory
  * for each operation. */
@@ -62,10 +73,29 @@ sem_t localMemSem;
     #define WOLFSSL_CAAM_QNX_MEMORY 250000
 #endif
 
+/* Maximum input size accepted for a single operation. Sizes are taken from the
+ * device client and are not trusted, this bounds them so that the aggregate
+ * buffer sizes calculated from them can not overflow. */
+#ifndef WOLFSSL_CAAM_QNX_MAX_SZ
+    #define WOLFSSL_CAAM_QNX_MAX_SZ (16 * 1024 * 1024)
+#endif
+
+/* Permissions that the /dev/wolfCrypt device node is created with. Any process
+ * that can open the device is able to submit operations to it, which is the
+ * intended use case of the resource manager, offering the CAAM to unprivileged
+ * applications. Requests are treated as untrusted and sanity checked before
+ * use. Deployments that instead want the CAAM reserved for privileged callers
+ * should override this, i.e. 0600 or 0660 with a dedicated group. */
+#ifndef WOLFSSL_CAAM_QNX_DEV_MODE
+    #define WOLFSSL_CAAM_QNX_DEV_MODE 0666
+#endif
+
 /* keep track of which ID memory belongs to so it can be free'd up */
-#define MAX_PART 7
+#define MAX_OWNER_PART CAAM_QNX_MAX_PARTITIONS
+#define NO_OWNER_PART MAX_OWNER_PART
 pthread_mutex_t sm_mutex;
-CAAM_ADDRESS sm_ownerId[MAX_PART];
+CAAM_ADDRESS sm_ownerId[MAX_OWNER_PART];
+unsigned int sm_pagePart[MAX_OWNER_PART];
 
 /* variables for I/O of resource manager */
 resmgr_connect_funcs_t connect_funcs;
@@ -315,12 +345,59 @@ int CAAM_ADR_SYNC(void* vaddr, int sz)
  */
 static int sanityCheckPartitionAddress(CAAM_ADDRESS partAddr, int partSz)
 {
-    if (partAddr < CAAM_PAGE || partAddr > CAAM_PAGE + (MAX_PART*4096) ||
-            partSz > 4096) {
+    CAAM_ADDRESS partOffset;
+
+    if (partAddr < CAAM_PAGE || partSz <= 0) {
+        WOLFSSL_MSG("error in physical address range");
+        return -1;
+    }
+
+    partOffset = partAddr - CAAM_PAGE;
+    if ((partOffset / CAAM_PAGE_SZ) >= CAAM_QNX_MAX_PARTITIONS ||
+            (CAAM_ADDRESS)partSz > (CAAM_ADDRESS)CAAM_PAGE_SZ -
+                (partOffset % CAAM_PAGE_SZ)) {
         WOLFSSL_MSG("error in physical address range");
         return -1;
     }
     return 0;
+}
+
+
+static int checkPartitionOwner(CAAM_ADDRESS partAddr, iofunc_ocb_t *ocb)
+{
+    unsigned int pageNumber;
+    unsigned int partNumber;
+    int ret = EOK;
+
+    pageNumber = (unsigned int)((partAddr - CAAM_PAGE) / CAAM_PAGE_SZ);
+    if (!CAAM_QNX_PARTITION_IS_VALID(pageNumber))
+        return EBADMSG;
+
+    if (pthread_mutex_lock(&sm_mutex) != EOK) {
+        return ECANCELED;
+    }
+    else {
+        partNumber = sm_pagePart[pageNumber];
+        if (!CAAM_QNX_PARTITION_IS_VALID(partNumber) ||
+                sm_ownerId[partNumber] != (CAAM_ADDRESS)ocb) {
+            ret = EACCES;
+        }
+        pthread_mutex_unlock(&sm_mutex);
+    }
+
+    return ret;
+}
+
+
+static void clearPartitionOwner(unsigned int partNumber)
+{
+    unsigned int i;
+
+    sm_ownerId[partNumber] = 0;
+    for (i = 0; i < MAX_OWNER_PART; i++) {
+        if (sm_pagePart[i] == partNumber)
+            sm_pagePart[i] = NO_OWNER_PART;
+    }
 }
 
 
@@ -357,23 +434,46 @@ static int doCMAC(resmgr_context_t *ctp, io_devctl_t *msg, unsigned int args[4],
     CAAM_BUFFER tmp[3];
     iov_t in_iovs[3], out_iov;
 
-    int msgSz = 0, ret, numBuf, keySz;
+    int msgSz = 0, ret, numBuf, keySz, expSz;
     unsigned char ctx[32];    /* running CMAC context is a constant 32 bytes */
     unsigned char keybuf[32 + BLACK_KEY_MAC_SZ];/*max AES key size is 32 + MAC*/
     unsigned char *buf = NULL;
 
     numBuf = 2; /* start with 2 (key + ctx) for case with no msg input */
-    keySz  = args[1];
-    if (args[2] == 1) { /* is it a black key? */
-        keySz = keySz + BLACK_KEY_MAC_SZ;
-    }
-    SETIOV(&in_iovs[0], keybuf, keySz);
-    SETIOV(&in_iovs[1], ctx, sizeof(ctx));
-    msgSz = args[3];
-    if (msgSz < 0) {
-        WOLFSSL_MSG("CMAC msg size was a negative value");
+
+    /* The sizes here come from the device client and are not trusted. The key
+     * size is used as the length to read into the fixed size keybuf, check
+     * that it is a valid AES key size before using it. */
+    keySz = args[1];
+    if (keySz != 16 && keySz != 24 && keySz != 32) {
+        WOLFSSL_MSG("Bad CMAC key size found");
         return EBADMSG;
     }
+
+    /* Is it a black key? This is not a boolean, it carries the black key type
+     * (CAAM_BLACK_KEY_SM / _CCM / _ECB), so test it the same way caamAesCmac
+     * does. Matching its non-zero test keeps the amount read here equal to the
+     * amount the descriptor consumes for any type. If a client sends a type
+     * that it did not append the MAC for, the short read is caught below. */
+    if (args[2] != 0) {
+        keySz = keySz + BLACK_KEY_MAC_SZ;
+    }
+
+    /* the key sizes accepted above always fit, this guards against keybuf
+     * being resized without the check above getting updated */
+    if (keySz > (int)sizeof(keybuf)) {
+        WOLFSSL_MSG("CMAC key size larger than key buffer");
+        return EBADMSG;
+    }
+
+    if (args[3] > WOLFSSL_CAAM_QNX_MAX_SZ) {
+        WOLFSSL_MSG("CMAC msg size out of range");
+        return EBADMSG;
+    }
+    msgSz = (int)args[3];
+
+    SETIOV(&in_iovs[0], keybuf, keySz);
+    SETIOV(&in_iovs[1], ctx, sizeof(ctx));
 
     if (msgSz > 0) {
         buf = (unsigned char*)CAAM_ADR_MAP(0, msgSz, 0);
@@ -384,9 +484,20 @@ static int doCMAC(resmgr_context_t *ctp, io_devctl_t *msg, unsigned int args[4],
         numBuf = numBuf + 1; /* increase buffer size by one when adding msg */
     }
 
+    expSz = msgSz + keySz + (int)sizeof(ctx);
     ret = resmgr_msgreadv(ctp, in_iovs, numBuf, idx);
-    if (ret < (msgSz + keySz + sizeof(ctx))) {
-        /* sanity check that enough data was sent */
+    if (ret < 0) {
+        /* the read itself failed */
+        WOLFSSL_MSG("error reading input for CMAC operation");
+        if (buf != NULL)
+            CAAM_ADR_UNMAP(buf, 0, msgSz, 0);
+        return ECANCELED;
+    }
+
+    if (ret < expSz) {
+        /* sanity check that enough data was sent, otherwise part of the
+         * buffers would be left holding data from a previous operation */
+        WOLFSSL_MSG("not enough input data sent for CMAC operation");
         if (buf != NULL)
             CAAM_ADR_UNMAP(buf, 0, msgSz, 0);
         return EOVERFLOW;
@@ -500,6 +611,10 @@ static int doBLOB(resmgr_context_t *ctp, io_devctl_t *msg, unsigned int args[4],
 
     if (args[0] == 1 && dir == CAAM_BLOB_ENCAP) {
         inSz = inSz + BLACK_KEY_MAC_SZ;
+    }
+
+    if (args[3] > sizeof(keymod)) {
+        return EOVERFLOW;
     }
 
     SETIOV(&in_iovs[0], keymod, args[3]);
@@ -755,39 +870,71 @@ static int doAES(resmgr_context_t *ctp, io_devctl_t *msg, unsigned int args[4],
     iov_t in_iovs[6], out_iovs[2];
     int inIdx = 0, outIdx = 0;
     int algo;
+    int readSz;
     unsigned char *key = NULL, *iv = NULL, *in = NULL, *out = NULL;
     unsigned char *pt = NULL;
-    int keySz, ivSz = 0, inSz, outSz;
+    int keySz, ivSz = 0, inSz, outSz, expectedReadSz;
+    unsigned int totalSz;
     unsigned int phyMem = 0;
+    int useLocalMem = 0;
 
     memset(tmp, 0, sizeof(tmp));
 
-    /* get key info */
+    /* The sizes here come from the device client and are not trusted. Sanity
+     * check them before doing any size arithmetic or pointer math. The key
+     * size is required to be a valid AES key size, which is also enforced
+     * later on by caamAesInternal, and the input size is bounded so that the
+     * aggregate size below can not overflow and wrongly select the fixed size
+     * local memory mapping. */
     keySz = args[1] & 0xFFFF; /* key size */
-    inSz = args[2]; /* input size */
-    outSz = args[2]; /* output size */
+    if (keySz != 16 && keySz != 24 && keySz != 32) {
+        WOLFSSL_MSG("Bad AES key size found");
+        return EBADMSG;
+    }
+
+    if (args[2] > WOLFSSL_CAAM_QNX_MAX_SZ) {
+        WOLFSSL_MSG("AES input size out of range");
+        return EBADMSG;
+    }
+    inSz  = (int)args[2]; /* input size */
+    outSz = (int)args[2]; /* output size */
+
     if (type == WC_CAAM_AESCBC || type == WC_CAAM_AESCTR) {
         ivSz = 16;
     }
 
-    if (keySz + inSz + outSz + ivSz < WOLFSSL_CAAM_QNX_MEMORY) {
-        if (sem_trywait(&localMemSem) == 0) {
+    if (inSz < 0 || keySz > INT_MAX - inSz ||
+            keySz + inSz > INT_MAX - ivSz) {
+        return EBADMSG;
+    }
+    expectedReadSz = keySz + inSz + ivSz;
+    if (expectedReadSz > INT_MAX - outSz) {
+        return EBADMSG;
+    }
+    totalSz = (unsigned int)expectedReadSz + (unsigned int)outSz;
+
+    if (totalSz < WOLFSSL_CAAM_QNX_MEMORY) {
+        if (localMemory != NULL && sem_trywait(&localMemSem) == 0) {
             key = localMemory;
             phyMem = localPhy;
+            useLocalMem = 1;
         }
     }
 
     /* local pre-mapped memory was not used, try to map some memory now */
     if (key == NULL) {
-        pt = (unsigned char*)CAAM_ADR_MAP(0, keySz + inSz + outSz + ivSz, 0);
+        pt = (unsigned char*)CAAM_ADR_MAP(0, totalSz, 0);
         key = pt;
     }
 
     if (key == NULL) {
         ret = ECANCELED;
     }
-    SETIOV(&in_iovs[inIdx], key, keySz);
-    inIdx++;
+
+    if (ret == EOK) {
+        SETIOV(&in_iovs[inIdx], key, keySz);
+        inIdx++;
+    }
 
     /* check for IV */
     if (ret == EOK) {
@@ -821,8 +968,15 @@ static int doAES(resmgr_context_t *ctp, io_devctl_t *msg, unsigned int args[4],
     }
 
     if (ret == EOK) {
-        if (resmgr_msgreadv(ctp, in_iovs, inIdx, idx) < 0) {
+        if (pt == NULL)
+            caamZeroMemory(key, (size_t)expectedReadSz);
+
+        readSz = resmgr_msgreadv(ctp, in_iovs, inIdx, idx);
+        if (readSz < 0) {
             ret = ECANCELED;
+        }
+        else if (readSz != expectedReadSz) {
+            ret = EBADMSG;
         }
     }
 
@@ -863,7 +1017,7 @@ static int doAES(resmgr_context_t *ctp, io_devctl_t *msg, unsigned int args[4],
 
     /* sync the new IV/MAC and output buffer */
     if (ret == EOK) {
-        CAAM_ADR_SYNC(key, keySz + inSz + ivSz + outSz);
+        CAAM_ADR_SYNC(key, totalSz);
         if (type == WC_CAAM_AESCBC || type == WC_CAAM_AESCTR) {
             SETIOV(&out_iovs[1], iv, ivSz);
             outIdx++;
@@ -877,10 +1031,17 @@ static int doAES(resmgr_context_t *ctp, io_devctl_t *msg, unsigned int args[4],
     }
 
     if (pt != NULL) {
-        CAAM_ADR_UNMAP(pt, 0, keySz + inSz + outSz + ivSz, 0);
+        /* wipe the whole buffer, including the output region, so decrypted
+         * data does not stay resident in the mapping being released */
+        caamZeroMemory(key, (size_t)totalSz);
+        CAAM_ADR_UNMAP(pt, 0, totalSz, 0);
     }
-    else {
-        /* done using local mapped memory */
+
+    if (useLocalMem) {
+        /* done using local mapped memory, wipe the whole buffer including the
+         * output region since this memory persists between operations */
+        if (key != NULL)
+            caamZeroMemory(key, (size_t)totalSz);
         sem_post(&localMemSem);
     }
 
@@ -897,6 +1058,9 @@ static int doECDSA_KEYPAIR(resmgr_context_t *ctp, io_devctl_t *msg,
     int ret = EOK;
     int keySz;
     int privSz;
+    unsigned int partNumber;
+    unsigned int pageNumber;
+    CAAM_ADDRESS keyAddr;
     DESCSTRUCT desc;
     CAAM_BUFFER tmp[2];
     iov_t out_iovs[3];
@@ -935,6 +1099,11 @@ static int doECDSA_KEYPAIR(resmgr_context_t *ctp, io_devctl_t *msg,
         }
     }
 
+    if (ret == EOK && args[0] == CAAM_BLACK_KEY_SM &&
+            !CAAM_QNX_PARTITION_IS_VALID(args[2])) {
+        ret = EBADMSG;
+    }
+
     if (ret == EOK) {
         SETIOV(&out_iovs[0], tmp[0].TheAddress, privSz);
         SETIOV(&out_iovs[1], tmp[1].TheAddress, keySz * 2);
@@ -944,13 +1113,23 @@ static int doECDSA_KEYPAIR(resmgr_context_t *ctp, io_devctl_t *msg,
         }
     }
 
-    /* claim ownership of a secure memory location */
+    /* claim ownership so later sign/ECDH can check the caller. args[2] is the
+     * partition, priv holds the key's physical address used to find the page */
     if (ret == EOK && args[0] == CAAM_BLACK_KEY_SM) {
-        if (pthread_mutex_lock(&sm_mutex) != EOK) {
+        partNumber = args[2];
+        keyAddr = ((CAAM_ADDRESS)priv[0] << 24) | ((CAAM_ADDRESS)priv[1] << 16) |
+                  ((CAAM_ADDRESS)priv[2] << 8) | (CAAM_ADDRESS)priv[3];
+        pageNumber = (unsigned int)((keyAddr - CAAM_PAGE) / CAAM_PAGE_SZ);
+        if (!CAAM_QNX_PARTITION_IS_VALID(partNumber) ||
+                !CAAM_QNX_PARTITION_IS_VALID(pageNumber)) {
+            ret = EBADMSG;
+        }
+        else if (pthread_mutex_lock(&sm_mutex) != EOK) {
             ret = ECANCELED;
         }
         else {
-            sm_ownerId[args[2]] = (CAAM_ADDRESS)ocb;
+            sm_ownerId[partNumber] = (CAAM_ADDRESS)ocb;
+            sm_pagePart[pageNumber] = partNumber;
             pthread_mutex_unlock(&sm_mutex);
         }
     }
@@ -1073,7 +1252,7 @@ static int doECDSA_VERIFY(resmgr_context_t *ctp, io_devctl_t *msg,
  * returns EOK on success
  */
 static int doECDSA_SIGN(resmgr_context_t *ctp, io_devctl_t *msg,
-        unsigned int args[4], unsigned int idx)
+        unsigned int args[4], unsigned int idx, iofunc_ocb_t *ocb)
 {
     int ret, keySz;
     DESCSTRUCT  desc;
@@ -1116,6 +1295,15 @@ static int doECDSA_SIGN(resmgr_context_t *ctp, io_devctl_t *msg,
         return EOVERFLOW;
     }
 
+    /* a secure memory key is referenced only by its address, reject one that
+     * the caller does not own so it can not sign with another client's key */
+    if (args[0] == CAAM_BLACK_KEY_SM) {
+        ret = checkPartitionOwner(blackKey, ocb);
+        if (ret != EOK) {
+            CAAM_ADR_UNMAP(hash, 0, args[2], 0);
+            return ret;
+        }
+    }
 
     /* setup CAAM buffers to pass to driver */
     if (args[0] == CAAM_BLACK_KEY_SM) {
@@ -1187,7 +1375,7 @@ static int doECDSA_SIGN(resmgr_context_t *ctp, io_devctl_t *msg,
  * returns EOK on success
  */
 static int doECDSA_ECDH(resmgr_context_t *ctp, io_devctl_t *msg,
-        unsigned int args[4], unsigned int idx)
+        unsigned int args[4], unsigned int idx, iofunc_ocb_t *ocb)
 {
     int ret;
     DESCSTRUCT desc;
@@ -1247,6 +1435,18 @@ static int doECDSA_ECDH(resmgr_context_t *ctp, io_devctl_t *msg,
         if (key != NULL)
             CAAM_ADR_UNMAP(key, 0, args[3], 0);
         return ECANCELED;
+    }
+
+    /* a secure memory private key is referenced only by its address, reject
+     * one the caller does not own so it can not derive with another client's
+     * key */
+    if (args[0] == CAAM_BLACK_KEY_SM) {
+        ret = checkPartitionOwner(blackKey, ocb);
+        if (ret != EOK) {
+            if (pubkey != NULL)
+                CAAM_ADR_UNMAP(pubkey, 0, args[3]*2, 0);
+            return ret;
+        }
     }
 
     /* setup CAAM buffers to pass to driver */
@@ -1363,7 +1563,8 @@ static int doFIFO_S(resmgr_context_t *ctp, io_devctl_t *msg,
 static int doGET_PART(resmgr_context_t *ctp, io_devctl_t *msg,
         unsigned int args[4], unsigned int idx, iofunc_ocb_t *ocb)
 {
-    int partNumber;
+    unsigned int partNumber;
+    unsigned int pageNumber;
     int partSz;
     CAAM_ADDRESS partAddr;
     iov_t out_iov;
@@ -1371,21 +1572,41 @@ static int doGET_PART(resmgr_context_t *ctp, io_devctl_t *msg,
     partNumber = args[0];
     partSz     = args[1];
 
-    partAddr = caamGetPartition(partNumber, partSz, 0);
-    if (partAddr == 0) {
+    if (!CAAM_QNX_PARTITION_IS_VALID(partNumber))
         return EBADMSG;
-    }
-
-    SETIOV(&out_iov, &partAddr, sizeof(CAAM_ADDRESS));
-    resmgr_msgwritev(ctp, &out_iov, 1, sizeof(msg->o));
 
     if (pthread_mutex_lock(&sm_mutex) != EOK) {
         return ECANCELED;
     }
-    else {
-        sm_ownerId[partNumber] = (CAAM_ADDRESS)ocb;
+
+    if (sm_ownerId[partNumber] != 0 &&
+            sm_ownerId[partNumber] != (CAAM_ADDRESS)ocb) {
         pthread_mutex_unlock(&sm_mutex);
+        return EACCES;
     }
+
+    partAddr = caamGetPartition(partNumber, partSz, 0);
+    if (partAddr == 0) {
+        pthread_mutex_unlock(&sm_mutex);
+        return EBADMSG;
+    }
+
+    pageNumber = (unsigned int)((partAddr - CAAM_PAGE) / CAAM_PAGE_SZ);
+    if (!CAAM_QNX_PARTITION_IS_VALID(pageNumber) ||
+            (sm_pagePart[pageNumber] != NO_OWNER_PART &&
+                sm_pagePart[pageNumber] != partNumber)) {
+        if (sm_ownerId[partNumber] == 0)
+            caamFreePart(partNumber);
+        pthread_mutex_unlock(&sm_mutex);
+        return ECANCELED;
+    }
+
+    sm_ownerId[partNumber] = (CAAM_ADDRESS)ocb;
+    sm_pagePart[pageNumber] = partNumber;
+    pthread_mutex_unlock(&sm_mutex);
+
+    SETIOV(&out_iov, &partAddr, sizeof(CAAM_ADDRESS));
+    resmgr_msgwritev(ctp, &out_iov, 1, sizeof(msg->o));
     return EOK;
 }
 
@@ -1394,7 +1615,7 @@ static int doGET_PART(resmgr_context_t *ctp, io_devctl_t *msg,
  * returns EOK on success
  */
 static int doWRITE_PART(resmgr_context_t *ctp, io_devctl_t *msg,
-        unsigned int args[4], unsigned int idx)
+        unsigned int args[4], unsigned int idx, iofunc_ocb_t *ocb)
 {
     int partSz, ret;
     CAAM_ADDRESS partAddr;
@@ -1406,6 +1627,15 @@ static int doWRITE_PART(resmgr_context_t *ctp, io_devctl_t *msg,
     partAddr = args[0];
     partSz   = args[1];
 
+    /* sanity check on address and length */
+    if (sanityCheckPartitionAddress(partAddr, partSz) != 0) {
+        return EBADMSG;
+    }
+
+    ret = checkPartitionOwner(partAddr, ocb);
+    if (ret != EOK)
+        return ret;
+
     buf = (unsigned char*)CAAM_ADR_MAP(0, partSz, 0);
     if (buf == NULL) {
         return ECANCELED;
@@ -1414,12 +1644,6 @@ static int doWRITE_PART(resmgr_context_t *ctp, io_devctl_t *msg,
     SETIOV(&in_iov, buf, partSz);
     ret = resmgr_msgreadv(ctp, &in_iov, 1, idx);
     if (ret != partSz) {
-        CAAM_ADR_UNMAP(buf, 0, partSz, 0);
-        return EBADMSG;
-    }
-
-    /* sanity check on address and length */
-    if (sanityCheckPartitionAddress(partAddr, partSz) != 0) {
         CAAM_ADR_UNMAP(buf, 0, partSz, 0);
         return EBADMSG;
     }
@@ -1440,9 +1664,9 @@ static int doWRITE_PART(resmgr_context_t *ctp, io_devctl_t *msg,
  * returns EOK on success
  */
 static int doREAD_PART(resmgr_context_t *ctp, io_devctl_t *msg,
-        unsigned int args[4], unsigned int idx)
+        unsigned int args[4], unsigned int idx, iofunc_ocb_t *ocb)
 {
-    int partSz;
+    int partSz, ret;
     CAAM_ADDRESS partAddr;
     CAAM_ADDRESS vaddr;
     unsigned char *buf;
@@ -1461,6 +1685,10 @@ static int doREAD_PART(resmgr_context_t *ctp, io_devctl_t *msg,
     if (sanityCheckPartitionAddress(partAddr, partSz) != 0) {
         return EBADMSG;
     }
+
+    ret = checkPartitionOwner(partAddr, ocb);
+    if (ret != EOK)
+        return ret;
 
     buf = (unsigned char*)CAAM_ADR_MAP(0, partSz, 0);
     if (buf == NULL) {
@@ -1548,11 +1776,11 @@ int io_devctl (resmgr_context_t *ctp, io_devctl_t *msg, iofunc_ocb_t *ocb)
             break;
 
         case WC_CAAM_ECDSA_SIGN:
-            ret = doECDSA_SIGN(ctp, msg, args, idx);
+            ret = doECDSA_SIGN(ctp, msg, args, idx, ocb);
             break;
 
         case WC_CAAM_ECDSA_ECDH:
-            ret = doECDSA_ECDH(ctp, msg, args, idx);
+            ret = doECDSA_ECDH(ctp, msg, args, idx, ocb);
             break;
 
         case WC_CAAM_FIFO_S:
@@ -1564,13 +1792,24 @@ int io_devctl (resmgr_context_t *ctp, io_devctl_t *msg, iofunc_ocb_t *ocb)
             break;
 
         case WC_CAAM_FREE_PART:
-            caamFreePart(args[0]);
+            if (!CAAM_QNX_PARTITION_IS_VALID(args[0])) {
+                ret = EBADMSG;
+                break;
+            }
 
             if (pthread_mutex_lock(&sm_mutex) != EOK) {
                 ret = ECANCELED;
             }
+            else if (sm_ownerId[args[0]] != (CAAM_ADDRESS)ocb) {
+                pthread_mutex_unlock(&sm_mutex);
+                ret = EACCES;
+            }
+            else if (caamFreePart(args[0]) != Success) {
+                pthread_mutex_unlock(&sm_mutex);
+                ret = ECANCELED;
+            }
             else {
-                sm_ownerId[args[0]] = 0;
+                clearPartitionOwner(args[0]);
                 pthread_mutex_unlock(&sm_mutex);
                 ret = EOK;
             }
@@ -1588,11 +1827,11 @@ int io_devctl (resmgr_context_t *ctp, io_devctl_t *msg, iofunc_ocb_t *ocb)
             break;
 
         case WC_CAAM_WRITE_PART:
-            ret = doWRITE_PART(ctp, msg, args, idx);
+            ret = doWRITE_PART(ctp, msg, args, idx, ocb);
             break;
 
         case WC_CAAM_READ_PART:
-            ret = doREAD_PART(ctp, msg, args, idx);
+            ret = doREAD_PART(ctp, msg, args, idx, ocb);
             break;
 
         default:
@@ -1623,9 +1862,9 @@ int io_close_ocb(resmgr_context_t *ctp, void *reserved, RESMGR_OCB_T *ocb)
         return ECANCELED;
     }
     else {
-        for (i = 0; i < MAX_PART; i++) {
+        for (i = 0; i < MAX_OWNER_PART; i++) {
             if (sm_ownerId[i] == (CAAM_ADDRESS)ocb) {
-                sm_ownerId[i] = 0;
+                clearPartitionOwner((unsigned int)i);
             #if defined(WOLFSSL_CAAM_DEBUG) || defined(WOLFSSL_CAAM_PRINT)
                 printf("found dangiling partition at index %d\n", i);
             #endif
@@ -1641,8 +1880,9 @@ int io_close_ocb(resmgr_context_t *ctp, void *reserved, RESMGR_OCB_T *ocb)
 #if 0
 static int getSupported(char* in)
 {
-        //printf("CAAM Status [0x%8.8x]   = 0x%8.8x\n",
-        //    CAAM_STATUS, WC_CAAM_READ(CAAM_STATUS));
+        /* printf("CAAM Status [0x%8.8x]   = 0x%8.8x\n",
+         *    CAAM_STATUS, WC_CAAM_READ(CAAM_STATUS));
+         */
         printf("CAAM Version MS Register [0x%8.8x]  = 0x%8.8x\n",
             CAAM_VERSION_MS, CAAM_READ(CAAM_VERSION_MS));
         printf("CAAM Version LS Register [0x%8.8x]  = 0x%8.8x\n",
@@ -1711,8 +1951,9 @@ int main(int argc, char *argv[])
     int i;
 
     pthread_mutex_init(&sm_mutex, NULL);
-    for (i = 0; i < MAX_PART; i++) {
+    for (i = 0; i < MAX_OWNER_PART; i++) {
         sm_ownerId[i] = 0;
+        sm_pagePart[i] = NO_OWNER_PART;
     }
 
     if (InitCAAM() != 0) {
@@ -1737,7 +1978,7 @@ int main(int argc, char *argv[])
     io_funcs.write     = io_write;
     io_funcs.devctl    = io_devctl;
 
-    iofunc_attr_init (&ioattr, S_IFCHR | 0666, NULL, NULL);
+    iofunc_attr_init (&ioattr, S_IFCHR | WOLFSSL_CAAM_QNX_DEV_MODE, NULL, NULL);
     name = resmgr_attach(dpp, &rattr, "/dev/wolfCrypt",
             _FTYPE_ANY, 0, &connect_funcs, &io_funcs, &ioattr);
     if (name == -1) {

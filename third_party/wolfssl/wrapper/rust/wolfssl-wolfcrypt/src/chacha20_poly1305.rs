@@ -1,0 +1,609 @@
+/*
+ * Copyright (C) 2006-2026 wolfSSL Inc.
+ *
+ * This file is part of wolfSSL.
+ *
+ * wolfSSL is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * wolfSSL is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1335, USA
+ */
+
+/*!
+This module provides a Rust wrapper for the wolfCrypt library's
+ChaCha20-Poly1305 functionality.
+*/
+
+#![cfg(chacha20_poly1305)]
+
+use crate::sys;
+use core::mem::MaybeUninit;
+use zeroize::{Zeroize, ZeroizeOnDrop};
+
+pub struct ChaCha20Poly1305 {
+    wc_ccp: sys::ChaChaPoly_Aead,
+}
+
+impl ChaCha20Poly1305 {
+    /// Key size for ChaCha20-Poly1305 stream cipher.
+    pub const KEYSIZE: usize = sys::CHACHA20_POLY1305_AEAD_KEYSIZE as usize;
+    /// IV size for ChaCha20-Poly1305 stream cipher.
+    pub const IV_SIZE: usize = sys::CHACHA20_POLY1305_AEAD_IV_SIZE as usize;
+    /// Authentication tag size for ChaCha20-Poly1305 stream cipher.
+    pub const AUTH_TAG_SIZE: usize = sys::CHACHA20_POLY1305_AEAD_AUTHTAG_SIZE as usize;
+
+    /// Decrypt an input message from `ciphertext` using the ChaCha20 stream
+    /// cipher into the `plaintext` output buffer. It also performs Poly-1305
+    /// authentication, comparing the given `auth_tag` to an authentication
+    /// generated with the `aad` (additional authentication data). If Err is
+    /// returned, the output data, `plaintext` is undefined. However, callers
+    /// must unconditionally zeroize the output buffer to guard against
+    /// leakage of cleartext data.
+    ///
+    /// # Parameters
+    ///
+    /// * `key`: Encryption key (must be 32 bytes).
+    /// * `iv`: Initialization Vector (must be 12 bytes).
+    /// * `aad`: Additional authenticated data (can be any length).
+    /// * `ciphertext`: Input buffer containing encrypted cipher text.
+    /// * `auth_tag`: Input buffer containing authentication tag (must be 16
+    ///   bytes).
+    /// * `plaintext`: Output buffer containing decrypted plain text.
+    ///
+    /// # Returns
+    ///
+    /// Returns either Ok(()) on success or Err(e) containing the wolfSSL
+    /// library error code value.
+    pub fn decrypt(key: &[u8], iv: &[u8], aad: &[u8], ciphertext: &[u8],
+        auth_tag: &[u8], plaintext: &mut [u8]) -> Result<(), i32> {
+        if key.len() != Self::KEYSIZE {
+            return Err(sys::wolfCrypt_ErrorCodes_BUFFER_E);
+        }
+        if iv.len() != Self::IV_SIZE {
+            return Err(sys::wolfCrypt_ErrorCodes_BUFFER_E);
+        }
+        if auth_tag.len() != Self::AUTH_TAG_SIZE {
+            return Err(sys::wolfCrypt_ErrorCodes_BUFFER_E);
+        }
+        if plaintext.len() < ciphertext.len() {
+            return Err(sys::wolfCrypt_ErrorCodes_BUFFER_E);
+        }
+        let aad_size = crate::buffer_len_to_u32(aad.len())?;
+        let ciphertext_size = crate::buffer_len_to_u32(ciphertext.len())?;
+        let rc = unsafe {
+            sys::wc_ChaCha20Poly1305_Decrypt(key.as_ptr(), iv.as_ptr(),
+                aad.as_ptr(), aad_size, ciphertext.as_ptr(),
+                ciphertext_size, auth_tag.as_ptr(), plaintext.as_mut_ptr())
+        };
+        if rc != 0 {
+            return Err(rc);
+        }
+        Ok(())
+    }
+
+    /// Encrypt an input message from `plaintext` using the ChaCha20 stream
+    /// cipher into the `ciphertext` output buffer performing Poly-1305
+    /// authentication on the cipher text and storing the generated
+    /// authentication tag in the `auth_tag` output buffer.
+    ///
+    /// # Parameters
+    ///
+    /// * `key`: Encryption key (must be 32 bytes).
+    /// * `iv`: Initialization Vector (must be 12 bytes).
+    /// * `aad`: Additional authenticated data (can be any length).
+    /// * `plaintext`: Input plain text to encrypt.
+    /// * `ciphertext`: Output buffer for encrypted cipher text.
+    /// * `auth_tag`: Output buffer for authentication tag (must be 16 bytes).
+    ///
+    /// # Returns
+    ///
+    /// Returns either Ok(()) on success or Err(e) containing the wolfSSL
+    /// library error code value.
+    pub fn encrypt(key: &[u8], iv: &[u8], aad: &[u8], plaintext: &[u8],
+        ciphertext: &mut [u8], auth_tag: &mut [u8]) -> Result<(), i32> {
+        if key.len() != Self::KEYSIZE {
+            return Err(sys::wolfCrypt_ErrorCodes_BUFFER_E);
+        }
+        if iv.len() != Self::IV_SIZE {
+            return Err(sys::wolfCrypt_ErrorCodes_BUFFER_E);
+        }
+        if auth_tag.len() != Self::AUTH_TAG_SIZE {
+            return Err(sys::wolfCrypt_ErrorCodes_BUFFER_E);
+        }
+        if ciphertext.len() < plaintext.len() {
+            return Err(sys::wolfCrypt_ErrorCodes_BUFFER_E);
+        }
+        let aad_size = crate::buffer_len_to_u32(aad.len())?;
+        let plaintext_size = crate::buffer_len_to_u32(plaintext.len())?;
+        let rc = unsafe {
+            sys::wc_ChaCha20Poly1305_Encrypt(key.as_ptr(), iv.as_ptr(),
+                aad.as_ptr(), aad_size, plaintext.as_ptr(), plaintext_size,
+                ciphertext.as_mut_ptr(), auth_tag.as_mut_ptr())
+        };
+        if rc != 0 {
+            return Err(rc);
+        }
+        Ok(())
+    }
+
+    /// Create a new ChaCha20Poly1305 instance.
+    ///
+    /// # Parameters
+    ///
+    /// * `key`: Encryption key (must be 32 bytes).
+    /// * `iv`: Initialization Vector (must be 12 bytes).
+    /// * `encrypt`: Whether the instance will be used to encrypt (true) or
+    ///   decrypt (false).
+    ///
+    /// Returns either Ok(chacha20poly1305) on success or Err(e) containing the
+    /// wolfSSL library error code value.
+    pub fn new(key: &[u8], iv: &[u8], encrypt: bool) -> Result<Self, i32> {
+        if key.len() != Self::KEYSIZE {
+            return Err(sys::wolfCrypt_ErrorCodes_BUFFER_E);
+        }
+        if iv.len() != Self::IV_SIZE {
+            return Err(sys::wolfCrypt_ErrorCodes_BUFFER_E);
+        }
+        let mut wc_ccp: MaybeUninit<sys::ChaChaPoly_Aead> = MaybeUninit::uninit();
+        let rc = unsafe {
+            sys::wc_ChaCha20Poly1305_Init(wc_ccp.as_mut_ptr(), key.as_ptr(),
+                iv.as_ptr(), if encrypt {1} else {0})
+        };
+        if rc != 0 {
+            return Err(rc);
+        }
+        let wc_ccp = unsafe { wc_ccp.assume_init() };
+        Ok(ChaCha20Poly1305 { wc_ccp })
+    }
+
+    /// Update AAD (additional authenticated data).
+    ///
+    /// This function should be called before `update_data()`.
+    ///
+    /// # Parameters
+    ///
+    /// * `aad`: Additional authenticated data.
+    ///
+    /// # Returns
+    ///
+    /// Returns either Ok(()) on success or Err(e) containing the wolfSSL
+    /// library error code value.
+    pub fn update_aad(&mut self, aad: &[u8]) -> Result<(), i32> {
+        let aad_size = crate::buffer_len_to_u32(aad.len())?;
+        let rc = unsafe {
+            sys::wc_ChaCha20Poly1305_UpdateAad(&mut self.wc_ccp,
+                aad.as_ptr(), aad_size)
+        };
+        if rc != 0 {
+            return Err(rc);
+        }
+        Ok(())
+    }
+
+    /// Update data (add additional input data to decrypt or encrypt).
+    ///
+    /// This function can be called multiple times. If AAD is used, the
+    /// `update_aad()` function must be called before this function. The
+    /// `finalize()` function should be called after adding all input data to
+    /// finalize the operation and compute the authentication tag.
+    ///
+    /// # Parameters
+    ///
+    /// * `din`: Additional input data to decrypt or encrypt.
+    /// * `dout`: Buffer in which to store output data (must be the same length
+    ///   as the input buffer).
+    ///
+    /// # Returns
+    ///
+    /// Returns either Ok(()) on success or Err(e) containing the wolfSSL
+    /// library error code value.
+    pub fn update_data(&mut self, din: &[u8], dout: &mut [u8]) -> Result<(), i32> {
+        if din.len() != dout.len() {
+            return Err(sys::wolfCrypt_ErrorCodes_BUFFER_E);
+        }
+        let din_size = crate::buffer_len_to_u32(din.len())?;
+        let rc = unsafe {
+            sys::wc_ChaCha20Poly1305_UpdateData(&mut self.wc_ccp,
+                din.as_ptr(), dout.as_mut_ptr(), din_size)
+        };
+        if rc != 0 {
+            return Err(rc);
+        }
+        Ok(())
+    }
+
+    /// Finalize the decrypt/encrypt operation.
+    ///
+    /// This function consumes the `ChaCha20Poly1305` instance. The
+    /// `update_data()` function must be called before calling this function to
+    /// add all input data (if present).
+    ///
+    /// Note that for decryption operations, the authentication tag is computed
+    /// and returned but is *not* checked so it is up to the caller to compare
+    /// to the expected tag. Use `finalize_verify()` instead for decryption
+    /// operations to finalize and compare against the expected authentication
+    /// tag in one operation.
+    ///
+    /// # Parameters
+    ///
+    /// * `auth_tag`: Output buffer for authentication tag (must be 16 bytes).
+    ///
+    /// # Returns
+    ///
+    /// Returns either Ok(()) on success or Err(e) containing the wolfSSL
+    /// library error code value.
+    pub fn finalize(mut self, auth_tag: &mut [u8]) -> Result<(), i32> {
+        if auth_tag.len() != Self::AUTH_TAG_SIZE {
+            return Err(sys::wolfCrypt_ErrorCodes_BUFFER_E);
+        }
+        let rc = unsafe {
+            sys::wc_ChaCha20Poly1305_Final(&mut self.wc_ccp,
+                auth_tag.as_mut_ptr())
+        };
+        if rc != 0 {
+            return Err(rc);
+        }
+        Ok(())
+    }
+
+    /// Finalize the decrypt/encrypt operation and verify the authentication
+    /// tag against `auth_tag`.
+    ///
+    /// This function consumes the `ChaCha20Poly1305` instance. The
+    /// `update_data()` function must be called before calling this function to
+    /// add all input data (if present). The authentication tag is computed
+    /// internally and compared against the expected `auth_tag` in constant
+    /// time. This is typically used when decrypting to verify the transmitted
+    /// authentication tag.
+    ///
+    /// # Parameters
+    ///
+    /// * `auth_tag`: Expected authentication tag to verify against (must be 16
+    ///   bytes).
+    ///
+    /// # Returns
+    ///
+    /// Returns either Ok(()) on success or Err(e) containing the wolfSSL
+    /// library error code value. A tag mismatch is reported as Err with the
+    /// `MAC_CMP_FAILED_E` error code.
+    pub fn finalize_verify(mut self, auth_tag: &[u8]) -> Result<(), i32> {
+        if auth_tag.len() != Self::AUTH_TAG_SIZE {
+            return Err(sys::wolfCrypt_ErrorCodes_BUFFER_E);
+        }
+        let mut calculated_tag = [0u8; Self::AUTH_TAG_SIZE];
+        let rc = unsafe {
+            sys::wc_ChaCha20Poly1305_Final(&mut self.wc_ccp,
+                calculated_tag.as_mut_ptr())
+        };
+        if rc != 0 {
+            return Err(rc);
+        }
+        let rc = unsafe {
+            sys::wc_ChaCha20Poly1305_CheckTag(auth_tag.as_ptr(),
+                calculated_tag.as_ptr())
+        };
+        if rc != 0 {
+            return Err(rc);
+        }
+        Ok(())
+    }
+}
+
+impl ChaCha20Poly1305 {
+    fn zeroize(&mut self) {
+        unsafe { crate::zeroize_raw(&mut self.wc_ccp); }
+    }
+}
+
+impl Drop for ChaCha20Poly1305 {
+    fn drop(&mut self) {
+        self.zeroize();
+    }
+}
+
+// ---------------------------------------------------------------------------
+// ChaCha20-Poly1305 aead trait implementations
+// ---------------------------------------------------------------------------
+
+/// ChaCha20-Poly1305 AEAD instance holding a key for use with the
+/// `aead::KeyInit` and `aead::AeadInPlace` traits.
+#[cfg(feature = "aead")]
+#[derive(Zeroize, ZeroizeOnDrop)]
+pub struct ChaCha20Poly1305Aead {
+    key: [u8; 32],
+}
+
+#[cfg(feature = "aead")]
+impl aead::KeySizeUser for ChaCha20Poly1305Aead {
+    type KeySize = aead::generic_array::typenum::U32;
+}
+
+#[cfg(feature = "aead")]
+impl aead::AeadCore for ChaCha20Poly1305Aead {
+    type NonceSize = aead::generic_array::typenum::U12;
+    type TagSize = aead::generic_array::typenum::U16;
+    type CiphertextOverhead = aead::generic_array::typenum::U0;
+}
+
+#[cfg(feature = "aead")]
+impl aead::KeyInit for ChaCha20Poly1305Aead {
+    fn new(key: &aead::Key<Self>) -> Self {
+        let mut out = ChaCha20Poly1305Aead { key: [0u8; 32] };
+        out.key.copy_from_slice(key.as_ref());
+        out
+    }
+}
+
+#[cfg(feature = "aead")]
+impl aead::AeadInPlace for ChaCha20Poly1305Aead {
+    fn encrypt_in_place_detached(
+        &self,
+        nonce: &aead::Nonce<Self>,
+        associated_data: &[u8],
+        buffer: &mut [u8],
+    ) -> Result<aead::Tag<Self>, aead::Error> {
+        if associated_data.len() > u32::MAX as usize || buffer.len() > u32::MAX as usize {
+            return Err(aead::Error);
+        }
+        let mut tag = aead::Tag::<Self>::default();
+        // wc_ChaCha20Poly1305_Encrypt supports in-place (out == in).
+        let buf_ptr = buffer.as_mut_ptr();
+        let in_ptr = buf_ptr as *const u8;
+        let nonce_bytes: &[u8] = nonce;
+        let tag_bytes: &mut [u8] = &mut tag;
+        let rc = unsafe {
+            sys::wc_ChaCha20Poly1305_Encrypt(
+                self.key.as_ptr(), nonce_bytes.as_ptr(),
+                associated_data.as_ptr(), associated_data.len() as u32,
+                in_ptr, buffer.len() as u32,
+                buf_ptr, tag_bytes.as_mut_ptr(),
+            )
+        };
+        if rc != 0 {
+            return Err(aead::Error);
+        }
+        Ok(tag)
+    }
+
+    fn decrypt_in_place_detached(
+        &self,
+        nonce: &aead::Nonce<Self>,
+        associated_data: &[u8],
+        buffer: &mut [u8],
+        tag: &aead::Tag<Self>,
+    ) -> Result<(), aead::Error> {
+        if associated_data.len() > u32::MAX as usize || buffer.len() > u32::MAX as usize {
+            return Err(aead::Error);
+        }
+        let buf_ptr = buffer.as_mut_ptr();
+        let in_ptr = buf_ptr as *const u8;
+        let nonce_bytes: &[u8] = nonce;
+        let tag_bytes: &[u8] = tag;
+        let rc = unsafe {
+            sys::wc_ChaCha20Poly1305_Decrypt(
+                self.key.as_ptr(), nonce_bytes.as_ptr(),
+                associated_data.as_ptr(), associated_data.len() as u32,
+                in_ptr, buffer.len() as u32,
+                tag_bytes.as_ptr(), buf_ptr,
+            )
+        };
+        if rc != 0 {
+            return Err(aead::Error);
+        }
+        Ok(())
+    }
+}
+
+#[cfg(xchacha20_poly1305)]
+pub struct XChaCha20Poly1305;
+
+#[cfg(xchacha20_poly1305)]
+impl XChaCha20Poly1305 {
+    /// Key size for XChaCha20-Poly1305 stream cipher.
+    pub const KEYSIZE: usize = sys::CHACHA20_POLY1305_AEAD_KEYSIZE as usize;
+    /// IV size for XChaCha20-Poly1305 stream cipher.
+    pub const IV_SIZE: usize = sys::XCHACHA20_POLY1305_AEAD_NONCE_SIZE as usize;
+    /// Authentication tag size for XChaCha20-Poly1305 stream cipher.
+    pub const AUTH_TAG_SIZE: usize = sys::CHACHA20_POLY1305_AEAD_AUTHTAG_SIZE as usize;
+
+    /// Decrypt an input message from `ciphertext` using the XChaCha20 stream
+    /// cipher into the `plaintext` output buffer. It also performs Poly-1305
+    /// authentication. The authentication tag is expected to be located in the
+    /// last 16 bytes of the `ciphertext` buffer.
+    /// If Err is returned, the output data, `plaintext` is undefined.
+    /// However, callers must unconditionally zeroize the output buffer to
+    /// guard against leakage of cleartext data.
+    ///
+    /// # Parameters
+    ///
+    /// * `key`: Encryption key (must be 32 bytes).
+    /// * `iv`: Initialization Vector (must be 24 bytes).
+    /// * `aad`: Additional authenticated data (can be any length).
+    /// * `ciphertext`: Input buffer containing encrypted cipher text.
+    /// * `plaintext`: Output buffer containing decrypted plain text.
+    ///
+    /// # Returns
+    ///
+    /// Returns either Ok(()) on success or Err(e) containing the wolfSSL
+    /// library error code value.
+    pub fn decrypt(key: &[u8], iv: &[u8], aad: &[u8], ciphertext: &[u8],
+        plaintext: &mut [u8]) -> Result<(), i32> {
+        if key.len() != Self::KEYSIZE {
+            return Err(sys::wolfCrypt_ErrorCodes_BUFFER_E);
+        }
+        if iv.len() != Self::IV_SIZE {
+            return Err(sys::wolfCrypt_ErrorCodes_BUFFER_E);
+        }
+        let rc = unsafe {
+            sys::wc_XChaCha20Poly1305_Decrypt(
+                plaintext.as_mut_ptr(), plaintext.len(),
+                ciphertext.as_ptr(), ciphertext.len(),
+                aad.as_ptr(), aad.len(),
+                iv.as_ptr(), iv.len(),
+                key.as_ptr(), key.len())
+        };
+        if rc != 0 {
+            return Err(rc);
+        }
+        Ok(())
+    }
+
+    /// Encrypt an input message from `plaintext` using the XChaCha20 stream
+    /// cipher into the `ciphertext` output buffer performing Poly-1305
+    /// authentication on the cipher text.
+    /// The authentication tag is stored in the last 16 bytes of the
+    /// `ciphertext` buffer, so the `ciphertext` buffer must be large enough
+    /// for both the cipher text and authentication tag.
+    ///
+    /// # Parameters
+    ///
+    /// * `key`: Encryption key (must be 32 bytes).
+    /// * `iv`: Initialization Vector (must be 24 bytes).
+    /// * `aad`: Additional authenticated data (can be any length).
+    /// * `plaintext`: Input plain text to encrypt.
+    /// * `ciphertext`: Output buffer for encrypted cipher text.
+    ///
+    /// # Returns
+    ///
+    /// Returns either Ok(()) on success or Err(e) containing the wolfSSL
+    /// library error code value.
+    pub fn encrypt(key: &[u8], iv: &[u8], aad: &[u8], plaintext: &[u8],
+        ciphertext: &mut [u8]) -> Result<(), i32> {
+        if key.len() != Self::KEYSIZE {
+            return Err(sys::wolfCrypt_ErrorCodes_BUFFER_E);
+        }
+        if iv.len() != Self::IV_SIZE {
+            return Err(sys::wolfCrypt_ErrorCodes_BUFFER_E);
+        }
+        let rc = unsafe {
+            sys::wc_XChaCha20Poly1305_Encrypt(
+                ciphertext.as_mut_ptr(), ciphertext.len(),
+                plaintext.as_ptr(), plaintext.len(),
+                aad.as_ptr(), aad.len(),
+                iv.as_ptr(), iv.len(),
+                key.as_ptr(), key.len())
+        };
+        if rc != 0 {
+            return Err(rc);
+        }
+        Ok(())
+    }
+}
+
+// ---------------------------------------------------------------------------
+// XChaCha20-Poly1305 aead trait implementations
+// ---------------------------------------------------------------------------
+
+/// XChaCha20-Poly1305 AEAD instance holding a key for use with the
+/// `aead::KeyInit` and `aead::AeadInPlace` traits.
+#[cfg(all(xchacha20_poly1305, feature = "aead"))]
+#[derive(Zeroize, ZeroizeOnDrop)]
+pub struct XChaCha20Poly1305Aead {
+    key: [u8; 32],
+}
+
+#[cfg(all(xchacha20_poly1305, feature = "aead"))]
+impl aead::KeySizeUser for XChaCha20Poly1305Aead {
+    type KeySize = aead::generic_array::typenum::U32;
+}
+
+#[cfg(all(xchacha20_poly1305, feature = "aead"))]
+impl aead::AeadCore for XChaCha20Poly1305Aead {
+    type NonceSize = aead::generic_array::typenum::U24;
+    type TagSize = aead::generic_array::typenum::U16;
+    type CiphertextOverhead = aead::generic_array::typenum::U0;
+}
+
+#[cfg(all(xchacha20_poly1305, feature = "aead"))]
+impl aead::KeyInit for XChaCha20Poly1305Aead {
+    fn new(key: &aead::Key<Self>) -> Self {
+        let mut out = XChaCha20Poly1305Aead { key: [0u8; 32] };
+        out.key.copy_from_slice(key.as_ref());
+        out
+    }
+}
+
+#[cfg(all(xchacha20_poly1305, feature = "aead"))]
+impl aead::AeadInPlace for XChaCha20Poly1305Aead {
+    // This function can encrypt a maximum of 4096 bytes.
+    fn encrypt_in_place_detached(
+        &self,
+        nonce: &aead::Nonce<Self>,
+        associated_data: &[u8],
+        buffer: &mut [u8],
+    ) -> Result<aead::Tag<Self>, aead::Error> {
+        // wc_XChaCha20Poly1305_Encrypt writes ciphertext + 16-byte tag into a
+        // single output buffer.  Use a stack buffer to hold both, then split
+        // the tag out and copy the ciphertext back over the caller's buffer.
+        const MAX_INLINE: usize = 4096;
+        debug_assert!(buffer.len() <= MAX_INLINE, "Maximum of 4096 bytes supported");
+        if buffer.len() > MAX_INLINE {
+            return Err(aead::Error);
+        }
+        let out_len = buffer.len() + 16;
+        let mut out_buf = [0u8; MAX_INLINE + 16];
+        let nonce_bytes: &[u8] = nonce;
+        let rc = unsafe {
+            sys::wc_XChaCha20Poly1305_Encrypt(
+                out_buf.as_mut_ptr(), out_len,
+                buffer.as_ptr(), buffer.len(),
+                associated_data.as_ptr(), associated_data.len(),
+                nonce_bytes.as_ptr(), nonce_bytes.len(),
+                self.key.as_ptr(), self.key.len(),
+            )
+        };
+        if rc != 0 {
+            return Err(aead::Error);
+        }
+        buffer.copy_from_slice(&out_buf[..buffer.len()]);
+        let mut tag = aead::Tag::<Self>::default();
+        let tag_bytes: &mut [u8] = &mut tag;
+        tag_bytes.copy_from_slice(&out_buf[buffer.len()..out_len]);
+        Ok(tag)
+    }
+
+    // This function can decrypt a maximum of 4096 bytes.
+    fn decrypt_in_place_detached(
+        &self,
+        nonce: &aead::Nonce<Self>,
+        associated_data: &[u8],
+        buffer: &mut [u8],
+        tag: &aead::Tag<Self>,
+    ) -> Result<(), aead::Error> {
+        // wc_XChaCha20Poly1305_Decrypt expects the auth tag appended after the
+        // ciphertext.  Build a combined [ciphertext | tag] buffer on the stack.
+        const MAX_INLINE: usize = 4096;
+        debug_assert!(buffer.len() <= MAX_INLINE, "Maximum of 4096 bytes supported");
+        if buffer.len() > MAX_INLINE {
+            return Err(aead::Error);
+        }
+        let mut in_buf = [0u8; MAX_INLINE + 16];
+        let in_len = buffer.len() + 16;
+        in_buf[..buffer.len()].copy_from_slice(buffer);
+        let tag_bytes: &[u8] = tag;
+        in_buf[buffer.len()..in_len].copy_from_slice(tag_bytes);
+        let nonce_bytes: &[u8] = nonce;
+        let rc = unsafe {
+            sys::wc_XChaCha20Poly1305_Decrypt(
+                buffer.as_mut_ptr(), buffer.len(),
+                in_buf.as_ptr(), in_len,
+                associated_data.as_ptr(), associated_data.len(),
+                nonce_bytes.as_ptr(), nonce_bytes.len(),
+                self.key.as_ptr(), self.key.len(),
+            )
+        };
+        if rc != 0 {
+            return Err(aead::Error);
+        }
+        Ok(())
+    }
+}

@@ -1,12 +1,12 @@
 /* user_settings_all.h
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -46,7 +46,7 @@ extern "C" {
 #define HAVE_EXT_CACHE
 #define ATOMIC_USER /* Enable Atomic Record Layer callbacks */
 #define HAVE_PK_CALLBACKS /* Enable public key callbacks */
-#define WOLFSSL_ALT_NAMES /* Allow alternate cert chain validation to any trusted cert (not entire chain presented by peer) */
+#define WOLFSSL_ALT_CERT_CHAINS /* Allow alternate cert chain validation to any trusted cert (not entire chain presented by peer) */
 #define HAVE_NULL_CIPHER /* Enable use of TLS cipher suites without cipher (clear text / no encryption) */
 #define WOLFSSL_HAVE_CERT_SERVICE
 #define WOLFSSL_JNI
@@ -96,7 +96,6 @@ extern "C" {
 #define WOLFSSL_POST_HANDSHAKE_AUTH
 #define WOLFSSL_SEND_HRR_COOKIE /* Used by DTLS v1.3 */
 #define HAVE_ANON /* anon cipher suites */
-#define HAVE_FALLBACK_SCSV /* TLS_FALLBACK_SCSV */
 #define WOLFSSL_EARLY_DATA
 #define HAVE_SERVER_RENEGOTIATION_INFO
 
@@ -126,6 +125,7 @@ extern "C" {
 #define WOLFSSL_CUSTOM_OID
 #define HAVE_OID_ENCODING
 #define WOLFSSL_ASN_TEMPLATE
+#define WOLFSSL_ALT_NAMES /* Support subject alternative names extension */
 
 /* Certificate Revocation */
 #define HAVE_OCSP
@@ -209,14 +209,14 @@ extern "C" {
 #define WOLFSSL_SHAKE256
 #define WOLFSSL_SHA3
 #define WOLFSSL_HASH_FLAGS /* enable hash flag API's */
-#define WOLFSSL_SHAKE256
 
 /* Additional Algorithms */
 #define HAVE_HASHDRBG
 #define HAVE_CURVE25519
 #define HAVE_ED25519
+#define ED25519_SMALL
 #define WOLFSSL_ED25519_STREAMING_VERIFY
-#define CURVED25519_SMALL
+#define CURVE25519_SMALL
 #define HAVE_ED448
 #define WOLFSSL_ED448_STREAMING_VERIFY
 #define HAVE_CURVE448
@@ -227,7 +227,6 @@ extern "C" {
 #define HAVE_X963_KDF
 #define WOLFSSL_CMAC
 #define WOLFSSL_DES_ECB
-#define HAVE_BLAKE2
 #define HAVE_BLAKE2B
 #define HAVE_BLAKE2S
 #define WOLFSSL_SIPHASH

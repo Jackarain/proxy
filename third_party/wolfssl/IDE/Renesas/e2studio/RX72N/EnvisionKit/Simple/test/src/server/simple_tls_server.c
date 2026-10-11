@@ -1,12 +1,12 @@
 /* simple_tls_server.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -26,6 +26,8 @@
 #include "wolfssl/ssl.h"
 #include "wolfssl/certs_test.h"
 #include <wolfssl_simple_demo.h>
+
+#if defined(SIMPLE_TLS_SERVER)
 
 static WOLFSSL_CTX *server_ctx;
 
@@ -123,18 +125,18 @@ void wolfSSL_TLS_server_init()
     #if !defined(NO_FILESYSTEM)
         ret = wolfSSL_CTX_use_PrivateKey_file(server_ctx, key, 0);
     #else
-        ret = wolfSSL_CTX_use_PrivateKey_buffer(server_ctx, key, sizeof_key, 
+        ret = wolfSSL_CTX_use_PrivateKey_buffer(server_ctx, key, sizeof_key,
                                                         SSL_FILETYPE_ASN1);
     #endif
         if (ret != SSL_SUCCESS) {
             printf("Error %d loading server-key!\n", ret);
             return;
         }
-   
+
    /* Register callbacks */
    wolfSSL_SetIORecv(server_ctx, my_IORecv);
    wolfSSL_SetIOSend(server_ctx, my_IOSend);
-   
+
 }
 
 void wolfSSL_TLS_server( )
@@ -192,3 +194,4 @@ out:
     tcp_sht_cep(cepid);
     tcp_cls_cep(cepid, TMO_FEVR);
 }
+#endif

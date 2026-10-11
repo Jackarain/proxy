@@ -27,13 +27,13 @@
 
 /* camellia.h
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -63,33 +63,49 @@
 #endif
 
 enum {
-    CAMELLIA_BLOCK_SIZE = 16
+    WC_CAMELLIA_BLOCK_SIZE = 16
 };
 
-#define CAMELLIA_TABLE_BYTE_LEN 272
-#define CAMELLIA_TABLE_WORD_LEN (CAMELLIA_TABLE_BYTE_LEN / sizeof(word32))
+#define WC_CAMELLIA_TABLE_BYTE_LEN 272
+#define WC_CAMELLIA_TABLE_WORD_LEN (WC_CAMELLIA_TABLE_BYTE_LEN / sizeof(word32))
 
-typedef word32 KEY_TABLE_TYPE[CAMELLIA_TABLE_WORD_LEN];
+typedef word32 WC_CAMELLIA_KEY_TABLE_TYPE[WC_CAMELLIA_TABLE_WORD_LEN];
 
-typedef struct Camellia {
+typedef struct wc_Camellia {
     word32 keySz;
-    KEY_TABLE_TYPE key;
-    word32 reg[CAMELLIA_BLOCK_SIZE / sizeof(word32)]; /* for CBC mode */
-    word32 tmp[CAMELLIA_BLOCK_SIZE / sizeof(word32)]; /* for CBC mode */
-} Camellia;
+    WC_CAMELLIA_KEY_TABLE_TYPE key;
+    word32 reg[WC_CAMELLIA_BLOCK_SIZE / sizeof(word32)]; /* for CBC mode */
+    word32 tmp[WC_CAMELLIA_BLOCK_SIZE / sizeof(word32)]; /* for CBC mode */
+} wc_Camellia;
 
 
-WOLFSSL_API int  wc_CamelliaSetKey(Camellia* cam,
+WOLFSSL_API int  wc_CamelliaSetKey(wc_Camellia* cam,
                                    const byte* key, word32 len, const byte* iv);
-WOLFSSL_API int  wc_CamelliaSetIV(Camellia* cam, const byte* iv);
-WOLFSSL_API int  wc_CamelliaEncryptDirect(Camellia* cam, byte* out,
+WOLFSSL_API int  wc_CamelliaSetIV(wc_Camellia* cam, const byte* iv);
+WOLFSSL_API int  wc_CamelliaEncryptDirect(wc_Camellia* cam, byte* out,
                                                                 const byte* in);
-WOLFSSL_API int  wc_CamelliaDecryptDirect(Camellia* cam, byte* out,
+WOLFSSL_API int  wc_CamelliaDecryptDirect(wc_Camellia* cam, byte* out,
                                                                 const byte* in);
-WOLFSSL_API int wc_CamelliaCbcEncrypt(Camellia* cam,
+WOLFSSL_API int wc_CamelliaCbcEncrypt(wc_Camellia* cam,
                                           byte* out, const byte* in, word32 sz);
-WOLFSSL_API int wc_CamelliaCbcDecrypt(Camellia* cam,
+WOLFSSL_API int wc_CamelliaCbcDecrypt(wc_Camellia* cam,
                                           byte* out, const byte* in, word32 sz);
+WOLFSSL_API void wc_CamelliaFree(wc_Camellia* cam);
+
+#ifndef OPENSSL_COEXIST
+
+enum {
+    CAMELLIA_BLOCK_SIZE = WC_CAMELLIA_BLOCK_SIZE
+};
+
+#define CAMELLIA_TABLE_BYTE_LEN WC_CAMELLIA_TABLE_BYTE_LEN
+#define CAMELLIA_TABLE_WORD_LEN WC_CAMELLIA_TABLE_WORD_LEN
+
+typedef word32 KEY_TABLE_TYPE[WC_CAMELLIA_TABLE_WORD_LEN];
+
+typedef struct wc_Camellia Camellia;
+
+#endif /* !OPENSSL_COEXIST */
 
 
 #ifdef __cplusplus

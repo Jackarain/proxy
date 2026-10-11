@@ -1,0 +1,66 @@
+/* test_mlkem.h
+ *
+ * Copyright (C) 2006-2026 wolfSSL Inc.
+ *
+ * This file is part of wolfSSL.
+ *
+ * wolfSSL is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * wolfSSL is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1335, USA
+ */
+
+#ifndef WOLFCRYPT_TEST_MLKEM_H
+#define WOLFCRYPT_TEST_MLKEM_H
+
+#include <tests/api/api_decl.h>
+
+int test_wc_mlkem_make_key_kats(void);
+int test_wc_MlKemKey_seed_service_indicator(void);
+int test_wc_mlkem_encapsulate_kats(void);
+int test_wc_mlkem_decapsulate_kats(void);
+int test_wc_mlkem_decapsulate_pubonly_fails(void);
+int test_wc_mlkem_decap_fo_reject(void);
+int test_wc_mlkem_decode_privkey_bad_pubhash(void);
+int test_wc_MlkemFeatureCoverage(void);
+int test_wc_MlkemDecisionCoverage(void);
+int test_wc_mlkem_init_id_decision(void);
+int test_wc_mlkem_init_label_decision(void);
+int test_wc_mlkem_encapsulate_pubkey_unset_decision(void);
+int test_wc_mlkem_encode_key_len_decision(void);
+int test_wc_mlkem_cb_free(void);
+int test_wc_mlkem_cb_pending_rejected(void);
+int test_wc_mlkem_decode_pubkey_refused_save(void);
+int test_wc_mlkem_decode_reused_key(void);
+int test_wc_mlkem_decode_alloc_fail(void);
+
+#define TEST_MLKEM_DECLS                                                \
+    TEST_DECL_GROUP("mlkem", test_wc_mlkem_make_key_kats),              \
+    TEST_DECL_GROUP("mlkem", test_wc_MlKemKey_seed_service_indicator),  \
+    TEST_DECL_GROUP("mlkem", test_wc_mlkem_encapsulate_kats),           \
+    TEST_DECL_GROUP("mlkem", test_wc_mlkem_decapsulate_kats),           \
+    TEST_DECL_GROUP("mlkem", test_wc_mlkem_decapsulate_pubonly_fails),  \
+    TEST_DECL_GROUP("mlkem", test_wc_mlkem_decap_fo_reject),            \
+    TEST_DECL_GROUP("mlkem", test_wc_mlkem_decode_privkey_bad_pubhash), \
+    TEST_DECL_GROUP("mlkem", test_wc_MlkemFeatureCoverage),             \
+    TEST_DECL_GROUP("mlkem", test_wc_MlkemDecisionCoverage),            \
+    TEST_DECL_GROUP("mlkem", test_wc_mlkem_init_id_decision),           \
+    TEST_DECL_GROUP("mlkem", test_wc_mlkem_init_label_decision),        \
+    TEST_DECL_GROUP("mlkem", test_wc_mlkem_encapsulate_pubkey_unset_decision), \
+    TEST_DECL_GROUP("mlkem", test_wc_mlkem_encode_key_len_decision), \
+    TEST_DECL_GROUP("mlkem", test_wc_mlkem_cb_free),                    \
+    TEST_DECL_GROUP("mlkem", test_wc_mlkem_cb_pending_rejected),        \
+    TEST_DECL_GROUP("mlkem", test_wc_mlkem_decode_pubkey_refused_save), \
+    TEST_DECL_GROUP("mlkem", test_wc_mlkem_decode_reused_key), \
+    TEST_DECL_GROUP("mlkem", test_wc_mlkem_decode_alloc_fail)
+
+#endif /* WOLFCRYPT_TEST_MLKEM_H */

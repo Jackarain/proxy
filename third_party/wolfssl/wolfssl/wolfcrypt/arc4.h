@@ -1,12 +1,12 @@
 /* arc4.h
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -51,6 +51,7 @@ typedef struct Arc4 {
     WC_ASYNC_DEV asyncDev;
 #endif
     void* heap;
+    WC_BITFIELD keySet:1;    /* set to 1 once a key has been configured */
 } Arc4;
 
 WOLFSSL_API int wc_Arc4Process(Arc4* arc4, byte* out, const byte* in,

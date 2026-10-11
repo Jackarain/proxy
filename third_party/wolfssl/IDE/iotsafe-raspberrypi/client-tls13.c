@@ -1,12 +1,12 @@
 /* client-tls13.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -161,6 +161,7 @@ int client_loop(const char *peer_ip, const char *peer_name,
     /* Declare certificate temporary buffer */
     uint8_t      cert_buffer[2048] = {0};
     uint32_t     cert_buffer_size  = 0;
+    int          cert_sz           = 0;
     uint8_t     *cert_iter         = NULL;
 
     /* Declare wolfSSL objects */
@@ -170,39 +171,31 @@ int client_loop(const char *peer_ip, const char *peer_name,
     char         randombytes[16] = {0};
 
     /* Construct HTTP POST */
-
-    /* Header */
-    strcat(buff, "POST /iot/device HTTP/1.1\r\n");
-    strcat(buff, "Content-Type: application/json\r\n");
-    strcat(buff, "Content-Length: 1000\r\n");
-    strcat(buff, "Accept: */*\r\n");
-    strcat(buff, "Host: ");
-    strcat(buff, peer_name);
-    strcat(buff, ":");
-    strcat(buff, peer_port);
-    strcat(buff, "\r\n");
-
-    /* Delimiter */
-    strcat(buff, "\r\n");
-
-    /* Body */
     srand(time(NULL));
-    int devid    = rand() % 100;
-    char snum[5] = {0};
-    snprintf(snum, sizeof(snum), "%d", devid);
+    int devid = rand() % 100;
 
-    strcat(buff, "{");
-    strcat(buff, "\"deviceId\": \"");
-    strcat(buff, snum);
-    strcat(buff, "\",");
-    strcat(buff, "\"sensorType\": \"Temperature\",");
-    strcat(buff, "\"sensorValue\": \"");
-    strcat(buff, temperature);
-    strcat(buff, "\",");
-    strcat(buff, "\"sensorUnit\": \"Celsius\",");
-    strcat(buff, "\"sensorTime\": 1582181510");
-    strcat(buff, "}");
-    strcat(buff, "\r\n");
+    int n = snprintf(buff, sizeof(buff),
+        "POST /iot/device HTTP/1.1\r\n"
+        "Content-Type: application/json\r\n"
+        "Content-Length: 1000\r\n"
+        "Accept: */*\r\n"
+        "Host: %s:%s\r\n"
+        "\r\n"
+        "{"
+        "\"deviceId\": \"%d\","
+        "\"sensorType\": \"Temperature\","
+        "\"sensorValue\": \"%s\","
+        "\"sensorUnit\": \"Celsius\","
+        "\"sensorTime\": 1582181510"
+        "}"
+        "\r\n",
+        peer_name, peer_port, devid, temperature);
+
+    if (n < 0 || n >= (int)sizeof(buff)) {
+        fprintf(stderr, "ERROR: HTTP request too large for buffer\n");
+        ret = -1;
+        goto exit;
+    }
 
     printf("\n\nPOST REQUEST\n\n%s\n\n", buff);
 
@@ -314,16 +307,17 @@ int client_loop(const char *peer_ip, const char *peer_name,
 
     /* Extract client certificate from IoTSAFE*/
     printf("----     Extracting client certificate from IoTSAFE\n");
-    if ((cert_buffer_size = wolfIoTSafe_GetCert(
+    cert_sz = wolfIoTSafe_GetCert(
                                 CRT_CLIENT_FILE_ID,
                                 cert_buffer,
-                                sizeof(cert_buffer)))
-         < 1)
+                                sizeof(cert_buffer));
+    if (cert_sz < 1)
     {
         fprintf(stderr, "ERROR: Bad client certificate\n");
         ret = -1;
         goto exit;
     }
+    cert_buffer_size = (uint32_t)cert_sz;
 
     /* Print extracted client certificate */
     printf("----     Printing extracted client certificate\n");
@@ -340,21 +334,22 @@ int client_loop(const char *peer_ip, const char *peer_name,
          != WOLFSSL_SUCCESS)
     {
         fprintf(stderr, "ERROR: Failed to load client certificate\n");
-        return -1;
+        goto exit;
     }
 
     /* Extract server certificate from IoTSAFE*/
     printf("----     Extracting server certificate from IoTSAFE\n");
-    if ((cert_buffer_size = wolfIoTSafe_GetCert(
+    cert_sz = wolfIoTSafe_GetCert(
                                 CRT_SERVER_FILE_ID,
                                 cert_buffer,
-                                sizeof(cert_buffer)))
-         < 1)
+                                sizeof(cert_buffer));
+    if (cert_sz < 1)
     {
         fprintf(stderr, "ERROR: Bad server certificate\n");
         ret = -1;
         goto exit;
     }
+    cert_buffer_size = (uint32_t)cert_sz;
 
     /* Print extracted server certificate */
     printf("----     Printing extracted server certificate\n");
@@ -371,7 +366,7 @@ int client_loop(const char *peer_ip, const char *peer_name,
          != WOLFSSL_SUCCESS)
     {
         fprintf(stderr, "ERROR: Failed to load server certificate\n");
-        return -1;
+        goto exit;
     }
 
     /* Set client to authenticate server */

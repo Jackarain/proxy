@@ -16,36 +16,8 @@ if [ -n "$WSL_DISTRO_NAME" ]; then
     fi
 fi
 
-# Git hooks should come before autoreconf.
-if [ -d .git ]; then
-    if [ ! -d .git/hooks ]; then
-        mkdir .git/hooks || exit $?
-    fi
-
-    if [ -n "$no_links" ]; then
-        echo "Linux ln does not work on shared Windows file system in WSL."
-        if [ ! -e .git/hooks/pre-commit ]; then
-            echo "The pre-commit.sh file will not be copied to .git/hooks/pre-commit"
-            # shell scripts do not work on Windows; TODO create equivalent batch file
-            # cp ./pre-commit.sh .git/hooks/pre-commit || exit $?
-        fi
-        if [ ! -e .git/hooks/pre-push ]; then
-            echo "The pre-push.sh file will not be copied to .git/hooks/pre-commit"
-            # shell scripts do not work on Windows; TODO create equivalent batch file
-            # cp ./pre-push.sh .git/hooks/pre-push || exit $?
-        fi
-    else
-        if [ ! -e .git/hooks/pre-commit ]; then
-            ln -s ../../pre-commit.sh .git/hooks/pre-commit || exit $?
-        fi
-        if [ ! -e .git/hooks/pre-push ]; then
-            ln -s ../../pre-push.sh .git/hooks/pre-push || exit $?
-        fi
-    fi
-fi
-
 # if and as needed, create empty dummy versions of various files, mostly
-# associated with fips/self-test and asynccrypt:
+# associated with fips/self-test:
 
 for dir in \
         ./wolfssl/wolfcrypt/port/intel \
@@ -63,15 +35,7 @@ for file in \
         ./wolfcrypt/src/wolfcrypt_first.c \
         ./wolfcrypt/src/wolfcrypt_last.c \
         ./wolfssl/wolfcrypt/fips.h \
-        ./wolfcrypt/src/selftest.c \
-        ./wolfcrypt/src/async.c \
-        ./wolfssl/wolfcrypt/async.h \
-        ./wolfcrypt/src/port/intel/quickassist.c \
-        ./wolfcrypt/src/port/intel/quickassist_mem.c \
-        ./wolfcrypt/src/port/cavium/cavium_nitrox.c \
-        ./wolfssl/wolfcrypt/port/intel/quickassist.h \
-        ./wolfssl/wolfcrypt/port/intel/quickassist_mem.h \
-        ./wolfssl/wolfcrypt/port/cavium/cavium_nitrox.h
+        ./wolfcrypt/src/selftest.c
 do
     if [ ! -e "$file" ]; then
         > "$file" || exit $?

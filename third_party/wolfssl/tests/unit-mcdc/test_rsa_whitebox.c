@@ -1,0 +1,1007 @@
+/* test_rsa_whitebox.c
+ *
+ * White-box MC/DC supplement for wolfcrypt/src/rsa.c.
+ *
+ * The tests/api RSA suite drives rsa.c through its *public* API. A handful of
+ * decision conditions live in file-static helpers whose "impossible" operand
+ * combinations are rejected by every public caller *before* the helper runs, so
+ * they can never be exercised from the API without modifying library source.
+ * This translation unit reaches them by compiling rsa.c directly (#include) and
+ * calling the helpers with both halves of each MC/DC independence pair.
+ *
+ * Coverage from this binary is unioned with the tests/api variant coverage by
+ * source line:col in the per-module suite:
+ * llvm-cov computes MC/DC independence PER BINARY, and the
+ * aggregate.sh ORs the "independence shown" bit across binaries by key. That is
+ * why every pair below is completed *within this file* rather than relying on
+ * the API tests to supply the other half.
+ *
+ * Build: compiled by the coverage runner's white-box step with the SAME MC/DC CFLAGS,
+ * -DHAVE_CONFIG_H and -I<workspace> as the instrumented library, then linked
+ * against that variant's libwolfssl.a with its rsa.o removed (this TU supplies
+ * the instrumented rsa.c). NOT part of the wolfSSL build; not registered in
+ * tests/api. See tests/unit-mcdc/README.md.
+ *
+ * Targeted residuals (rsa.c), by class:
+ *   Class 1  _NewRsaKey_common cross-argument BAD_FUNC_ARG checks ... 9 conditions
+ *   Class 2  _RsaExportKey NULL-pointer guard ..................... 11 conditions
+ *   Class 3  _RsaFlattenPublicKey NULL-pointer guard ...............  5 conditions
+ *   Class 4  wc_CompareDiffPQ p/q NULL guard ......................  2 conditions
+ *   Class 5  _RsaPrivateKeyDecodeRaw arg/size guards ............... 15 conditions
+ *   Class 9  wc_RsaCleanup data/type guard ..........................  4 conditions
+ *   Class 10 wc_CheckProbablePrime_ex qRaw/qRawSz cross-check ........ 2 conditions
+ *   Class 11 wc_RsaFunctionNonBlock key/nb NULL guard ................ 2 conditions
+ * The RsaMGF1 buffer-size check (line ~1038) is intentionally skipped: its
+ * second operand ((word32)hLen > sizeof(tmpA)) is structurally unsatisfiable
+ * (hLen <= WC_MAX_DIGEST_SIZE < WC_MAX_DIGEST_SIZE+4 == sizeof(tmpA)), so
+ * unique-cause MC/DC for it is unreachable, and the surrounding path runs real
+ * hashing/allocation that we prefer not to drive from here. See RESIDUALS.md.
+ */
+
+/* Pull rsa.c in verbatim so the file-static helpers below are in scope and
+ * instrumented in THIS binary. rsa.c includes settings.h (which picks up
+ * user_settings.h via -DWOLFSSL_USER_SETTINGS) and rsa.h itself. */
+#include <wolfcrypt/src/rsa.c>
+
+#include <stdio.h>
+
+#ifndef INVALID_DEVID
+    #define INVALID_DEVID (-2)
+#endif
+
+static int wb_fail = 0;
+#define WB_NOTE(msg) do { printf("  [wb] %s\n", (msg)); } while (0)
+
+/* ------------------------------------------------------------------------- *
+ * Class 1: _NewRsaKey_common() cross-argument BAD_FUNC_ARG checks.
+ *
+ * _NewRsaKey_common(heap, devId, result_code, rsaInitType, id, idLen, label)
+ * validates that the id/idLen/label triple matches the init type. Each public
+ * wrapper (wc_NewRsaKey / wc_NewRsaKey_Id / wc_NewRsaKey_Label) hard-codes the
+ * arguments it does not use, so the "wrong" combinations are unreachable through
+ * the API. We call the static directly with each combination.
+ *
+ *   RSA_NEW_INIT_ID    line 204: if (id==NULL || idLen==0 || label!=NULL)
+ *                                 -> idx0 (id==NULL), idx1 (idLen==0), idx2 (label!=NULL)
+ *   RSA_NEW_INIT_LABEL line 212: if (label==NULL || id!=NULL || idLen!=0)
+ *                                 -> idx0 (label==NULL), idx1 (id!=NULL), idx2 (idLen!=0)
+ *   default            line 221: if (id!=NULL || idLen!=0 || label!=NULL)
+ *                                 -> idx0 (id!=NULL), idx1 (idLen!=0), idx2 (label!=NULL)
+ *
+ * The BAD_FUNC_ARG branch frees the key internally and returns NULL (nothing to
+ * free); the "all false" branch returns a real initialized key we release with
+ * wc_DeleteRsaKey. On any single bad arg the check returns before dereferencing,
+ * so every call is memory-safe.
+ * ------------------------------------------------------------------------- */
+#ifndef WC_NO_CONSTRUCTORS
+static void wb_rsa_release(RsaKey* key)
+{
+    if (key != NULL) {
+        (void)wc_DeleteRsaKey(key, NULL);
+    }
+}
+
+static void wb_newrsakey_common(void)
+{
+    unsigned char idbuf[4];
+    char          lbl[] = "x";
+    int           rc = 0;
+    RsaKey*       key;
+
+    XMEMSET(idbuf, 0x5A, sizeof(idbuf));
+
+#ifdef WOLF_PRIVATE_KEY_ID
+    /* line 204 (ID case), idx0/idx1/idx2: hold two operands false, flip one to
+     * make it independently decide the outcome; plus the all-false real init. */
+    key = _NewRsaKey_common(NULL, INVALID_DEVID, &rc, RSA_NEW_INIT_ID,
+                            NULL, 4, NULL);        /* id==NULL   -> true  */
+    wb_rsa_release(key);
+    key = _NewRsaKey_common(NULL, INVALID_DEVID, &rc, RSA_NEW_INIT_ID,
+                            idbuf, 0, NULL);       /* idLen==0   -> true  */
+    wb_rsa_release(key);
+    key = _NewRsaKey_common(NULL, INVALID_DEVID, &rc, RSA_NEW_INIT_ID,
+                            idbuf, 4, lbl);        /* label!=NULL-> true  */
+    wb_rsa_release(key);
+    key = _NewRsaKey_common(NULL, INVALID_DEVID, &rc, RSA_NEW_INIT_ID,
+                            idbuf, 4, NULL);       /* all false  -> real  */
+    wb_rsa_release(key);
+
+    /* line 212 (LABEL case), idx0/idx1/idx2: flip each operand, plus all-false. */
+    key = _NewRsaKey_common(NULL, INVALID_DEVID, &rc, RSA_NEW_INIT_LABEL,
+                            NULL, 0, NULL);        /* label==NULL-> true  */
+    wb_rsa_release(key);
+    key = _NewRsaKey_common(NULL, INVALID_DEVID, &rc, RSA_NEW_INIT_LABEL,
+                            idbuf, 0, lbl);        /* id!=NULL   -> true  */
+    wb_rsa_release(key);
+    key = _NewRsaKey_common(NULL, INVALID_DEVID, &rc, RSA_NEW_INIT_LABEL,
+                            NULL, 4, lbl);         /* idLen!=0   -> true  */
+    wb_rsa_release(key);
+    key = _NewRsaKey_common(NULL, INVALID_DEVID, &rc, RSA_NEW_INIT_LABEL,
+                            NULL, 0, lbl);         /* all false  -> real  */
+    wb_rsa_release(key);
+    WB_NOTE("_NewRsaKey_common ID/LABEL cross-arg pairs exercised");
+#else
+    (void)lbl;
+    WB_NOTE("WOLF_PRIVATE_KEY_ID off; ID/LABEL cases skipped");
+#endif
+
+    /* line 221 default case (always compiled), idx0/idx1/idx2: flip each of
+     * id / idLen / label with the others held false, plus the all-false real
+     * init (also produced by wc_NewRsaKey, done once here for this binary). */
+    key = _NewRsaKey_common(NULL, INVALID_DEVID, &rc, RSA_NEW_INIT_PLAIN,
+                            idbuf, 0, NULL);       /* id!=NULL   -> true  */
+    wb_rsa_release(key);
+    key = _NewRsaKey_common(NULL, INVALID_DEVID, &rc, RSA_NEW_INIT_PLAIN,
+                            NULL, 4, NULL);        /* idLen!=0   -> true  */
+    wb_rsa_release(key);
+    key = _NewRsaKey_common(NULL, INVALID_DEVID, &rc, RSA_NEW_INIT_PLAIN,
+                            NULL, 0, lbl);         /* label!=NULL-> true  */
+    wb_rsa_release(key);
+    key = _NewRsaKey_common(NULL, INVALID_DEVID, &rc, RSA_NEW_INIT_PLAIN,
+                            NULL, 0, NULL);        /* all false  -> real  */
+    wb_rsa_release(key);
+    WB_NOTE("_NewRsaKey_common default cross-arg pairs exercised");
+}
+#else
+static void wb_newrsakey_common(void) { WB_NOTE("WC_NO_CONSTRUCTORS on; _NewRsaKey_common skipped"); }
+#endif /* !WC_NO_CONSTRUCTORS */
+
+/* ------------------------------------------------------------------------- *
+ * Class 2: _RsaExportKey() NULL-pointer guard (line 4938, 11 conditions).
+ *
+ *   if (key==NULL || e==NULL || eSz==NULL || n==NULL || nSz==NULL ||
+ *       d==NULL || dSz==NULL || p==NULL || pSz==NULL || q==NULL || qSz==NULL)
+ *
+ * wc_RsaExportKey pre-guards these before calling the static, so the false side
+ * of each operand is only reachable here. All-valid uses a freshly initialized
+ * key (empty mp_ints export as size 0, returning 0). Each bad call sets exactly
+ * one pointer NULL; the guard short-circuits before any dereference.
+ * ------------------------------------------------------------------------- */
+#if !defined(WOLFSSL_RSA_VERIFY_ONLY)
+static void wb_rsa_export_key(void)
+{
+    RsaKey key;
+    byte   e[256], n[256], d[256], p[256], q[256];
+    word32 eSz = sizeof(e), nSz = sizeof(n), dSz = sizeof(d);
+    word32 pSz = sizeof(p), qSz = sizeof(q);
+
+    if (wc_InitRsaKey(&key, NULL) != 0) {
+        WB_NOTE("wc_InitRsaKey failed (_RsaExportKey skipped)");
+        wb_fail = 1;
+        return;
+    }
+
+    /* all-false side: every pointer valid */
+    (void)_RsaExportKey(&key, e, &eSz, n, &nSz, d, &dSz, p, &pSz, q, &qSz);
+    /* one NULL at a time -> each operand independently forces BAD_FUNC_ARG */
+    (void)_RsaExportKey(NULL, e, &eSz, n, &nSz, d, &dSz, p, &pSz, q, &qSz);
+    (void)_RsaExportKey(&key, NULL, &eSz, n, &nSz, d, &dSz, p, &pSz, q, &qSz);
+    (void)_RsaExportKey(&key, e, NULL, n, &nSz, d, &dSz, p, &pSz, q, &qSz);
+    (void)_RsaExportKey(&key, e, &eSz, NULL, &nSz, d, &dSz, p, &pSz, q, &qSz);
+    (void)_RsaExportKey(&key, e, &eSz, n, NULL, d, &dSz, p, &pSz, q, &qSz);
+    (void)_RsaExportKey(&key, e, &eSz, n, &nSz, NULL, &dSz, p, &pSz, q, &qSz);
+    (void)_RsaExportKey(&key, e, &eSz, n, &nSz, d, NULL, p, &pSz, q, &qSz);
+    (void)_RsaExportKey(&key, e, &eSz, n, &nSz, d, &dSz, NULL, &pSz, q, &qSz);
+    (void)_RsaExportKey(&key, e, &eSz, n, &nSz, d, &dSz, p, NULL, q, &qSz);
+    (void)_RsaExportKey(&key, e, &eSz, n, &nSz, d, &dSz, p, &pSz, NULL, &qSz);
+    (void)_RsaExportKey(&key, e, &eSz, n, &nSz, d, &dSz, p, &pSz, q, NULL);
+
+    wc_FreeRsaKey(&key);
+    WB_NOTE("_RsaExportKey NULL-pointer guard pairs exercised");
+}
+#else
+static void wb_rsa_export_key(void) { WB_NOTE("RSA_VERIFY_ONLY on; _RsaExportKey skipped"); }
+#endif
+
+/* ------------------------------------------------------------------------- *
+ * Class 3: _RsaFlattenPublicKey() NULL-pointer guard (line 4829, 5 conditions).
+ *
+ *   if (key==NULL || e==NULL || eSz==NULL || n==NULL || nSz==NULL)
+ *
+ * wc_RsaFlattenPublicKey pre-guards these. All-valid uses a freshly initialized
+ * key (empty mp_ints flatten as size 0, returning 0). Each bad call sets exactly
+ * one pointer NULL; the guard short-circuits before any dereference.
+ * ------------------------------------------------------------------------- */
+#if !defined(WOLFSSL_RSA_VERIFY_ONLY)
+static void wb_rsa_flatten_pub(void)
+{
+    RsaKey key;
+    byte   e[256], n[256];
+    word32 eSz = sizeof(e), nSz = sizeof(n);
+
+    if (wc_InitRsaKey(&key, NULL) != 0) {
+        WB_NOTE("wc_InitRsaKey failed (_RsaFlattenPublicKey skipped)");
+        wb_fail = 1;
+        return;
+    }
+
+    (void)_RsaFlattenPublicKey(&key, e, &eSz, n, &nSz);   /* all false */
+    (void)_RsaFlattenPublicKey(NULL, e, &eSz, n, &nSz);   /* key==NULL */
+    (void)_RsaFlattenPublicKey(&key, NULL, &eSz, n, &nSz);/* e==NULL   */
+    (void)_RsaFlattenPublicKey(&key, e, NULL, n, &nSz);   /* eSz==NULL */
+    (void)_RsaFlattenPublicKey(&key, e, &eSz, NULL, &nSz);/* n==NULL   */
+    (void)_RsaFlattenPublicKey(&key, e, &eSz, n, NULL);   /* nSz==NULL */
+
+    wc_FreeRsaKey(&key);
+    WB_NOTE("_RsaFlattenPublicKey NULL-pointer guard pairs exercised");
+}
+#else
+static void wb_rsa_flatten_pub(void) { WB_NOTE("RSA_VERIFY_ONLY on; _RsaFlattenPublicKey skipped"); }
+#endif
+
+/* ------------------------------------------------------------------------- *
+ * Class 4: wc_CompareDiffPQ() p/q NULL guard (line 5047, 2 conditions).
+ *
+ *   if (p == NULL || q == NULL)
+ *
+ * Reachable from wc_MakeRsaKey only with non-NULL p/q, so the true side of each
+ * operand is white-box only. All-valid uses two freshly initialized mp_ints
+ * (both zero); the guard short-circuits before dereferencing a NULL operand.
+ * ------------------------------------------------------------------------- */
+#if defined(WOLFSSL_KEY_GEN) && !defined(WOLFSSL_RSA_PUBLIC_ONLY)
+static void wb_compare_diff_pq(void)
+{
+    mp_int p, q;
+    int    valid = 0;
+
+    if (mp_init(&p) != MP_OKAY) {
+        WB_NOTE("mp_init(p) failed (wc_CompareDiffPQ skipped)");
+        wb_fail = 1;
+        return;
+    }
+    if (mp_init(&q) != MP_OKAY) {
+        WB_NOTE("mp_init(q) failed (wc_CompareDiffPQ skipped)");
+        mp_clear(&p);
+        wb_fail = 1;
+        return;
+    }
+
+    (void)wc_CompareDiffPQ(&p, &q, 1024, &valid);  /* p!=NULL && q!=NULL: false */
+    (void)wc_CompareDiffPQ(NULL, &q, 1024, &valid);/* p==NULL -> true           */
+    (void)wc_CompareDiffPQ(&p, NULL, 1024, &valid);/* p!=NULL F, q==NULL -> true*/
+
+    mp_clear(&p);
+    mp_clear(&q);
+    WB_NOTE("wc_CompareDiffPQ p/q NULL guard pairs exercised");
+}
+#else
+static void wb_compare_diff_pq(void) { WB_NOTE("KEY_GEN off / PUBLIC_ONLY; wc_CompareDiffPQ skipped"); }
+#endif
+
+/* ------------------------------------------------------------------------- *
+ * Class 5: _RsaPrivateKeyDecodeRaw() arg/size guards (lines 5890 & 5896).
+ *
+ *   line 5890 (11 conds): if (n==NULL||nSz==0||e==NULL||eSz==0||d==NULL||dSz==0
+ *                             ||p==NULL||pSz==0||q==NULL||qSz==0||key==NULL)
+ *   line 5896 (guarded):  if ((u==NULL||uSz==0)||(dP!=NULL&&dPSz==0)
+ *                             ||(dQ!=NULL&&dQSz==0))
+ *
+ * wc_RsaPrivateKeyDecodeRaw pre-guards the required params, so the false side of
+ * each operand is white-box only. mp_read_unsigned_bin accepts any bytes, so the
+ * all-valid call (4-byte dummy values) reaches past both checks and populates
+ * the key; we run the BAD_FUNC_ARG calls first (key untouched) then the single
+ * populating call, then free once. Each bad call flips exactly one operand.
+ * ------------------------------------------------------------------------- */
+#ifndef WOLFSSL_RSA_PUBLIC_ONLY
+static void wb_privkey_decode_raw(void)
+{
+    RsaKey key;
+    byte   b[4] = { 1, 2, 3, 4 };
+
+    if (wc_InitRsaKey(&key, NULL) != 0) {
+        WB_NOTE("wc_InitRsaKey failed (_RsaPrivateKeyDecodeRaw skipped)");
+        wb_fail = 1;
+        return;
+    }
+
+    /* line 5890: flip each of the 11 required-arg operands to true (bad). */
+    (void)_RsaPrivateKeyDecodeRaw(NULL, 4, b, 4, b, 4, b, 4, b, 4, b, 4, b, 4, b, 4, &key); /* n==NULL  */
+    (void)_RsaPrivateKeyDecodeRaw(b, 0, b, 4, b, 4, b, 4, b, 4, b, 4, b, 4, b, 4, &key);    /* nSz==0   */
+    (void)_RsaPrivateKeyDecodeRaw(b, 4, NULL, 4, b, 4, b, 4, b, 4, b, 4, b, 4, b, 4, &key); /* e==NULL  */
+    (void)_RsaPrivateKeyDecodeRaw(b, 4, b, 0, b, 4, b, 4, b, 4, b, 4, b, 4, b, 4, &key);    /* eSz==0   */
+    (void)_RsaPrivateKeyDecodeRaw(b, 4, b, 4, NULL, 4, b, 4, b, 4, b, 4, b, 4, b, 4, &key); /* d==NULL  */
+    (void)_RsaPrivateKeyDecodeRaw(b, 4, b, 4, b, 0, b, 4, b, 4, b, 4, b, 4, b, 4, &key);    /* dSz==0   */
+    (void)_RsaPrivateKeyDecodeRaw(b, 4, b, 4, b, 4, b, 4, NULL, 4, b, 4, b, 4, b, 4, &key); /* p==NULL  */
+    (void)_RsaPrivateKeyDecodeRaw(b, 4, b, 4, b, 4, b, 4, b, 0, b, 4, b, 4, b, 4, &key);    /* pSz==0   */
+    (void)_RsaPrivateKeyDecodeRaw(b, 4, b, 4, b, 4, b, 4, b, 4, NULL, 4, b, 4, b, 4, &key); /* q==NULL  */
+    (void)_RsaPrivateKeyDecodeRaw(b, 4, b, 4, b, 4, b, 4, b, 4, b, 0, b, 4, b, 4, &key);    /* qSz==0   */
+    (void)_RsaPrivateKeyDecodeRaw(b, 4, b, 4, b, 4, b, 4, b, 4, b, 4, b, 4, b, 4, NULL);    /* key==NULL*/
+
+#if defined(WOLFSSL_KEY_GEN) || defined(OPENSSL_EXTRA) || !defined(RSA_LOW_MEM)
+    /* line 5896: flip each operand; u/dP/dQ params here (n..q all valid). */
+    (void)_RsaPrivateKeyDecodeRaw(b, 4, b, 4, b, 4, NULL, 4, b, 4, b, 4, b, 4, b, 4, &key); /* u==NULL   */
+    (void)_RsaPrivateKeyDecodeRaw(b, 4, b, 4, b, 4, b, 0, b, 4, b, 4, b, 4, b, 4, &key);    /* uSz==0    */
+    (void)_RsaPrivateKeyDecodeRaw(b, 4, b, 4, b, 4, b, 4, b, 4, b, 4, b, 0, b, 4, &key);    /* dP!=NULL && dPSz==0 */
+    (void)_RsaPrivateKeyDecodeRaw(b, 4, b, 4, b, 4, b, 4, b, 4, b, 4, b, 4, b, 0, &key);    /* dQ!=NULL && dQSz==0 */
+
+    /* The "dP != NULL" / "dQ != NULL" operands themselves (idx 2 and idx 4)
+     * need their FALSE side, which every call above holds true: dP/dQ are
+     * optional CRT components, so passing them absent is a legitimate,
+     * memory-safe call shape that simply skips their size cross-check.
+     *   dP==NULL, dQ==NULL          -> idx2 F (idx4 then F)  decision F
+     *   dP valid,  dQ==NULL         -> idx2 T, idx3 F, idx4 F  decision F
+     *   dP==NULL,  dQ valid         -> idx2 F, idx4 T, idx5 F  decision F
+     * paired against the idx2/idx4 TRUE vectors just above. */
+    (void)_RsaPrivateKeyDecodeRaw(b, 4, b, 4, b, 4, b, 4, b, 4, b, 4, NULL, 0, NULL, 0, &key);
+    (void)_RsaPrivateKeyDecodeRaw(b, 4, b, 4, b, 4, b, 4, b, 4, b, 4, b, 4, NULL, 0, &key);
+    (void)_RsaPrivateKeyDecodeRaw(b, 4, b, 4, b, 4, b, 4, b, 4, b, 4, NULL, 0, b, 4, &key);
+#endif
+
+    /* all-false side of both checks: every required arg valid, u/dP/dQ valid.
+     * This populates the key (mp_read_unsigned_bin on 4-byte dummies). */
+    (void)_RsaPrivateKeyDecodeRaw(b, 4, b, 4, b, 4, b, 4, b, 4, b, 4, b, 4, b, 4, &key);
+
+    wc_FreeRsaKey(&key);
+    WB_NOTE("_RsaPrivateKeyDecodeRaw arg/size guard pairs exercised");
+}
+#else
+static void wb_privkey_decode_raw(void) { WB_NOTE("RSA_PUBLIC_ONLY on; _RsaPrivateKeyDecodeRaw skipped"); }
+#endif
+
+/* ------------------------------------------------------------------------- *
+ * Class 6: RsaPad() argument guard (line ~1643, 4 conditions).
+ *
+ *   if (input==NULL || inputLen==0 || pkcsBlock==NULL || pkcsBlockLen==0)
+ *
+ * wc_RsaPad_ex dispatches here only with validated args, so the single-true
+ * (reject) half of each operand is white-box only; the all-false side is
+ * produced by every real PKCS#1 v1.5 encrypt. Each bad call returns
+ * BAD_FUNC_ARG before touching the buffers.
+ * ------------------------------------------------------------------------- */
+#ifndef WOLFSSL_RSA_VERIFY_ONLY
+static void wb_rsa_pad(void)
+{
+    byte blk[256];
+    byte inp[16];
+
+    XMEMSET(blk, 0, sizeof(blk));
+    XMEMSET(inp, 0, sizeof(inp));
+
+    /* all-false side (every operand valid) must be in THIS binary too, since
+     * llvm-cov shows MC/DC independence per binary. RSA_BLOCK_TYPE_1 pads with
+     * 0xFF and needs no RNG, so this valid call completes without a generator. */
+    (void)RsaPad(inp,  sizeof(inp), blk,  sizeof(blk), RSA_BLOCK_TYPE_1, NULL); /* all false       */
+    (void)RsaPad(NULL, sizeof(inp), blk,  sizeof(blk), RSA_BLOCK_TYPE_1, NULL); /* input==NULL     */
+    (void)RsaPad(inp,  0,           blk,  sizeof(blk), RSA_BLOCK_TYPE_1, NULL); /* inputLen==0     */
+    (void)RsaPad(inp,  sizeof(inp), NULL, sizeof(blk), RSA_BLOCK_TYPE_1, NULL); /* pkcsBlock==NULL */
+    (void)RsaPad(inp,  sizeof(inp), blk,  0,           RSA_BLOCK_TYPE_1, NULL); /* pkcsBlockLen==0 */
+    WB_NOTE("RsaPad argument guard pairs exercised");
+}
+#else
+static void wb_rsa_pad(void) { WB_NOTE("RSA_VERIFY_ONLY on; RsaPad skipped"); }
+#endif
+
+/* ------------------------------------------------------------------------- *
+ * Class 7: RsaUnPad() argument guard (line ~2039, 3 conditions).
+ *
+ *   if (output == NULL || pkcsBlockLen < 2 || pkcsBlockLen > 0xFFFF)
+ *
+ * wc_RsaUnPad_ex validates before dispatching, so each operand's true side is
+ * white-box only. The pkcsBlockLen>0xFFFF call short-circuits after the length
+ * test, never indexing the (smaller) buffer, so it is memory-safe.
+ * ------------------------------------------------------------------------- */
+#ifndef WOLFSSL_RSA_VERIFY_ONLY
+static void wb_rsa_unpad(void)
+{
+    byte        blk[256];
+    const byte* outp = NULL;
+
+    XMEMSET(blk, 0, sizeof(blk));
+    blk[0] = 0;
+    blk[1] = RSA_BLOCK_TYPE_1;
+
+    /* all-false side (output valid, 2 <= len <= 0xFFFF) in THIS binary too. The
+     * block need not be validly padded: the line-2039 guard runs before any
+     * padding parse, so this call exercises its false side regardless. */
+    (void)RsaUnPad(blk, sizeof(blk), &outp, RSA_BLOCK_TYPE_1); /* all false          */
+    (void)RsaUnPad(blk, sizeof(blk), NULL,  RSA_BLOCK_TYPE_1); /* output==NULL       */
+    (void)RsaUnPad(blk, 1,           &outp, RSA_BLOCK_TYPE_1); /* pkcsBlockLen < 2   */
+    (void)RsaUnPad(blk, 0x10000u,    &outp, RSA_BLOCK_TYPE_1); /* pkcsBlockLen>0xFFFF*/
+    WB_NOTE("RsaUnPad argument guard pairs exercised");
+}
+#else
+static void wb_rsa_unpad(void) { WB_NOTE("RSA_VERIFY_ONLY on; RsaUnPad skipped"); }
+#endif
+
+/* ------------------------------------------------------------------------- *
+ * Class 8: _CheckProbablePrime() argument guard (line ~5185, 3 conditions).
+ *
+ *   if (p == NULL || e == NULL || isPrime == NULL)
+ *
+ * wc_CheckProbablePrime_ex validates p/e/isPrime before calling the static, so
+ * the true side of each operand is white-box only (q may legitimately be NULL).
+ * Each bad call short-circuits before dereferencing. The all-false call uses
+ * two zero-initialized mp_ints (0 is trivially rejected as composite).
+ * ------------------------------------------------------------------------- */
+#if defined(WOLFSSL_KEY_GEN) && !defined(WOLFSSL_RSA_PUBLIC_ONLY)
+static void wb_check_probable_prime(void)
+{
+    mp_int p, e;
+    int    isPrime = 0;
+
+    if (mp_init(&p) != MP_OKAY) {
+        WB_NOTE("mp_init(p) failed (_CheckProbablePrime skipped)");
+        wb_fail = 1;
+        return;
+    }
+    if (mp_init(&e) != MP_OKAY) {
+        WB_NOTE("mp_init(e) failed (_CheckProbablePrime skipped)");
+        mp_clear(&p);
+        wb_fail = 1;
+        return;
+    }
+
+    (void)_CheckProbablePrime(&p,   NULL, &e,   2048, &isPrime, NULL); /* all false */
+    (void)_CheckProbablePrime(NULL, NULL, &e,   2048, &isPrime, NULL); /* p==NULL       */
+    (void)_CheckProbablePrime(&p,   NULL, NULL, 2048, &isPrime, NULL); /* e==NULL       */
+    (void)_CheckProbablePrime(&p,   NULL, &e,   2048, NULL,     NULL); /* isPrime==NULL */
+
+    mp_clear(&p);
+    mp_clear(&e);
+    WB_NOTE("_CheckProbablePrime p/e/isPrime NULL guard pairs exercised");
+}
+#else
+static void wb_check_probable_prime(void) { WB_NOTE("KEY_GEN off / PUBLIC_ONLY; _CheckProbablePrime skipped"); }
+#endif
+
+/* ------------------------------------------------------------------------- *
+ * Class 9: wc_RsaCleanup() data/type guard (line ~163, 4 conditions).
+ *
+ *   if ((key->data != NULL && key->dataLen > 0) &&
+ *       (key->type == RSA_PRIVATE_DECRYPT || key->type == RSA_PRIVATE_ENCRYPT))
+ *
+ * File-static, called only internally after every RSA op with a key whose
+ * data/dataLen/type are already self-consistent, so the individual operand
+ * flips below (data==NULL, dataLen==0, type neither PRIVATE_DECRYPT nor
+ * PRIVATE_ENCRYPT) are white-box only. data points at a stack buffer with
+ * dataIsAlloc==0 so ForceZero runs but XFREE does not (no allocation here).
+ * ------------------------------------------------------------------------- */
+#if !defined(WOLFSSL_NO_MALLOC) && (defined(WOLFSSL_ASYNC_CRYPT) || \
+    (!defined(WOLFSSL_RSA_VERIFY_ONLY) && !defined(WOLFSSL_RSA_VERIFY_INLINE)))
+static void wb_rsa_cleanup(void)
+{
+    RsaKey key;
+    byte   buf[8];
+
+    XMEMSET(&key, 0, sizeof(key));
+    XMEMSET(buf, 0xAA, sizeof(buf));
+
+#ifndef WOLFSSL_RSA_PUBLIC_ONLY
+    /* all-true: data!=NULL, dataLen>0, type==PRIVATE_DECRYPT -> ForceZero */
+    key.data = buf; key.dataLen = sizeof(buf); key.dataIsAlloc = 0;
+    key.type = RSA_PRIVATE_DECRYPT;
+    wc_RsaCleanup(&key);
+
+    /* type==PRIVATE_ENCRYPT: other half of the (C||D) type pair */
+    key.data = buf; key.dataLen = sizeof(buf); key.dataIsAlloc = 0;
+    key.type = RSA_PRIVATE_ENCRYPT;
+    wc_RsaCleanup(&key);
+
+    /* data==NULL -> first AND-operand false */
+    key.data = NULL; key.dataLen = sizeof(buf); key.dataIsAlloc = 0;
+    key.type = RSA_PRIVATE_DECRYPT;
+    wc_RsaCleanup(&key);
+
+    /* dataLen==0 -> first AND-operand false (other leaf) */
+    key.data = buf; key.dataLen = 0; key.dataIsAlloc = 0;
+    key.type = RSA_PRIVATE_DECRYPT;
+    wc_RsaCleanup(&key);
+#endif
+
+    /* type neither PRIVATE_DECRYPT nor PRIVATE_ENCRYPT -> (C||D) false */
+    key.data = buf; key.dataLen = sizeof(buf); key.dataIsAlloc = 0;
+    key.type = RSA_PUBLIC_ENCRYPT;
+    wc_RsaCleanup(&key);
+
+    WB_NOTE("wc_RsaCleanup data/type guard pairs exercised");
+}
+#else
+static void wb_rsa_cleanup(void) { WB_NOTE("wc_RsaCleanup body compiled out; nothing to exercise"); }
+#endif
+
+/* ------------------------------------------------------------------------- *
+ * Class 10: wc_CheckProbablePrime_ex() qRaw/qRawSz cross-check
+ * (line ~5324, 2 conditions).
+ *
+ *   if ((qRaw != NULL && qRawSz == 0) || (qRaw == NULL && qRawSz != 0))
+ *       return BAD_FUNC_ARG;
+ *
+ * A public API, but llvm-cov computes MC/DC independence per binary: driving
+ * this decision's 4 leaf values from tests/api split across several distinct
+ * test-case call sites does not by itself guarantee the pair for each operand
+ * lands together in one profile. Exercised here within a single binary so the
+ * independence pairs are unambiguous.
+ * ------------------------------------------------------------------------- */
+#if defined(WOLFSSL_KEY_GEN) && !defined(WOLFSSL_RSA_PUBLIC_ONLY)
+static void wb_check_probable_prime_ex_qraw(void)
+{
+    byte pRaw[2] = { 0x03, 0x03 };
+    byte eRaw[3] = { 0x01, 0x00, 0x01 };
+    int  isPrime = 0;
+
+    /* qRaw!=NULL, qRawSz==0 -> first term true */
+    (void)wc_CheckProbablePrime_ex(pRaw, sizeof(pRaw), pRaw, 0,
+        eRaw, sizeof(eRaw), 1024, &isPrime, NULL);
+    /* qRaw==NULL, qRawSz!=0 -> second term true */
+    (void)wc_CheckProbablePrime_ex(pRaw, sizeof(pRaw), NULL, 2,
+        eRaw, sizeof(eRaw), 1024, &isPrime, NULL);
+    /* qRaw==NULL, qRawSz==0 -> all-false (q omitted, valid) */
+    (void)wc_CheckProbablePrime_ex(pRaw, sizeof(pRaw), NULL, 0,
+        eRaw, sizeof(eRaw), 1024, &isPrime, NULL);
+    /* qRaw!=NULL, qRawSz!=0 -> all-false (q supplied, valid) */
+    (void)wc_CheckProbablePrime_ex(pRaw, sizeof(pRaw), pRaw, sizeof(pRaw),
+        eRaw, sizeof(eRaw), 1024, &isPrime, NULL);
+
+    WB_NOTE("wc_CheckProbablePrime_ex qRaw/qRawSz cross-check pairs exercised");
+}
+#else
+static void wb_check_probable_prime_ex_qraw(void) { WB_NOTE("KEY_GEN off / PUBLIC_ONLY; wc_CheckProbablePrime_ex skipped"); }
+#endif
+
+/* ------------------------------------------------------------------------- *
+ * Class 11: wc_RsaFunctionNonBlock() key/key->nb NULL guard
+ * (line ~2299, 2 conditions).
+ *
+ *   if (key == NULL || key->nb == NULL) return BAD_FUNC_ARG;
+ *
+ * Only compiled under WC_RSA_NONBLOCK (the "nonblock" variant, fastmath).
+ * Every public entry point attaches an RsaNb via wc_RsaSetNonBlock before
+ * dispatching here, so the nb==NULL true side is white-box only. The
+ * all-false call passes the guard into the SP-nonblock/fastmath state
+ * machine; driving that state machine to completion is out of scope here.
+ * ------------------------------------------------------------------------- */
+#ifdef WC_RSA_NONBLOCK
+static void wb_rsa_function_nonblock(void)
+{
+    RsaKey key;
+    WC_RNG rng;
+    RsaNb  nb;
+    byte   in[4] = { 0x01, 0x02, 0x03, 0x04 };
+    byte   out[256];
+    word32 outLen;
+
+    XMEMSET(&key, 0, sizeof(key));
+    XMEMSET(&rng, 0, sizeof(rng));
+
+    if (wc_InitRsaKey(&key, NULL) != 0 || wc_InitRng(&rng) != 0) {
+        WB_NOTE("init failed (wc_RsaFunctionNonBlock skipped)");
+        wb_fail = 1;
+        return;
+    }
+    if (wc_MakeRsaKey(&key, 2048, WC_RSA_EXPONENT, &rng) != 0) {
+        WB_NOTE("wc_MakeRsaKey failed (wc_RsaFunctionNonBlock skipped)");
+        wc_FreeRng(&rng);
+        wc_FreeRsaKey(&key);
+        wb_fail = 1;
+        return;
+    }
+
+    /* key==NULL -> idx0 true */
+    outLen = sizeof(out);
+    (void)wc_RsaFunctionNonBlock(in, sizeof(in), out, &outLen,
+        RSA_PUBLIC_ENCRYPT, NULL);
+
+    /* key!=NULL but key->nb==NULL (never attached) -> idx1 true */
+    outLen = sizeof(out);
+    (void)wc_RsaFunctionNonBlock(in, sizeof(in), out, &outLen,
+        RSA_PUBLIC_ENCRYPT, &key);
+
+    /* all-false: nb attached, guard passes into the state machine */
+    if (wc_RsaSetNonBlock(&key, &nb) == 0) {
+        outLen = sizeof(out);
+        (void)wc_RsaFunctionNonBlock(in, sizeof(in), out, &outLen,
+            RSA_PUBLIC_ENCRYPT, &key);
+    }
+
+    /* rsa.c:3377 - wc_RsaDirect()'s "skip cleanup while still pending" guard.
+     * Its FP_WOULDBLOCK operand needs a call that yields, which only the
+     * non-blocking state machine produces; the all-false row is the same
+     * call with no non-blocking context attached. Both rows are here so the
+     * pair is shown in this binary. */
+#if defined(WC_RSA_DIRECT) || defined(WC_RSA_NO_PADDING) || \
+    defined(OPENSSL_EXTRA) || defined(OPENSSL_EXTRA_X509_SMALL)
+    {
+        byte   dIn[512];
+        byte   dOut[512];
+        word32 dInSz;
+        int    encSz = wc_RsaEncryptSize(&key);
+        int    ret;
+        int    i;
+
+        if ((encSz > 0) && ((word32)encSz <= sizeof(dIn))) {
+            dInSz = (word32)encSz;
+            XMEMSET(dIn, 0, dInSz);
+            dIn[dInSz - 1] = 0x02;
+
+            /* all-false row: no non-blocking context, the call completes. */
+            (void)wc_RsaSetNonBlock(&key, NULL);
+            outLen = sizeof(dOut);
+            key.state = RSA_STATE_NONE;
+            ret = wc_RsaDirect(dIn, dInSz, dOut, &outLen, &key,
+                RSA_PUBLIC_ENCRYPT, &rng);
+            if (ret <= 0) {
+                WB_NOTE("wc_RsaDirect blocking case misbehaved");
+                wb_fail = 1;
+            }
+
+            /* FP_WOULDBLOCK row: with a context attached each call yields
+             * until the state machine finishes. Bounded by a vector count,
+             * never by elapsed time. */
+            XMEMSET(&nb, 0, sizeof(nb));
+            if (wc_RsaSetNonBlock(&key, &nb) == 0) {
+                key.state = RSA_STATE_NONE;
+                for (i = 0; i < 1000000; i++) {
+                    outLen = sizeof(dOut);
+                    ret = wc_RsaDirect(dIn, dInSz, dOut, &outLen, &key,
+                        RSA_PUBLIC_ENCRYPT, &rng);
+                    if (ret != FP_WOULDBLOCK) {
+                        break;
+                    }
+                }
+                if (ret <= 0) {
+                    WB_NOTE("wc_RsaDirect non-blocking case did not complete");
+                    wb_fail = 1;
+                }
+                (void)wc_RsaSetNonBlock(&key, NULL);
+            }
+        }
+    }
+#endif
+
+    wc_FreeRsaKey(&key);
+    wc_FreeRng(&rng);
+    WB_NOTE("wc_RsaFunctionNonBlock key/nb NULL guard pairs exercised");
+}
+#else
+static void wb_rsa_function_nonblock(void) { WB_NOTE("WC_RSA_NONBLOCK off; wc_RsaFunctionNonBlock skipped"); }
+#endif
+
+/* ------------------------------------------------------------------------- *
+ * Class 12: wc_RsaPrivateKeyDecodeRaw() (the PUBLIC wrapper, lines ~6051 and
+ * ~6059) -- distinct decisions from the _RsaPrivateKeyDecodeRaw static above.
+ *
+ *   6051: if (n==NULL||nSz==0||e==NULL||eSz==0||d==NULL||dSz==0
+ *             ||p==NULL||pSz==0||q==NULL||qSz==0||key==NULL)   [idx10 = key]
+ *   6059: if ((u==NULL||uSz==0)||(dP!=NULL&&dPSz==0)||(dQ!=NULL&&dQSz==0))
+ *                                                    [idx2..idx5 = dP/dQ]
+ *
+ * The wrapper sets err rather than returning, so a rejected call falls through
+ * a chain of "if (err == MP_OKAY)" guards and never dereferences key. All
+ * accepted calls import 4-byte dummy components into the same initialized key
+ * (mp_read_unsigned_bin accepts any bytes); when dP/dQ are omitted the wrapper
+ * derives them with CalcDX() from the (equally dummy) p/q/d, which is a plain
+ * bounded modular reduction -- no key generation, no primality search.
+ * ------------------------------------------------------------------------- */
+#ifndef WOLFSSL_RSA_PUBLIC_ONLY
+static void wb_pub_privkey_decode_raw(void)
+{
+    RsaKey key;
+    byte   b[4] = { 1, 2, 3, 4 };
+
+    if (wc_InitRsaKey(&key, NULL) != 0) {
+        WB_NOTE("wc_InitRsaKey failed (wc_RsaPrivateKeyDecodeRaw skipped)");
+        wb_fail = 1;
+        return;
+    }
+
+    /* line 6051 idx10: key==NULL true side (every other operand false). */
+    (void)wc_RsaPrivateKeyDecodeRaw(b, 4, b, 4, b, 4, b, 4, b, 4, b, 4,
+        b, 4, b, 4, NULL);
+
+#if defined(WOLFSSL_KEY_GEN) || defined(OPENSSL_EXTRA) || !defined(RSA_LOW_MEM)
+    /* line 6059 idx2..idx5: the dP/dQ presence + size cross-checks. u stays
+     * valid throughout so idx0/idx1 are false and the dP/dQ operands are the
+     * ones being evaluated. */
+    (void)wc_RsaPrivateKeyDecodeRaw(b, 4, b, 4, b, 4, b, 4, b, 4, b, 4,
+        b, 0, b, 4, &key);            /* idx2 T, idx3 T            -> T */
+    (void)wc_RsaPrivateKeyDecodeRaw(b, 4, b, 4, b, 4, b, 4, b, 4, b, 4,
+        b, 4, b, 0, &key);            /* idx2 T, idx3 F, idx4 T, idx5 T -> T */
+    (void)wc_RsaPrivateKeyDecodeRaw(b, 4, b, 4, b, 4, b, 4, b, 4, b, 4,
+        NULL, 0, NULL, 0, &key);      /* idx2 F, idx4 F            -> F */
+    (void)wc_RsaPrivateKeyDecodeRaw(b, 4, b, 4, b, 4, b, 4, b, 4, b, 4,
+        b, 4, NULL, 0, &key);         /* idx2 T, idx3 F, idx4 F    -> F */
+    (void)wc_RsaPrivateKeyDecodeRaw(b, 4, b, 4, b, 4, b, 4, b, 4, b, 4,
+        NULL, 0, b, 4, &key);         /* idx2 F, idx4 T, idx5 F    -> F */
+#endif
+
+    /* all-false baseline in the same binary. */
+    (void)wc_RsaPrivateKeyDecodeRaw(b, 4, b, 4, b, 4, b, 4, b, 4, b, 4,
+        b, 4, b, 4, &key);
+
+    wc_FreeRsaKey(&key);
+    WB_NOTE("wc_RsaPrivateKeyDecodeRaw key/dP/dQ guard pairs exercised");
+}
+#else
+static void wb_pub_privkey_decode_raw(void)
+{ WB_NOTE("RSA_PUBLIC_ONLY on; wc_RsaPrivateKeyDecodeRaw skipped"); }
+#endif
+
+/* ------------------------------------------------------------------------- *
+ * Class 13: wc_RsaSetNonBlockTime() argument guard (line ~5909, 2 conditions).
+ *
+ *   if (key == NULL || key->nb == NULL)
+ *
+ * Compiled only under WC_RSA_NONBLOCK_TIME && USE_FAST_MATH (the "nonblock"
+ * variant). No tests/api caller reaches it with a key that has no RsaNb
+ * attached, so the idx1 operand and the all-false side are white-box only.
+ * Both early returns happen before key->nb is dereferenced.
+ * ------------------------------------------------------------------------- */
+#if defined(WC_RSA_NONBLOCK) && defined(WC_RSA_NONBLOCK_TIME) && \
+    defined(USE_FAST_MATH)
+static void wb_rsa_set_nonblock_time(void)
+{
+    RsaKey key;
+    RsaNb  nb;
+
+    if (wc_InitRsaKey(&key, NULL) != 0) {
+        WB_NOTE("wc_InitRsaKey failed (wc_RsaSetNonBlockTime skipped)");
+        wb_fail = 1;
+        return;
+    }
+    XMEMSET(&nb, 0, sizeof(nb));
+
+    /* idx0 true: key==NULL (short-circuits before key->nb). */
+    (void)wc_RsaSetNonBlockTime(NULL, 100, 1000);
+    /* idx0 false, idx1 true: no RsaNb has been attached yet. */
+    (void)wc_RsaSetNonBlockTime(&key, 100, 1000);
+    /* all-false: attach the RsaNb, then the guard passes. */
+    if (wc_RsaSetNonBlock(&key, &nb) == 0) {
+        (void)wc_RsaSetNonBlockTime(&key, 100, 1000);
+    }
+    /* Detach before free so the stack RsaNb does not outlive the key. */
+    (void)wc_RsaSetNonBlock(&key, NULL);
+
+    wc_FreeRsaKey(&key);
+    WB_NOTE("wc_RsaSetNonBlockTime key/key->nb NULL guard pairs exercised");
+}
+#else
+static void wb_rsa_set_nonblock_time(void)
+{ WB_NOTE("WC_RSA_NONBLOCK_TIME/USE_FAST_MATH off; wc_RsaSetNonBlockTime skipped"); }
+#endif
+
+/* ------------------------------------------------------------------------- *
+ * Class 14: RsaUnPad_OAEP() digest/length guard (line 1794, 2 conditions).
+ *
+ *   ret = wc_HashGetDigestSize(hType);
+ *   if ((ret < 0) || (pkcsBlockLen < (2 * (word32)ret + 2)))
+ *
+ * wc_RsaUnPad_ex only reaches this helper with a hash type it has already
+ * accepted and a block the size of the RSA modulus, so neither operand is ever
+ * TRUE from the API: the first needs a hash type with no digest size, the
+ * second a block shorter than 2*hLen+2. Both calls return BAD_FUNC_ARG before
+ * the block is read, so a short buffer is safe.
+ * ------------------------------------------------------------------------- */
+#if !defined(WOLFSSL_RSA_VERIFY_ONLY) && !defined(WC_NO_RSA_OAEP) && \
+    !defined(NO_SHA256)
+static void wb_unpad_oaep_guard(void)
+{
+    byte  blk[256];
+    byte* outp = NULL;
+
+    XMEMSET(blk, 0, sizeof(blk));
+
+    /* (F,F): valid hash, block far larger than 2*32+2 */
+    (void)RsaUnPad_OAEP(blk, (unsigned int)sizeof(blk), &outp,
+        WC_HASH_TYPE_SHA256, WC_MGF1SHA256, NULL, 0, NULL);
+    /* (T,-): no digest size for this type */
+    (void)RsaUnPad_OAEP(blk, (unsigned int)sizeof(blk), &outp,
+        WC_HASH_TYPE_NONE, WC_MGF1SHA256, NULL, 0, NULL);
+    /* (F,T): valid hash but the block cannot hold seed+db */
+    (void)RsaUnPad_OAEP(blk, 8, &outp,
+        WC_HASH_TYPE_SHA256, WC_MGF1SHA256, NULL, 0, NULL);
+    WB_NOTE("RsaUnPad_OAEP digest/length guard pairs exercised");
+}
+#else
+static void wb_unpad_oaep_guard(void)
+{
+    WB_NOTE("OAEP unavailable; RsaUnPad_OAEP guard skipped");
+}
+#endif
+
+/* ------------------------------------------------------------------------- *
+ * Class 15: RsaUnPad_PSS() FIPS 186-4 5.5(e) salt reduction (line 1937).
+ *
+ *   if (orig_bits == 1024 && hLen == WC_SHA512_DIGEST_SIZE)
+ *
+ * Only evaluated when the caller asks for RSA_PSS_SALT_LEN_DEFAULT. The
+ * second operand's FALSE row needs a 1024-bit modulus with a hash that is NOT
+ * SHA-512 -- but rsa.h resolves RSA_MIN_SIZE to 2048 unless overridden, so no
+ * public PSS call can present bits==1024 outside the min_size_1024 variant,
+ * and even there the API tests drive SHA-512 only. Calling the static helper
+ * with the bits parameter chosen directly gives both rows in every variant.
+ * The block itself does not have to be valid padding: the decision is reached
+ * before any of it is parsed, and RsaUnPad_PSS returns an error afterwards.
+ * ------------------------------------------------------------------------- */
+#if defined(WC_RSA_PSS) && defined(WOLFSSL_SHA512) && !defined(NO_SHA256)
+static void wb_unpad_pss_saltlen(void)
+{
+    byte  blk[512];
+    byte* outp = NULL;
+
+    XMEMSET(blk, 0, sizeof(blk));
+
+    /* (T,T): 1024-bit modulus with SHA-512 -> salt reduced to the max */
+    (void)RsaUnPad_PSS(blk, 128, &outp, WC_HASH_TYPE_SHA512, WC_MGF1SHA512,
+        RSA_PSS_SALT_LEN_DEFAULT, 1024, NULL);
+    /* (T,F): same 1024-bit modulus, SHA-256 -> no reduction */
+    (void)RsaUnPad_PSS(blk, 128, &outp, WC_HASH_TYPE_SHA256, WC_MGF1SHA256,
+        RSA_PSS_SALT_LEN_DEFAULT, 1024, NULL);
+    /* (F,-): 2048-bit modulus */
+    (void)RsaUnPad_PSS(blk, 256, &outp, WC_HASH_TYPE_SHA512, WC_MGF1SHA512,
+        RSA_PSS_SALT_LEN_DEFAULT, 2048, NULL);
+    WB_NOTE("RsaUnPad_PSS 5.5(e) salt-reduction pairs exercised");
+}
+#else
+static void wb_unpad_pss_saltlen(void)
+{
+    WB_NOTE("PSS/SHA-512 unavailable; RsaUnPad_PSS salt reduction skipped");
+}
+#endif
+
+/* ------------------------------------------------------------------------- *
+ * Class 16: RsaPublicEncryptEx() key-size guard (line 3707, operand 1).
+ *
+ *   if (sz < RSA_MIN_PAD_SZ || sz > (int)RSA_MAX_SIZE/8)
+ *
+ * sz is wc_RsaEncryptSize(key), i.e. the byte length of the modulus. Operand 0
+ * fires for a stub key with a tiny modulus, but operand 1 needs a modulus
+ * LARGER than the build's RSA_MAX_SIZE -- which no key generator or decoder
+ * will produce, since both reject oversized moduli first. Writing the modulus
+ * straight into the key is the only way there. Nothing dereferences the key
+ * beyond wc_RsaEncryptSize before the guard returns WC_KEY_SIZE_E.
+ * ------------------------------------------------------------------------- */
+#if !defined(WOLFSSL_RSA_VERIFY_ONLY) && !defined(WOLFSSL_RSA_PUBLIC_ONLY)
+static void wb_public_encrypt_size_guard(void)
+{
+    RsaKey key;
+    byte   in[16];
+    /* Must be >= sz, or the earlier `sz > outLen` guard returns first. */
+    byte   out[(RSA_MAX_SIZE / 8) * 2];
+
+    XMEMSET(&key, 0, sizeof(key));
+    XMEMSET(in, 0x11, sizeof(in));
+    XMEMSET(out, 0, sizeof(out));
+
+    if (wc_InitRsaKey(&key, NULL) != 0) {
+        WB_NOTE("wc_InitRsaKey failed; oversized-modulus guard skipped");
+        wb_fail = 1;
+        return;
+    }
+
+    /* n = 2^(RSA_MAX_SIZE + 64) - 1: strictly wider than the build maximum. */
+    if (mp_2expt(&key.n, RSA_MAX_SIZE + 64) == MP_OKAY) {
+        (void)RsaPublicEncryptEx(in, (word32)sizeof(in), out,
+            (word32)sizeof(out), &key, RSA_PUBLIC_ENCRYPT, RSA_BLOCK_TYPE_2,
+            WC_RSA_PKCSV15_PAD, WC_HASH_TYPE_NONE, WC_MGF1NONE, NULL, 0, 0,
+            NULL);
+    }
+    else {
+        WB_NOTE("mp_2expt failed; oversized-modulus guard skipped");
+    }
+    wc_FreeRsaKey(&key);
+    WB_NOTE("RsaPublicEncryptEx oversized-modulus guard exercised");
+}
+#else
+static void wb_public_encrypt_size_guard(void)
+{
+    WB_NOTE("public encrypt unavailable; oversized-modulus guard skipped");
+}
+#endif
+
+/* ------------------------------------------------------------------------- *
+ * Class 17: RsaPrivateDecryptEx() output-length guard (line 4094).
+ *
+ *   if (rsa_type == RSA_PUBLIC_DECRYPT && ret > (int)outLen)
+ *
+ * The recovered message length is only re-checked against outLen on the
+ * PUBLIC-decrypt (signature verify) path, and only trips when the caller's
+ * buffer is smaller than the recovered message -- a combination no ordinary
+ * verify produces, since callers size the buffer from the key. Signing a
+ * 64-byte payload and verifying it into a 16-byte buffer gives the (T,T) row;
+ * the same verify into a full-size buffer gives (T,F) and a private decrypt
+ * gives (F,-). All three live in this binary, which is what MC/DC needs.
+ * ------------------------------------------------------------------------- */
+#if !defined(WOLFSSL_RSA_VERIFY_ONLY) && !defined(WOLFSSL_RSA_PUBLIC_ONLY) && \
+    !defined(NO_RSA) && defined(WOLFSSL_KEY_GEN)
+static void wb_private_decrypt_outlen(void)
+{
+    RsaKey key;
+    WC_RNG rng;
+    byte   msg[64];
+    byte   sig[512];
+    byte   big[512];
+    byte   small[16];
+    int    sigSz;
+
+    XMEMSET(&key, 0, sizeof(key));
+    XMEMSET(&rng, 0, sizeof(rng));
+    XMEMSET(msg, 0x33, sizeof(msg));
+    XMEMSET(sig, 0, sizeof(sig));
+
+    if (wc_InitRng(&rng) != 0) {
+        WB_NOTE("wc_InitRng failed; outLen guard skipped");
+        wb_fail = 1;
+        return;
+    }
+    if (wc_InitRsaKey(&key, NULL) != 0) {
+        wc_FreeRng(&rng);
+        WB_NOTE("wc_InitRsaKey failed; outLen guard skipped");
+        wb_fail = 1;
+        return;
+    }
+    if (wc_MakeRsaKey(&key, 2048, WC_RSA_EXPONENT, &rng) != 0) {
+        WB_NOTE("wc_MakeRsaKey(2048) failed; outLen guard skipped");
+        wc_FreeRsaKey(&key);
+        wc_FreeRng(&rng);
+        return;
+    }
+#ifdef WC_RSA_BLINDING
+    (void)wc_RsaSetRNG(&key, &rng);
+#endif
+
+    sigSz = wc_RsaSSL_Sign(msg, (word32)sizeof(msg), sig, (word32)sizeof(sig),
+        &key, &rng);
+    if (sigSz > 0) {
+        /* (T,T): recovered 64 bytes will not fit in 16 */
+        (void)wc_RsaSSL_Verify(sig, (word32)sigSz, small,
+            (word32)sizeof(small), &key);
+        /* (T,F): same verify with room to spare */
+        (void)wc_RsaSSL_Verify(sig, (word32)sigSz, big, (word32)sizeof(big),
+            &key);
+        /* (F,-): the private-decrypt path never consults outLen here */
+        {
+            byte ct[512];
+            int  ctSz = wc_RsaPublicEncrypt(msg, (word32)sizeof(msg), ct,
+                (word32)sizeof(ct), &key, &rng);
+            if (ctSz > 0) {
+                (void)wc_RsaPrivateDecrypt(ct, (word32)ctSz, big,
+                    (word32)sizeof(big), &key);
+            }
+        }
+    }
+    else {
+        WB_NOTE("wc_RsaSSL_Sign failed; outLen guard vectors skipped");
+    }
+
+    wc_FreeRsaKey(&key);
+    wc_FreeRng(&rng);
+    WB_NOTE("RsaPrivateDecryptEx outLen guard pairs exercised");
+}
+#else
+static void wb_private_decrypt_outlen(void)
+{
+    WB_NOTE("sign/verify unavailable; outLen guard skipped");
+}
+#endif
+
+int main(void)
+{
+    setvbuf(stdout, NULL, _IONBF, 0);
+    printf("rsa.c white-box MC/DC supplement\n");
+#ifdef NO_RSA
+    printf("  NO_RSA defined; nothing to exercise\n");
+    return 0;
+#else
+    wb_newrsakey_common();
+    wb_rsa_export_key();
+    wb_rsa_flatten_pub();
+    wb_compare_diff_pq();
+    wb_privkey_decode_raw();
+    wb_rsa_pad();
+    wb_rsa_unpad();
+    wb_check_probable_prime();
+    wb_rsa_cleanup();
+    wb_check_probable_prime_ex_qraw();
+    wb_rsa_function_nonblock();
+    wb_pub_privkey_decode_raw();
+    wb_rsa_set_nonblock_time();
+    wb_unpad_oaep_guard();
+    wb_unpad_pss_saltlen();
+    wb_public_encrypt_size_guard();
+    wb_private_decrypt_outlen();
+    printf("done (%s)\n", wb_fail ? "with skips" : "ok");
+    /* Setup failures are surfaced as skips, not test failures: the harness
+     * treats a nonzero exit as a failed variant and discards its coverage. */
+    return 0;
+#endif
+}

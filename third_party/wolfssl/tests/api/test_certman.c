@@ -1,0 +1,4711 @@
+/* test_certman.c
+ *
+ * Copyright (C) 2006-2026 wolfSSL Inc.
+ *
+ * This file is part of wolfSSL.
+ *
+ * wolfSSL is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * wolfSSL is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1335, USA
+ */
+
+#include <tests/unit.h>
+
+#ifdef NO_INLINE
+    #include <wolfssl/wolfcrypt/misc.h>
+#else
+    #define WOLFSSL_MISC_INCLUDED
+    #include <wolfcrypt/src/misc.c>
+#endif
+
+#include <wolfssl/ssl.h>
+#include <wolfssl/internal.h>
+#include <wolfssl/ocsp.h>
+#include <tests/api/api.h>
+#include <tests/api/test_certman.h>
+#include <tests/utils.h>
+#include <testsuite/utils.h>
+
+int test_wolfSSL_CertManagerAPI(void)
+{
+    EXPECT_DECLS;
+#ifndef NO_CERTS
+    WOLFSSL_CERT_MANAGER* cm = NULL;
+    unsigned char c = 0;
+
+    ExpectNotNull(cm = wolfSSL_CertManagerNew_ex(NULL));
+
+    wolfSSL_CertManagerFree(NULL);
+    ExpectIntEQ(wolfSSL_CertManager_up_ref(NULL), 0);
+    ExpectIntEQ(wolfSSL_CertManagerUnloadCAs(NULL),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+#ifdef WOLFSSL_TRUST_PEER_CERT
+    ExpectIntEQ(wolfSSL_CertManagerUnload_trust_peers(NULL),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+#endif
+
+    ExpectIntEQ(wolfSSL_CertManagerLoadCABuffer_ex(NULL, &c, 1,
+        WOLFSSL_FILETYPE_ASN1, 0, 0), WC_NO_ERR_TRACE(WOLFSSL_FATAL_ERROR));
+
+#if !defined(NO_WOLFSSL_CLIENT) || !defined(WOLFSSL_NO_CLIENT_AUTH)
+    ExpectIntEQ(wolfSSL_CertManagerVerifyBuffer(NULL, NULL, -1,
+        WOLFSSL_FILETYPE_ASN1), WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wolfSSL_CertManagerVerifyBuffer(cm, NULL, -1,
+        WOLFSSL_FILETYPE_ASN1), WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wolfSSL_CertManagerVerifyBuffer(NULL, &c, -1,
+        WOLFSSL_FILETYPE_ASN1), WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wolfSSL_CertManagerVerifyBuffer(NULL, NULL, 1,
+        WOLFSSL_FILETYPE_ASN1), WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wolfSSL_CertManagerVerifyBuffer(NULL, &c, 1,
+        WOLFSSL_FILETYPE_ASN1), WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wolfSSL_CertManagerVerifyBuffer(cm, NULL, 1,
+        WOLFSSL_FILETYPE_ASN1), WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wolfSSL_CertManagerVerifyBuffer(cm, &c, -1,
+        WOLFSSL_FILETYPE_ASN1), WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wolfSSL_CertManagerVerifyBuffer(cm, &c, 1, -1),
+        WC_NO_ERR_TRACE(WOLFSSL_BAD_FILETYPE));
+#endif
+
+#if !defined(NO_FILESYSTEM)
+    {
+    #ifdef WOLFSSL_PEM_TO_DER
+        const char* ca_cert = "./certs/ca-cert.pem";
+    #if !defined(NO_WOLFSSL_CLIENT) || !defined(WOLFSSL_NO_CLIENT_AUTH)
+        const char* ca_cert_der = "./certs/ca-cert.der";
+    #endif
+    #else
+        const char* ca_cert = "./certs/ca-cert.der";
+    #endif
+        const char* ca_path = "./certs";
+
+    #if !defined(NO_WOLFSSL_CLIENT) || !defined(WOLFSSL_NO_CLIENT_AUTH)
+        ExpectIntEQ(wolfSSL_CertManagerVerify(NULL, NULL, -1),
+            WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+        ExpectIntEQ(wolfSSL_CertManagerVerify(cm, NULL, WOLFSSL_FILETYPE_ASN1),
+            WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+        ExpectIntEQ(wolfSSL_CertManagerVerify(NULL, ca_cert,
+            WOLFSSL_FILETYPE_PEM), WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+        ExpectIntEQ(wolfSSL_CertManagerVerify(cm, ca_cert, -1),
+            WC_NO_ERR_TRACE(WOLFSSL_BAD_FILETYPE));
+#ifdef WOLFSSL_PEM_TO_DER
+        ExpectIntEQ(wolfSSL_CertManagerVerify(cm, ca_cert_der,
+            WOLFSSL_FILETYPE_PEM), WC_NO_ERR_TRACE(ASN_NO_PEM_HEADER));
+#endif
+        ExpectIntEQ(wolfSSL_CertManagerVerify(cm, "no-file",
+            WOLFSSL_FILETYPE_ASN1), WC_NO_ERR_TRACE(WOLFSSL_BAD_FILE));
+    #endif
+
+        ExpectIntEQ(wolfSSL_CertManagerLoadCA(NULL, NULL, NULL),
+            WC_NO_ERR_TRACE(WOLFSSL_FATAL_ERROR));
+        ExpectIntEQ(wolfSSL_CertManagerLoadCA(NULL, ca_cert, NULL),
+            WC_NO_ERR_TRACE(WOLFSSL_FATAL_ERROR));
+        ExpectIntEQ(wolfSSL_CertManagerLoadCA(NULL, NULL, ca_path),
+            WC_NO_ERR_TRACE(WOLFSSL_FATAL_ERROR));
+        ExpectIntEQ(wolfSSL_CertManagerLoadCA(NULL, ca_cert, ca_path),
+            WC_NO_ERR_TRACE(WOLFSSL_FATAL_ERROR));
+    }
+#endif
+
+#ifdef OPENSSL_COMPATIBLE_DEFAULTS
+    ExpectIntEQ(wolfSSL_CertManagerEnableCRL(cm, 0), 1);
+#elif !defined(HAVE_CRL)
+    ExpectIntEQ(wolfSSL_CertManagerEnableCRL(cm, 0),
+        WC_NO_ERR_TRACE(NOT_COMPILED_IN));
+#endif
+
+    ExpectIntEQ(wolfSSL_CertManagerDisableCRL(NULL),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wolfSSL_CertManagerDisableCRL(cm), 1);
+#ifdef HAVE_CRL
+    /* Test APIs when CRL is disabled. */
+#ifdef HAVE_CRL_IO
+    ExpectIntEQ(wolfSSL_CertManagerSetCRL_IOCb(cm, NULL), 1);
+#endif
+    ExpectIntEQ(wolfSSL_CertManagerCheckCRL(cm, server_cert_der_2048,
+        sizeof_server_cert_der_2048), 1);
+    ExpectIntEQ(wolfSSL_CertManagerFreeCRL(cm), 1);
+#endif
+
+    /* OCSP */
+    ExpectIntEQ(wolfSSL_CertManagerEnableOCSP(NULL, 0),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wolfSSL_CertManagerDisableOCSP(NULL),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wolfSSL_CertManagerEnableOCSPStapling(NULL),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wolfSSL_CertManagerDisableOCSPStapling(NULL),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wolfSSL_CertManagerEnableOCSPMustStaple(NULL),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wolfSSL_CertManagerDisableOCSPMustStaple(NULL),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+#if !defined(HAVE_CERTIFICATE_STATUS_REQUEST) && \
+    !defined(HAVE_CERTIFICATE_STATUS_REQUEST_V2)
+    ExpectIntEQ(wolfSSL_CertManagerDisableOCSPStapling(cm),
+        WC_NO_ERR_TRACE(NOT_COMPILED_IN));
+    ExpectIntEQ(wolfSSL_CertManagerEnableOCSPMustStaple(cm),
+        WC_NO_ERR_TRACE(NOT_COMPILED_IN));
+    ExpectIntEQ(wolfSSL_CertManagerDisableOCSPMustStaple(cm),
+        WC_NO_ERR_TRACE(NOT_COMPILED_IN));
+#endif
+
+#ifdef HAVE_OCSP
+    ExpectIntEQ(wolfSSL_CertManagerCheckOCSP(NULL, NULL, -1),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wolfSSL_CertManagerCheckOCSP(cm, NULL, -1),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wolfSSL_CertManagerCheckOCSP(NULL, &c, -1),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wolfSSL_CertManagerCheckOCSP(NULL, NULL, 1),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wolfSSL_CertManagerCheckOCSP(NULL, &c, 1),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wolfSSL_CertManagerCheckOCSP(cm, NULL, 1),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wolfSSL_CertManagerCheckOCSP(cm, &c, -1),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+
+    ExpectIntEQ(wolfSSL_CertManagerCheckOCSPResponse(NULL, NULL, 0,
+        NULL, NULL, NULL, NULL), WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wolfSSL_CertManagerCheckOCSPResponse(cm, NULL, 1,
+        NULL, NULL, NULL, NULL), WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wolfSSL_CertManagerCheckOCSPResponse(NULL, &c, 1,
+        NULL, NULL, NULL, NULL), WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+
+    ExpectIntEQ(wolfSSL_CertManagerSetOCSPOverrideURL(NULL, NULL),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wolfSSL_CertManagerSetOCSPOverrideURL(NULL, ""),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wolfSSL_CertManagerSetOCSPOverrideURL(cm, NULL), 1);
+
+    ExpectIntEQ(wolfSSL_CertManagerSetOCSP_Cb(NULL, NULL, NULL, NULL),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wolfSSL_CertManagerSetOCSP_Cb(cm, NULL, NULL, NULL), 1);
+
+    ExpectIntEQ(wolfSSL_CertManagerDisableOCSP(cm), 1);
+    /* Test APIs when OCSP is disabled. */
+    ExpectIntEQ(wolfSSL_CertManagerCheckOCSPResponse(cm, &c, 1,
+        NULL, NULL, NULL, NULL), 1);
+    ExpectIntEQ(wolfSSL_CertManagerCheckOCSP(cm, &c, 1), 1);
+
+#endif
+
+    ExpectIntEQ(wolfSSL_CertManager_up_ref(cm), 1);
+    if (EXPECT_SUCCESS()) {
+        wolfSSL_CertManagerFree(cm);
+    }
+    wolfSSL_CertManagerFree(cm);
+    cm = NULL;
+
+    ExpectNotNull(cm = wolfSSL_CertManagerNew_ex(NULL));
+
+#ifdef HAVE_OCSP
+    ExpectIntEQ(wolfSSL_CertManagerEnableOCSP(cm, WOLFSSL_OCSP_URL_OVERRIDE |
+         WOLFSSL_OCSP_CHECKALL), 1);
+#if defined(HAVE_CERTIFICATE_STATUS_REQUEST) || \
+    defined(HAVE_CERTIFICATE_STATUS_REQUEST_V2)
+    ExpectIntEQ(wolfSSL_CertManagerEnableOCSPStapling(cm), 1);
+    ExpectIntEQ(wolfSSL_CertManagerEnableOCSPStapling(cm), 1);
+    ExpectIntEQ(wolfSSL_CertManagerDisableOCSPStapling(cm), 1);
+    ExpectIntEQ(wolfSSL_CertManagerEnableOCSPStapling(cm), 1);
+    ExpectIntEQ(wolfSSL_CertManagerEnableOCSPMustStaple(cm), 1);
+    ExpectIntEQ(wolfSSL_CertManagerDisableOCSPMustStaple(cm), 1);
+#endif
+
+    ExpectIntEQ(wolfSSL_CertManagerSetOCSPOverrideURL(cm, ""), 1);
+    ExpectIntEQ(wolfSSL_CertManagerSetOCSPOverrideURL(cm, ""), 1);
+#endif
+
+#ifdef WOLFSSL_TRUST_PEER_CERT
+    ExpectIntEQ(wolfSSL_CertManagerUnload_trust_peers(cm), 1);
+#endif
+    wolfSSL_CertManagerFree(cm);
+#endif
+    return EXPECT_RESULT();
+}
+
+#if !defined(NO_FILESYSTEM) && !defined(NO_CERTS) && !defined(NO_TLS)
+static int test_cm_load_ca_buffer(const byte* cert_buf, size_t cert_sz,
+    int file_type)
+{
+    int ret;
+    WOLFSSL_CERT_MANAGER* cm;
+
+    cm = wolfSSL_CertManagerNew();
+    if (cm == NULL) {
+        fprintf(stderr, "test_cm_load_ca failed\n");
+        return -1;
+    }
+
+    ret = wolfSSL_CertManagerLoadCABuffer(cm, cert_buf, (sword32)cert_sz,
+                                          file_type);
+
+    wolfSSL_CertManagerFree(cm);
+
+    return ret;
+}
+
+static int test_cm_load_ca_file(const char* ca_cert_file)
+{
+    int ret = 0;
+    byte* cert_buf = NULL;
+    size_t cert_sz = 0;
+#if defined(WOLFSSL_PEM_TO_DER)
+    DerBuffer* pDer = NULL;
+#endif
+
+    ret = load_file(ca_cert_file, &cert_buf, &cert_sz);
+    if (ret == 0) {
+        /* normal test */
+        ret = test_cm_load_ca_buffer(cert_buf, cert_sz, CERT_FILETYPE);
+
+        if (ret == WOLFSSL_SUCCESS) {
+            /* test including null terminator in length */
+            byte* tmp = (byte*)XREALLOC(cert_buf, cert_sz+1, NULL, DYNAMIC_TYPE_TMP_BUFFER);
+            if (tmp == NULL) {
+                ret = MEMORY_E;
+            }
+            else {
+                cert_buf = tmp;
+                cert_buf[cert_sz] = '\0';
+                ret = test_cm_load_ca_buffer(cert_buf, cert_sz+1,
+                        CERT_FILETYPE);
+            }
+
+        }
+
+    #if defined(WOLFSSL_PEM_TO_DER)
+        if (ret == WOLFSSL_SUCCESS) {
+            /* test loading DER */
+            ret = wc_PemToDer(cert_buf, (sword32)cert_sz, CA_TYPE, &pDer,
+                    NULL, NULL, NULL);
+            if (ret == 0 && pDer != NULL) {
+                ret = test_cm_load_ca_buffer(pDer->buffer, pDer->length,
+                    WOLFSSL_FILETYPE_ASN1);
+
+                wc_FreeDer(&pDer);
+            }
+        }
+    #endif
+
+    }
+    XFREE(cert_buf, NULL, DYNAMIC_TYPE_TMP_BUFFER);
+
+    return ret;
+}
+
+static int test_cm_load_ca_buffer_ex(const byte* cert_buf, size_t cert_sz,
+                                     int file_type, word32 flags)
+{
+    int ret;
+    WOLFSSL_CERT_MANAGER* cm;
+
+    cm = wolfSSL_CertManagerNew();
+    if (cm == NULL) {
+        fprintf(stderr, "test_cm_load_ca failed\n");
+        return -1;
+    }
+
+    ret = wolfSSL_CertManagerLoadCABuffer_ex(cm, cert_buf, (sword32)cert_sz,
+                                             file_type, 0, flags);
+
+    wolfSSL_CertManagerFree(cm);
+
+    return ret;
+}
+
+static int test_cm_load_ca_file_ex(const char* ca_cert_file, word32 flags)
+{
+    int ret = 0;
+    byte* cert_buf = NULL;
+    size_t cert_sz = 0;
+#if defined(WOLFSSL_PEM_TO_DER)
+    DerBuffer* pDer = NULL;
+#endif
+
+    ret = load_file(ca_cert_file, &cert_buf, &cert_sz);
+    if (ret == 0) {
+        /* normal test */
+        ret = test_cm_load_ca_buffer_ex(cert_buf, cert_sz,
+                                        CERT_FILETYPE, flags);
+
+        if (ret == WOLFSSL_SUCCESS) {
+            /* test including null terminator in length */
+            byte* tmp = (byte*)XREALLOC(cert_buf, cert_sz+1, NULL, DYNAMIC_TYPE_TMP_BUFFER);
+            if (tmp == NULL) {
+                ret = MEMORY_E;
+            }
+            else {
+                cert_buf = tmp;
+                cert_buf[cert_sz] = '\0';
+                ret = test_cm_load_ca_buffer_ex(cert_buf, cert_sz+1,
+                        CERT_FILETYPE, flags);
+            }
+
+        }
+
+    #if defined(WOLFSSL_PEM_TO_DER)
+        if (ret == WOLFSSL_SUCCESS) {
+            /* test loading DER */
+            ret = wc_PemToDer(cert_buf, (sword32)cert_sz, CA_TYPE, &pDer,
+                              NULL, NULL, NULL);
+            if (ret == 0 && pDer != NULL) {
+                ret = test_cm_load_ca_buffer_ex(pDer->buffer, pDer->length,
+                    WOLFSSL_FILETYPE_ASN1, flags);
+
+                wc_FreeDer(&pDer);
+            }
+        }
+    #endif
+
+    }
+    XFREE(cert_buf, NULL, DYNAMIC_TYPE_TMP_BUFFER);
+
+    return ret;
+}
+
+#endif /* !NO_FILESYSTEM && !NO_CERTS */
+
+int test_wolfSSL_CertManagerLoadCABuffer(void)
+{
+    EXPECT_DECLS;
+#if !defined(NO_FILESYSTEM) && !defined(NO_CERTS) && !defined(NO_TLS)
+#if defined(WOLFSSL_PEM_TO_DER)
+    const char* ca_cert = "./certs/ca-cert.pem";
+    const char* ca_expired_cert = "./certs/test/expired/expired-ca.pem";
+#else
+    const char* ca_cert = "./certs/ca-cert.der";
+    const char* ca_expired_cert = "./certs/test/expired/expired-ca.der";
+#endif
+    int ret;
+
+    ExpectIntLE(ret = test_cm_load_ca_file(ca_cert), 1);
+#if defined(NO_WOLFSSL_CLIENT) && defined(NO_WOLFSSL_SERVER)
+    ExpectIntEQ(ret, WC_NO_ERR_TRACE(WOLFSSL_FATAL_ERROR));
+#elif defined(NO_RSA)
+    ExpectIntEQ(ret, WC_NO_ERR_TRACE(ASN_UNKNOWN_OID_E));
+#else
+    ExpectIntEQ(ret, WOLFSSL_SUCCESS);
+#endif
+
+    ExpectIntLE(ret = test_cm_load_ca_file(ca_expired_cert), 1);
+#if defined(NO_WOLFSSL_CLIENT) && defined(NO_WOLFSSL_SERVER)
+    ExpectIntEQ(ret, WC_NO_ERR_TRACE(WOLFSSL_FATAL_ERROR));
+#elif defined(NO_RSA)
+    ExpectIntEQ(ret, WC_NO_ERR_TRACE(ASN_UNKNOWN_OID_E));
+#elif !(WOLFSSL_LOAD_VERIFY_DEFAULT_FLAGS && \
+        WOLFSSL_LOAD_FLAG_DATE_ERR_OKAY) && !defined(NO_ASN_TIME)
+    ExpectIntEQ(ret, WC_NO_ERR_TRACE(ASN_AFTER_DATE_E));
+#else
+    ExpectIntEQ(ret, WOLFSSL_SUCCESS);
+#endif
+#endif
+    return EXPECT_RESULT();
+}
+
+int test_wolfSSL_CertManagerLoadCABuffer_ex(void)
+{
+    EXPECT_DECLS;
+#if !defined(NO_FILESYSTEM) && !defined(NO_CERTS) && !defined(NO_TLS)
+#if defined(WOLFSSL_PEM_TO_DER)
+    const char* ca_cert = "./certs/ca-cert.pem";
+    const char* ca_expired_cert = "./certs/test/expired/expired-ca.pem";
+#else
+    const char* ca_cert = "./certs/ca-cert.der";
+    const char* ca_expired_cert = "./certs/test/expired/expired-ca.der";
+#endif
+    int ret;
+
+    ExpectIntLE(ret = test_cm_load_ca_file_ex(ca_cert, WOLFSSL_LOAD_FLAG_NONE),
+        1);
+#if defined(NO_WOLFSSL_CLIENT) && defined(NO_WOLFSSL_SERVER)
+    ExpectIntEQ(ret, WC_NO_ERR_TRACE(WOLFSSL_FATAL_ERROR));
+#elif defined(NO_RSA)
+    ExpectIntEQ(ret, WC_NO_ERR_TRACE(ASN_UNKNOWN_OID_E));
+#else
+    ExpectIntEQ(ret, WOLFSSL_SUCCESS);
+#endif
+
+    ExpectIntLE(ret = test_cm_load_ca_file_ex(ca_expired_cert,
+        WOLFSSL_LOAD_FLAG_DATE_ERR_OKAY), 1);
+#if defined(NO_WOLFSSL_CLIENT) && defined(NO_WOLFSSL_SERVER)
+    ExpectIntEQ(ret, WC_NO_ERR_TRACE(WOLFSSL_FATAL_ERROR));
+#elif defined(NO_RSA)
+    ExpectIntEQ(ret, WC_NO_ERR_TRACE(ASN_UNKNOWN_OID_E));
+#elif !(WOLFSSL_LOAD_VERIFY_DEFAULT_FLAGS && \
+        WOLFSSL_LOAD_FLAG_DATE_ERR_OKAY) && !defined(NO_ASN_TIME) && \
+      defined(WOLFSSL_TRUST_PEER_CERT) && defined(OPENSSL_COMPATIBLE_DEFAULTS)
+    ExpectIntEQ(ret, WC_NO_ERR_TRACE(ASN_AFTER_DATE_E));
+#else
+    ExpectIntEQ(ret, WOLFSSL_SUCCESS);
+#endif
+
+#endif
+
+    return EXPECT_RESULT();
+}
+
+int test_wolfSSL_CertManagerLoadCABufferType(void)
+{
+    EXPECT_DECLS;
+#if !defined(NO_FILESYSTEM) && !defined(NO_CERTS) && !defined(NO_TLS) && \
+    !defined(NO_RSA) && !defined(NO_SHA256) && \
+    !defined(WOLFSSL_TEST_APPLE_NATIVE_CERT_VALIDATION)
+#if defined(WOLFSSL_PEM_TO_DER)
+    const char* ca_cert = "./certs/ca-cert.pem";
+    const char* int1_cert = "./certs/intermediate/ca-int-cert.pem";
+    const char* int2_cert = "./certs/intermediate/ca-int2-cert.pem";
+    const char* client_cert = "./certs/intermediate/client-int-cert.pem";
+#else
+    const char* ca_cert = "./certs/ca-cert.der";
+    const char* int1_cert = "./certs/intermediate/ca-int-cert.der";
+    const char* int2_cert = "./certs/intermediate/ca-int2-cert.der";
+    const char* client_cert = "./certs/intermediate/client-int-cert.der";
+#endif
+    byte* ca_cert_buf = NULL;
+    byte* int1_cert_buf = NULL;
+    byte* int2_cert_buf = NULL;
+    byte* client_cert_buf = NULL;
+    size_t ca_cert_sz = 0;
+    size_t int1_cert_sz = 0;
+    size_t int2_cert_sz = 0;
+    size_t client_cert_sz = 0;
+    WOLFSSL_CERT_MANAGER* cm = NULL;
+
+    ExpectNotNull(cm = wolfSSL_CertManagerNew());
+    ExpectIntEQ(load_file(ca_cert, &ca_cert_buf, &ca_cert_sz), 0);
+    ExpectIntEQ(load_file(int1_cert, &int1_cert_buf, &int1_cert_sz), 0);
+    ExpectIntEQ(load_file(int2_cert, &int2_cert_buf, &int2_cert_sz), 0);
+    ExpectIntEQ(load_file(client_cert, &client_cert_buf, &client_cert_sz), 0);
+
+    ExpectIntNE(wolfSSL_CertManagerLoadCABufferType(cm, ca_cert_buf,
+        (sword32)ca_cert_sz, CERT_FILETYPE, 0,
+        WOLFSSL_LOAD_VERIFY_DEFAULT_FLAGS, 0), WOLFSSL_SUCCESS);
+    ExpectIntNE(wolfSSL_CertManagerLoadCABufferType(cm, ca_cert_buf,
+        (sword32)ca_cert_sz, CERT_FILETYPE, 0,
+        WOLFSSL_LOAD_VERIFY_DEFAULT_FLAGS, 5), WOLFSSL_SUCCESS);
+
+    ExpectIntEQ(wolfSSL_CertManagerLoadCABufferType(cm, ca_cert_buf,
+        (sword32)ca_cert_sz, CERT_FILETYPE, 0,
+        WOLFSSL_LOAD_VERIFY_DEFAULT_FLAGS, WOLFSSL_USER_CA),
+        WOLFSSL_SUCCESS);
+#if (!defined(NO_WOLFSSL_CLIENT) || !defined(WOLFSSL_NO_CLIENT_AUTH)) || \
+    defined(OPENSSL_EXTRA)
+    ExpectIntEQ(wolfSSL_CertManagerVerifyBuffer(cm, int1_cert_buf,
+        int1_cert_sz, CERT_FILETYPE), WOLFSSL_SUCCESS);
+#endif
+    ExpectIntEQ(wolfSSL_CertManagerLoadCABufferType(cm, int1_cert_buf,
+        (sword32)int1_cert_sz, CERT_FILETYPE, 0,
+        WOLFSSL_LOAD_VERIFY_DEFAULT_FLAGS, WOLFSSL_USER_INTER),
+        WOLFSSL_SUCCESS);
+#if (!defined(NO_WOLFSSL_CLIENT) || !defined(WOLFSSL_NO_CLIENT_AUTH)) || \
+    defined(OPENSSL_EXTRA)
+    ExpectIntEQ(wolfSSL_CertManagerVerifyBuffer(cm, int2_cert_buf,
+        int2_cert_sz, CERT_FILETYPE), WOLFSSL_SUCCESS);
+#endif
+    ExpectIntEQ(wolfSSL_CertManagerLoadCABufferType(cm, int2_cert_buf,
+        (sword32)int2_cert_sz, CERT_FILETYPE, 0,
+        WOLFSSL_LOAD_VERIFY_DEFAULT_FLAGS, WOLFSSL_USER_INTER),
+        WOLFSSL_SUCCESS);
+#if (!defined(NO_WOLFSSL_CLIENT) || !defined(WOLFSSL_NO_CLIENT_AUTH)) || \
+    defined(OPENSSL_EXTRA)
+    ExpectIntEQ(wolfSSL_CertManagerVerifyBuffer(cm, client_cert_buf,
+        client_cert_sz, CERT_FILETYPE), WOLFSSL_SUCCESS);
+#endif
+    ExpectIntEQ(wolfSSL_CertManagerLoadCABufferType(cm, client_cert_buf,
+        (sword32)client_cert_sz, CERT_FILETYPE, 0,
+        WOLFSSL_LOAD_VERIFY_DEFAULT_FLAGS, WOLFSSL_USER_INTER),
+        WOLFSSL_SUCCESS);
+
+    ExpectIntEQ(wolfSSL_CertManagerUnloadTypeCerts(cm, WOLFSSL_USER_INTER),
+        WOLFSSL_SUCCESS);
+
+    /* Intermediate certs have been unloaded, but CA cert is still
+       loaded.  Expect first level intermediate to verify, rest to fail. */
+#if (!defined(NO_WOLFSSL_CLIENT) || !defined(WOLFSSL_NO_CLIENT_AUTH)) || \
+    defined(OPENSSL_EXTRA)
+    ExpectIntEQ(wolfSSL_CertManagerVerifyBuffer(cm, int1_cert_buf,
+        int1_cert_sz, CERT_FILETYPE), WOLFSSL_SUCCESS);
+    ExpectIntNE(wolfSSL_CertManagerVerifyBuffer(cm, int2_cert_buf,
+        int2_cert_sz, CERT_FILETYPE), WOLFSSL_SUCCESS);
+    ExpectIntNE(wolfSSL_CertManagerVerifyBuffer(cm, client_cert_buf,
+        client_cert_sz, CERT_FILETYPE), WOLFSSL_SUCCESS);
+#endif
+
+    ExpectIntEQ(wolfSSL_CertManagerLoadCABufferType(cm, int1_cert_buf,
+        (sword32)int1_cert_sz, CERT_FILETYPE, 0,
+        WOLFSSL_LOAD_VERIFY_DEFAULT_FLAGS, WOLFSSL_TEMP_CA),
+        WOLFSSL_SUCCESS);
+#if (!defined(NO_WOLFSSL_CLIENT) || !defined(WOLFSSL_NO_CLIENT_AUTH)) || \
+    defined(OPENSSL_EXTRA)
+    ExpectIntEQ(wolfSSL_CertManagerVerifyBuffer(cm, int2_cert_buf,
+        int2_cert_sz, CERT_FILETYPE), WOLFSSL_SUCCESS);
+#endif
+    ExpectIntEQ(wolfSSL_CertManagerLoadCABufferType(cm, int2_cert_buf,
+        (sword32)int2_cert_sz, CERT_FILETYPE, 0,
+        WOLFSSL_LOAD_VERIFY_DEFAULT_FLAGS, WOLFSSL_CHAIN_CA),
+        WOLFSSL_SUCCESS);
+#if (!defined(NO_WOLFSSL_CLIENT) || !defined(WOLFSSL_NO_CLIENT_AUTH)) || \
+    defined(OPENSSL_EXTRA)
+    ExpectIntEQ(wolfSSL_CertManagerVerifyBuffer(cm, client_cert_buf,
+        client_cert_sz, CERT_FILETYPE), WOLFSSL_SUCCESS);
+#endif
+    ExpectIntEQ(wolfSSL_CertManagerLoadCABufferType(cm, client_cert_buf,
+        (sword32)client_cert_sz, CERT_FILETYPE, 0,
+        WOLFSSL_LOAD_VERIFY_DEFAULT_FLAGS, WOLFSSL_USER_INTER),
+        WOLFSSL_SUCCESS);
+
+    ExpectIntEQ(wolfSSL_CertManagerUnloadTypeCerts(cm, WOLFSSL_USER_INTER),
+        WOLFSSL_SUCCESS);
+#if (!defined(NO_WOLFSSL_CLIENT) || !defined(WOLFSSL_NO_CLIENT_AUTH)) || \
+    defined(OPENSSL_EXTRA)
+    ExpectIntEQ(wolfSSL_CertManagerVerifyBuffer(cm, int1_cert_buf,
+        int1_cert_sz, CERT_FILETYPE), WOLFSSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_CertManagerVerifyBuffer(cm, int2_cert_buf,
+        int2_cert_sz, CERT_FILETYPE), WOLFSSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_CertManagerVerifyBuffer(cm, client_cert_buf,
+        client_cert_sz, CERT_FILETYPE), WOLFSSL_SUCCESS);
+#endif
+
+    ExpectIntEQ(wolfSSL_CertManagerUnloadTypeCerts(cm, WOLFSSL_CHAIN_CA),
+        WOLFSSL_SUCCESS);
+#if (!defined(NO_WOLFSSL_CLIENT) || !defined(WOLFSSL_NO_CLIENT_AUTH)) || \
+    defined(OPENSSL_EXTRA)
+    ExpectIntEQ(wolfSSL_CertManagerVerifyBuffer(cm, int1_cert_buf,
+        int1_cert_sz, CERT_FILETYPE), WOLFSSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_CertManagerVerifyBuffer(cm, int2_cert_buf,
+        int2_cert_sz, CERT_FILETYPE), WOLFSSL_SUCCESS);
+    ExpectIntNE(wolfSSL_CertManagerVerifyBuffer(cm, client_cert_buf,
+        client_cert_sz, CERT_FILETYPE), WOLFSSL_SUCCESS);
+#endif
+
+    ExpectIntEQ(wolfSSL_CertManagerUnloadTypeCerts(cm, WOLFSSL_TEMP_CA),
+        WOLFSSL_SUCCESS);
+#if (!defined(NO_WOLFSSL_CLIENT) || !defined(WOLFSSL_NO_CLIENT_AUTH)) || \
+    defined(OPENSSL_EXTRA)
+    ExpectIntEQ(wolfSSL_CertManagerVerifyBuffer(cm, int1_cert_buf,
+        int1_cert_sz, CERT_FILETYPE), WOLFSSL_SUCCESS);
+    ExpectIntNE(wolfSSL_CertManagerVerifyBuffer(cm, int2_cert_buf,
+        int2_cert_sz, CERT_FILETYPE), WOLFSSL_SUCCESS);
+    ExpectIntNE(wolfSSL_CertManagerVerifyBuffer(cm, client_cert_buf,
+        client_cert_sz, CERT_FILETYPE), WOLFSSL_SUCCESS);
+#endif
+
+    ExpectIntEQ(wolfSSL_CertManagerUnloadTypeCerts(cm, WOLFSSL_USER_CA),
+        WOLFSSL_SUCCESS);
+#if (!defined(NO_WOLFSSL_CLIENT) || !defined(WOLFSSL_NO_CLIENT_AUTH)) || \
+    defined(OPENSSL_EXTRA)
+    ExpectIntNE(wolfSSL_CertManagerVerifyBuffer(cm, int1_cert_buf,
+        int1_cert_sz, CERT_FILETYPE), WOLFSSL_SUCCESS);
+    ExpectIntNE(wolfSSL_CertManagerVerifyBuffer(cm, int2_cert_buf,
+        int2_cert_sz, CERT_FILETYPE), WOLFSSL_SUCCESS);
+    ExpectIntNE(wolfSSL_CertManagerVerifyBuffer(cm, client_cert_buf,
+        client_cert_sz, CERT_FILETYPE), WOLFSSL_SUCCESS);
+#endif
+
+    if (cm)
+        wolfSSL_CertManagerFree(cm);
+    if (ca_cert_buf)
+        XFREE(ca_cert_buf, NULL, DYNAMIC_TYPE_TMP_BUFFER);
+    if (int1_cert_buf)
+        XFREE(int1_cert_buf, NULL, DYNAMIC_TYPE_TMP_BUFFER);
+    if (int2_cert_buf)
+        XFREE(int2_cert_buf, NULL, DYNAMIC_TYPE_TMP_BUFFER);
+    if (client_cert_buf)
+        XFREE(client_cert_buf, NULL, DYNAMIC_TYPE_TMP_BUFFER);
+#endif
+
+    return EXPECT_RESULT();
+}
+
+int test_wolfSSL_CertManagerGetCerts(void)
+{
+    EXPECT_DECLS;
+#if defined(OPENSSL_ALL) && !defined(NO_CERTS) && \
+    !defined(NO_FILESYSTEM) && !defined(NO_RSA) && \
+     defined(WOLFSSL_SIGNER_DER_CERT)
+    WOLFSSL_CERT_MANAGER* cm = NULL;
+    WOLFSSL_STACK* sk = NULL;
+    X509* x509 = NULL;
+    X509* cert1 = NULL;
+    FILE* file1 = NULL;
+#ifdef DEBUG_WOLFSSL_VERBOSE
+    WOLFSSL_BIO* bio = NULL;
+#endif
+    int i = 0;
+    int ret = 0;
+    const byte* der = NULL;
+    int derSz = 0;
+
+    ExpectNotNull(file1 = fopen("./certs/ca-cert.pem", "rb"));
+
+    ExpectNotNull(cert1 = wolfSSL_PEM_read_X509(file1, NULL, NULL, NULL));
+    if (file1 != NULL) {
+        fclose(file1);
+    }
+
+    ExpectNull(sk = wolfSSL_CertManagerGetCerts(NULL));
+    ExpectNotNull(cm = wolfSSL_CertManagerNew_ex(NULL));
+    ExpectNull(sk = wolfSSL_CertManagerGetCerts(cm));
+
+    ExpectNotNull(der = wolfSSL_X509_get_der(cert1, &derSz));
+#if defined(OPENSSL_ALL) || defined(WOLFSSL_QT)
+    /* Check that ASN_SELF_SIGNED_E is returned for a self-signed cert for QT
+     * and full OpenSSL compatibility */
+    ExpectIntEQ(ret = wolfSSL_CertManagerVerifyBuffer(cm, der, derSz,
+        WOLFSSL_FILETYPE_ASN1), WC_NO_ERR_TRACE(ASN_SELF_SIGNED_E));
+#else
+    ExpectIntEQ(ret = wolfSSL_CertManagerVerifyBuffer(cm, der, derSz,
+        WOLFSSL_FILETYPE_ASN1), WC_NO_ERR_TRACE(ASN_NO_SIGNER_E));
+#endif
+
+    ExpectIntEQ(WOLFSSL_SUCCESS, wolfSSL_CertManagerLoadCA(cm,
+                "./certs/ca-cert.pem", NULL));
+
+    ExpectNotNull(sk = wolfSSL_CertManagerGetCerts(cm));
+
+    for (i = 0; EXPECT_SUCCESS() && i < sk_X509_num(sk); i++) {
+        ExpectNotNull(x509 = sk_X509_value(sk, i));
+        ExpectIntEQ(0, wolfSSL_X509_cmp(x509, cert1));
+
+#ifdef DEBUG_WOLFSSL_VERBOSE
+        bio = BIO_new(wolfSSL_BIO_s_file());
+        if (bio != NULL) {
+            BIO_set_fp(bio, stderr, BIO_NOCLOSE);
+            X509_print(bio, x509);
+            BIO_free(bio);
+        }
+#endif /* DEBUG_WOLFSSL_VERBOSE */
+    }
+    wolfSSL_X509_free(cert1);
+    sk_X509_pop_free(sk, NULL);
+    wolfSSL_CertManagerFree(cm);
+#endif /* defined(OPENSSL_ALL) && !defined(NO_CERTS) && \
+          !defined(NO_FILESYSTEM) && !defined(NO_RSA) && \
+          defined(WOLFSSL_SIGNER_DER_CERT) */
+
+    return EXPECT_RESULT();
+}
+
+int test_wolfSSL_CertManagerSetVerify(void)
+{
+    EXPECT_DECLS;
+#if !defined(NO_FILESYSTEM) && !defined(NO_CERTS) && !defined(NO_TLS) && \
+    !defined(NO_WOLFSSL_CM_VERIFY) && !defined(NO_RSA) && \
+    (!defined(NO_WOLFSSL_CLIENT) || !defined(WOLFSSL_NO_CLIENT_AUTH))
+    WOLFSSL_CERT_MANAGER* cm = NULL;
+    int tmp = myVerifyAction;
+#ifdef WOLFSSL_PEM_TO_DER
+    const char* ca_cert = "./certs/ca-cert.pem";
+    const char* expiredCert = "./certs/test/expired/expired-cert.pem";
+#else
+    const char* ca_cert = "./certs/ca-cert.der";
+    const char* expiredCert = "./certs/test/expired/expired-cert.der";
+#endif
+
+    wolfSSL_CertManagerSetVerify(NULL, NULL);
+    wolfSSL_CertManagerSetVerify(NULL, myVerify);
+
+    ExpectNotNull(cm = wolfSSL_CertManagerNew());
+
+#if defined(NO_WOLFSSL_CLIENT) && defined(NO_WOLFSSL_SERVER)
+    ExpectIntEQ(wolfSSL_CertManagerLoadCA(cm, ca_cert, NULL), -1);
+#else
+    ExpectIntEQ(wolfSSL_CertManagerLoadCA(cm, ca_cert, NULL),
+                WOLFSSL_SUCCESS);
+    /* Exercise the baseline verification path before the callback overrides
+     * the result, so the expired-cert failure remains visible to MC/DC. */
+    ExpectIntNE(wolfSSL_CertManagerVerify(cm, expiredCert,
+        CERT_FILETYPE), WOLFSSL_SUCCESS);
+#endif
+
+    wolfSSL_CertManagerSetVerify(cm, myVerify);
+    /* Use the test CB that always accepts certs */
+    myVerifyAction = VERIFY_OVERRIDE_ERROR;
+
+    ExpectIntEQ(wolfSSL_CertManagerVerify(cm, expiredCert,
+        CERT_FILETYPE), WOLFSSL_SUCCESS);
+
+    wolfSSL_CertManagerSetVerify(cm, NULL);
+    ExpectIntNE(wolfSSL_CertManagerVerify(cm, expiredCert,
+        CERT_FILETYPE), WOLFSSL_SUCCESS);
+    wolfSSL_CertManagerSetVerify(cm, myVerify);
+
+#ifdef WOLFSSL_ALWAYS_VERIFY_CB
+    {
+        const char* verifyCert = "./certs/server-cert.der";
+        /* Use the test CB that always fails certs */
+        myVerifyAction = VERIFY_FORCE_FAIL;
+
+        ExpectIntEQ(wolfSSL_CertManagerVerify(cm, verifyCert,
+            WOLFSSL_FILETYPE_ASN1), WC_NO_ERR_TRACE(VERIFY_CERT_ERROR));
+    }
+#endif
+
+    wolfSSL_CertManagerFree(cm);
+    myVerifyAction = tmp;
+#endif
+
+    return EXPECT_RESULT();
+}
+
+int test_wolfSSL_CertManagerNameConstraint(void)
+{
+    EXPECT_DECLS;
+#if !defined(NO_FILESYSTEM) && !defined(NO_CERTS) && \
+    !defined(NO_WOLFSSL_CM_VERIFY) && !defined(NO_RSA) && \
+    defined(OPENSSL_EXTRA) && defined(WOLFSSL_CERT_GEN) && \
+    defined(WOLFSSL_CERT_EXT) && defined(WOLFSSL_ALT_NAMES) && \
+    !defined(NO_SHA256)
+    WOLFSSL_CERT_MANAGER* cm = NULL;
+    WOLFSSL_EVP_PKEY *priv = NULL;
+    WOLFSSL_X509_NAME* name = NULL;
+    const char* ca_cert = "./certs/test/cert-ext-nc.der";
+    const char* server_cert = "./certs/test/server-goodcn.pem";
+    int i = 0;
+    static const byte extNameConsOid[] = {85, 29, 30};
+
+    RsaKey  key;
+    WC_RNG  rng;
+    byte    *der = NULL;
+    int     derSz = 0;
+    word32  idx = 0;
+    byte    *pt;
+    WOLFSSL_X509 *x509 = NULL;
+    WOLFSSL_X509 *ca = NULL;
+
+    wc_InitRng(&rng);
+
+    /* load in CA private key for signing */
+    ExpectIntEQ(wc_InitRsaKey_ex(&key, HEAP_HINT, testDevId), 0);
+    ExpectIntEQ(wc_RsaPrivateKeyDecode(server_key_der_2048, &idx, &key,
+                sizeof_server_key_der_2048), 0);
+
+    /* get ca certificate then alter it */
+    ExpectNotNull(der =
+            (byte*)XMALLOC(FOURK_BUF, HEAP_HINT, DYNAMIC_TYPE_TMP_BUFFER));
+    ExpectNotNull(x509 = wolfSSL_X509_load_certificate_file(ca_cert,
+                WOLFSSL_FILETYPE_ASN1));
+    ExpectNotNull(pt = (byte*)wolfSSL_X509_get_tbs(x509, &derSz));
+    if (EXPECT_SUCCESS() && (der != NULL)) {
+        XMEMCPY(der, pt, (size_t)derSz);
+
+        /* find the name constraint extension and alter it */
+        pt = der;
+        for (i = 0; i < derSz - 3; i++) {
+            if (XMEMCMP(pt, extNameConsOid, 3) == 0) {
+                pt += 3;
+                break;
+            }
+            pt++;
+        }
+        ExpectIntNE(i, derSz - 3); /* did not find OID if this case is hit */
+
+        /* go to the length value and set it to 0 */
+        while (i < derSz && *pt != 0x81) {
+            pt++;
+            i++;
+        }
+        ExpectIntNE(i, derSz); /* did not place to alter */
+        pt++;
+        *pt = 0x00;
+    }
+
+    /* resign the altered certificate */
+    ExpectIntGT((derSz = wc_SignCert(derSz, CTC_SHA256wRSA, der,
+                             FOURK_BUF, &key, NULL, &rng)), 0);
+
+    ExpectNotNull(cm = wolfSSL_CertManagerNew());
+    ExpectIntEQ(wolfSSL_CertManagerLoadCABuffer(cm, der, derSz,
+                WOLFSSL_FILETYPE_ASN1), WC_NO_ERR_TRACE(ASN_PARSE_E));
+    wolfSSL_CertManagerFree(cm);
+
+    XFREE(der, HEAP_HINT, DYNAMIC_TYPE_TMP_BUFFER);
+    wolfSSL_X509_free(x509);
+    wc_FreeRsaKey(&key);
+    wc_FreeRng(&rng);
+
+    /* add email alt name to satisfy constraint */
+    pt = (byte*)server_key_der_2048;
+    ExpectNotNull(priv = wolfSSL_d2i_PrivateKey(EVP_PKEY_RSA, NULL,
+                (const unsigned char**)&pt, sizeof_server_key_der_2048));
+
+    ExpectNotNull(cm = wolfSSL_CertManagerNew());
+    ExpectNotNull(ca = wolfSSL_X509_load_certificate_file(ca_cert,
+                WOLFSSL_FILETYPE_ASN1));
+
+    ExpectNotNull((der = (byte*)wolfSSL_X509_get_der(ca, &derSz)));
+    DEBUG_WRITE_DER(der, derSz, "ca.der");
+
+    ExpectIntEQ(wolfSSL_CertManagerLoadCABuffer(cm, der, derSz,
+                WOLFSSL_FILETYPE_ASN1), WOLFSSL_SUCCESS);
+
+    /* Good cert test with proper alt email name */
+    ExpectNotNull(x509 = wolfSSL_X509_load_certificate_file(server_cert,
+                WOLFSSL_FILETYPE_PEM));
+    ExpectNotNull(name = wolfSSL_X509_get_subject_name(ca));
+    ExpectIntEQ(wolfSSL_X509_set_issuer_name(x509, name), WOLFSSL_SUCCESS);
+    name = NULL;
+
+    ExpectNotNull(name = X509_NAME_new());
+    ExpectIntEQ(X509_NAME_add_entry_by_txt(name, "countryName", MBSTRING_UTF8,
+                                       (byte*)"US", 2, -1, 0), SSL_SUCCESS);
+    ExpectIntEQ(X509_NAME_add_entry_by_txt(name, "commonName", MBSTRING_UTF8,
+                             (byte*)"wolfssl.com", 11, -1, 0), SSL_SUCCESS);
+    ExpectIntEQ(X509_NAME_add_entry_by_txt(name, "emailAddress", MBSTRING_UTF8,
+                    (byte*)"support@info.wolfssl.com", 24, -1, 0), SSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_X509_set_subject_name(x509, name), WOLFSSL_SUCCESS);
+    X509_NAME_free(name);
+    name = NULL;
+
+    wolfSSL_X509_add_altname(x509, "wolfssl@info.wolfssl.com", ASN_RFC822_TYPE);
+
+    ExpectIntGT(wolfSSL_X509_sign(x509, priv, EVP_sha256()), 0);
+    DEBUG_WRITE_CERT_X509(x509, "good-cert.pem");
+
+    ExpectNotNull((der = (byte*)wolfSSL_X509_get_der(x509, &derSz)));
+    ExpectIntEQ(wolfSSL_CertManagerVerifyBuffer(cm, der, derSz,
+                WOLFSSL_FILETYPE_ASN1), WOLFSSL_SUCCESS);
+    wolfSSL_X509_free(x509);
+    x509 = NULL;
+
+
+    /* Cert with bad alt name list */
+    ExpectNotNull(x509 = wolfSSL_X509_load_certificate_file(server_cert,
+                WOLFSSL_FILETYPE_PEM));
+    ExpectNotNull(name = wolfSSL_X509_get_subject_name(ca));
+    ExpectIntEQ(wolfSSL_X509_set_issuer_name(x509, name), WOLFSSL_SUCCESS);
+    name = NULL;
+
+    ExpectNotNull(name = X509_NAME_new());
+    ExpectIntEQ(X509_NAME_add_entry_by_txt(name, "countryName", MBSTRING_UTF8,
+                                       (byte*)"US", 2, -1, 0), SSL_SUCCESS);
+    ExpectIntEQ(X509_NAME_add_entry_by_txt(name, "commonName", MBSTRING_UTF8,
+                             (byte*)"wolfssl.com", 11, -1, 0), SSL_SUCCESS);
+    ExpectIntEQ(X509_NAME_add_entry_by_txt(name, "emailAddress", MBSTRING_UTF8,
+                    (byte*)"support@info.wolfssl.com", 24, -1, 0), SSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_X509_set_subject_name(x509, name), WOLFSSL_SUCCESS);
+    X509_NAME_free(name);
+
+    wolfSSL_X509_add_altname(x509, "wolfssl@info.com", ASN_RFC822_TYPE);
+    wolfSSL_X509_add_altname(x509, "wolfssl@info.wolfssl.com", ASN_RFC822_TYPE);
+
+    ExpectIntGT(wolfSSL_X509_sign(x509, priv, EVP_sha256()), 0);
+    DEBUG_WRITE_CERT_X509(x509, "bad-cert.pem");
+
+    ExpectNotNull((der = (byte*)wolfSSL_X509_get_der(x509, &derSz)));
+    ExpectIntEQ(wolfSSL_CertManagerVerifyBuffer(cm, der, derSz,
+                WOLFSSL_FILETYPE_ASN1), WC_NO_ERR_TRACE(ASN_NAME_INVALID_E));
+
+    wolfSSL_CertManagerFree(cm);
+    wolfSSL_X509_free(x509);
+    wolfSSL_X509_free(ca);
+    wolfSSL_EVP_PKEY_free(priv);
+#endif
+
+    return EXPECT_RESULT();
+}
+
+int test_wolfSSL_CertManagerNameConstraint2(void)
+{
+    EXPECT_DECLS;
+#if !defined(NO_FILESYSTEM) && !defined(NO_CERTS) && \
+    !defined(NO_WOLFSSL_CM_VERIFY) && !defined(NO_RSA) && \
+    defined(OPENSSL_EXTRA) && defined(WOLFSSL_CERT_GEN) && \
+    defined(WOLFSSL_CERT_EXT) && defined(WOLFSSL_ALT_NAMES)
+    const char* ca_cert  = "./certs/test/cert-ext-ndir.der";
+    const char* ca_cert2 = "./certs/test/cert-ext-ndir-exc.der";
+    const char* server_cert = "./certs/server-cert.pem";
+    WOLFSSL_CERT_MANAGER* cm = NULL;
+    WOLFSSL_X509 *x509 = NULL;
+    WOLFSSL_X509 *ca = NULL;
+
+    const unsigned char *der = NULL;
+    const unsigned char *pt;
+    WOLFSSL_EVP_PKEY *priv = NULL;
+    WOLFSSL_X509_NAME* name = NULL;
+    int   derSz = 0;
+
+    /* C=US*/
+    char altName[] = {
+        0x30, 0x0D, 0x31, 0x0B, 0x30, 0x09,
+        0x06, 0x03, 0x55, 0x04, 0x06, 0x13, 0x02, 0x55, 0x53
+    };
+
+    /* C=ID */
+    char altNameFail[] = {
+        0x30, 0x0D, 0x31, 0x0B, 0x30, 0x09,
+        0x06, 0x03, 0x55, 0x04, 0x06, 0x13, 0x02, 0x49, 0x44
+    };
+
+    /* C=<invalid UTF-8>: the value is a UTF8String whose content octets are
+     * not a well formed encoding, so it cannot be compared against the
+     * C=US subtree of either CA. */
+    char altNameBadUtf8[] = {
+        0x30, 0x0D, 0x31, 0x0B, 0x30, 0x09,
+        0x06, 0x03, 0x55, 0x04, 0x06, 0x0C, 0x02, (char)0xC3, 0x28
+    };
+
+    /* C=US ST=California*/
+    char altNameExc[] = {
+        0x30, 0x22,
+        0x31, 0x0B,
+        0x30, 0x09, 0x06, 0x03, 0x55, 0x04, 0x06, 0x13, 0x02, 0x55, 0x53,
+        0x31, 0x13,
+        0x30, 0x11, 0x06, 0x03, 0x55, 0x04, 0x08, 0x0C, 0x0A,
+        0x43, 0x61, 0x6c, 0x69, 0x66, 0x6f, 0x72, 0x6e, 0x69, 0x61
+    };
+    /* load in CA private key for signing */
+    pt = ca_key_der_2048;
+    ExpectNotNull(priv = wolfSSL_d2i_PrivateKey(EVP_PKEY_RSA, NULL, &pt,
+                                                sizeof_ca_key_der_2048));
+
+    ExpectNotNull(cm = wolfSSL_CertManagerNew());
+    ExpectNotNull(ca = wolfSSL_X509_load_certificate_file(ca_cert,
+                WOLFSSL_FILETYPE_ASN1));
+    ExpectNotNull((der = wolfSSL_X509_get_der(ca, &derSz)));
+    ExpectIntEQ(wolfSSL_CertManagerLoadCABuffer(cm, der, derSz,
+                WOLFSSL_FILETYPE_ASN1), WOLFSSL_SUCCESS);
+
+    ExpectNotNull(x509 = wolfSSL_X509_load_certificate_file(server_cert,
+                WOLFSSL_FILETYPE_PEM));
+    ExpectNotNull(name = wolfSSL_X509_get_subject_name(ca));
+    ExpectIntEQ(wolfSSL_X509_set_issuer_name(x509, name), WOLFSSL_SUCCESS);
+#if defined(WOLFSSL_SHA3) && !defined(WOLFSSL_NOSHA3_256)
+    wolfSSL_X509_sign(x509, priv, EVP_sha3_256());
+#else
+    wolfSSL_X509_sign(x509, priv, EVP_sha256());
+#endif
+    ExpectNotNull((der = wolfSSL_X509_get_der(x509, &derSz)));
+    ExpectIntEQ(wolfSSL_CertManagerVerifyBuffer(cm, der, derSz,
+                WOLFSSL_FILETYPE_ASN1), WOLFSSL_SUCCESS);
+
+    /* Test no name case. */
+    ExpectIntEQ(wolfSSL_X509_add_altname_ex(x509, NULL, 0, ASN_DIR_TYPE),
+        WOLFSSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_X509_add_altname(x509, "", ASN_DIR_TYPE),
+        WOLFSSL_SUCCESS);
+    /* IP not supported unless WOLFSSL_IP_ALT_NAME is enabled. */
+#ifdef WOLFSSL_IP_ALT_NAME
+    ExpectIntEQ(wolfSSL_X509_add_altname(x509, "127.0.0.1", ASN_IP_TYPE),
+        WOLFSSL_SUCCESS);
+#else
+    ExpectIntEQ(wolfSSL_X509_add_altname(x509, "127.0.0.1", ASN_IP_TYPE),
+        WOLFSSL_FAILURE);
+#endif
+
+    /* add in matching DIR alt name and resign */
+    wolfSSL_X509_add_altname_ex(x509, altName, sizeof(altName), ASN_DIR_TYPE);
+#if defined(WOLFSSL_SHA3) && !defined(WOLFSSL_NOSHA3_256)
+    wolfSSL_X509_sign(x509, priv, EVP_sha3_256());
+#else
+    wolfSSL_X509_sign(x509, priv, EVP_sha256());
+#endif
+
+    ExpectNotNull((der = wolfSSL_X509_get_der(x509, &derSz)));
+    ExpectIntEQ(wolfSSL_CertManagerVerifyBuffer(cm, der, derSz,
+                WOLFSSL_FILETYPE_ASN1), WOLFSSL_SUCCESS);
+    wolfSSL_X509_free(x509);
+    x509 = NULL;
+
+    /* check verify fail */
+    ExpectNotNull(x509 = wolfSSL_X509_load_certificate_file(server_cert,
+                WOLFSSL_FILETYPE_PEM));
+    ExpectNotNull(name = wolfSSL_X509_get_subject_name(ca));
+    ExpectIntEQ(wolfSSL_X509_set_issuer_name(x509, name), WOLFSSL_SUCCESS);
+
+    /* add in miss matching DIR alt name and resign */
+    wolfSSL_X509_add_altname_ex(x509, altNameFail, sizeof(altNameFail),
+            ASN_DIR_TYPE);
+
+#if defined(WOLFSSL_SHA3) && !defined(WOLFSSL_NOSHA3_256)
+    wolfSSL_X509_sign(x509, priv, EVP_sha3_256());
+#else
+    wolfSSL_X509_sign(x509, priv, EVP_sha256());
+#endif
+    ExpectNotNull((der = wolfSSL_X509_get_der(x509, &derSz)));
+    ExpectIntEQ(wolfSSL_CertManagerVerifyBuffer(cm, der, derSz,
+                WOLFSSL_FILETYPE_ASN1), WC_NO_ERR_TRACE(ASN_NAME_INVALID_E));
+
+    /* check that it still fails if one bad altname and one good altname is in
+     * the certificate */
+    wolfSSL_X509_free(x509);
+    x509 = NULL;
+    ExpectNotNull(x509 = wolfSSL_X509_load_certificate_file(server_cert,
+                WOLFSSL_FILETYPE_PEM));
+    ExpectNotNull(name = wolfSSL_X509_get_subject_name(ca));
+    ExpectIntEQ(wolfSSL_X509_set_issuer_name(x509, name), WOLFSSL_SUCCESS);
+    wolfSSL_X509_add_altname_ex(x509, altName, sizeof(altName), ASN_DIR_TYPE);
+    wolfSSL_X509_add_altname_ex(x509, altNameFail, sizeof(altNameFail),
+            ASN_DIR_TYPE);
+
+#if defined(WOLFSSL_SHA3) && !defined(WOLFSSL_NOSHA3_256)
+    wolfSSL_X509_sign(x509, priv, EVP_sha3_256());
+#else
+    wolfSSL_X509_sign(x509, priv, EVP_sha256());
+#endif
+    ExpectNotNull((der = wolfSSL_X509_get_der(x509, &derSz)));
+    ExpectIntEQ(wolfSSL_CertManagerVerifyBuffer(cm, der, derSz,
+                WOLFSSL_FILETYPE_ASN1), WC_NO_ERR_TRACE(ASN_NAME_INVALID_E));
+
+    /* check it fails with switching position of bad altname */
+    wolfSSL_X509_free(x509);
+    x509 = NULL;
+    ExpectNotNull(x509 = wolfSSL_X509_load_certificate_file(server_cert,
+                WOLFSSL_FILETYPE_PEM));
+    ExpectNotNull(name = wolfSSL_X509_get_subject_name(ca));
+    ExpectIntEQ(wolfSSL_X509_set_issuer_name(x509, name), WOLFSSL_SUCCESS);
+    wolfSSL_X509_add_altname_ex(x509, altNameFail, sizeof(altNameFail),
+            ASN_DIR_TYPE);
+    wolfSSL_X509_add_altname_ex(x509, altName, sizeof(altName), ASN_DIR_TYPE);
+
+#if defined(WOLFSSL_SHA3) && !defined(WOLFSSL_NOSHA3_256)
+    wolfSSL_X509_sign(x509, priv, EVP_sha3_256());
+#else
+    wolfSSL_X509_sign(x509, priv, EVP_sha256());
+#endif
+    ExpectNotNull((der = wolfSSL_X509_get_der(x509, &derSz)));
+    ExpectIntEQ(wolfSSL_CertManagerVerifyBuffer(cm, der, derSz,
+                WOLFSSL_FILETYPE_ASN1), WC_NO_ERR_TRACE(ASN_NAME_INVALID_E));
+
+    /* check that a directoryName that cannot be compared against the
+     * permitted subtree fails the check rather than being taken as either
+     * inside or outside it */
+    wolfSSL_X509_free(x509);
+    x509 = NULL;
+    ExpectNotNull(x509 = wolfSSL_X509_load_certificate_file(server_cert,
+                WOLFSSL_FILETYPE_PEM));
+    ExpectNotNull(name = wolfSSL_X509_get_subject_name(ca));
+    ExpectIntEQ(wolfSSL_X509_set_issuer_name(x509, name), WOLFSSL_SUCCESS);
+    wolfSSL_X509_add_altname_ex(x509, altNameBadUtf8, sizeof(altNameBadUtf8),
+            ASN_DIR_TYPE);
+
+#if defined(WOLFSSL_SHA3) && !defined(WOLFSSL_NOSHA3_256)
+    wolfSSL_X509_sign(x509, priv, EVP_sha3_256());
+#else
+    wolfSSL_X509_sign(x509, priv, EVP_sha256());
+#endif
+    ExpectNotNull((der = wolfSSL_X509_get_der(x509, &derSz)));
+    ExpectIntEQ(wolfSSL_CertManagerVerifyBuffer(cm, der, derSz,
+                WOLFSSL_FILETYPE_ASN1), WC_NO_ERR_TRACE(ASN_NAME_INVALID_E));
+    wolfSSL_CertManagerFree(cm);
+
+    wolfSSL_X509_free(x509);
+    x509 = NULL;
+    wolfSSL_X509_free(ca);
+    ca = NULL;
+
+    /* now test with excluded name constraint */
+    ExpectNotNull(cm = wolfSSL_CertManagerNew());
+    ExpectNotNull(ca = wolfSSL_X509_load_certificate_file(ca_cert2,
+                WOLFSSL_FILETYPE_ASN1));
+    ExpectNotNull((der = wolfSSL_X509_get_der(ca, &derSz)));
+    ExpectIntEQ(wolfSSL_CertManagerLoadCABuffer(cm, der, derSz,
+                WOLFSSL_FILETYPE_ASN1), WOLFSSL_SUCCESS);
+
+    ExpectNotNull(x509 = wolfSSL_X509_load_certificate_file(server_cert,
+                WOLFSSL_FILETYPE_PEM));
+    wolfSSL_X509_add_altname_ex(x509, altNameExc, sizeof(altNameExc),
+            ASN_DIR_TYPE);
+    ExpectNotNull(name = wolfSSL_X509_get_subject_name(ca));
+    ExpectIntEQ(wolfSSL_X509_set_issuer_name(x509, name), WOLFSSL_SUCCESS);
+
+#if defined(WOLFSSL_SHA3) && !defined(WOLFSSL_NOSHA3_256)
+    wolfSSL_X509_sign(x509, priv, EVP_sha3_256());
+#else
+    wolfSSL_X509_sign(x509, priv, EVP_sha256());
+#endif
+    ExpectNotNull((der = wolfSSL_X509_get_der(x509, &derSz)));
+    ExpectIntEQ(wolfSSL_CertManagerVerifyBuffer(cm, der, derSz,
+                WOLFSSL_FILETYPE_ASN1), WC_NO_ERR_TRACE(ASN_NAME_INVALID_E));
+
+    /* a directoryName that cannot be compared against the excluded subtree
+     * has not been shown to be outside it, so it fails the check too */
+    wolfSSL_X509_free(x509);
+    x509 = NULL;
+    ExpectNotNull(x509 = wolfSSL_X509_load_certificate_file(server_cert,
+                WOLFSSL_FILETYPE_PEM));
+    wolfSSL_X509_add_altname_ex(x509, altNameBadUtf8, sizeof(altNameBadUtf8),
+            ASN_DIR_TYPE);
+    ExpectNotNull(name = wolfSSL_X509_get_subject_name(ca));
+    ExpectIntEQ(wolfSSL_X509_set_issuer_name(x509, name), WOLFSSL_SUCCESS);
+
+#if defined(WOLFSSL_SHA3) && !defined(WOLFSSL_NOSHA3_256)
+    wolfSSL_X509_sign(x509, priv, EVP_sha3_256());
+#else
+    wolfSSL_X509_sign(x509, priv, EVP_sha256());
+#endif
+    ExpectNotNull((der = wolfSSL_X509_get_der(x509, &derSz)));
+    ExpectIntEQ(wolfSSL_CertManagerVerifyBuffer(cm, der, derSz,
+                WOLFSSL_FILETYPE_ASN1), WC_NO_ERR_TRACE(ASN_NAME_INVALID_E));
+
+    wolfSSL_CertManagerFree(cm);
+    wolfSSL_X509_free(x509);
+    wolfSSL_X509_free(ca);
+    wolfSSL_EVP_PKEY_free(priv);
+#endif
+
+    return EXPECT_RESULT();
+}
+
+int test_wolfSSL_CertManagerNameConstraint3(void)
+{
+    EXPECT_DECLS;
+#if !defined(NO_FILESYSTEM) && !defined(NO_CERTS) && \
+    !defined(NO_WOLFSSL_CM_VERIFY) && !defined(NO_RSA) && \
+    defined(OPENSSL_EXTRA) && defined(WOLFSSL_CERT_GEN) && \
+    defined(WOLFSSL_CERT_EXT) && defined(WOLFSSL_ALT_NAMES) && \
+    !defined(NO_SHA256)
+    WOLFSSL_CERT_MANAGER* cm = NULL;
+    WOLFSSL_EVP_PKEY *priv = NULL;
+    WOLFSSL_X509_NAME* name = NULL;
+    const char* ca_cert = "./certs/test/cert-ext-mnc.der";
+    const char* server_cert = "./certs/test/server-goodcn.pem";
+
+    byte    *der = NULL;
+    int     derSz = 0;
+    byte    *pt;
+    WOLFSSL_X509 *x509 = NULL;
+    WOLFSSL_X509 *ca = NULL;
+
+    pt = (byte*)server_key_der_2048;
+    ExpectNotNull(priv = wolfSSL_d2i_PrivateKey(EVP_PKEY_RSA, NULL,
+                (const unsigned char**)&pt, sizeof_server_key_der_2048));
+
+    ExpectNotNull(cm = wolfSSL_CertManagerNew());
+    ExpectNotNull(ca = wolfSSL_X509_load_certificate_file(ca_cert,
+                WOLFSSL_FILETYPE_ASN1));
+    ExpectNotNull((der = (byte*)wolfSSL_X509_get_der(ca, &derSz)));
+    DEBUG_WRITE_DER(der, derSz, "ca.der");
+
+    ExpectIntEQ(wolfSSL_CertManagerLoadCABuffer(cm, der, derSz,
+                WOLFSSL_FILETYPE_ASN1), WOLFSSL_SUCCESS);
+
+    /* check satisfying .wolfssl.com constraint passes */
+    ExpectNotNull(x509 = wolfSSL_X509_load_certificate_file(server_cert,
+                WOLFSSL_FILETYPE_PEM));
+    ExpectNotNull(name = wolfSSL_X509_get_subject_name(ca));
+    ExpectIntEQ(wolfSSL_X509_set_issuer_name(x509, name), WOLFSSL_SUCCESS);
+    name = NULL;
+
+    ExpectNotNull(name = X509_NAME_new());
+    ExpectIntEQ(X509_NAME_add_entry_by_txt(name, "countryName", MBSTRING_UTF8,
+                                       (byte*)"US", 2, -1, 0), SSL_SUCCESS);
+    ExpectIntEQ(X509_NAME_add_entry_by_txt(name, "commonName", MBSTRING_UTF8,
+                             (byte*)"wolfssl.com", 11, -1, 0), SSL_SUCCESS);
+    ExpectIntEQ(X509_NAME_add_entry_by_txt(name, "emailAddress", MBSTRING_UTF8,
+                    (byte*)"support@info.wolfssl.com", 24, -1, 0), SSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_X509_set_subject_name(x509, name), WOLFSSL_SUCCESS);
+    X509_NAME_free(name);
+    name = NULL;
+
+    wolfSSL_X509_add_altname(x509, "wolfssl@info.wolfssl.com", ASN_RFC822_TYPE);
+
+    ExpectIntGT(wolfSSL_X509_sign(x509, priv, EVP_sha256()), 0);
+    DEBUG_WRITE_CERT_X509(x509, "good-1st-constraint-cert.pem");
+
+    ExpectNotNull((der = (byte*)wolfSSL_X509_get_der(x509, &derSz)));
+    ExpectIntEQ(wolfSSL_CertManagerVerifyBuffer(cm, der, derSz,
+                WOLFSSL_FILETYPE_ASN1), WOLFSSL_SUCCESS);
+    wolfSSL_X509_free(x509);
+    x509 = NULL;
+
+    /* check satisfying .random.com constraint passes */
+    ExpectNotNull(x509 = wolfSSL_X509_load_certificate_file(server_cert,
+                WOLFSSL_FILETYPE_PEM));
+    ExpectNotNull(name = wolfSSL_X509_get_subject_name(ca));
+    ExpectIntEQ(wolfSSL_X509_set_issuer_name(x509, name), WOLFSSL_SUCCESS);
+    name = NULL;
+
+    ExpectNotNull(name = X509_NAME_new());
+    ExpectIntEQ(X509_NAME_add_entry_by_txt(name, "countryName", MBSTRING_UTF8,
+                                       (byte*)"US", 2, -1, 0), SSL_SUCCESS);
+    ExpectIntEQ(X509_NAME_add_entry_by_txt(name, "commonName", MBSTRING_UTF8,
+                             (byte*)"wolfssl.com", 11, -1, 0), SSL_SUCCESS);
+    ExpectIntEQ(X509_NAME_add_entry_by_txt(name, "emailAddress", MBSTRING_UTF8,
+                    (byte*)"support@info.example.com", 24, -1, 0), SSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_X509_set_subject_name(x509, name), WOLFSSL_SUCCESS);
+    X509_NAME_free(name);
+    name = NULL;
+
+    wolfSSL_X509_add_altname(x509, "wolfssl@info.example.com", ASN_RFC822_TYPE);
+
+    ExpectIntGT(wolfSSL_X509_sign(x509, priv, EVP_sha256()), 0);
+    DEBUG_WRITE_CERT_X509(x509, "good-2nd-constraint-cert.pem");
+
+    ExpectNotNull((der = (byte*)wolfSSL_X509_get_der(x509, &derSz)));
+    ExpectIntEQ(wolfSSL_CertManagerVerifyBuffer(cm, der, derSz,
+                WOLFSSL_FILETYPE_ASN1), WOLFSSL_SUCCESS);
+    wolfSSL_X509_free(x509);
+    x509 = NULL;
+
+    /* check fail case when neither constraint is matched */
+    ExpectNotNull(x509 = wolfSSL_X509_load_certificate_file(server_cert,
+                WOLFSSL_FILETYPE_PEM));
+    ExpectNotNull(name = wolfSSL_X509_get_subject_name(ca));
+    ExpectIntEQ(wolfSSL_X509_set_issuer_name(x509, name), WOLFSSL_SUCCESS);
+    name = NULL;
+
+    ExpectNotNull(name = X509_NAME_new());
+    ExpectIntEQ(X509_NAME_add_entry_by_txt(name, "countryName", MBSTRING_UTF8,
+                                       (byte*)"US", 2, -1, 0), SSL_SUCCESS);
+    ExpectIntEQ(X509_NAME_add_entry_by_txt(name, "commonName", MBSTRING_UTF8,
+                             (byte*)"wolfssl.com", 11, -1, 0), SSL_SUCCESS);
+    ExpectIntEQ(X509_NAME_add_entry_by_txt(name, "emailAddress", MBSTRING_UTF8,
+                     (byte*)"support@info.com", 16, -1, 0), SSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_X509_set_subject_name(x509, name), WOLFSSL_SUCCESS);
+    X509_NAME_free(name);
+
+    wolfSSL_X509_add_altname(x509, "wolfssl@info.com", ASN_RFC822_TYPE);
+
+    ExpectIntGT(wolfSSL_X509_sign(x509, priv, EVP_sha256()), 0);
+    DEBUG_WRITE_CERT_X509(x509, "bad-cert.pem");
+
+    ExpectNotNull((der = (byte*)wolfSSL_X509_get_der(x509, &derSz)));
+    ExpectIntEQ(wolfSSL_CertManagerVerifyBuffer(cm, der, derSz,
+                WOLFSSL_FILETYPE_ASN1), WC_NO_ERR_TRACE(ASN_NAME_INVALID_E));
+
+    wolfSSL_CertManagerFree(cm);
+    wolfSSL_X509_free(x509);
+    wolfSSL_X509_free(ca);
+    wolfSSL_EVP_PKEY_free(priv);
+#endif
+
+    return EXPECT_RESULT();
+}
+
+int test_wolfSSL_CertManagerNameConstraint4(void)
+{
+    EXPECT_DECLS;
+#if !defined(NO_FILESYSTEM) && !defined(NO_CERTS) && \
+    !defined(NO_WOLFSSL_CM_VERIFY) && !defined(NO_RSA) && \
+    defined(OPENSSL_EXTRA) && defined(WOLFSSL_CERT_GEN) && \
+    defined(WOLFSSL_CERT_EXT) && defined(WOLFSSL_ALT_NAMES) && \
+    !defined(NO_SHA256)
+    WOLFSSL_CERT_MANAGER* cm = NULL;
+    WOLFSSL_EVP_PKEY *priv = NULL;
+    WOLFSSL_X509_NAME* name = NULL;
+    const char* ca_cert = "./certs/test/cert-ext-ncdns.der";
+    const char* server_cert = "./certs/test/server-goodcn.pem";
+
+    byte    *der = NULL;
+    int     derSz;
+    byte    *pt;
+    WOLFSSL_X509 *x509 = NULL;
+    WOLFSSL_X509 *ca = NULL;
+
+    pt = (byte*)server_key_der_2048;
+    ExpectNotNull(priv = wolfSSL_d2i_PrivateKey(EVP_PKEY_RSA, NULL,
+                (const unsigned char**)&pt, sizeof_server_key_der_2048));
+
+    ExpectNotNull(cm = wolfSSL_CertManagerNew());
+    ExpectNotNull(ca = wolfSSL_X509_load_certificate_file(ca_cert,
+                WOLFSSL_FILETYPE_ASN1));
+    ExpectNotNull((der = (byte*)wolfSSL_X509_get_der(ca, &derSz)));
+    DEBUG_WRITE_DER(der, derSz, "ca.der");
+
+    ExpectIntEQ(wolfSSL_CertManagerLoadCABuffer(cm, der, derSz,
+                WOLFSSL_FILETYPE_ASN1), WOLFSSL_SUCCESS);
+
+    /* check satisfying wolfssl.com constraint passes */
+    ExpectNotNull(x509 = wolfSSL_X509_load_certificate_file(server_cert,
+                WOLFSSL_FILETYPE_PEM));
+    ExpectNotNull(name = wolfSSL_X509_get_subject_name(ca));
+    ExpectIntEQ(wolfSSL_X509_set_issuer_name(x509, name), WOLFSSL_SUCCESS);
+    name = NULL;
+
+    ExpectNotNull(name = X509_NAME_new());
+    ExpectIntEQ(X509_NAME_add_entry_by_txt(name, "countryName", MBSTRING_UTF8,
+                                       (byte*)"US", 2, -1, 0), SSL_SUCCESS);
+    ExpectIntEQ(X509_NAME_add_entry_by_txt(name, "commonName", MBSTRING_UTF8,
+                             (byte*)"wolfssl.com", 11, -1, 0), SSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_X509_set_subject_name(x509, name), WOLFSSL_SUCCESS);
+    X509_NAME_free(name);
+    name = NULL;
+
+    wolfSSL_X509_add_altname(x509, "www.wolfssl.com", ASN_DNS_TYPE);
+    ExpectIntGT(wolfSSL_X509_sign(x509, priv, EVP_sha256()), 0);
+    DEBUG_WRITE_CERT_X509(x509, "good-1st-constraint-cert.pem");
+
+    ExpectNotNull((der = (byte*)wolfSSL_X509_get_der(x509, &derSz)));
+    ExpectIntEQ(wolfSSL_CertManagerVerifyBuffer(cm, der, derSz,
+                WOLFSSL_FILETYPE_ASN1), WOLFSSL_SUCCESS);
+    wolfSSL_X509_free(x509);
+    x509 = NULL;
+
+    /* check satisfying example.com constraint passes */
+    ExpectNotNull(x509 = wolfSSL_X509_load_certificate_file(server_cert,
+                WOLFSSL_FILETYPE_PEM));
+    ExpectNotNull(name = wolfSSL_X509_get_subject_name(ca));
+    ExpectIntEQ(wolfSSL_X509_set_issuer_name(x509, name), WOLFSSL_SUCCESS);
+    name = NULL;
+
+    ExpectNotNull(name = X509_NAME_new());
+    ExpectIntEQ(X509_NAME_add_entry_by_txt(name, "countryName", MBSTRING_UTF8,
+                                       (byte*)"US", 2, -1, 0), SSL_SUCCESS);
+    ExpectIntEQ(X509_NAME_add_entry_by_txt(name, "commonName", MBSTRING_UTF8,
+                             (byte*)"example.com", 11, -1, 0), SSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_X509_set_subject_name(x509, name), WOLFSSL_SUCCESS);
+    X509_NAME_free(name);
+    name = NULL;
+
+    wolfSSL_X509_add_altname(x509, "www.example.com", ASN_DNS_TYPE);
+    ExpectIntGT(wolfSSL_X509_sign(x509, priv, EVP_sha256()), 0);
+    DEBUG_WRITE_CERT_X509(x509, "good-2nd-constraint-cert.pem");
+
+    ExpectNotNull((der = (byte*)wolfSSL_X509_get_der(x509, &derSz)));
+    ExpectIntEQ(wolfSSL_CertManagerVerifyBuffer(cm, der, derSz,
+                WOLFSSL_FILETYPE_ASN1), WOLFSSL_SUCCESS);
+    wolfSSL_X509_free(x509);
+    x509 = NULL;
+
+    /* check satisfying wolfssl.com constraint passes with list of DNS's */
+    ExpectNotNull(x509 = wolfSSL_X509_load_certificate_file(server_cert,
+                WOLFSSL_FILETYPE_PEM));
+    ExpectNotNull(name = wolfSSL_X509_get_subject_name(ca));
+    ExpectIntEQ(wolfSSL_X509_set_issuer_name(x509, name), WOLFSSL_SUCCESS);
+    name = NULL;
+
+    ExpectNotNull(name = X509_NAME_new());
+    ExpectIntEQ(X509_NAME_add_entry_by_txt(name, "countryName", MBSTRING_UTF8,
+                                       (byte*)"US", 2, -1, 0), SSL_SUCCESS);
+    ExpectIntEQ(X509_NAME_add_entry_by_txt(name, "commonName", MBSTRING_UTF8,
+                             (byte*)"wolfssl.com", 11, -1, 0), SSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_X509_set_subject_name(x509, name), WOLFSSL_SUCCESS);
+    X509_NAME_free(name);
+    name = NULL;
+
+    wolfSSL_X509_add_altname(x509, "www.wolfssl.com", ASN_DNS_TYPE);
+    wolfSSL_X509_add_altname(x509, "www.info.wolfssl.com", ASN_DNS_TYPE);
+    wolfSSL_X509_add_altname(x509, "extra.wolfssl.com", ASN_DNS_TYPE);
+    ExpectIntGT(wolfSSL_X509_sign(x509, priv, EVP_sha256()), 0);
+    DEBUG_WRITE_CERT_X509(x509, "good-multiple-constraint-cert.pem");
+
+    ExpectNotNull((der = (byte*)wolfSSL_X509_get_der(x509, &derSz)));
+    ExpectIntEQ(wolfSSL_CertManagerVerifyBuffer(cm, der, derSz,
+                WOLFSSL_FILETYPE_ASN1), WOLFSSL_SUCCESS);
+    wolfSSL_X509_free(x509);
+    x509 = NULL;
+
+    /* check fail when one DNS in the list is bad */
+    ExpectNotNull(x509 = wolfSSL_X509_load_certificate_file(server_cert,
+                WOLFSSL_FILETYPE_PEM));
+    ExpectNotNull(name = wolfSSL_X509_get_subject_name(ca));
+    ExpectIntEQ(wolfSSL_X509_set_issuer_name(x509, name), WOLFSSL_SUCCESS);
+    name = NULL;
+
+    ExpectNotNull(name = X509_NAME_new());
+    ExpectIntEQ(X509_NAME_add_entry_by_txt(name, "countryName", MBSTRING_UTF8,
+                                       (byte*)"US", 2, -1, 0), SSL_SUCCESS);
+    ExpectIntEQ(X509_NAME_add_entry_by_txt(name, "commonName", MBSTRING_UTF8,
+                             (byte*)"wolfssl.com", 11, -1, 0), SSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_X509_set_subject_name(x509, name), WOLFSSL_SUCCESS);
+    X509_NAME_free(name);
+    name = NULL;
+
+    wolfSSL_X509_add_altname(x509, "www.wolfssl.com", ASN_DNS_TYPE);
+    wolfSSL_X509_add_altname(x509, "www.nomatch.com", ASN_DNS_TYPE);
+    wolfSSL_X509_add_altname(x509, "www.info.wolfssl.com", ASN_DNS_TYPE);
+    ExpectIntGT(wolfSSL_X509_sign(x509, priv, EVP_sha256()), 0);
+    DEBUG_WRITE_CERT_X509(x509, "bad-multiple-constraint-cert.pem");
+
+    ExpectNotNull((der = (byte*)wolfSSL_X509_get_der(x509, &derSz)));
+    ExpectIntEQ(wolfSSL_CertManagerVerifyBuffer(cm, der, derSz,
+                WOLFSSL_FILETYPE_ASN1), WC_NO_ERR_TRACE(ASN_NAME_INVALID_E));
+    wolfSSL_X509_free(x509);
+    x509 = NULL;
+
+    /* check fail case when neither constraint is matched */
+    ExpectNotNull(x509 = wolfSSL_X509_load_certificate_file(server_cert,
+                WOLFSSL_FILETYPE_PEM));
+    ExpectNotNull(name = wolfSSL_X509_get_subject_name(ca));
+    ExpectIntEQ(wolfSSL_X509_set_issuer_name(x509, name), WOLFSSL_SUCCESS);
+    name = NULL;
+
+    ExpectNotNull(name = X509_NAME_new());
+    ExpectIntEQ(X509_NAME_add_entry_by_txt(name, "countryName", MBSTRING_UTF8,
+                                       (byte*)"US", 2, -1, 0), SSL_SUCCESS);
+    ExpectIntEQ(X509_NAME_add_entry_by_txt(name, "commonName", MBSTRING_UTF8,
+                             (byte*)"common", 6, -1, 0), SSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_X509_set_subject_name(x509, name), WOLFSSL_SUCCESS);
+    X509_NAME_free(name);
+
+    wolfSSL_X509_add_altname(x509, "www.random.com", ASN_DNS_TYPE);
+    ExpectIntGT(wolfSSL_X509_sign(x509, priv, EVP_sha256()), 0);
+    DEBUG_WRITE_CERT_X509(x509, "bad-cert.pem");
+
+    ExpectNotNull((der = (byte*)wolfSSL_X509_get_der(x509, &derSz)));
+    ExpectIntEQ(wolfSSL_CertManagerVerifyBuffer(cm, der, derSz,
+                WOLFSSL_FILETYPE_ASN1), WC_NO_ERR_TRACE(ASN_NAME_INVALID_E));
+
+    wolfSSL_CertManagerFree(cm);
+    wolfSSL_X509_free(x509);
+    wolfSSL_X509_free(ca);
+    wolfSSL_EVP_PKEY_free(priv);
+#endif
+
+    return EXPECT_RESULT();
+}
+
+int test_wolfSSL_CertManagerNameConstraint5(void)
+{
+    EXPECT_DECLS;
+#if !defined(NO_FILESYSTEM) && !defined(NO_CERTS) && \
+    !defined(NO_WOLFSSL_CM_VERIFY) && !defined(NO_RSA) && \
+    defined(OPENSSL_EXTRA) && defined(WOLFSSL_CERT_GEN) && \
+    defined(WOLFSSL_CERT_EXT) && defined(WOLFSSL_ALT_NAMES) && \
+    !defined(NO_SHA256)
+    WOLFSSL_CERT_MANAGER* cm = NULL;
+    WOLFSSL_EVP_PKEY *priv = NULL;
+    WOLFSSL_X509_NAME* name = NULL;
+    const char* ca_cert = "./certs/test/cert-ext-ncmixed.der";
+    const char* server_cert = "./certs/test/server-goodcn.pem";
+
+    byte    *der = NULL;
+    int     derSz;
+    byte    *pt;
+    WOLFSSL_X509 *x509 = NULL;
+    WOLFSSL_X509 *ca = NULL;
+
+    pt = (byte*)server_key_der_2048;
+    ExpectNotNull(priv = wolfSSL_d2i_PrivateKey(EVP_PKEY_RSA, NULL,
+                (const unsigned char**)&pt, sizeof_server_key_der_2048));
+
+    ExpectNotNull(cm = wolfSSL_CertManagerNew());
+    ExpectNotNull(ca = wolfSSL_X509_load_certificate_file(ca_cert,
+                WOLFSSL_FILETYPE_ASN1));
+    ExpectNotNull((der = (byte*)wolfSSL_X509_get_der(ca, &derSz)));
+    DEBUG_WRITE_DER(der, derSz, "ca.der");
+
+    ExpectIntEQ(wolfSSL_CertManagerLoadCABuffer(cm, der, derSz,
+                WOLFSSL_FILETYPE_ASN1), WOLFSSL_SUCCESS);
+
+    /* check satisfying wolfssl.com constraint passes */
+    ExpectNotNull(x509 = wolfSSL_X509_load_certificate_file(server_cert,
+                WOLFSSL_FILETYPE_PEM));
+    ExpectNotNull(name = wolfSSL_X509_get_subject_name(ca));
+    ExpectIntEQ(wolfSSL_X509_set_issuer_name(x509, name), WOLFSSL_SUCCESS);
+    name = NULL;
+
+    ExpectNotNull(name = X509_NAME_new());
+    ExpectIntEQ(X509_NAME_add_entry_by_txt(name, "countryName", MBSTRING_UTF8,
+                                       (byte*)"US", 2, -1, 0), SSL_SUCCESS);
+    ExpectIntEQ(X509_NAME_add_entry_by_txt(name, "commonName", MBSTRING_UTF8,
+                             (byte*)"example", 7, -1, 0), SSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_X509_set_subject_name(x509, name), WOLFSSL_SUCCESS);
+    X509_NAME_free(name);
+    name = NULL;
+
+    wolfSSL_X509_add_altname(x509, "good.example", ASN_DNS_TYPE);
+    wolfSSL_X509_add_altname(x509, "facts@into.wolfssl.com", ASN_RFC822_TYPE);
+    ExpectIntGT(wolfSSL_X509_sign(x509, priv, EVP_sha256()), 0);
+    DEBUG_WRITE_CERT_X509(x509, "good-cert.pem");
+
+    ExpectNotNull((der = (byte*)wolfSSL_X509_get_der(x509, &derSz)));
+    ExpectIntEQ(wolfSSL_CertManagerVerifyBuffer(cm, der, derSz,
+                WOLFSSL_FILETYPE_ASN1), WOLFSSL_SUCCESS);
+    wolfSSL_X509_free(x509);
+    x509 = NULL;
+
+    /* fail with DNS check because of common name */
+    ExpectNotNull(x509 = wolfSSL_X509_load_certificate_file(server_cert,
+                WOLFSSL_FILETYPE_PEM));
+    ExpectNotNull(name = wolfSSL_X509_get_subject_name(ca));
+    ExpectIntEQ(wolfSSL_X509_set_issuer_name(x509, name), WOLFSSL_SUCCESS);
+    name = NULL;
+
+    ExpectNotNull(name = X509_NAME_new());
+    ExpectIntEQ(X509_NAME_add_entry_by_txt(name, "countryName", MBSTRING_UTF8,
+                                       (byte*)"US", 2, -1, 0), SSL_SUCCESS);
+    ExpectIntEQ(X509_NAME_add_entry_by_txt(name, "commonName", MBSTRING_UTF8,
+                             (byte*)"wolfssl.com", 11, -1, 0), SSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_X509_set_subject_name(x509, name), WOLFSSL_SUCCESS);
+    X509_NAME_free(name);
+    name = NULL;
+
+    wolfSSL_X509_add_altname(x509, "example", ASN_DNS_TYPE);
+    wolfSSL_X509_add_altname(x509, "facts@wolfssl.com", ASN_RFC822_TYPE);
+    ExpectIntGT(wolfSSL_X509_sign(x509, priv, EVP_sha256()), 0);
+    DEBUG_WRITE_CERT_X509(x509, "bad-cn-cert.pem");
+
+    ExpectNotNull((der = (byte*)wolfSSL_X509_get_der(x509, &derSz)));
+    ExpectIntEQ(wolfSSL_CertManagerVerifyBuffer(cm, der, derSz,
+                WOLFSSL_FILETYPE_ASN1), WC_NO_ERR_TRACE(ASN_NAME_INVALID_E));
+    wolfSSL_X509_free(x509);
+    x509 = NULL;
+
+    /* fail on permitted DNS name constraint */
+    ExpectNotNull(x509 = wolfSSL_X509_load_certificate_file(server_cert,
+                WOLFSSL_FILETYPE_PEM));
+    ExpectNotNull(name = wolfSSL_X509_get_subject_name(ca));
+    ExpectIntEQ(wolfSSL_X509_set_issuer_name(x509, name), WOLFSSL_SUCCESS);
+    name = NULL;
+
+    ExpectNotNull(name = X509_NAME_new());
+    ExpectIntEQ(X509_NAME_add_entry_by_txt(name, "countryName", MBSTRING_UTF8,
+                                       (byte*)"US", 2, -1, 0), SSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_X509_set_subject_name(x509, name), WOLFSSL_SUCCESS);
+    X509_NAME_free(name);
+    name = NULL;
+
+    wolfSSL_X509_add_altname(x509, "www.example", ASN_DNS_TYPE);
+    wolfSSL_X509_add_altname(x509, "www.wolfssl", ASN_DNS_TYPE);
+    wolfSSL_X509_add_altname(x509, "facts@wolfssl.com", ASN_RFC822_TYPE);
+    ExpectIntGT(wolfSSL_X509_sign(x509, priv, EVP_sha256()), 0);
+    DEBUG_WRITE_CERT_X509(x509, "bad-1st-constraint-cert.pem");
+
+    ExpectNotNull((der = (byte*)wolfSSL_X509_get_der(x509, &derSz)));
+    ExpectIntEQ(wolfSSL_CertManagerVerifyBuffer(cm, der, derSz,
+                WOLFSSL_FILETYPE_ASN1), WC_NO_ERR_TRACE(ASN_NAME_INVALID_E));
+    wolfSSL_X509_free(x509);
+    x509 = NULL;
+
+    /* fail on permitted email name constraint */
+    ExpectNotNull(x509 = wolfSSL_X509_load_certificate_file(server_cert,
+                WOLFSSL_FILETYPE_PEM));
+    ExpectNotNull(name = wolfSSL_X509_get_subject_name(ca));
+    ExpectIntEQ(wolfSSL_X509_set_issuer_name(x509, name), WOLFSSL_SUCCESS);
+    name = NULL;
+
+    ExpectNotNull(name = X509_NAME_new());
+    ExpectIntEQ(X509_NAME_add_entry_by_txt(name, "countryName", MBSTRING_UTF8,
+                                       (byte*)"US", 2, -1, 0), SSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_X509_set_subject_name(x509, name), WOLFSSL_SUCCESS);
+    X509_NAME_free(name);
+    name = NULL;
+
+    wolfSSL_X509_add_altname(x509, "example", ASN_DNS_TYPE);
+    wolfSSL_X509_add_altname(x509, "facts@wolfssl.com", ASN_RFC822_TYPE);
+    wolfSSL_X509_add_altname(x509, "info@example.com", ASN_RFC822_TYPE);
+    ExpectIntGT(wolfSSL_X509_sign(x509, priv, EVP_sha256()), 0);
+    DEBUG_WRITE_CERT_X509(x509, "bad-2nd-constraint-cert.pem");
+
+    ExpectNotNull((der = (byte*)wolfSSL_X509_get_der(x509, &derSz)));
+    ExpectIntEQ(wolfSSL_CertManagerVerifyBuffer(cm, der, derSz,
+                WOLFSSL_FILETYPE_ASN1), WC_NO_ERR_TRACE(ASN_NAME_INVALID_E));
+    wolfSSL_X509_free(x509);
+    x509 = NULL;
+
+    /* success with empty email name */
+    ExpectNotNull(x509 = wolfSSL_X509_load_certificate_file(server_cert,
+                WOLFSSL_FILETYPE_PEM));
+    ExpectNotNull(name = wolfSSL_X509_get_subject_name(ca));
+    ExpectIntEQ(wolfSSL_X509_set_issuer_name(x509, name), WOLFSSL_SUCCESS);
+    name = NULL;
+
+    ExpectNotNull(name = X509_NAME_new());
+    ExpectIntEQ(X509_NAME_add_entry_by_txt(name, "countryName", MBSTRING_UTF8,
+                                       (byte*)"US", 2, -1, 0), SSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_X509_set_subject_name(x509, name), WOLFSSL_SUCCESS);
+    X509_NAME_free(name);
+
+    wolfSSL_X509_add_altname(x509, "example", ASN_DNS_TYPE);
+    ExpectIntGT(wolfSSL_X509_sign(x509, priv, EVP_sha256()), 0);
+    DEBUG_WRITE_CERT_X509(x509, "good-missing-constraint-cert.pem");
+
+    ExpectNotNull((der = (byte*)wolfSSL_X509_get_der(x509, &derSz)));
+    ExpectIntEQ(wolfSSL_CertManagerVerifyBuffer(cm, der, derSz,
+                WOLFSSL_FILETYPE_ASN1), WOLFSSL_SUCCESS);
+    wolfSSL_X509_free(x509);
+
+    wolfSSL_CertManagerFree(cm);
+    wolfSSL_X509_free(ca);
+    wolfSSL_EVP_PKEY_free(priv);
+#endif
+    return EXPECT_RESULT();
+}
+
+int test_wolfSSL_CertManagerNameConstraint_DNS_CN(void)
+{
+    EXPECT_DECLS;
+#if !defined(NO_FILESYSTEM) && !defined(NO_CERTS) && \
+    !defined(NO_WOLFSSL_CM_VERIFY) && !defined(NO_RSA) && \
+    defined(OPENSSL_EXTRA) && defined(WOLFSSL_CERT_GEN) && \
+    defined(WOLFSSL_CERT_EXT) && defined(WOLFSSL_ALT_NAMES) && \
+    !defined(NO_SHA256) && !defined(IGNORE_NAME_CONSTRAINTS)
+    /* CA (cert-ext-ncdns.der) permits DNS:wolfssl.com and DNS:example.com. The
+     * Subject CN is checked against these dNSName constraints as a fallback
+     * only when the leaf has no dNSName SAN (RFC 6125 6.4.4); a non-dNSName
+     * SAN must not suppress that check. */
+    WOLFSSL_CERT_MANAGER* cm = NULL;
+    WOLFSSL_EVP_PKEY *priv = NULL;
+    WOLFSSL_X509_NAME* name = NULL;
+    const char* ca_cert = "./certs/test/cert-ext-ncdns.der";
+    const char* server_cert = "./certs/test/server-goodcn.pem";
+    /* non-dNSName SAN values. The CA declares no registeredID or iPAddress
+     * constraint, so these names are themselves unconstrained. */
+    static const byte rid_dummy[] = { 0x2A, 0x03, 0x04 };  /* OID 1.2.3.4 */
+    static const byte ip_dummy[]  = { 203, 0, 113, 7 };
+
+    byte    *der = NULL;
+    int     derSz;
+    byte    *pt;
+    WOLFSSL_X509 *x509 = NULL;
+    WOLFSSL_X509 *ca = NULL;
+
+    pt = (byte*)server_key_der_2048;
+    ExpectNotNull(priv = wolfSSL_d2i_PrivateKey(EVP_PKEY_RSA, NULL,
+                (const unsigned char**)&pt, sizeof_server_key_der_2048));
+
+    ExpectNotNull(cm = wolfSSL_CertManagerNew());
+    ExpectNotNull(ca = wolfSSL_X509_load_certificate_file(ca_cert,
+                WOLFSSL_FILETYPE_ASN1));
+    ExpectNotNull((der = (byte*)wolfSSL_X509_get_der(ca, &derSz)));
+    ExpectIntEQ(wolfSSL_CertManagerLoadCABuffer(cm, der, derSz,
+                WOLFSSL_FILETYPE_ASN1), WOLFSSL_SUCCESS);
+
+    /* Negative case: leaf with an out-of-scope dNSName SAN. */
+    ExpectNotNull(x509 = wolfSSL_X509_load_certificate_file(server_cert,
+                WOLFSSL_FILETYPE_PEM));
+    ExpectNotNull(name = wolfSSL_X509_get_subject_name(ca));
+    ExpectIntEQ(wolfSSL_X509_set_issuer_name(x509, name), WOLFSSL_SUCCESS);
+    name = NULL;
+
+    ExpectNotNull(name = X509_NAME_new());
+    ExpectIntEQ(X509_NAME_add_entry_by_txt(name, "countryName", MBSTRING_UTF8,
+                                       (byte*)"US", 2, -1, 0), SSL_SUCCESS);
+    ExpectIntEQ(X509_NAME_add_entry_by_txt(name, "commonName", MBSTRING_UTF8,
+                             (byte*)"evil.attacker.com", 17, -1, 0),
+                SSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_X509_set_subject_name(x509, name), WOLFSSL_SUCCESS);
+    X509_NAME_free(name);
+    name = NULL;
+
+    ExpectIntEQ(wolfSSL_X509_add_altname(x509, "evil.attacker.com",
+                                         ASN_DNS_TYPE), WOLFSSL_SUCCESS);
+    ExpectIntGT(wolfSSL_X509_sign(x509, priv, EVP_sha256()), 0);
+    ExpectNotNull((der = (byte*)wolfSSL_X509_get_der(x509, &derSz)));
+    ExpectIntEQ(wolfSSL_CertManagerVerifyBuffer(cm, der, derSz,
+                WOLFSSL_FILETYPE_ASN1), WC_NO_ERR_TRACE(ASN_NAME_INVALID_E));
+    wolfSSL_X509_free(x509);
+    x509 = NULL;
+
+    /* Positive case: leaf with an out-of-scope CN but an in-scope dNSName
+     * SAN; the dNSName SAN suppresses the CN fallback, so it is accepted. */
+    ExpectNotNull(x509 = wolfSSL_X509_load_certificate_file(server_cert,
+                WOLFSSL_FILETYPE_PEM));
+    ExpectNotNull(name = wolfSSL_X509_get_subject_name(ca));
+    ExpectIntEQ(wolfSSL_X509_set_issuer_name(x509, name), WOLFSSL_SUCCESS);
+    name = NULL;
+    ExpectNotNull(name = X509_NAME_new());
+    ExpectIntEQ(X509_NAME_add_entry_by_txt(name, "countryName", MBSTRING_UTF8,
+                                       (byte*)"US", 2, -1, 0), SSL_SUCCESS);
+    ExpectIntEQ(X509_NAME_add_entry_by_txt(name, "commonName", MBSTRING_UTF8,
+                             (byte*)"evil.attacker.com", 17, -1, 0),
+                SSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_X509_set_subject_name(x509, name), WOLFSSL_SUCCESS);
+    X509_NAME_free(name);
+    name = NULL;
+    ExpectIntEQ(wolfSSL_X509_add_altname(x509, "wolfssl.com",
+                                         ASN_DNS_TYPE), WOLFSSL_SUCCESS);
+    ExpectIntGT(wolfSSL_X509_sign(x509, priv, EVP_sha256()), 0);
+    ExpectNotNull((der = (byte*)wolfSSL_X509_get_der(x509, &derSz)));
+    ExpectIntEQ(wolfSSL_CertManagerVerifyBuffer(cm, der, derSz,
+                WOLFSSL_FILETYPE_ASN1), WOLFSSL_SUCCESS);
+    wolfSSL_X509_free(x509);
+    x509 = NULL;
+
+    /* Negative case: leaf with an out-of-scope CN and no SAN; the CN is
+     * checked against the DNS constraint as a fallback. */
+    ExpectNotNull(x509 = wolfSSL_X509_load_certificate_file(server_cert,
+                WOLFSSL_FILETYPE_PEM));
+    ExpectNotNull(name = wolfSSL_X509_get_subject_name(ca));
+    ExpectIntEQ(wolfSSL_X509_set_issuer_name(x509, name), WOLFSSL_SUCCESS);
+    name = NULL;
+
+    ExpectNotNull(name = X509_NAME_new());
+    ExpectIntEQ(X509_NAME_add_entry_by_txt(name, "countryName", MBSTRING_UTF8,
+                                       (byte*)"US", 2, -1, 0), SSL_SUCCESS);
+    ExpectIntEQ(X509_NAME_add_entry_by_txt(name, "commonName", MBSTRING_UTF8,
+                             (byte*)"evil.attacker.com", 17, -1, 0),
+                SSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_X509_set_subject_name(x509, name), WOLFSSL_SUCCESS);
+    X509_NAME_free(name);
+    name = NULL;
+
+    /* No SAN added; CN=evil.attacker.com violates the DNS constraint. */
+    ExpectIntGT(wolfSSL_X509_sign(x509, priv, EVP_sha256()), 0);
+    ExpectNotNull((der = (byte*)wolfSSL_X509_get_der(x509, &derSz)));
+    ExpectIntEQ(wolfSSL_CertManagerVerifyBuffer(cm, der, derSz,
+                WOLFSSL_FILETYPE_ASN1), WC_NO_ERR_TRACE(ASN_NAME_INVALID_E));
+    wolfSSL_X509_free(x509);
+    x509 = NULL;
+
+    /* Positive case: leaf with an in-scope CN and no SAN. */
+    ExpectNotNull(x509 = wolfSSL_X509_load_certificate_file(server_cert,
+                WOLFSSL_FILETYPE_PEM));
+    ExpectNotNull(name = wolfSSL_X509_get_subject_name(ca));
+    ExpectIntEQ(wolfSSL_X509_set_issuer_name(x509, name), WOLFSSL_SUCCESS);
+    name = NULL;
+
+    ExpectNotNull(name = X509_NAME_new());
+    ExpectIntEQ(X509_NAME_add_entry_by_txt(name, "countryName", MBSTRING_UTF8,
+                                       (byte*)"US", 2, -1, 0), SSL_SUCCESS);
+    ExpectIntEQ(X509_NAME_add_entry_by_txt(name, "commonName", MBSTRING_UTF8,
+                             (byte*)"wolfssl.com", 11, -1, 0),
+                SSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_X509_set_subject_name(x509, name), WOLFSSL_SUCCESS);
+    X509_NAME_free(name);
+    name = NULL;
+
+    /* No SAN added; CN=wolfssl.com matches the permitted DNS constraint. */
+    ExpectIntGT(wolfSSL_X509_sign(x509, priv, EVP_sha256()), 0);
+    ExpectNotNull((der = (byte*)wolfSSL_X509_get_der(x509, &derSz)));
+    ExpectIntEQ(wolfSSL_CertManagerVerifyBuffer(cm, der, derSz,
+                WOLFSSL_FILETYPE_ASN1), WOLFSSL_SUCCESS);
+    wolfSSL_X509_free(x509);
+    x509 = NULL;
+
+    /* Negative case: leaf with an out-of-scope CN and a registeredID SAN;
+     * a non-dNSName SAN must not suppress the CN check. */
+    ExpectNotNull(x509 = wolfSSL_X509_load_certificate_file(server_cert,
+                WOLFSSL_FILETYPE_PEM));
+    ExpectNotNull(name = wolfSSL_X509_get_subject_name(ca));
+    ExpectIntEQ(wolfSSL_X509_set_issuer_name(x509, name), WOLFSSL_SUCCESS);
+    name = NULL;
+    ExpectNotNull(name = X509_NAME_new());
+    ExpectIntEQ(X509_NAME_add_entry_by_txt(name, "countryName", MBSTRING_UTF8,
+                                       (byte*)"US", 2, -1, 0), SSL_SUCCESS);
+    ExpectIntEQ(X509_NAME_add_entry_by_txt(name, "commonName", MBSTRING_UTF8,
+                             (byte*)"evil.attacker.com", 17, -1, 0),
+                SSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_X509_set_subject_name(x509, name), WOLFSSL_SUCCESS);
+    X509_NAME_free(name);
+    name = NULL;
+    ExpectIntEQ(wolfSSL_X509_add_altname_ex(x509, (const char*)rid_dummy,
+                sizeof(rid_dummy), ASN_RID_TYPE), WOLFSSL_SUCCESS);
+    ExpectIntGT(wolfSSL_X509_sign(x509, priv, EVP_sha256()), 0);
+    ExpectNotNull((der = (byte*)wolfSSL_X509_get_der(x509, &derSz)));
+    ExpectIntEQ(wolfSSL_CertManagerVerifyBuffer(cm, der, derSz,
+                WOLFSSL_FILETYPE_ASN1), WC_NO_ERR_TRACE(ASN_NAME_INVALID_E));
+    wolfSSL_X509_free(x509);
+    x509 = NULL;
+
+    /* Negative case: leaf with an out-of-scope CN and an iPAddress SAN. */
+    ExpectNotNull(x509 = wolfSSL_X509_load_certificate_file(server_cert,
+                WOLFSSL_FILETYPE_PEM));
+    ExpectNotNull(name = wolfSSL_X509_get_subject_name(ca));
+    ExpectIntEQ(wolfSSL_X509_set_issuer_name(x509, name), WOLFSSL_SUCCESS);
+    name = NULL;
+    ExpectNotNull(name = X509_NAME_new());
+    ExpectIntEQ(X509_NAME_add_entry_by_txt(name, "countryName", MBSTRING_UTF8,
+                                       (byte*)"US", 2, -1, 0), SSL_SUCCESS);
+    ExpectIntEQ(X509_NAME_add_entry_by_txt(name, "commonName", MBSTRING_UTF8,
+                             (byte*)"evil.attacker.com", 17, -1, 0),
+                SSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_X509_set_subject_name(x509, name), WOLFSSL_SUCCESS);
+    X509_NAME_free(name);
+    name = NULL;
+    ExpectIntEQ(wolfSSL_X509_add_altname_ex(x509, (const char*)ip_dummy,
+                sizeof(ip_dummy), ASN_IP_TYPE), WOLFSSL_SUCCESS);
+    ExpectIntGT(wolfSSL_X509_sign(x509, priv, EVP_sha256()), 0);
+    ExpectNotNull((der = (byte*)wolfSSL_X509_get_der(x509, &derSz)));
+    ExpectIntEQ(wolfSSL_CertManagerVerifyBuffer(cm, der, derSz,
+                WOLFSSL_FILETYPE_ASN1), WC_NO_ERR_TRACE(ASN_NAME_INVALID_E));
+    wolfSSL_X509_free(x509);
+    x509 = NULL;
+
+    /* Positive case: leaf with an in-scope CN and a registeredID SAN; the
+     * check must not over-reject. */
+    ExpectNotNull(x509 = wolfSSL_X509_load_certificate_file(server_cert,
+                WOLFSSL_FILETYPE_PEM));
+    ExpectNotNull(name = wolfSSL_X509_get_subject_name(ca));
+    ExpectIntEQ(wolfSSL_X509_set_issuer_name(x509, name), WOLFSSL_SUCCESS);
+    name = NULL;
+    ExpectNotNull(name = X509_NAME_new());
+    ExpectIntEQ(X509_NAME_add_entry_by_txt(name, "countryName", MBSTRING_UTF8,
+                                       (byte*)"US", 2, -1, 0), SSL_SUCCESS);
+    ExpectIntEQ(X509_NAME_add_entry_by_txt(name, "commonName", MBSTRING_UTF8,
+                             (byte*)"wolfssl.com", 11, -1, 0),
+                SSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_X509_set_subject_name(x509, name), WOLFSSL_SUCCESS);
+    X509_NAME_free(name);
+    name = NULL;
+    ExpectIntEQ(wolfSSL_X509_add_altname_ex(x509, (const char*)rid_dummy,
+                sizeof(rid_dummy), ASN_RID_TYPE), WOLFSSL_SUCCESS);
+    ExpectIntGT(wolfSSL_X509_sign(x509, priv, EVP_sha256()), 0);
+    ExpectNotNull((der = (byte*)wolfSSL_X509_get_der(x509, &derSz)));
+    ExpectIntEQ(wolfSSL_CertManagerVerifyBuffer(cm, der, derSz,
+                WOLFSSL_FILETYPE_ASN1), WOLFSSL_SUCCESS);
+
+    wolfSSL_CertManagerFree(cm);
+    wolfSSL_X509_free(x509);
+    wolfSSL_X509_free(ca);
+    wolfSSL_EVP_PKEY_free(priv);
+#endif
+    return EXPECT_RESULT();
+}
+
+int test_wolfSSL_CertManagerNameConstraint_IP_SAN(void)
+{
+    EXPECT_DECLS;
+#if !defined(NO_FILESYSTEM) && !defined(NO_CERTS) && \
+    !defined(NO_WOLFSSL_CM_VERIFY) && !defined(NO_RSA) && \
+    defined(OPENSSL_EXTRA) && defined(WOLFSSL_CERT_GEN) && \
+    defined(WOLFSSL_CERT_EXT) && defined(WOLFSSL_ALT_NAMES) && \
+    !defined(NO_SHA256) && !defined(IGNORE_NAME_CONSTRAINTS)
+    /* Regression test for iPAddress name-constraint enforcement.
+     *
+     * The CA at cert-ext-ncip.der declares a permittedSubtrees iPAddress
+     * constraint of 192.168.1.0/255.255.255.0. A leaf with an iPAddress
+     * SAN outside that subnet must be rejected. Prior to the fix, default
+     * builds (without WOLFSSL_IP_ALT_NAME) silently skipped iPAddress SANs
+     * during parsing, so the constraint loop saw no IP entries and the
+     * leaf was accepted.
+     *
+     * The bypass only existed when WOLFSSL_IP_ALT_NAME was undefined (the
+     * default). To exercise the regression target, this test must run in a
+     * configuration without --enable-ip-alt-name and without
+     * --enable-opensslall (which implies WOLFSSL_IP_ALT_NAME via
+     * settings.h). With WOLFSSL_IP_ALT_NAME defined the same assertions
+     * still hold, but the negative case there is enforcement of an
+     * already-working path rather than the regression itself.
+     *
+     * Scope: this test exercises the permittedSubtrees code path. The
+     * excludedSubtrees path uses the same parsing plumbing
+     * (DecodeGeneralName -> SetDNSEntry into cert->altNames) and the same
+     * ConfirmNameConstraints walk; the TALOS bug was strictly about
+     * iPAddress entries being absent from cert->altNames, so once that is
+     * fixed both directions are restored. The pre-existing
+     * test_wolfSSL_NAME_CONSTRAINTS_excluded test exercises the excluded
+     * direction more broadly. */
+    WOLFSSL_CERT_MANAGER* cm = NULL;
+    WOLFSSL_EVP_PKEY *priv = NULL;
+    WOLFSSL_X509_NAME* name = NULL;
+    const char* ca_cert = "./certs/test/cert-ext-ncip.der";
+    const char* server_cert = "./certs/test/server-goodcn.pem";
+    /* Raw IPv4 bytes for SAN values (not dotted-quad strings). */
+    static const byte ip_inside[]  = { 192, 168, 1, 10 };  /* permitted */
+    static const byte ip_outside[] = {  10,   0, 0,  1 };  /* violates */
+
+    byte    *der = NULL;
+    int     derSz;
+    byte    *pt;
+    WOLFSSL_X509 *x509 = NULL;
+    WOLFSSL_X509 *ca = NULL;
+
+    pt = (byte*)server_key_der_2048;
+    ExpectNotNull(priv = wolfSSL_d2i_PrivateKey(EVP_PKEY_RSA, NULL,
+                (const unsigned char**)&pt, sizeof_server_key_der_2048));
+
+    ExpectNotNull(cm = wolfSSL_CertManagerNew());
+    ExpectNotNull(ca = wolfSSL_X509_load_certificate_file(ca_cert,
+                WOLFSSL_FILETYPE_ASN1));
+    ExpectNotNull((der = (byte*)wolfSSL_X509_get_der(ca, &derSz)));
+    ExpectIntEQ(wolfSSL_CertManagerLoadCABuffer(cm, der, derSz,
+                WOLFSSL_FILETYPE_ASN1), WOLFSSL_SUCCESS);
+
+    /* Negative case: leaf with IP SAN outside permitted subnet. Must be
+     * rejected with ASN_NAME_INVALID_E. */
+    ExpectNotNull(x509 = wolfSSL_X509_load_certificate_file(server_cert,
+                WOLFSSL_FILETYPE_PEM));
+    ExpectNotNull(name = wolfSSL_X509_get_subject_name(ca));
+    ExpectIntEQ(wolfSSL_X509_set_issuer_name(x509, name), WOLFSSL_SUCCESS);
+    name = NULL;
+
+    /* Use add_altname_ex with raw IP bytes so the test runs in default
+     * builds where add_altname (string form) requires WOLFSSL_IP_ALT_NAME. */
+    ExpectIntEQ(wolfSSL_X509_add_altname_ex(x509, (const char*)ip_outside,
+                sizeof(ip_outside), ASN_IP_TYPE), WOLFSSL_SUCCESS);
+    ExpectIntGT(wolfSSL_X509_sign(x509, priv, EVP_sha256()), 0);
+    ExpectNotNull((der = (byte*)wolfSSL_X509_get_der(x509, &derSz)));
+    ExpectIntEQ(wolfSSL_CertManagerVerifyBuffer(cm, der, derSz,
+                WOLFSSL_FILETYPE_ASN1), WC_NO_ERR_TRACE(ASN_NAME_INVALID_E));
+    wolfSSL_X509_free(x509);
+    x509 = NULL;
+
+    /* Positive case: leaf with IP SAN inside the permitted subnet must be
+     * accepted. Confirms the fix does not over-reject. */
+    ExpectNotNull(x509 = wolfSSL_X509_load_certificate_file(server_cert,
+                WOLFSSL_FILETYPE_PEM));
+    ExpectNotNull(name = wolfSSL_X509_get_subject_name(ca));
+    ExpectIntEQ(wolfSSL_X509_set_issuer_name(x509, name), WOLFSSL_SUCCESS);
+    name = NULL;
+
+    ExpectIntEQ(wolfSSL_X509_add_altname_ex(x509, (const char*)ip_inside,
+                sizeof(ip_inside), ASN_IP_TYPE), WOLFSSL_SUCCESS);
+    ExpectIntGT(wolfSSL_X509_sign(x509, priv, EVP_sha256()), 0);
+    ExpectNotNull((der = (byte*)wolfSSL_X509_get_der(x509, &derSz)));
+    ExpectIntEQ(wolfSSL_CertManagerVerifyBuffer(cm, der, derSz,
+                WOLFSSL_FILETYPE_ASN1), WOLFSSL_SUCCESS);
+
+    wolfSSL_CertManagerFree(cm);
+    wolfSSL_X509_free(x509);
+    wolfSSL_X509_free(ca);
+    wolfSSL_EVP_PKEY_free(priv);
+#endif
+    return EXPECT_RESULT();
+}
+
+int test_wolfSSL_CertManagerNameConstraint_RID_SAN(void)
+{
+    EXPECT_DECLS;
+#if !defined(NO_FILESYSTEM) && !defined(NO_CERTS) && \
+    !defined(NO_WOLFSSL_CM_VERIFY) && !defined(NO_RSA) && \
+    defined(OPENSSL_EXTRA) && defined(WOLFSSL_CERT_GEN) && \
+    defined(WOLFSSL_CERT_EXT) && defined(WOLFSSL_ALT_NAMES) && \
+    !defined(NO_SHA256) && !defined(IGNORE_NAME_CONSTRAINTS)
+    /* Regression test for registeredID name-constraint enforcement.
+     *
+     * The CA at cert-ext-ncrid.der declares a permittedSubtrees
+     * registeredID constraint of OID 1.2.3.4.5. A leaf with a
+     * registeredID SAN outside that permitted set must be rejected.
+     *
+     * Pre-fix, three independent failures hid the registeredID type from
+     * enforcement in all build configurations:
+     *   1. ConfirmNameConstraints' nameTypes[] array did not include
+     *      ASN_RID_TYPE, so the constraint loop never considered
+     *      registeredID entries.
+     *   2. DecodeSubtree's accepted-tag set excluded
+     *      ASN_CONTEXT_SPECIFIC|ASN_RID_TYPE, so registeredID subtrees
+     *      in the CA's nameConstraints were dropped during parsing and
+     *      never reached signer->permittedNames/excludedNames.
+     *   3. DecodeGeneralName gated registeredID SAN parsing on
+     *      WOLFSSL_RID_ALT_NAME; without that define cert->altNames had
+     *      no ASN_RID_TYPE entries.
+     * The bug was unconditional - WOLFSSL_RID_ALT_NAME alone did not
+     * fix it because layers 1 and 2 still discarded the data. */
+    WOLFSSL_CERT_MANAGER* cm = NULL;
+    WOLFSSL_EVP_PKEY *priv = NULL;
+    WOLFSSL_X509_NAME* name = NULL;
+    const char* ca_cert = "./certs/test/cert-ext-ncrid.der";
+    const char* server_cert = "./certs/test/server-goodcn.pem";
+    /* DER-encoded OID body bytes (no tag/length, since registeredID is
+     * IMPLICIT [8] OBJECT IDENTIFIER inside a SAN). The first arc encodes
+     * 40*X + Y in one byte for X<=2,Y<=39, then each subsequent arc is
+     * base-128 with continuation bits. For values <128 the encoding is a
+     * single byte. */
+    static const byte rid_inside[]  = { 0x2A, 0x03, 0x04, 0x05 }; /* 1.2.3.4.5 - permitted */
+    static const byte rid_outside[] = { 0x2A, 0x03, 0x04, 0x63 }; /* 1.2.3.4.99 - violates */
+
+    byte    *der = NULL;
+    int     derSz;
+    byte    *pt;
+    WOLFSSL_X509 *x509 = NULL;
+    WOLFSSL_X509 *ca = NULL;
+
+    pt = (byte*)server_key_der_2048;
+    ExpectNotNull(priv = wolfSSL_d2i_PrivateKey(EVP_PKEY_RSA, NULL,
+                (const unsigned char**)&pt, sizeof_server_key_der_2048));
+
+    ExpectNotNull(cm = wolfSSL_CertManagerNew());
+    ExpectNotNull(ca = wolfSSL_X509_load_certificate_file(ca_cert,
+                WOLFSSL_FILETYPE_ASN1));
+    ExpectNotNull((der = (byte*)wolfSSL_X509_get_der(ca, &derSz)));
+    ExpectIntEQ(wolfSSL_CertManagerLoadCABuffer(cm, der, derSz,
+                WOLFSSL_FILETYPE_ASN1), WOLFSSL_SUCCESS);
+
+    /* Negative case: leaf with a registeredID SAN outside the permitted
+     * OID set. Must be rejected with ASN_NAME_INVALID_E. */
+    ExpectNotNull(x509 = wolfSSL_X509_load_certificate_file(server_cert,
+                WOLFSSL_FILETYPE_PEM));
+    ExpectNotNull(name = wolfSSL_X509_get_subject_name(ca));
+    ExpectIntEQ(wolfSSL_X509_set_issuer_name(x509, name), WOLFSSL_SUCCESS);
+    name = NULL;
+
+    ExpectIntEQ(wolfSSL_X509_add_altname_ex(x509, (const char*)rid_outside,
+                sizeof(rid_outside), ASN_RID_TYPE), WOLFSSL_SUCCESS);
+    ExpectIntGT(wolfSSL_X509_sign(x509, priv, EVP_sha256()), 0);
+    ExpectNotNull((der = (byte*)wolfSSL_X509_get_der(x509, &derSz)));
+    ExpectIntEQ(wolfSSL_CertManagerVerifyBuffer(cm, der, derSz,
+                WOLFSSL_FILETYPE_ASN1), WC_NO_ERR_TRACE(ASN_NAME_INVALID_E));
+    wolfSSL_X509_free(x509);
+    x509 = NULL;
+
+    /* Positive case: leaf with a registeredID SAN matching the permitted
+     * OID exactly must be accepted. */
+    ExpectNotNull(x509 = wolfSSL_X509_load_certificate_file(server_cert,
+                WOLFSSL_FILETYPE_PEM));
+    ExpectNotNull(name = wolfSSL_X509_get_subject_name(ca));
+    ExpectIntEQ(wolfSSL_X509_set_issuer_name(x509, name), WOLFSSL_SUCCESS);
+    name = NULL;
+
+    ExpectIntEQ(wolfSSL_X509_add_altname_ex(x509, (const char*)rid_inside,
+                sizeof(rid_inside), ASN_RID_TYPE), WOLFSSL_SUCCESS);
+    ExpectIntGT(wolfSSL_X509_sign(x509, priv, EVP_sha256()), 0);
+    ExpectNotNull((der = (byte*)wolfSSL_X509_get_der(x509, &derSz)));
+    ExpectIntEQ(wolfSSL_CertManagerVerifyBuffer(cm, der, derSz,
+                WOLFSSL_FILETYPE_ASN1), WOLFSSL_SUCCESS);
+
+    wolfSSL_CertManagerFree(cm);
+    wolfSSL_X509_free(x509);
+    wolfSSL_X509_free(ca);
+    wolfSSL_EVP_PKEY_free(priv);
+#endif
+    return EXPECT_RESULT();
+}
+
+int test_wolfSSL_X509_get_ext_d2i_RID_SAN(void)
+{
+    EXPECT_DECLS;
+#if !defined(NO_FILESYSTEM) && !defined(NO_CERTS) && !defined(NO_RSA) && \
+    defined(OPENSSL_EXTRA) && defined(WOLFSSL_CERT_GEN) && \
+    defined(WOLFSSL_CERT_EXT) && defined(WOLFSSL_ALT_NAMES) && \
+    !defined(NO_SHA256)
+    /* Regression test: a cert with a registeredID SAN must be exposable
+     * through the OPENSSL_EXTRA SAN APIs even when WOLFSSL_RID_ALT_NAME
+     * is undefined.
+     *
+     * The registeredID name-constraint fix adds registeredID entries to
+     * altNames unconditionally so name constraints can be enforced. The
+     * OPENSSL_EXTRA helpers DNS_to_GENERAL_NAME (used by
+     * wolfSSL_X509_get_ext) and the ALT_NAMES_OID arm of
+     * wolfSSL_X509_get_ext_d2i previously gated registeredID handling on
+     * WOLFSSL_RID_ALT_NAME, which is NOT auto-enabled by
+     * --enable-opensslextra. Without the fix, any cert with a
+     * registeredID SAN would cause those getters to return NULL or
+     * produce a malformed GENERAL_NAME (type==GEN_RID but
+     * d.dNSName-as-IA5STRING in the union). */
+    WOLFSSL_EVP_PKEY *priv = NULL;
+    const char* server_cert = "./certs/test/server-goodcn.pem";
+    static const byte rid_oid[] = { 0x2A, 0x03, 0x04, 0x05 };
+    byte    *pt;
+    byte    *der = NULL;
+    int      derSz;
+    WOLFSSL_X509 *leaf = NULL;
+    WOLFSSL_X509 *parsed = NULL;
+    WOLFSSL_STACK *altNames = NULL;
+    WOLFSSL_X509_EXTENSION *ext = NULL;
+    WOLFSSL_GENERAL_NAME *gn = NULL;
+    int found = 0;
+    int i;
+    int loc;
+
+    pt = (byte*)server_key_der_2048;
+    ExpectNotNull(priv = wolfSSL_d2i_PrivateKey(EVP_PKEY_RSA, NULL,
+                (const unsigned char**)&pt, sizeof_server_key_der_2048));
+
+    /* Build and sign a leaf with a registeredID SAN. */
+    ExpectNotNull(leaf = wolfSSL_X509_load_certificate_file(server_cert,
+                WOLFSSL_FILETYPE_PEM));
+    ExpectIntEQ(wolfSSL_X509_add_altname_ex(leaf, (const char*)rid_oid,
+                sizeof(rid_oid), ASN_RID_TYPE), WOLFSSL_SUCCESS);
+    ExpectIntGT(wolfSSL_X509_sign(leaf, priv, EVP_sha256()), 0);
+    ExpectNotNull((der = (byte*)wolfSSL_X509_get_der(leaf, &derSz)));
+
+    /* Re-parse the signed leaf so altNames are populated through
+     * DecodeGeneralName (the path the fix touches). */
+    ExpectNotNull(parsed = wolfSSL_X509_load_certificate_buffer(der, derSz,
+                WOLFSSL_FILETYPE_ASN1));
+
+    /* wolfSSL_X509_get_ext_d2i for SAN must return a non-NULL stack
+     * containing a registeredID GENERAL_NAME with the union populated
+     * via d.registeredID (not d.dNSName). */
+    ExpectNotNull(altNames = (WOLFSSL_STACK*)wolfSSL_X509_get_ext_d2i(parsed,
+                NID_subject_alt_name, NULL, NULL));
+    if (altNames != NULL) {
+        for (i = 0; i < wolfSSL_sk_num(altNames); i++) {
+            gn = (WOLFSSL_GENERAL_NAME*)wolfSSL_sk_value(altNames, i);
+            if (gn != NULL && gn->type == ASN_RID_TYPE) {
+                /* The union must hold a real ASN1_OBJECT, not the
+                 * default IA5 string the bypass path would produce.
+                 * Verify the encoded OID bytes match what we put on
+                 * the leaf so a future mis-encoding (wrong tag, off-by
+                 * -one length, swapped fields) is caught. */
+                ExpectNotNull(gn->d.registeredID);
+                if (gn->d.registeredID != NULL) {
+                    /* DER-wrapped: ASN_OBJECT_ID + length-byte + body */
+                    word32 expectedSz = 1 + 1 + sizeof(rid_oid);
+                    ExpectIntEQ(gn->d.registeredID->objSz, expectedSz);
+                    ExpectNotNull(gn->d.registeredID->obj);
+                    if (gn->d.registeredID->obj != NULL &&
+                        gn->d.registeredID->objSz == expectedSz) {
+                        ExpectIntEQ(gn->d.registeredID->obj[0], ASN_OBJECT_ID);
+                        ExpectIntEQ(gn->d.registeredID->obj[1],
+                                    (byte)sizeof(rid_oid));
+                        ExpectIntEQ(XMEMCMP(gn->d.registeredID->obj + 2,
+                                    rid_oid, sizeof(rid_oid)), 0);
+                    }
+                }
+                found = 1;
+                break;
+            }
+        }
+    }
+    ExpectIntEQ(found, 1);
+
+    if (altNames != NULL) {
+        wolfSSL_sk_pop_free(altNames,
+                (void (*)(void*))wolfSSL_GENERAL_NAME_free);
+    }
+
+    /* Also exercise wolfSSL_X509_get_ext, which routes through
+     * DNS_to_GENERAL_NAME. Pre-fix that helper would return WOLFSSL_FAILURE
+     * for any RID entry in default builds, causing X509_get_ext to return
+     * NULL even though the SAN extension is present. */
+    loc = wolfSSL_X509_get_ext_by_NID(parsed, NID_subject_alt_name, -1);
+    ExpectIntGE(loc, 0);
+    if (loc >= 0) {
+        ExpectNotNull(ext = wolfSSL_X509_get_ext(parsed, loc));
+    }
+
+    wolfSSL_X509_free(parsed);
+    wolfSSL_X509_free(leaf);
+    wolfSSL_EVP_PKEY_free(priv);
+#endif
+    return EXPECT_RESULT();
+}
+
+int test_wolfSSL_X509_check_host_IP_only_SAN_CN_fallback(void)
+{
+    EXPECT_DECLS;
+#if !defined(NO_FILESYSTEM) && !defined(NO_CERTS) && !defined(NO_RSA) && \
+    defined(OPENSSL_EXTRA) && defined(WOLFSSL_CERT_GEN) && \
+    defined(WOLFSSL_CERT_EXT) && defined(WOLFSSL_ALT_NAMES) && \
+    !defined(NO_SHA256)
+    /* Companion regression test for the CheckForAltNames CN-fallback
+     * preservation introduced alongside the iPAddress name-constraint
+     * enforcement fix.
+     *
+     * Once iPAddress SAN entries are unconditionally added to altNames
+     * (so name constraints can be enforced), a leaf that presents only
+     * iPAddress SANs would suppress CN fallback in CheckForAltNames in
+     * default builds, where the iPAddress matching path is compiled out.
+     * That would silently break TLS hostname verification for callers
+     * that previously relied on the CN fallback. The fix in
+     * src/internal.c treats iPAddress entries as absent for the
+     * *checkCN decision when WOLFSSL_IP_ALT_NAME is undefined.
+     *
+     * This test pins both directions:
+     *   - default build (no WOLFSSL_IP_ALT_NAME): IP-only-SAN cert with a
+     *     matching CN must succeed via CN fallback.
+     *   - WOLFSSL_IP_ALT_NAME defined: the same cert must fail because
+     *     the SAN presence suppresses CN fallback (RFC 6125 compliant).
+     * Independently, a cert with a non-matching DNS SAN must always fail
+     * regardless of build flags, since DNS SAN presence unambiguously
+     * suppresses CN fallback. */
+    WOLFSSL_EVP_PKEY *priv = NULL;
+    WOLFSSL_X509_NAME* name = NULL;
+    const char* server_cert = "./certs/test/server-goodcn.pem";
+    const char hostName[] = "cnhost.local";
+    static const byte ip_san[] = { 10, 0, 0, 1 };
+    byte    *pt;
+    WOLFSSL_X509 *leafIp = NULL;
+    WOLFSSL_X509 *leafDns = NULL;
+
+    pt = (byte*)server_key_der_2048;
+    ExpectNotNull(priv = wolfSSL_d2i_PrivateKey(EVP_PKEY_RSA, NULL,
+                (const unsigned char**)&pt, sizeof_server_key_der_2048));
+
+    /* Leaf with CN matching hostName and only an iPAddress SAN. */
+    ExpectNotNull(leafIp = wolfSSL_X509_load_certificate_file(server_cert,
+                WOLFSSL_FILETYPE_PEM));
+    ExpectNotNull(name = X509_NAME_new());
+    ExpectIntEQ(X509_NAME_add_entry_by_txt(name, "commonName", MBSTRING_UTF8,
+                (byte*)hostName, (int)XSTRLEN(hostName), -1, 0), SSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_X509_set_subject_name(leafIp, name), WOLFSSL_SUCCESS);
+    X509_NAME_free(name);
+    name = NULL;
+    ExpectIntEQ(wolfSSL_X509_add_altname_ex(leafIp, (const char*)ip_san,
+                sizeof(ip_san), ASN_IP_TYPE), WOLFSSL_SUCCESS);
+    ExpectIntGT(wolfSSL_X509_sign(leafIp, priv, EVP_sha256()), 0);
+
+#ifndef WOLFSSL_IP_ALT_NAME
+    /* Default build: iPAddress entries are present in altNames for
+     * constraint enforcement but treated as absent for *checkCN, so the
+     * lookup falls back to the Subject CN, which matches. */
+    ExpectIntEQ(wolfSSL_X509_check_host(leafIp, hostName, XSTRLEN(hostName),
+                0, NULL), WOLFSSL_SUCCESS);
+#else
+    /* IP_ALT_NAME build: SAN presence suppresses CN fallback per RFC 6125.
+     * The hostName ("cnhost.local") cannot match the iPAddress entry, so
+     * the check must fail. */
+    ExpectIntEQ(wolfSSL_X509_check_host(leafIp, hostName, XSTRLEN(hostName),
+                0, NULL), WC_NO_ERR_TRACE(WOLFSSL_FAILURE));
+#endif
+
+    /* Leaf with CN matching hostName but a non-matching DNS SAN. CN
+     * fallback must be suppressed in every build (DNS SAN unambiguously
+     * counts toward *checkCN), so the check must fail. This pins the
+     * other side of the boundary so a future change that broadly skips
+     * altNames in *checkCN does not silently regress. */
+    ExpectNotNull(leafDns = wolfSSL_X509_load_certificate_file(server_cert,
+                WOLFSSL_FILETYPE_PEM));
+    ExpectNotNull(name = X509_NAME_new());
+    ExpectIntEQ(X509_NAME_add_entry_by_txt(name, "commonName", MBSTRING_UTF8,
+                (byte*)hostName, (int)XSTRLEN(hostName), -1, 0), SSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_X509_set_subject_name(leafDns, name), WOLFSSL_SUCCESS);
+    X509_NAME_free(name);
+    name = NULL;
+    ExpectIntEQ(wolfSSL_X509_add_altname(leafDns, "other.example",
+                ASN_DNS_TYPE), WOLFSSL_SUCCESS);
+    ExpectIntGT(wolfSSL_X509_sign(leafDns, priv, EVP_sha256()), 0);
+    ExpectIntEQ(wolfSSL_X509_check_host(leafDns, hostName, XSTRLEN(hostName),
+                0, NULL), WC_NO_ERR_TRACE(WOLFSSL_FAILURE));
+
+    wolfSSL_X509_free(leafIp);
+    wolfSSL_X509_free(leafDns);
+    wolfSSL_EVP_PKEY_free(priv);
+#endif
+    return EXPECT_RESULT();
+}
+
+int test_wolfSSL_X509_check_host_URI_SAN_not_DNS_match(void)
+{
+    EXPECT_DECLS;
+#if !defined(NO_FILESYSTEM) && !defined(NO_CERTS) && !defined(NO_RSA) && \
+    defined(OPENSSL_EXTRA) && defined(WOLFSSL_CERT_GEN) && \
+    defined(WOLFSSL_CERT_EXT) && defined(WOLFSSL_ALT_NAMES) && \
+    !defined(NO_SHA256)
+    /* RFC 6125 Sec. 6.4 / RFC 9525 Sec. 6.3: DNS-ID reference identifiers
+     * must be matched only against dNSName SANs, not uniformResourceIdentifier.
+     * wolfSSL_X509_add_altname() is used to attach a bare-hostname URI SAN
+     * (the misissue shape that can reach altNames when certificate parsing is
+     * built without strict URI checks). URI SAN presence still suppresses CN
+     * fallback per RFC 6125 Sec. 6.4.4. */
+    WOLFSSL_EVP_PKEY *priv = NULL;
+    WOLFSSL_X509_NAME* name = NULL;
+    const char* server_cert = "./certs/test/server-goodcn.pem";
+    const char hostName[] = "cnhost.local";
+    const char uriSan[] = "http://cnhost.local";
+    byte    *pt;
+    WOLFSSL_X509 *leafUri = NULL;
+    WOLFSSL_X509 *leafUriDns = NULL;
+
+    pt = (byte*)server_key_der_2048;
+    ExpectNotNull(priv = wolfSSL_d2i_PrivateKey(EVP_PKEY_RSA, NULL,
+                (const unsigned char**)&pt, sizeof_server_key_der_2048));
+
+    ExpectNotNull(leafUri = wolfSSL_X509_load_certificate_file(server_cert,
+                WOLFSSL_FILETYPE_PEM));
+    ExpectNotNull(name = X509_NAME_new());
+    ExpectIntEQ(X509_NAME_add_entry_by_txt(name, "commonName", MBSTRING_UTF8,
+                (byte*)hostName, (int)XSTRLEN(hostName), -1, 0), SSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_X509_set_subject_name(leafUri, name), WOLFSSL_SUCCESS);
+    X509_NAME_free(name);
+    name = NULL;
+    ExpectIntEQ(wolfSSL_X509_add_altname(leafUri, uriSan, ASN_URI_TYPE),
+            WOLFSSL_SUCCESS);
+    ExpectIntGT(wolfSSL_X509_sign(leafUri, priv, EVP_sha256()), 0);
+    ExpectIntEQ(wolfSSL_X509_check_host(leafUri, hostName, XSTRLEN(hostName),
+                0, NULL), WC_NO_ERR_TRACE(WOLFSSL_FAILURE));
+
+    ExpectNotNull(leafUriDns = wolfSSL_X509_load_certificate_file(server_cert,
+                WOLFSSL_FILETYPE_PEM));
+    ExpectNotNull(name = X509_NAME_new());
+    ExpectIntEQ(X509_NAME_add_entry_by_txt(name, "commonName", MBSTRING_UTF8,
+                (byte*)hostName, (int)XSTRLEN(hostName), -1, 0), SSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_X509_set_subject_name(leafUriDns, name),
+            WOLFSSL_SUCCESS);
+    X509_NAME_free(name);
+    name = NULL;
+    ExpectIntEQ(wolfSSL_X509_add_altname(leafUriDns, uriSan, ASN_URI_TYPE),
+            WOLFSSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_X509_add_altname(leafUriDns, hostName, ASN_DNS_TYPE),
+            WOLFSSL_SUCCESS);
+    ExpectIntGT(wolfSSL_X509_sign(leafUriDns, priv, EVP_sha256()), 0);
+    ExpectIntEQ(wolfSSL_X509_check_host(leafUriDns, hostName,
+                XSTRLEN(hostName), 0, NULL), WOLFSSL_SUCCESS);
+
+    wolfSSL_X509_free(leafUri);
+    wolfSSL_X509_free(leafUriDns);
+    wolfSSL_EVP_PKEY_free(priv);
+#endif
+    return EXPECT_RESULT();
+}
+
+int test_wolfSSL_CertManagerCRL(void)
+{
+    EXPECT_DECLS;
+#if !defined(NO_FILESYSTEM) && !defined(NO_CERTS) && defined(HAVE_CRL) && \
+    !defined(NO_RSA)
+    const char* ca_cert = "./certs/ca-cert.pem";
+    const char* crl1     = "./certs/crl/crl.pem";
+    const char* crl2     = "./certs/crl/crl2.pem";
+#ifdef WC_RSA_PSS
+    const char* crl_rsapss = "./certs/crl/crl_rsapss.pem";
+    const char* ca_rsapss  = "./certs/rsapss/ca-rsapss.pem";
+#endif
+    /* ./certs/crl/crl.der */
+    const unsigned char crl_buff[] = {
+        0x30, 0x82, 0x02, 0x05, 0x30, 0x81, 0xEE, 0x02,
+        0x01, 0x01, 0x30, 0x0D, 0x06, 0x09, 0x2A, 0x86,
+        0x48, 0x86, 0xF7, 0x0D, 0x01, 0x01, 0x0B, 0x05,
+        0x00, 0x30, 0x81, 0x95, 0x31, 0x0B, 0x30, 0x09,
+        0x06, 0x03, 0x55, 0x04, 0x06, 0x13, 0x02, 0x55,
+        0x53, 0x31, 0x10, 0x30, 0x0E, 0x06, 0x03, 0x55,
+        0x04, 0x08, 0x0C, 0x07, 0x4D, 0x6F, 0x6E, 0x74,
+        0x61, 0x6E, 0x61, 0x31, 0x10, 0x30, 0x0E, 0x06,
+        0x03, 0x55, 0x04, 0x07, 0x0C, 0x07, 0x42, 0x6F,
+        0x7A, 0x65, 0x6D, 0x61, 0x6E, 0x31, 0x11, 0x30,
+        0x0F, 0x06, 0x03, 0x55, 0x04, 0x0A, 0x0C, 0x08,
+        0x53, 0x61, 0x77, 0x74, 0x6F, 0x6F, 0x74, 0x68,
+        0x31, 0x13, 0x30, 0x11, 0x06, 0x03, 0x55, 0x04,
+        0x0B, 0x0C, 0x0A, 0x43, 0x6F, 0x6E, 0x73, 0x75,
+        0x6C, 0x74, 0x69, 0x6E, 0x67, 0x31, 0x18, 0x30,
+        0x16, 0x06, 0x03, 0x55, 0x04, 0x03, 0x0C, 0x0F,
+        0x77, 0x77, 0x77, 0x2E, 0x77, 0x6F, 0x6C, 0x66,
+        0x73, 0x73, 0x6C, 0x2E, 0x63, 0x6F, 0x6D, 0x31,
+        0x20, 0x30, 0x1E, 0x06, 0x09, 0x2A, 0x86, 0x48,
+        0x86, 0xF7, 0x0D, 0x01, 0x09, 0x01, 0x16, 0x11,
+        0x66, 0x61, 0x63, 0x74, 0x73, 0x40, 0x77, 0x6F,
+        0x6C, 0x66, 0x73, 0x73, 0x6C, 0x2E, 0x63, 0x6F,
+        0x6D, 0x17, 0x0D, 0x32, 0x36, 0x30, 0x36, 0x31,
+        0x31, 0x32, 0x31, 0x34, 0x34, 0x34, 0x30, 0x5A,
+        0x17, 0x0D, 0x32, 0x39, 0x30, 0x33, 0x30, 0x37,
+        0x32, 0x31, 0x34, 0x34, 0x34, 0x30, 0x5A, 0x30,
+        0x14, 0x30, 0x12, 0x02, 0x01, 0x02, 0x17, 0x0D,
+        0x32, 0x36, 0x30, 0x36, 0x31, 0x31, 0x32, 0x31,
+        0x34, 0x34, 0x34, 0x30, 0x5A, 0xA0, 0x0E, 0x30,
+        0x0C, 0x30, 0x0A, 0x06, 0x03, 0x55, 0x1D, 0x14,
+        0x04, 0x03, 0x02, 0x01, 0x02, 0x30, 0x0D, 0x06,
+        0x09, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01,
+        0x01, 0x0B, 0x05, 0x00, 0x03, 0x82, 0x01, 0x01,
+        0x00, 0x53, 0xDC, 0x68, 0x3D, 0x93, 0x47, 0x65,
+        0x03, 0xCA, 0xA5, 0x07, 0xE8, 0x13, 0x26, 0x72,
+        0x94, 0x02, 0x3E, 0x6F, 0xC2, 0x8D, 0x27, 0xFC,
+        0xF6, 0x64, 0xC6, 0x06, 0x77, 0xBC, 0x1F, 0x26,
+        0xE4, 0x6E, 0x87, 0x95, 0xF8, 0xFE, 0x18, 0xEE,
+        0xD7, 0x24, 0xF9, 0xB8, 0xAD, 0x74, 0x85, 0x76,
+        0xEC, 0x55, 0x92, 0x6C, 0x58, 0x4F, 0x59, 0x66,
+        0x68, 0xF1, 0x17, 0x78, 0xDC, 0x39, 0x6C, 0x4C,
+        0x2B, 0x38, 0x1E, 0xD4, 0x07, 0xAC, 0xB8, 0x2C,
+        0xF5, 0xD4, 0x2B, 0xC1, 0x96, 0x09, 0x79, 0x8A,
+        0xA2, 0xE2, 0xD1, 0xE5, 0x1E, 0x32, 0x92, 0x1F,
+        0x12, 0x81, 0xA6, 0xAD, 0x4D, 0xCE, 0x9D, 0x9A,
+        0x08, 0x6F, 0x56, 0xE4, 0xFE, 0x58, 0x8D, 0xDA,
+        0xB2, 0x88, 0x54, 0x6A, 0x5A, 0x19, 0x07, 0x9C,
+        0x1B, 0xDE, 0x4F, 0x7A, 0x62, 0xDD, 0x35, 0x75,
+        0x25, 0x29, 0xA2, 0x9A, 0xBA, 0x19, 0xA9, 0x32,
+        0xFE, 0x61, 0xAD, 0xBB, 0x70, 0x06, 0x0F, 0x37,
+        0x62, 0x7C, 0x02, 0x61, 0x3E, 0x43, 0x22, 0xE9,
+        0x62, 0x12, 0xF2, 0xF7, 0x0B, 0x18, 0x3A, 0xA2,
+        0xFB, 0x0A, 0xE9, 0x2D, 0x0B, 0x68, 0xFC, 0xE1,
+        0x41, 0x51, 0x64, 0x7C, 0xC8, 0x8C, 0x4C, 0xD6,
+        0xFC, 0x90, 0x0B, 0x24, 0xE7, 0xE3, 0x52, 0xA5,
+        0xE9, 0x09, 0xF8, 0x85, 0xE9, 0x73, 0xCA, 0xB2,
+        0x00, 0x19, 0x05, 0xD6, 0x5F, 0x99, 0xAF, 0xBB,
+        0x9A, 0x41, 0x0F, 0x48, 0xA7, 0xB4, 0x25, 0x78,
+        0xD0, 0xB6, 0xCE, 0x3B, 0x3C, 0xC2, 0x2D, 0xFA,
+        0x65, 0x2E, 0x65, 0x5E, 0x67, 0x01, 0x01, 0xAA,
+        0xF7, 0x4D, 0xAD, 0x5A, 0x8F, 0xB4, 0x30, 0xD4,
+        0x9C, 0x0C, 0xE9, 0xB6, 0xC5, 0xB6, 0x4A, 0xB6,
+        0xEB, 0x3A, 0x01, 0xD1, 0x92, 0xB4, 0x94, 0xE8,
+        0x62, 0xE3, 0xD3, 0x37, 0xFF, 0xAA, 0x38, 0x8D,
+        0x9F, 0xE3, 0xDE, 0x9C, 0xB1, 0x70, 0xC5, 0x11,
+        0x64
+    };
+
+    WOLFSSL_CERT_MANAGER* cm = NULL;
+
+    ExpectNotNull(cm = wolfSSL_CertManagerNew());
+
+    ExpectIntEQ(wolfSSL_CertManagerEnableCRL(NULL, 0),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wolfSSL_CertManagerEnableCRL(cm, WOLFSSL_CRL_CHECKALL), 1);
+    ExpectIntEQ(wolfSSL_CertManagerEnableCRL(cm, WOLFSSL_CRL_CHECK), 1);
+    ExpectIntEQ(wolfSSL_CertManagerEnableCRL(cm,
+        WOLFSSL_CRL_CHECK | WOLFSSL_CRL_CHECKALL), 1);
+    ExpectIntEQ(wolfSSL_CertManagerEnableCRL(cm, 16), 1);
+    ExpectIntEQ(wolfSSL_CertManagerEnableCRL(cm, WOLFSSL_CRL_CHECKALL), 1);
+
+    ExpectIntEQ(wolfSSL_CertManagerCheckCRL(NULL, NULL, -1),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wolfSSL_CertManagerCheckCRL(cm, NULL, -1),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wolfSSL_CertManagerCheckCRL(NULL, server_cert_der_2048, -1),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wolfSSL_CertManagerCheckCRL(NULL, NULL, 1),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wolfSSL_CertManagerCheckCRL(NULL, server_cert_der_2048, 1),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wolfSSL_CertManagerCheckCRL(cm, NULL, 1),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wolfSSL_CertManagerCheckCRL(cm, server_cert_der_2048, -1),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wolfSSL_CertManagerCheckCRL(cm, server_cert_der_2048,
+        sizeof_server_cert_der_2048), WC_NO_ERR_TRACE(ASN_NO_SIGNER_E));
+
+    ExpectIntEQ(wolfSSL_CertManagerSetCRL_Cb(NULL, NULL),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wolfSSL_CertManagerSetCRL_Cb(cm, NULL), 1);
+#ifdef HAVE_CRL_IO
+    ExpectIntEQ(wolfSSL_CertManagerSetCRL_IOCb(NULL, NULL),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wolfSSL_CertManagerSetCRL_IOCb(cm, NULL), 1);
+#endif
+
+#ifndef NO_FILESYSTEM
+    ExpectIntEQ(wolfSSL_CertManagerLoadCRL(NULL, NULL, WOLFSSL_FILETYPE_ASN1,
+        0), WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wolfSSL_CertManagerLoadCRL(cm, NULL, WOLFSSL_FILETYPE_ASN1,
+        0), WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    /* -1 seen as !WOLFSSL_FILETYPE_PEM */
+    ExpectIntEQ(wolfSSL_CertManagerLoadCRL(cm, "./certs/crl", -1, 0), 1);
+
+    ExpectIntEQ(wolfSSL_CertManagerLoadCRLFile(NULL, NULL,
+        WOLFSSL_FILETYPE_ASN1), WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wolfSSL_CertManagerLoadCRLFile(cm, NULL, WOLFSSL_FILETYPE_ASN1),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    /* -1 seen as !WOLFSSL_FILETYPE_PEM */
+    ExpectIntEQ(wolfSSL_CertManagerLoadCRLFile(cm, "./certs/crl/crl.pem", -1),
+        WC_NO_ERR_TRACE(ASN_PARSE_E));
+#endif
+
+    ExpectIntEQ(wolfSSL_CertManagerLoadCRLBuffer(NULL, NULL, -1,
+        WOLFSSL_FILETYPE_ASN1), WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wolfSSL_CertManagerLoadCRLBuffer(cm, NULL, -1,
+        WOLFSSL_FILETYPE_ASN1), WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wolfSSL_CertManagerLoadCRLBuffer(NULL, crl_buff, -1,
+        WOLFSSL_FILETYPE_ASN1), WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wolfSSL_CertManagerLoadCRLBuffer(NULL, NULL, 1,
+        WOLFSSL_FILETYPE_ASN1), WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wolfSSL_CertManagerLoadCRLBuffer(NULL, crl_buff, 1,
+        WOLFSSL_FILETYPE_ASN1), WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wolfSSL_CertManagerLoadCRLBuffer(cm, NULL, 1,
+        WOLFSSL_FILETYPE_ASN1), WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntEQ(wolfSSL_CertManagerLoadCRLBuffer(cm, crl_buff, -1,
+        WOLFSSL_FILETYPE_ASN1), WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    ExpectIntNE(wolfSSL_CertManagerLoadCRLBuffer(cm, crl_buff, 0,
+        WOLFSSL_FILETYPE_ASN1), WOLFSSL_SUCCESS);
+    ExpectIntNE(wolfSSL_CertManagerLoadCRLBuffer(cm, crl_buff,
+        sizeof(crl_buff) - 1, WOLFSSL_FILETYPE_ASN1), WOLFSSL_SUCCESS);
+
+    ExpectIntEQ(wolfSSL_CertManagerFreeCRL(NULL),
+        WC_NO_ERR_TRACE(BAD_FUNC_ARG));
+    DoExpectIntEQ(wolfSSL_CertManagerFreeCRL(cm), 1);
+
+    ExpectIntEQ(WOLFSSL_SUCCESS,
+        wolfSSL_CertManagerLoadCA(cm, ca_cert, NULL));
+    ExpectIntEQ(WOLFSSL_SUCCESS,
+        wolfSSL_CertManagerLoadCRL(cm, crl1, WOLFSSL_FILETYPE_PEM, 0));
+    ExpectIntEQ(WOLFSSL_SUCCESS,
+        wolfSSL_CertManagerLoadCRL(cm, crl2, WOLFSSL_FILETYPE_PEM, 0));
+    wolfSSL_CertManagerFreeCRL(cm);
+
+#ifndef WOLFSSL_CRL_ALLOW_MISSING_CDP
+    ExpectIntEQ(WOLFSSL_SUCCESS,
+        wolfSSL_CertManagerLoadCRL(cm, crl1, WOLFSSL_FILETYPE_PEM, 0));
+    ExpectIntEQ(WOLFSSL_SUCCESS,
+        wolfSSL_CertManagerLoadCA(cm, ca_cert, NULL));
+    ExpectIntEQ(wolfSSL_CertManagerCheckCRL(cm, server_cert_der_2048,
+        sizeof_server_cert_der_2048), WC_NO_ERR_TRACE(CRL_MISSING));
+    ExpectIntEQ(wolfSSL_CertManagerVerifyBuffer(cm, server_cert_der_2048,
+        sizeof_server_cert_der_2048, WOLFSSL_FILETYPE_ASN1),
+        WC_NO_ERR_TRACE(CRL_MISSING));
+#endif /* !WOLFSSL_CRL_ALLOW_MISSING_CDP */
+
+    ExpectIntEQ(wolfSSL_CertManagerLoadCRLBuffer(cm, crl_buff, sizeof(crl_buff),
+        WOLFSSL_FILETYPE_ASN1), 1);
+
+#if !defined(NO_FILESYSTEM) && defined(WC_RSA_PSS)
+    /* loading should fail without the CA set */
+    ExpectIntEQ(wolfSSL_CertManagerLoadCRLFile(cm, crl_rsapss,
+        WOLFSSL_FILETYPE_PEM), WC_NO_ERR_TRACE(ASN_CRL_NO_SIGNER_E));
+
+    /* now successfully load the RSA-PSS crl once loading in it's CA */
+    ExpectIntEQ(WOLFSSL_SUCCESS,
+        wolfSSL_CertManagerLoadCA(cm, ca_rsapss, NULL));
+    ExpectIntEQ(wolfSSL_CertManagerLoadCRLFile(cm, crl_rsapss,
+        WOLFSSL_FILETYPE_PEM), WOLFSSL_SUCCESS);
+#endif
+
+    wolfSSL_CertManagerFree(cm);
+#endif
+
+    return EXPECT_RESULT();
+}
+
+int test_wolfSSL_CRL_reason_extensions_cleanup(void)
+{
+    EXPECT_DECLS;
+#if defined(HAVE_CRL) && defined(OPENSSL_EXTRA) && !defined(NO_CERTS) && \
+    defined(WOLFSSL_PEM_TO_DER) && !defined(NO_FILESYSTEM) && \
+    !defined(NO_STDIO_FILESYSTEM) && !defined(NO_RSA)
+    WOLFSSL_CERT_MANAGER* cm = NULL;
+    const char* crlReasonFile = "./certs/crl/crl_reason.pem";
+
+    ExpectNotNull(cm = wolfSSL_CertManagerNew());
+    if (cm != NULL) {
+        ExpectIntEQ(wolfSSL_CertManagerEnableCRL(cm, WOLFSSL_CRL_CHECKALL),
+                    WOLFSSL_SUCCESS);
+        ExpectIntEQ(wolfSSL_CertManagerLoadCABuffer(cm, ca_cert_der_2048,
+                    sizeof_ca_cert_der_2048, WOLFSSL_FILETYPE_ASN1),
+                    WOLFSSL_SUCCESS);
+        /* Exercises ParseCRL/GetRevoked path that allocates entry extensions;
+         * cleanup runs via FreeDecodedCRL in BufferLoadCRL. */
+        ExpectIntEQ(wolfSSL_CertManagerLoadCRLFile(cm, crlReasonFile,
+                    WOLFSSL_FILETYPE_PEM), WOLFSSL_SUCCESS);
+        wolfSSL_CertManagerFree(cm);
+    }
+#endif
+    return EXPECT_RESULT();
+}
+
+int test_wolfSSL_CRL_static_revoked_list(void)
+{
+    EXPECT_DECLS;
+#if defined(CRL_STATIC_REVOKED_LIST) && defined(HAVE_CRL) && \
+    !defined(NO_RSA) && !defined(NO_CERTS)
+    /* CRL signed by certs/ca-cert.pem that revokes serials 05, 02, 01 in that
+     * (unsorted) wire order. The unsorted order exposes a binary search bug in
+     * FindRevokedSerial when CRL_STATIC_REVOKED_LIST is enabled: the revoked
+     * cert array is never sorted after parsing, so binary search misses entries
+     * that are out of order.
+     *
+     * Generated with Python cryptography library:
+     *   builder.add_revoked_certificate(serial=5)
+     *   builder.add_revoked_certificate(serial=2)
+     *   builder.add_revoked_certificate(serial=1)
+     *   crl = builder.sign(ca_key, hashes.SHA256())
+     */
+    static const unsigned char crl_multi_revoked[] = {
+        0x30, 0x82, 0x02, 0x1E, 0x30, 0x82, 0x01, 0x06,
+        0x02, 0x01, 0x01, 0x30, 0x0D, 0x06, 0x09, 0x2A,
+        0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x01, 0x0B,
+        0x05, 0x00, 0x30, 0x81, 0x95, 0x31, 0x0B, 0x30,
+        0x09, 0x06, 0x03, 0x55, 0x04, 0x06, 0x13, 0x02,
+        0x55, 0x53, 0x31, 0x10, 0x30, 0x0E, 0x06, 0x03,
+        0x55, 0x04, 0x08, 0x0C, 0x07, 0x4D, 0x6F, 0x6E,
+        0x74, 0x61, 0x6E, 0x61, 0x31, 0x10, 0x30, 0x0E,
+        0x06, 0x03, 0x55, 0x04, 0x07, 0x0C, 0x07, 0x42,
+        0x6F, 0x7A, 0x65, 0x6D, 0x61, 0x6E, 0x31, 0x11,
+        0x30, 0x0F, 0x06, 0x03, 0x55, 0x04, 0x0A, 0x0C,
+        0x08, 0x53, 0x61, 0x77, 0x74, 0x6F, 0x6F, 0x74,
+        0x68, 0x31, 0x13, 0x30, 0x11, 0x06, 0x03, 0x55,
+        0x04, 0x0B, 0x0C, 0x0A, 0x43, 0x6F, 0x6E, 0x73,
+        0x75, 0x6C, 0x74, 0x69, 0x6E, 0x67, 0x31, 0x18,
+        0x30, 0x16, 0x06, 0x03, 0x55, 0x04, 0x03, 0x0C,
+        0x0F, 0x77, 0x77, 0x77, 0x2E, 0x77, 0x6F, 0x6C,
+        0x66, 0x73, 0x73, 0x6C, 0x2E, 0x63, 0x6F, 0x6D,
+        0x31, 0x20, 0x30, 0x1E, 0x06, 0x09, 0x2A, 0x86,
+        0x48, 0x86, 0xF7, 0x0D, 0x01, 0x09, 0x01, 0x16,
+        0x11, 0x66, 0x61, 0x63, 0x74, 0x73, 0x40, 0x77,
+        0x6F, 0x6C, 0x66, 0x73, 0x73, 0x6C, 0x2E, 0x63,
+        0x6F, 0x6D, 0x17, 0x0D, 0x32, 0x36, 0x30, 0x31,
+        0x30, 0x31, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
+        0x5A, 0x17, 0x0D, 0x33, 0x36, 0x30, 0x31, 0x30,
+        0x31, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x5A,
+        0x30, 0x3C, 0x30, 0x12, 0x02, 0x01, 0x05, 0x17,
+        0x0D, 0x32, 0x33, 0x30, 0x31, 0x30, 0x31, 0x30,
+        0x30, 0x30, 0x30, 0x30, 0x30, 0x5A, 0x30, 0x12,
+        0x02, 0x01, 0x02, 0x17, 0x0D, 0x32, 0x33, 0x30,
+        0x32, 0x30, 0x31, 0x30, 0x30, 0x30, 0x30, 0x30,
+        0x30, 0x5A, 0x30, 0x12, 0x02, 0x01, 0x01, 0x17,
+        0x0D, 0x32, 0x33, 0x30, 0x33, 0x30, 0x31, 0x30,
+        0x30, 0x30, 0x30, 0x30, 0x30, 0x5A, 0x30, 0x0D,
+        0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D,
+        0x01, 0x01, 0x0B, 0x05, 0x00, 0x03, 0x82, 0x01,
+        0x01, 0x00, 0x11, 0xC6, 0x97, 0x9D, 0x6B, 0xD0,
+        0x51, 0xBC, 0xA4, 0xD3, 0xED, 0xA7, 0x0E, 0x81,
+        0xDE, 0xAA, 0x5C, 0x21, 0x90, 0xA0, 0x5C, 0xBA,
+        0x8D, 0xA7, 0xA1, 0x66, 0xC8, 0x44, 0xA3, 0x00,
+        0x6D, 0x27, 0x81, 0xC6, 0xA9, 0x1E, 0x38, 0xBD,
+        0x20, 0x18, 0xA5, 0x61, 0x6B, 0xDC, 0xE5, 0x24,
+        0xE5, 0x0D, 0xAB, 0x1D, 0x56, 0x92, 0x4D, 0x80,
+        0x96, 0x3C, 0xAA, 0x30, 0xA4, 0x40, 0xB8, 0xA1,
+        0xD5, 0xBE, 0x9D, 0x0E, 0x74, 0x4A, 0xD8, 0x30,
+        0x46, 0xA7, 0xB3, 0xC6, 0x7A, 0xD7, 0x90, 0x26,
+        0xDA, 0x31, 0xB6, 0x9B, 0xBE, 0x06, 0x4B, 0xFF,
+        0xBE, 0x08, 0xDB, 0xFF, 0x7F, 0xE8, 0x45, 0xAA,
+        0xA9, 0xCF, 0x6C, 0x71, 0x48, 0x8F, 0xB1, 0x99,
+        0x14, 0x9B, 0x78, 0xCB, 0xAB, 0x07, 0xF8, 0xBC,
+        0x6C, 0xBE, 0xC8, 0x8B, 0x5D, 0x86, 0x8D, 0xE5,
+        0x42, 0x41, 0x74, 0xCA, 0xE4, 0x84, 0x5D, 0x7C,
+        0x7E, 0xCB, 0xBD, 0x31, 0xFE, 0xA6, 0x54, 0xC9,
+        0x5B, 0x03, 0xF3, 0x2D, 0x14, 0xF3, 0xB8, 0xAB,
+        0x7E, 0xA7, 0x8F, 0x35, 0x04, 0x97, 0xA4, 0xB4,
+        0x7F, 0xC5, 0x06, 0xF1, 0x57, 0xB9, 0x59, 0x25,
+        0x59, 0xCD, 0xBB, 0xD5, 0xA0, 0xDC, 0x9A, 0xCC,
+        0xDE, 0x24, 0x20, 0x2E, 0x00, 0x09, 0x0A, 0x54,
+        0x7A, 0xAB, 0xD8, 0x49, 0xD3, 0x4E, 0x5A, 0x88,
+        0x58, 0xFE, 0xFD, 0x9E, 0x30, 0x54, 0x53, 0x69,
+        0x36, 0xFE, 0x55, 0xBD, 0xFB, 0x88, 0xAB, 0xFE,
+        0x96, 0x22, 0x1F, 0xEC, 0x0F, 0x82, 0x04, 0x22,
+        0xB3, 0xE7, 0x02, 0xDB, 0xFE, 0xC5, 0x92, 0xC4,
+        0x40, 0xE0, 0xD2, 0x38, 0xFD, 0xE8, 0x3B, 0x8F,
+        0x45, 0xE6, 0x5C, 0x56, 0x9D, 0x1A, 0x67, 0xB0,
+        0x1F, 0x13, 0xC1, 0x7E, 0x4F, 0x51, 0xC9, 0x7E,
+        0x0C, 0x75, 0xAF, 0x67, 0x53, 0xA8, 0xB4, 0x08,
+        0x51, 0x04, 0xBE, 0x88, 0x15, 0x9E, 0xF5, 0x99,
+        0x46, 0xE5
+    };
+    WOLFSSL_CERT_MANAGER* cm = NULL;
+
+    /* Set up CertManager with the CA and CRL checking enabled */
+    ExpectNotNull(cm = wolfSSL_CertManagerNew());
+    ExpectIntEQ(wolfSSL_CertManagerLoadCA(cm, "./certs/ca-cert.pem", NULL),
+        WOLFSSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_CertManagerEnableCRL(cm, WOLFSSL_CRL_CHECKALL),
+        WOLFSSL_SUCCESS);
+
+    /* Load the CRL that revokes serials {05, 02, 01} in unsorted wire order */
+    ExpectIntEQ(wolfSSL_CertManagerLoadCRLBuffer(cm, crl_multi_revoked,
+        sizeof(crl_multi_revoked), WOLFSSL_FILETYPE_ASN1), WOLFSSL_SUCCESS);
+
+    /* server-cert.pem has serial 01, which is in the CRL but at the last
+     * position in the unsorted array. Binary search on unsorted data misses
+     * it, so this assertion fails before the bug fix. */
+    ExpectIntEQ(wolfSSL_CertManagerCheckCRL(cm, server_cert_der_2048,
+        sizeof_server_cert_der_2048), WC_NO_ERR_TRACE(CRL_CERT_REVOKED));
+
+    wolfSSL_CertManagerFree(cm);
+#endif
+    return EXPECT_RESULT();
+}
+
+int test_wolfSSL_CRL_static_revoked_list_dup(void)
+{
+    EXPECT_DECLS;
+#if defined(CRL_STATIC_REVOKED_LIST) && defined(HAVE_CRL) && \
+    defined(OPENSSL_EXTRA) && !defined(NO_RSA) && !defined(NO_CERTS) && \
+    defined(WOLFSSL_PEM_TO_DER) && !defined(NO_FILESYSTEM) && \
+    !defined(NO_STDIO_FILESYSTEM)
+    /* certs/crl/crl_reason.pem revokes serial 01 and carries a
+     * crlEntryExtensions (CRL Reason Code) for that entry.
+     * Under OPENSSL_EXTRA GetRevoked() heap-allocates
+     * RevokedCert.extensions to hold the raw DER of those extensions. */
+    const char* crlReasonFile = "./certs/crl/crl_reason.pem";
+    XFILE fp = XBADFILE;
+    WOLFSSL_X509_CRL* crl = NULL;
+    WOLFSSL_X509_CRL* dupl = NULL;
+
+    ExpectTrue((fp = XFOPEN(crlReasonFile, "rb")) != XBADFILE);
+    ExpectNotNull(crl = wolfSSL_PEM_read_X509_CRL(fp, NULL, NULL, NULL));
+    if (fp != XBADFILE)
+        XFCLOSE(fp);
+
+    ExpectNotNull(crl != NULL ? crl->crlList : NULL);
+    ExpectIntGT((crl != NULL && crl->crlList != NULL) ?
+        crl->crlList->totalCerts : 0, 0);
+    ExpectNotNull((crl != NULL && crl->crlList != NULL) ?
+        crl->crlList->certs[0].extensions : NULL);
+
+    ExpectNotNull(dupl = wolfSSL_X509_CRL_dup(crl));
+
+    /* Every duplicated revoked cert must own its own copy of the extensions.
+     * A shallow copy shares the pointer, a dropped copy leaves it NULL. */
+    if (crl != NULL && dupl != NULL && crl->crlList != NULL &&
+            dupl->crlList != NULL) {
+        int i;
+        for (i = 0; i < crl->crlList->totalCerts; i++) {
+            const RevokedCert* o = &crl->crlList->certs[i];
+            const RevokedCert* d = &dupl->crlList->certs[i];
+
+            if (o->extensions != NULL) {
+                ExpectNotNull(d->extensions);
+                ExpectPtrNE(d->extensions, o->extensions);
+                ExpectIntEQ(d->extensionsSz, o->extensionsSz);
+                ExpectBufEQ(d->extensions, o->extensions, o->extensionsSz);
+            }
+        }
+    }
+
+    wolfSSL_X509_CRL_free(dupl);
+    wolfSSL_X509_CRL_free(crl);
+#endif
+    return EXPECT_RESULT();
+}
+
+int test_wolfSSL_CRL_duplicate_extensions(void)
+{
+    EXPECT_DECLS;
+#if defined(WOLFSSL_ASN_TEMPLATE) && !defined(NO_CERTS) && \
+    defined(HAVE_CRL) && !defined(NO_RSA) && \
+    !defined(WOLFSSL_NO_ASN_STRICT) && \
+    (defined(WC_ASN_RUNTIME_DATE_CHECK_CONTROL) || defined(NO_ASN_TIME_CHECK))
+    const unsigned char crl_duplicate_akd[] =
+        "-----BEGIN X509 CRL-----\n"
+        "MIICCDCB8QIBATANBgkqhkiG9w0BAQsFADB5MQswCQYDVQQGEwJVUzETMBEGA1UE\n"
+        "CAwKQ2FsaWZvcm5pYTEWMBQGA1UEBwwNU2FuIEZyYW5jaXNjbzETMBEGA1UECgwK\n"
+        "TXkgQ29tcGFueTETMBEGA1UEAwwKTXkgUm9vdCBDQTETMBEGA1UECwwKTXkgUm9v\n"
+        "dCBDQRcNMjQwOTAxMDAwMDAwWhcNMjUxMjAxMDAwMDAwWqBEMEIwHwYDVR0jBBgw\n"
+        "FoAU72ng99Ud5pns3G3Q9+K5XGRxgzUwHwYDVR0jBBgwFoAU72ng99Ud5pns3G3Q\n"
+        "9+K5XGRxgzUwDQYJKoZIhvcNAQELBQADggEBAIFVw4jrS4taSXR/9gPzqGrqFeHr\n"
+        "IXCnFtHJTLxqa8vUOAqSwqysvNpepVKioMVoGrLjFMjANjWQqTEiMROAnLfJ/+L8\n"
+        "FHZkV/mZwOKAXMhIC9MrJzifxBICwmvD028qnwQm09EP8z4ICZptD6wPdRTDzduc\n"
+        "KBuAX+zn8pNrJgyrheRKpPgno9KsbCzK4D/RIt1sTK2M3vVOtY+vpsN70QYUXvQ4\n"
+        "r2RZac3omlT43x5lddPxIlcouQpwWcVvr/K+Va770MRrjn88PBrJmvsEw/QYVBXp\n"
+        "Gxv2b78HFDacba80sMIm8ltRdqUCa5qIc6OATsz7izCQXEbkTEeESrcK1MA=\n"
+        "-----END X509 CRL-----\n";
+
+    WOLFSSL_CERT_MANAGER* cm = NULL;
+    int ret;
+
+    (void)wc_AsnSetSkipDateCheck(1);
+
+    cm = wolfSSL_CertManagerNew();
+    ExpectNotNull(cm);
+
+    /* Test loading CRL with duplicate extensions */
+    WOLFSSL_MSG("Testing CRL with duplicate Authority Key Identifier "
+                "extensions");
+    ret = wolfSSL_CertManagerLoadCRLBuffer(cm, crl_duplicate_akd,
+                                           sizeof(crl_duplicate_akd),
+                                           WOLFSSL_FILETYPE_PEM);
+    ExpectIntEQ(ret, ASN_PARSE_E);
+
+    wolfSSL_CertManagerFree(cm);
+
+    (void)wc_AsnSetSkipDateCheck(0);
+#endif
+    return EXPECT_RESULT();
+}
+
+int test_wolfSSL_CRL_critical_idp(void)
+{
+    EXPECT_DECLS;
+#if !defined(NO_CERTS) && defined(HAVE_CRL) && !defined(NO_RSA)
+
+    /* CA cert (CN=claim-root), self-signed, 799 bytes DER */
+    static const unsigned char ca_cert_idp[] = {
+        0x30, 0x82, 0x03, 0x1b, 0x30, 0x82, 0x02, 0x03, 0xa0, 0x03, 0x02,
+        0x01, 0x02, 0x02, 0x14, 0x1e, 0x25, 0xc1, 0x5d, 0x6f, 0x02, 0x21,
+        0xa0, 0xf0, 0x14, 0x15, 0x9c, 0x3b, 0x4d, 0x1d, 0x73, 0x16, 0x00,
+        0xe4, 0x51, 0x30, 0x0d, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7,
+        0x0d, 0x01, 0x01, 0x0b, 0x05, 0x00, 0x30, 0x15, 0x31, 0x13, 0x30,
+        0x11, 0x06, 0x03, 0x55, 0x04, 0x03, 0x0c, 0x0a, 0x63, 0x6c, 0x61,
+        0x69, 0x6d, 0x2d, 0x72, 0x6f, 0x6f, 0x74, 0x30, 0x1e, 0x17, 0x0d,
+        0x32, 0x36, 0x30, 0x34, 0x31, 0x36, 0x31, 0x31, 0x33, 0x38, 0x35,
+        0x35, 0x5a, 0x17, 0x0d, 0x33, 0x36, 0x30, 0x34, 0x31, 0x33, 0x31,
+        0x31, 0x33, 0x38, 0x35, 0x35, 0x5a, 0x30, 0x15, 0x31, 0x13, 0x30,
+        0x11, 0x06, 0x03, 0x55, 0x04, 0x03, 0x0c, 0x0a, 0x63, 0x6c, 0x61,
+        0x69, 0x6d, 0x2d, 0x72, 0x6f, 0x6f, 0x74, 0x30, 0x82, 0x01, 0x22,
+        0x30, 0x0d, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01,
+        0x01, 0x01, 0x05, 0x00, 0x03, 0x82, 0x01, 0x0f, 0x00, 0x30, 0x82,
+        0x01, 0x0a, 0x02, 0x82, 0x01, 0x01, 0x00, 0xba, 0x49, 0x8c, 0xb5,
+        0x17, 0xc1, 0x01, 0x24, 0x6f, 0x56, 0x1a, 0xa9, 0x3b, 0x03, 0xe2,
+        0x9f, 0x24, 0xb1, 0x25, 0x98, 0xfb, 0x38, 0x82, 0x78, 0x54, 0xa7,
+        0x1f, 0x69, 0x87, 0xe4, 0x96, 0x1b, 0x81, 0x18, 0x10, 0xb0, 0xc0,
+        0x5b, 0x4b, 0xbf, 0xb8, 0x1d, 0xf4, 0xee, 0x75, 0x0f, 0xb5, 0x45,
+        0x72, 0x70, 0xce, 0x65, 0x84, 0x44, 0x3e, 0x30, 0x78, 0xc4, 0xf3,
+        0xec, 0xba, 0x96, 0x78, 0xa4, 0x65, 0xfc, 0x62, 0x8d, 0xf5, 0x29,
+        0xf9, 0x7c, 0x3d, 0x78, 0x6c, 0x1d, 0x4a, 0x4c, 0xc9, 0x15, 0x2d,
+        0x22, 0x10, 0xea, 0x93, 0x26, 0xb8, 0xa6, 0x17, 0xd3, 0x0e, 0xbc,
+        0x0c, 0xab, 0x83, 0x63, 0xf6, 0x1c, 0xcc, 0x83, 0x73, 0x29, 0x7e,
+        0x7f, 0x83, 0x7f, 0xbd, 0x63, 0xaa, 0x8d, 0xfa, 0x78, 0x85, 0xd2,
+        0x3e, 0x60, 0x95, 0x5a, 0x8d, 0xfa, 0x8f, 0xcd, 0x94, 0x3f, 0x13,
+        0x28, 0xd9, 0xd0, 0x87, 0x28, 0x17, 0x78, 0xe2, 0x61, 0x8d, 0x79,
+        0x97, 0x01, 0xa9, 0x7c, 0x84, 0xc0, 0x1c, 0xbe, 0x5f, 0x5d, 0xca,
+        0x28, 0x6b, 0x5e, 0xdd, 0x83, 0xa5, 0x55, 0x34, 0x11, 0xba, 0xfa,
+        0x8b, 0x92, 0xa3, 0xde, 0xb6, 0xf3, 0xba, 0xab, 0x7f, 0x1a, 0x67,
+        0xfd, 0x6f, 0x20, 0x85, 0x4c, 0x77, 0xa7, 0x8e, 0xbe, 0xb8, 0xf8,
+        0x8f, 0x70, 0xe3, 0x5a, 0xd3, 0x77, 0xc9, 0x9e, 0x10, 0x60, 0xb4,
+        0xdb, 0x0c, 0xc5, 0x05, 0xe1, 0x1f, 0xbd, 0xe6, 0x79, 0xee, 0x82,
+        0x3f, 0x51, 0x76, 0xe2, 0x7f, 0x5c, 0x11, 0x6d, 0xd3, 0x21, 0x69,
+        0xec, 0x05, 0x11, 0x8b, 0xc8, 0x39, 0xb3, 0x2c, 0xa6, 0x83, 0xb4,
+        0x6f, 0xac, 0x19, 0xd6, 0x6a, 0x65, 0x0d, 0x08, 0x94, 0x58, 0xde,
+        0x3d, 0xc9, 0x0c, 0x54, 0x03, 0x73, 0x0c, 0x8d, 0x24, 0x09, 0xf3,
+        0xb1, 0x5d, 0xd2, 0xe3, 0xeb, 0x56, 0xd6, 0x28, 0x66, 0x5b, 0x02,
+        0x03, 0x01, 0x00, 0x01, 0xa3, 0x63, 0x30, 0x61, 0x30, 0x0f, 0x06,
+        0x03, 0x55, 0x1d, 0x13, 0x01, 0x01, 0xff, 0x04, 0x05, 0x30, 0x03,
+        0x01, 0x01, 0xff, 0x30, 0x0e, 0x06, 0x03, 0x55, 0x1d, 0x0f, 0x01,
+        0x01, 0xff, 0x04, 0x04, 0x03, 0x02, 0x01, 0x06, 0x30, 0x1d, 0x06,
+        0x03, 0x55, 0x1d, 0x0e, 0x04, 0x16, 0x04, 0x14, 0x52, 0x97, 0x58,
+        0x47, 0x98, 0xca, 0xf8, 0x99, 0xa0, 0x7e, 0x8e, 0x1c, 0x38, 0x2e,
+        0xea, 0xbb, 0xea, 0x9b, 0x74, 0x30, 0x30, 0x1f, 0x06, 0x03, 0x55,
+        0x1d, 0x23, 0x04, 0x18, 0x30, 0x16, 0x80, 0x14, 0x52, 0x97, 0x58,
+        0x47, 0x98, 0xca, 0xf8, 0x99, 0xa0, 0x7e, 0x8e, 0x1c, 0x38, 0x2e,
+        0xea, 0xbb, 0xea, 0x9b, 0x74, 0x30, 0x30, 0x0d, 0x06, 0x09, 0x2a,
+        0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x0b, 0x05, 0x00, 0x03,
+        0x82, 0x01, 0x01, 0x00, 0x7d, 0x30, 0xd4, 0x6a, 0x01, 0x89, 0x3b,
+        0x62, 0xed, 0x16, 0x46, 0x59, 0x0f, 0xf2, 0x3b, 0xb5, 0xde, 0x89,
+        0x08, 0x17, 0x68, 0xcb, 0x46, 0xdc, 0x39, 0xa6, 0xcb, 0x56, 0xb0,
+        0x91, 0xeb, 0x03, 0xb2, 0x15, 0xc4, 0x3b, 0x4d, 0x63, 0x55, 0x22,
+        0x0a, 0x26, 0xe6, 0x64, 0x46, 0xe8, 0x0f, 0xa8, 0xf3, 0xde, 0xe1,
+        0x43, 0x54, 0xe6, 0xd7, 0x8a, 0xf4, 0x4f, 0xab, 0x56, 0x93, 0x12,
+        0x71, 0x4b, 0x25, 0x71, 0x0a, 0x31, 0x18, 0x79, 0xee, 0x45, 0xa4,
+        0xf5, 0x72, 0x67, 0xfa, 0x41, 0xd9, 0x87, 0x97, 0x09, 0xef, 0x55,
+        0xad, 0x6f, 0x47, 0x1d, 0x5a, 0xb2, 0xe9, 0xf7, 0x22, 0x05, 0x2d,
+        0x5a, 0x81, 0xa8, 0xe8, 0x53, 0xb0, 0x94, 0xf6, 0x63, 0xff, 0x3f,
+        0x51, 0x7a, 0x08, 0xac, 0x27, 0x9a, 0x57, 0x11, 0x22, 0xa4, 0x00,
+        0x84, 0x70, 0x86, 0x76, 0x39, 0x0f, 0x4f, 0x57, 0xcf, 0x8e, 0x94,
+        0xd2, 0x8e, 0x43, 0xc0, 0xd5, 0x34, 0x7d, 0xf5, 0xa1, 0x45, 0x1e,
+        0xb7, 0xc8, 0x7e, 0x7c, 0xfe, 0x5d, 0x4d, 0x53, 0x43, 0x25, 0x15,
+        0x9e, 0x08, 0x01, 0x56, 0xa4, 0xff, 0x79, 0x59, 0x25, 0xc9, 0x23,
+        0x98, 0xaf, 0x05, 0xaf, 0xc1, 0x0b, 0x29, 0xf1, 0xe2, 0xc4, 0x36,
+        0x31, 0x91, 0xfa, 0xf2, 0xbb, 0x12, 0xe8, 0x67, 0xf9, 0xc7, 0xa1,
+        0x5e, 0x8c, 0xed, 0x92, 0x12, 0xa3, 0x2b, 0xe1, 0xc2, 0xe1, 0xa0,
+        0xb0, 0x0e, 0x12, 0xa7, 0xd0, 0xa2, 0xae, 0xd6, 0xfa, 0x30, 0x21,
+        0x0f, 0x73, 0xfe, 0x24, 0x21, 0x5f, 0x03, 0x86, 0x69, 0xcd, 0xec,
+        0x76, 0x18, 0xe1, 0xfd, 0xb6, 0x64, 0x90, 0xa6, 0x06, 0x2e, 0x19,
+        0x40, 0x93, 0x50, 0x37, 0xe4, 0x90, 0xe3, 0x1f, 0x07, 0xae, 0xfb,
+        0x89, 0xc3, 0xf6, 0xc4, 0x90, 0xab, 0x40, 0x67, 0x4c, 0x43, 0x2c,
+        0xa2, 0xb0, 0x3e, 0x61, 0x16, 0x69, 0x8f
+    };
+
+    /* CRL with critical IDP onlyuser=TRUE, revokes serial 0x1000, 480 bytes */
+    static const unsigned char crl_user_idp[] = {
+        0x30, 0x82, 0x01, 0xdc, 0x30, 0x81, 0xc5, 0x02, 0x01, 0x01, 0x30,
+        0x0d, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01,
+        0x0b, 0x05, 0x00, 0x30, 0x15, 0x31, 0x13, 0x30, 0x11, 0x06, 0x03,
+        0x55, 0x04, 0x03, 0x0c, 0x0a, 0x63, 0x6c, 0x61, 0x69, 0x6d, 0x2d,
+        0x72, 0x6f, 0x6f, 0x74, 0x17, 0x0d, 0x32, 0x36, 0x30, 0x34, 0x31,
+        0x36, 0x31, 0x31, 0x33, 0x38, 0x35, 0x35, 0x5a, 0x17, 0x0d, 0x33,
+        0x36, 0x30, 0x34, 0x31, 0x33, 0x31, 0x31, 0x33, 0x38, 0x35, 0x35,
+        0x5a, 0x30, 0x15, 0x30, 0x13, 0x02, 0x02, 0x10, 0x00, 0x17, 0x0d,
+        0x32, 0x36, 0x30, 0x34, 0x31, 0x36, 0x31, 0x31, 0x33, 0x38, 0x35,
+        0x35, 0x5a, 0xa0, 0x65, 0x30, 0x63, 0x30, 0x1f, 0x06, 0x03, 0x55,
+        0x1d, 0x23, 0x04, 0x18, 0x30, 0x16, 0x80, 0x14, 0x52, 0x97, 0x58,
+        0x47, 0x98, 0xca, 0xf8, 0x99, 0xa0, 0x7e, 0x8e, 0x1c, 0x38, 0x2e,
+        0xea, 0xbb, 0xea, 0x9b, 0x74, 0x30, 0x30, 0x33, 0x06, 0x03, 0x55,
+        0x1d, 0x1c, 0x01, 0x01, 0xff, 0x04, 0x29, 0x30, 0x27, 0xa0, 0x22,
+        0xa0, 0x20, 0x86, 0x1e, 0x68, 0x74, 0x74, 0x70, 0x3a, 0x2f, 0x2f,
+        0x63, 0x6c, 0x61, 0x69, 0x6d, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2f,
+        0x63, 0x72, 0x6c, 0x2d, 0x75, 0x73, 0x65, 0x72, 0x2e, 0x70, 0x65,
+        0x6d, 0x81, 0x01, 0xff, 0x30, 0x0b, 0x06, 0x03, 0x55, 0x1d, 0x14,
+        0x04, 0x04, 0x02, 0x02, 0x20, 0x00, 0x30, 0x0d, 0x06, 0x09, 0x2a,
+        0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x0b, 0x05, 0x00, 0x03,
+        0x82, 0x01, 0x01, 0x00, 0x9b, 0x1a, 0x70, 0xba, 0xf8, 0x38, 0xff,
+        0xc6, 0x36, 0x59, 0x6e, 0xab, 0x87, 0x74, 0x04, 0xe3, 0x17, 0xb3,
+        0xdd, 0x62, 0x03, 0x25, 0x9e, 0xff, 0x53, 0xf7, 0xde, 0x48, 0xb0,
+        0x56, 0x0c, 0x19, 0xea, 0x86, 0x30, 0x21, 0x01, 0x63, 0xd6, 0xd2,
+        0xef, 0xd1, 0x0e, 0x1d, 0xde, 0xc1, 0x18, 0x33, 0xd2, 0x1b, 0x79,
+        0x2e, 0xa1, 0xd5, 0x51, 0xcc, 0x31, 0x35, 0x28, 0xa6, 0x6f, 0xc0,
+        0xcf, 0x78, 0xbf, 0x5d, 0xdd, 0x66, 0x81, 0x71, 0xa3, 0x52, 0xb5,
+        0x48, 0x81, 0x1a, 0x34, 0xf1, 0x03, 0x37, 0x3a, 0x97, 0x02, 0xd6,
+        0x56, 0x4a, 0x24, 0xeb, 0x93, 0x47, 0xb6, 0xc3, 0x69, 0xc6, 0x2b,
+        0xd8, 0xfc, 0xf9, 0x9f, 0x85, 0xab, 0xe2, 0x81, 0x66, 0x8f, 0xcf,
+        0x7a, 0x81, 0xd7, 0x46, 0xb4, 0x8d, 0x44, 0x05, 0x40, 0xd2, 0x3b,
+        0x1c, 0xb8, 0x4a, 0x88, 0xb8, 0x65, 0x69, 0x5e, 0x7f, 0x6c, 0x43,
+        0x1c, 0x4f, 0xbf, 0x48, 0x55, 0x6b, 0xb0, 0xb3, 0x70, 0x49, 0x1a,
+        0xfa, 0xd1, 0x55, 0xe7, 0xb9, 0x5d, 0x4f, 0x2d, 0x7e, 0xc1, 0xa5,
+        0x5f, 0x5e, 0x38, 0xef, 0x74, 0xe8, 0x72, 0x89, 0x9c, 0x86, 0x24,
+        0x65, 0x2d, 0x38, 0x88, 0x53, 0x81, 0x48, 0x8a, 0x7d, 0xc3, 0x0d,
+        0x87, 0xaf, 0xd3, 0xf7, 0x39, 0xeb, 0xac, 0x36, 0xc2, 0xc9, 0x1f,
+        0x78, 0xa9, 0x53, 0x1c, 0x4a, 0xa6, 0xba, 0x63, 0xd1, 0xc2, 0x62,
+        0x81, 0x00, 0x39, 0xb1, 0x1c, 0x1c, 0xad, 0x96, 0x83, 0xf7, 0x99,
+        0x34, 0xc6, 0x9c, 0x93, 0xbb, 0x6a, 0x7c, 0xf5, 0x18, 0xed, 0xbd,
+        0x29, 0xe4, 0x29, 0x50, 0x3c, 0xcb, 0x94, 0x72, 0x8f, 0xad, 0x15,
+        0x91, 0x38, 0x4a, 0xb4, 0xde, 0x98, 0x3e, 0xd6, 0xb2, 0xd1, 0x2a,
+        0x8c, 0xa2, 0xc9, 0x0f, 0x2f, 0x7c, 0x4a, 0xd6, 0x56, 0x02, 0x9f,
+        0x6c, 0xda, 0xa9, 0x4c, 0x04, 0x64, 0x7c
+    };
+
+    /* CRL with critical IDP onlyCA=TRUE, empty revocation list, 459 bytes */
+    static const unsigned char crl_caonly_idp[] = {
+        0x30, 0x82, 0x01, 0xc7, 0x30, 0x81, 0xb0, 0x02, 0x01, 0x01, 0x30,
+        0x0d, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01,
+        0x0b, 0x05, 0x00, 0x30, 0x15, 0x31, 0x13, 0x30, 0x11, 0x06, 0x03,
+        0x55, 0x04, 0x03, 0x0c, 0x0a, 0x63, 0x6c, 0x61, 0x69, 0x6d, 0x2d,
+        0x72, 0x6f, 0x6f, 0x74, 0x17, 0x0d, 0x32, 0x36, 0x30, 0x34, 0x31,
+        0x36, 0x31, 0x31, 0x33, 0x38, 0x35, 0x35, 0x5a, 0x17, 0x0d, 0x33,
+        0x36, 0x30, 0x34, 0x31, 0x33, 0x31, 0x31, 0x33, 0x38, 0x35, 0x35,
+        0x5a, 0xa0, 0x67, 0x30, 0x65, 0x30, 0x1f, 0x06, 0x03, 0x55, 0x1d,
+        0x23, 0x04, 0x18, 0x30, 0x16, 0x80, 0x14, 0x52, 0x97, 0x58, 0x47,
+        0x98, 0xca, 0xf8, 0x99, 0xa0, 0x7e, 0x8e, 0x1c, 0x38, 0x2e, 0xea,
+        0xbb, 0xea, 0x9b, 0x74, 0x30, 0x30, 0x35, 0x06, 0x03, 0x55, 0x1d,
+        0x1c, 0x01, 0x01, 0xff, 0x04, 0x2b, 0x30, 0x29, 0xa0, 0x24, 0xa0,
+        0x22, 0x86, 0x20, 0x68, 0x74, 0x74, 0x70, 0x3a, 0x2f, 0x2f, 0x63,
+        0x6c, 0x61, 0x69, 0x6d, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2f, 0x63,
+        0x72, 0x6c, 0x2d, 0x63, 0x61, 0x6f, 0x6e, 0x6c, 0x79, 0x2e, 0x70,
+        0x65, 0x6d, 0x82, 0x01, 0xff, 0x30, 0x0b, 0x06, 0x03, 0x55, 0x1d,
+        0x14, 0x04, 0x04, 0x02, 0x02, 0x20, 0x01, 0x30, 0x0d, 0x06, 0x09,
+        0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x0b, 0x05, 0x00,
+        0x03, 0x82, 0x01, 0x01, 0x00, 0x9d, 0x6e, 0x0d, 0x93, 0x89, 0xab,
+        0x6e, 0x74, 0x52, 0x2c, 0xe6, 0x89, 0xcb, 0x72, 0x49, 0x90, 0x0d,
+        0x91, 0x80, 0xb5, 0xca, 0x7b, 0x95, 0x0d, 0xa8, 0x05, 0x31, 0x04,
+        0x50, 0xb8, 0xf3, 0xce, 0x9c, 0xbb, 0x05, 0x38, 0x0a, 0x64, 0x1a,
+        0x61, 0x68, 0xa7, 0xa8, 0xa0, 0x69, 0x2a, 0x79, 0x01, 0x42, 0x67,
+        0xf5, 0x72, 0xdf, 0x37, 0x5b, 0x42, 0x6d, 0x3c, 0x59, 0x95, 0x09,
+        0x34, 0xb3, 0xb6, 0x8b, 0x2b, 0xd8, 0xab, 0xb6, 0x8b, 0xff, 0x8e,
+        0xae, 0xd0, 0xc6, 0x9a, 0xbe, 0x7e, 0x29, 0xbc, 0x4d, 0xfb, 0xe1,
+        0xac, 0xd8, 0x23, 0x1a, 0xec, 0x0d, 0xa1, 0xa0, 0xf6, 0x52, 0x8e,
+        0x64, 0xc4, 0x11, 0x0f, 0x7c, 0x5b, 0x9f, 0x65, 0x4f, 0x5a, 0xd6,
+        0x64, 0xe0, 0x64, 0xf6, 0xac, 0x9d, 0xdc, 0x21, 0x3f, 0xa8, 0x5c,
+        0xd2, 0xf5, 0x87, 0xec, 0x49, 0x19, 0xff, 0x01, 0x9e, 0x8d, 0x83,
+        0x08, 0xd2, 0xdc, 0x83, 0xf6, 0x03, 0xc4, 0x6f, 0xf6, 0xa2, 0x13,
+        0x41, 0xfe, 0x66, 0xcd, 0xeb, 0xe8, 0x0f, 0x28, 0x7d, 0xd2, 0xcd,
+        0xfa, 0x7a, 0xd7, 0xae, 0x08, 0xa1, 0x31, 0x17, 0x60, 0x59, 0x39,
+        0x98, 0x85, 0xe1, 0xa4, 0xd2, 0x35, 0x70, 0xb7, 0xff, 0xf3, 0x2f,
+        0xee, 0x45, 0x9c, 0xbe, 0xcc, 0x18, 0x49, 0x94, 0xe9, 0xf6, 0xd0,
+        0x45, 0x54, 0x6f, 0xe4, 0xe8, 0x3a, 0x0d, 0x5b, 0x05, 0xe8, 0x02,
+        0x51, 0x5b, 0x63, 0xb5, 0xf2, 0x47, 0x86, 0x9b, 0xf3, 0x07, 0xc2,
+        0x49, 0x26, 0xa0, 0x77, 0x94, 0xe7, 0x4f, 0xbc, 0x5f, 0x9f, 0xf9,
+        0x06, 0x0e, 0xcb, 0x45, 0x9c, 0x02, 0x11, 0xfc, 0xcb, 0x12, 0x7f,
+        0xba, 0x7d, 0x93, 0x5b, 0x57, 0x6a, 0x15, 0x5e, 0xd2, 0xc1, 0x97,
+        0xb2, 0xbb, 0x00, 0x2c, 0xdd, 0x41, 0x97, 0x2a, 0xe4, 0x53, 0x40,
+        0xf8, 0xb5, 0x56, 0xf2, 0x9a, 0x04, 0xe6, 0x89
+    };
+
+    WOLFSSL_CERT_MANAGER* cm = NULL;
+
+    ExpectNotNull(cm = wolfSSL_CertManagerNew());
+
+    ExpectIntEQ(wolfSSL_CertManagerLoadCABuffer(cm, ca_cert_idp,
+        sizeof(ca_cert_idp), WOLFSSL_FILETYPE_ASN1), WOLFSSL_SUCCESS);
+
+    ExpectIntEQ(wolfSSL_CertManagerEnableCRL(cm, WOLFSSL_CRL_CHECKALL),
+        WOLFSSL_SUCCESS);
+
+    /* User-scope CRL has a critical IDP extension, must be rejected */
+    ExpectIntNE(wolfSSL_CertManagerLoadCRLBuffer(cm, crl_user_idp,
+        sizeof(crl_user_idp), WOLFSSL_FILETYPE_ASN1), WOLFSSL_SUCCESS);
+
+    /* CA-only CRL also has a critical IDP extension, must be rejected */
+    ExpectIntNE(wolfSSL_CertManagerLoadCRLBuffer(cm, crl_caonly_idp,
+        sizeof(crl_caonly_idp), WOLFSSL_FILETYPE_ASN1), WOLFSSL_SUCCESS);
+
+    wolfSSL_CertManagerFree(cm);
+#endif
+    return EXPECT_RESULT();
+}
+
+#if defined(HAVE_CRL) && !defined(NO_CERTS) && !defined(NO_RSA) && \
+    !defined(NO_SHA256) && defined(OPENSSL_EXTRA) && !defined(NO_TLS) && \
+    !defined(NO_WOLFSSL_CLIENT)
+    #ifndef NO_SKID
+        #define TEST_CRL_CROSS_CA_AKID
+    #endif
+    #if defined(WOLFSSL_PEM_TO_DER) && !defined(NO_FILESYSTEM) && \
+        !defined(NO_WOLFSSL_DIR)
+        #define TEST_CRL_UNVERIFIED_NO_EVICT
+    #endif
+#endif
+
+#if defined(TEST_CRL_CROSS_CA_AKID) || defined(TEST_CRL_UNVERIFIED_NO_EVICT)
+/* Trusted CA "crl-test-ca-a", self-signed, keyCertSign + cRLSign. */
+static const unsigned char crl_test_ca_a[] = {
+        0x30, 0x82, 0x03, 0x21, 0x30, 0x82, 0x02, 0x09, 0xa0, 0x03, 0x02,
+        0x01, 0x02, 0x02, 0x14, 0x7e, 0xad, 0x8c, 0x50, 0xec, 0xd2, 0x0e,
+        0xe3, 0xcf, 0x15, 0x6f, 0x48, 0x89, 0x19, 0xba, 0xe5, 0x46, 0x13,
+        0xec, 0xc6, 0x30, 0x0d, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7,
+        0x0d, 0x01, 0x01, 0x0b, 0x05, 0x00, 0x30, 0x18, 0x31, 0x16, 0x30,
+        0x14, 0x06, 0x03, 0x55, 0x04, 0x03, 0x0c, 0x0d, 0x63, 0x72, 0x6c,
+        0x2d, 0x74, 0x65, 0x73, 0x74, 0x2d, 0x63, 0x61, 0x2d, 0x61, 0x30,
+        0x1e, 0x17, 0x0d, 0x32, 0x36, 0x30, 0x31, 0x30, 0x31, 0x30, 0x30,
+        0x30, 0x30, 0x30, 0x30, 0x5a, 0x17, 0x0d, 0x34, 0x36, 0x30, 0x31,
+        0x30, 0x31, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x5a, 0x30, 0x18,
+        0x31, 0x16, 0x30, 0x14, 0x06, 0x03, 0x55, 0x04, 0x03, 0x0c, 0x0d,
+        0x63, 0x72, 0x6c, 0x2d, 0x74, 0x65, 0x73, 0x74, 0x2d, 0x63, 0x61,
+        0x2d, 0x61, 0x30, 0x82, 0x01, 0x22, 0x30, 0x0d, 0x06, 0x09, 0x2a,
+        0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x01, 0x05, 0x00, 0x03,
+        0x82, 0x01, 0x0f, 0x00, 0x30, 0x82, 0x01, 0x0a, 0x02, 0x82, 0x01,
+        0x01, 0x00, 0xc0, 0x6b, 0x66, 0x66, 0x08, 0x4a, 0x0a, 0xec, 0x0c,
+        0x04, 0xcb, 0x7b, 0x7b, 0x81, 0xef, 0xdb, 0x0c, 0xab, 0x23, 0x24,
+        0xa6, 0xdb, 0x72, 0xb2, 0xad, 0xa9, 0x59, 0x0e, 0x40, 0x87, 0x6e,
+        0x9a, 0x0f, 0xa3, 0xf6, 0x3d, 0x56, 0x7a, 0x30, 0x3a, 0x01, 0xe3,
+        0x95, 0x3f, 0x36, 0x83, 0x0d, 0xb7, 0x35, 0xde, 0xcf, 0xcb, 0x34,
+        0x5b, 0x3d, 0x69, 0xbc, 0xde, 0x56, 0x0c, 0x2e, 0x76, 0x18, 0xc0,
+        0xee, 0xfb, 0x74, 0x2d, 0x4b, 0xd7, 0x7d, 0x6b, 0xd7, 0x14, 0x02,
+        0xda, 0xe6, 0x73, 0x65, 0x6f, 0xfb, 0x4a, 0x3a, 0xa1, 0x76, 0xb5,
+        0x22, 0xcf, 0x44, 0x4c, 0x51, 0x70, 0x9e, 0x3c, 0x43, 0xcb, 0xaf,
+        0xb5, 0x7a, 0x0f, 0xa2, 0x29, 0x5f, 0xaf, 0x56, 0x9c, 0x5b, 0xa3,
+        0x80, 0x27, 0x7d, 0x31, 0x68, 0x13, 0x5b, 0x80, 0x4a, 0x67, 0x87,
+        0xd6, 0xa3, 0x3f, 0x3d, 0x58, 0x58, 0x1c, 0x90, 0xa2, 0xa3, 0x8b,
+        0x80, 0xf9, 0xdc, 0x63, 0x98, 0x69, 0x1f, 0x5b, 0xb3, 0xb5, 0x05,
+        0x69, 0xe0, 0x0e, 0x7d, 0xbc, 0xb4, 0x40, 0x57, 0xb2, 0x4f, 0x5f,
+        0x1d, 0x2d, 0x46, 0xc1, 0x95, 0xd7, 0x5d, 0x21, 0xd9, 0x35, 0xa7,
+        0xed, 0xa7, 0x07, 0x54, 0x7d, 0xf7, 0x8f, 0x56, 0x0d, 0x59, 0x09,
+        0xc1, 0x25, 0x43, 0xa8, 0x49, 0x49, 0xa8, 0x54, 0x71, 0xe6, 0xb0,
+        0x46, 0x9e, 0x20, 0x77, 0x37, 0x8d, 0x2d, 0x5d, 0x0a, 0x9d, 0x39,
+        0x82, 0x47, 0x68, 0x17, 0x7a, 0x87, 0xd9, 0x57, 0xb4, 0xa1, 0x2b,
+        0xbd, 0xb7, 0x3b, 0xa8, 0x32, 0x73, 0xa1, 0x6b, 0xc4, 0xbe, 0x6e,
+        0xee, 0xc3, 0xc0, 0xde, 0x2c, 0x09, 0xd0, 0x40, 0xff, 0x0b, 0x87,
+        0xd8, 0x9e, 0x9d, 0x72, 0xc9, 0x3a, 0x91, 0x1d, 0x3c, 0xcc, 0x31,
+        0x8b, 0x50, 0x5c, 0x10, 0xbf, 0xa1, 0x97, 0xc0, 0x65, 0x9c, 0xae,
+        0xd0, 0xd9, 0x20, 0x2b, 0xc3, 0x02, 0x03, 0x01, 0x00, 0x01, 0xa3,
+        0x63, 0x30, 0x61, 0x30, 0x1f, 0x06, 0x03, 0x55, 0x1d, 0x23, 0x04,
+        0x18, 0x30, 0x16, 0x80, 0x14, 0x16, 0x20, 0x5d, 0x43, 0x64, 0x9c,
+        0xed, 0xc6, 0x95, 0x92, 0xa4, 0xc6, 0x28, 0xdc, 0x1a, 0x06, 0x7f,
+        0x01, 0x84, 0x0e, 0x30, 0x0f, 0x06, 0x03, 0x55, 0x1d, 0x13, 0x01,
+        0x01, 0xff, 0x04, 0x05, 0x30, 0x03, 0x01, 0x01, 0xff, 0x30, 0x0e,
+        0x06, 0x03, 0x55, 0x1d, 0x0f, 0x01, 0x01, 0xff, 0x04, 0x04, 0x03,
+        0x02, 0x01, 0x06, 0x30, 0x1d, 0x06, 0x03, 0x55, 0x1d, 0x0e, 0x04,
+        0x16, 0x04, 0x14, 0x16, 0x20, 0x5d, 0x43, 0x64, 0x9c, 0xed, 0xc6,
+        0x95, 0x92, 0xa4, 0xc6, 0x28, 0xdc, 0x1a, 0x06, 0x7f, 0x01, 0x84,
+        0x0e, 0x30, 0x0d, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d,
+        0x01, 0x01, 0x0b, 0x05, 0x00, 0x03, 0x82, 0x01, 0x01, 0x00, 0xb9,
+        0xed, 0xac, 0x74, 0x75, 0x54, 0xf8, 0x51, 0xca, 0xdb, 0x48, 0xfd,
+        0x68, 0xff, 0x97, 0x6e, 0x49, 0x6e, 0x4c, 0xd0, 0x7a, 0xaa, 0x7a,
+        0xb2, 0x6c, 0x5a, 0x5c, 0xf9, 0x2b, 0x41, 0xfc, 0xcf, 0x30, 0xe5,
+        0xc5, 0x81, 0x6e, 0x27, 0xd7, 0x37, 0x59, 0xc1, 0x89, 0x10, 0x12,
+        0x4f, 0x48, 0x8f, 0x2b, 0xf6, 0xf6, 0x39, 0x00, 0x7e, 0x9e, 0x8e,
+        0x10, 0xcf, 0xff, 0x79, 0x63, 0x4d, 0x94, 0x81, 0x25, 0xff, 0x88,
+        0x42, 0x30, 0x3b, 0xfd, 0x9d, 0x98, 0x7e, 0x06, 0x75, 0xb3, 0x28,
+        0x36, 0xc2, 0xda, 0x4e, 0xbc, 0xb6, 0x63, 0xf4, 0x69, 0x12, 0x80,
+        0x75, 0xc3, 0x36, 0xfe, 0xcd, 0xa1, 0x4b, 0xfb, 0x37, 0xa5, 0xf8,
+        0xdb, 0x4f, 0x53, 0xdd, 0xeb, 0x31, 0x08, 0xaf, 0xc5, 0x3b, 0x4f,
+        0x11, 0x9e, 0x0c, 0xd4, 0xe9, 0xd6, 0xb9, 0x9b, 0xac, 0x29, 0x0e,
+        0xa9, 0x9e, 0xd4, 0x2d, 0xfe, 0x5b, 0x68, 0x7a, 0x23, 0x5e, 0x83,
+        0x72, 0x7f, 0xdc, 0x5e, 0xc5, 0x08, 0x2d, 0x61, 0x07, 0xf5, 0xa8,
+        0x08, 0x1d, 0x92, 0x15, 0x6f, 0x15, 0xb7, 0xce, 0xf2, 0x57, 0x68,
+        0xcd, 0x04, 0x35, 0x30, 0x69, 0x85, 0x48, 0x84, 0x48, 0x44, 0x6e,
+        0xb8, 0x3e, 0x3c, 0xd3, 0xa5, 0x05, 0x0d, 0x45, 0x1a, 0xd7, 0xac,
+        0xcc, 0xb1, 0x02, 0x21, 0xe3, 0x00, 0x1f, 0x7f, 0xc8, 0x1f, 0x60,
+        0xee, 0x95, 0xb3, 0xd8, 0x7e, 0x3c, 0x82, 0x98, 0xa5, 0xae, 0x86,
+        0x49, 0x55, 0x09, 0xbd, 0xa1, 0xc3, 0x98, 0xd1, 0xb2, 0x8b, 0xc1,
+        0xb3, 0xba, 0xcb, 0x41, 0x4d, 0xb1, 0xe7, 0x94, 0x0e, 0xbc, 0x22,
+        0xe3, 0x36, 0x21, 0x6b, 0xe3, 0x08, 0xdc, 0x82, 0x62, 0x4d, 0x4c,
+        0xd5, 0xbc, 0xfe, 0x95, 0x37, 0xd2, 0x97, 0x5d, 0xe6, 0xc4, 0x6f,
+        0xc6, 0xd3, 0x39, 0x8d, 0xec, 0xb1, 0xf1, 0x7d, 0x96, 0xed, 0x7c,
+        0x8d, 0xea
+};
+
+/* Leaf issued by CA A, serial 0x2a. */
+static const unsigned char crl_test_leaf_a[] = {
+        0x30, 0x82, 0x03, 0x0b, 0x30, 0x82, 0x01, 0xf3, 0xa0, 0x03, 0x02,
+        0x01, 0x02, 0x02, 0x01, 0x2a, 0x30, 0x0d, 0x06, 0x09, 0x2a, 0x86,
+        0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x0b, 0x05, 0x00, 0x30, 0x18,
+        0x31, 0x16, 0x30, 0x14, 0x06, 0x03, 0x55, 0x04, 0x03, 0x0c, 0x0d,
+        0x63, 0x72, 0x6c, 0x2d, 0x74, 0x65, 0x73, 0x74, 0x2d, 0x63, 0x61,
+        0x2d, 0x61, 0x30, 0x1e, 0x17, 0x0d, 0x32, 0x36, 0x30, 0x31, 0x30,
+        0x31, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x5a, 0x17, 0x0d, 0x34,
+        0x36, 0x30, 0x31, 0x30, 0x31, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
+        0x5a, 0x30, 0x18, 0x31, 0x16, 0x30, 0x14, 0x06, 0x03, 0x55, 0x04,
+        0x03, 0x0c, 0x0d, 0x63, 0x72, 0x6c, 0x2d, 0x74, 0x65, 0x73, 0x74,
+        0x2d, 0x6c, 0x65, 0x61, 0x66, 0x30, 0x82, 0x01, 0x22, 0x30, 0x0d,
+        0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x01,
+        0x05, 0x00, 0x03, 0x82, 0x01, 0x0f, 0x00, 0x30, 0x82, 0x01, 0x0a,
+        0x02, 0x82, 0x01, 0x01, 0x00, 0xd5, 0xb1, 0x3f, 0x7e, 0xe3, 0xc9,
+        0x6a, 0xe5, 0xed, 0xc2, 0x24, 0xdd, 0x3f, 0x31, 0x19, 0xd4, 0xc7,
+        0xea, 0xad, 0x58, 0x5f, 0xd6, 0x51, 0xec, 0x27, 0x28, 0x8a, 0xee,
+        0x54, 0x03, 0x2c, 0x58, 0x36, 0x2e, 0xc7, 0x06, 0x17, 0x66, 0xf2,
+        0x80, 0x3a, 0x6c, 0x9e, 0x1b, 0xf8, 0x40, 0x9d, 0x21, 0x61, 0xf4,
+        0x44, 0x16, 0x29, 0xc5, 0x5d, 0x0e, 0xf8, 0x67, 0x41, 0x12, 0x29,
+        0x8c, 0x9f, 0x7f, 0x85, 0x24, 0x51, 0x90, 0x7e, 0x9a, 0xc7, 0x4c,
+        0x45, 0x6c, 0x8c, 0x0c, 0xbe, 0x3f, 0xdb, 0x3d, 0xd6, 0x4d, 0x24,
+        0x74, 0xd4, 0x90, 0xb5, 0xfe, 0xcf, 0x24, 0xdf, 0xfa, 0xf5, 0x2e,
+        0x1e, 0xbe, 0x48, 0xe3, 0xe6, 0xc2, 0x22, 0x59, 0xe9, 0x18, 0x72,
+        0xd1, 0xe5, 0x0a, 0xce, 0xcb, 0xa7, 0x3c, 0xde, 0x1a, 0xc7, 0xdd,
+        0x95, 0xcf, 0x97, 0xf6, 0xe0, 0x37, 0xbc, 0x24, 0xf0, 0xdf, 0x1b,
+        0x3f, 0x21, 0x49, 0xc6, 0x7c, 0x1a, 0x68, 0x58, 0x82, 0x5c, 0xe2,
+        0xc6, 0x2d, 0x9e, 0x3c, 0x44, 0x19, 0x24, 0x90, 0x96, 0xa5, 0x01,
+        0x7e, 0xc3, 0xac, 0x70, 0x8b, 0x8f, 0x71, 0xe2, 0x73, 0x1c, 0x46,
+        0xa6, 0x50, 0x93, 0x4a, 0xa2, 0x6d, 0x41, 0xab, 0x83, 0xb0, 0x91,
+        0x7a, 0x38, 0x78, 0x8d, 0x51, 0x8c, 0xd0, 0x3e, 0xb6, 0xa6, 0xaf,
+        0x02, 0x10, 0xfb, 0x1f, 0x6e, 0x50, 0x60, 0x75, 0xef, 0x84, 0xc8,
+        0x6d, 0x69, 0xa2, 0x38, 0x61, 0xc8, 0xb6, 0x2f, 0xc6, 0x55, 0x1b,
+        0x19, 0x86, 0xd3, 0x44, 0xbb, 0x55, 0x76, 0xfb, 0xac, 0x5f, 0x34,
+        0x2b, 0x2d, 0x84, 0x22, 0x6c, 0x6d, 0x5f, 0x57, 0xcc, 0x4f, 0x67,
+        0x12, 0x09, 0x44, 0xaf, 0xe4, 0x26, 0x5d, 0xb1, 0x14, 0xdb, 0xbc,
+        0xa9, 0xbb, 0x4b, 0xcf, 0x65, 0xe4, 0xc0, 0x1f, 0x1d, 0xc4, 0xfe,
+        0xe8, 0xe0, 0xa3, 0x4a, 0x3e, 0xd0, 0xe2, 0xe7, 0x02, 0x03, 0x01,
+        0x00, 0x01, 0xa3, 0x60, 0x30, 0x5e, 0x30, 0x0c, 0x06, 0x03, 0x55,
+        0x1d, 0x13, 0x01, 0x01, 0xff, 0x04, 0x02, 0x30, 0x00, 0x30, 0x0e,
+        0x06, 0x03, 0x55, 0x1d, 0x0f, 0x01, 0x01, 0xff, 0x04, 0x04, 0x03,
+        0x02, 0x07, 0x80, 0x30, 0x1d, 0x06, 0x03, 0x55, 0x1d, 0x0e, 0x04,
+        0x16, 0x04, 0x14, 0x85, 0x8d, 0x21, 0x83, 0xd0, 0xf2, 0x31, 0x12,
+        0x35, 0x96, 0x85, 0xcf, 0x0e, 0xa3, 0xf8, 0x25, 0xfa, 0x52, 0x35,
+        0xa1, 0x30, 0x1f, 0x06, 0x03, 0x55, 0x1d, 0x23, 0x04, 0x18, 0x30,
+        0x16, 0x80, 0x14, 0x16, 0x20, 0x5d, 0x43, 0x64, 0x9c, 0xed, 0xc6,
+        0x95, 0x92, 0xa4, 0xc6, 0x28, 0xdc, 0x1a, 0x06, 0x7f, 0x01, 0x84,
+        0x0e, 0x30, 0x0d, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d,
+        0x01, 0x01, 0x0b, 0x05, 0x00, 0x03, 0x82, 0x01, 0x01, 0x00, 0x29,
+        0xbf, 0x18, 0xcd, 0xc7, 0xef, 0x17, 0x13, 0xf0, 0x87, 0x9c, 0x50,
+        0xbc, 0x60, 0x54, 0x2e, 0xdb, 0x42, 0xd3, 0xc5, 0x2c, 0x3a, 0xb1,
+        0x4f, 0xd9, 0xc0, 0x23, 0x69, 0xab, 0x06, 0xda, 0x2b, 0x0c, 0x55,
+        0xc7, 0x78, 0x0c, 0xae, 0x34, 0xb9, 0x82, 0x17, 0x0c, 0x13, 0x8a,
+        0x87, 0xde, 0x82, 0x7e, 0x3a, 0x6a, 0x60, 0x38, 0xd7, 0xc4, 0x2c,
+        0x96, 0x2c, 0x64, 0xfe, 0x72, 0x9c, 0x91, 0x85, 0x1d, 0x7f, 0xd5,
+        0xb5, 0xa8, 0x53, 0xc1, 0x75, 0x99, 0x2d, 0xae, 0x7c, 0xa7, 0xb6,
+        0x1a, 0x7e, 0x74, 0x46, 0xff, 0x77, 0xcc, 0xec, 0x12, 0x3d, 0x9a,
+        0x6f, 0x7d, 0x6e, 0x6d, 0x9b, 0x0f, 0x27, 0x96, 0x25, 0x31, 0x9d,
+        0xc4, 0x92, 0x03, 0x13, 0x04, 0xd7, 0x4f, 0xb1, 0x24, 0x31, 0x13,
+        0x42, 0x58, 0x95, 0xef, 0x01, 0x65, 0x7c, 0x57, 0x90, 0x71, 0xf6,
+        0xc8, 0x7b, 0x74, 0xdd, 0x4d, 0x42, 0x0d, 0x99, 0x5c, 0x09, 0x55,
+        0x2a, 0xbf, 0x24, 0xbe, 0x9b, 0x74, 0xd8, 0x7c, 0x37, 0xc1, 0xd0,
+        0x0f, 0xc0, 0x2a, 0x4d, 0x93, 0x5b, 0x3d, 0x1e, 0x9d, 0xd9, 0x2f,
+        0x2d, 0x6a, 0xeb, 0x43, 0x2c, 0x75, 0xc7, 0xbd, 0xd0, 0xf7, 0xe4,
+        0x0d, 0xc1, 0xe0, 0xea, 0x93, 0x81, 0x54, 0xf2, 0xe1, 0xd6, 0x70,
+        0x0c, 0x16, 0xf1, 0x75, 0x92, 0xdf, 0xd5, 0x63, 0x0f, 0x0f, 0x04,
+        0x07, 0x14, 0xbb, 0x3e, 0xbb, 0x21, 0xa5, 0xbb, 0xb1, 0xe5, 0x8d,
+        0xe2, 0xcc, 0x66, 0xd1, 0x52, 0xb0, 0xbc, 0x77, 0x04, 0x21, 0x9e,
+        0x19, 0xda, 0xb9, 0x94, 0x27, 0x35, 0x88, 0xb5, 0x0d, 0x52, 0x46,
+        0x0b, 0x17, 0xf1, 0x06, 0x3c, 0xb3, 0xd3, 0xd9, 0x28, 0x97, 0x04,
+        0x14, 0xba, 0x12, 0x28, 0xd4, 0x66, 0x36, 0x76, 0x9e, 0x77, 0x90,
+        0x19, 0xc0, 0x8b, 0x57, 0x83, 0x00, 0xf5, 0xb7, 0xb6, 0xc5, 0x2d,
+        0x83, 0x59
+};
+#endif
+
+/* A CRL names its issuer, and the AKID only says which of that issuer's keys
+ * signed it. Any other trusted CA that happens to match the AKID must not be
+ * accepted as the signer, or one CA could revoke another CA's certificates. */
+int test_wolfSSL_CRL_cross_ca_akid(void)
+{
+    EXPECT_DECLS;
+#ifdef TEST_CRL_CROSS_CA_AKID
+    /* A second, unrelated trusted CA "crl-test-ca-b". Stands in
+     * for any other CA in the store whose key an attacker holds.
+     */
+    static const unsigned char caCertB[] = {
+        0x30, 0x82, 0x03, 0x21, 0x30, 0x82, 0x02, 0x09, 0xa0, 0x03, 0x02,
+        0x01, 0x02, 0x02, 0x14, 0x48, 0x74, 0xf5, 0x40, 0x37, 0x08, 0xa7,
+        0xda, 0xf2, 0xb5, 0xc1, 0x8e, 0x0b, 0xac, 0x8c, 0xec, 0x5b, 0x75,
+        0x95, 0xd5, 0x30, 0x0d, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7,
+        0x0d, 0x01, 0x01, 0x0b, 0x05, 0x00, 0x30, 0x18, 0x31, 0x16, 0x30,
+        0x14, 0x06, 0x03, 0x55, 0x04, 0x03, 0x0c, 0x0d, 0x63, 0x72, 0x6c,
+        0x2d, 0x74, 0x65, 0x73, 0x74, 0x2d, 0x63, 0x61, 0x2d, 0x62, 0x30,
+        0x1e, 0x17, 0x0d, 0x32, 0x36, 0x30, 0x31, 0x30, 0x31, 0x30, 0x30,
+        0x30, 0x30, 0x30, 0x30, 0x5a, 0x17, 0x0d, 0x34, 0x36, 0x30, 0x31,
+        0x30, 0x31, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x5a, 0x30, 0x18,
+        0x31, 0x16, 0x30, 0x14, 0x06, 0x03, 0x55, 0x04, 0x03, 0x0c, 0x0d,
+        0x63, 0x72, 0x6c, 0x2d, 0x74, 0x65, 0x73, 0x74, 0x2d, 0x63, 0x61,
+        0x2d, 0x62, 0x30, 0x82, 0x01, 0x22, 0x30, 0x0d, 0x06, 0x09, 0x2a,
+        0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x01, 0x05, 0x00, 0x03,
+        0x82, 0x01, 0x0f, 0x00, 0x30, 0x82, 0x01, 0x0a, 0x02, 0x82, 0x01,
+        0x01, 0x00, 0xca, 0xb2, 0xb9, 0xea, 0x1a, 0xc3, 0x46, 0x20, 0x89,
+        0x69, 0xdf, 0x77, 0x65, 0xe6, 0x8d, 0x25, 0x14, 0x35, 0x82, 0x48,
+        0x5a, 0xce, 0xdc, 0xbc, 0x61, 0x6f, 0xa2, 0x78, 0xce, 0x0c, 0xee,
+        0x2f, 0x56, 0x05, 0x7a, 0x04, 0xfd, 0x99, 0x91, 0xe9, 0x84, 0x50,
+        0x42, 0x8f, 0x9b, 0x4f, 0x91, 0x77, 0xd4, 0x54, 0xbb, 0x70, 0xca,
+        0x5a, 0x46, 0x9d, 0x03, 0x55, 0xcd, 0xcb, 0x0e, 0x3e, 0xee, 0x37,
+        0x66, 0x98, 0xad, 0x54, 0x39, 0x5d, 0xf6, 0x9d, 0x7a, 0x2d, 0xed,
+        0x1c, 0x5f, 0xc5, 0x76, 0x2c, 0x87, 0xd9, 0xf5, 0xcf, 0x50, 0xea,
+        0xc7, 0xec, 0xad, 0x45, 0xf3, 0x99, 0x3d, 0xa6, 0xab, 0xd9, 0xe2,
+        0xbf, 0x5a, 0x00, 0x1f, 0xf4, 0x70, 0x94, 0x8a, 0x2b, 0x4a, 0xff,
+        0xb5, 0x5c, 0x6b, 0xe0, 0xbc, 0x4c, 0x34, 0x00, 0xfe, 0xbb, 0xba,
+        0x15, 0x12, 0xa5, 0x21, 0x6d, 0xc1, 0xe9, 0x8d, 0x48, 0x78, 0xd6,
+        0x7f, 0xac, 0x1e, 0xf5, 0x61, 0x88, 0x49, 0xe1, 0xee, 0xe4, 0x39,
+        0xa9, 0x07, 0xd5, 0x11, 0x93, 0xbd, 0xba, 0x25, 0x3b, 0xe7, 0x8c,
+        0x9a, 0x23, 0x02, 0x32, 0x29, 0x00, 0xf4, 0xe3, 0x55, 0xea, 0x96,
+        0x8c, 0x56, 0x61, 0x1d, 0x39, 0x98, 0x36, 0xa9, 0xbd, 0x8b, 0x62,
+        0x6e, 0x35, 0x60, 0x8f, 0x97, 0xc0, 0x57, 0x08, 0x88, 0x6e, 0x7f,
+        0x86, 0x2f, 0xe9, 0xf7, 0xb8, 0xfc, 0x87, 0xed, 0x1c, 0x09, 0x17,
+        0x28, 0xd4, 0xdb, 0x21, 0x1e, 0xe6, 0x8e, 0xd9, 0xf8, 0x2c, 0x80,
+        0x45, 0x7d, 0x5f, 0x7d, 0x58, 0xa6, 0x8f, 0x40, 0x44, 0x3d, 0x79,
+        0x0a, 0x38, 0x3d, 0x12, 0xcd, 0x51, 0xa1, 0xd0, 0x38, 0x62, 0x1f,
+        0xb8, 0x75, 0x55, 0xd1, 0x87, 0x10, 0x50, 0x82, 0x56, 0xb4, 0x51,
+        0x3c, 0xe7, 0xc5, 0x03, 0xd0, 0x4b, 0x21, 0xfa, 0x60, 0x7c, 0x55,
+        0x42, 0xc4, 0x09, 0x98, 0x35, 0x02, 0x03, 0x01, 0x00, 0x01, 0xa3,
+        0x63, 0x30, 0x61, 0x30, 0x1f, 0x06, 0x03, 0x55, 0x1d, 0x23, 0x04,
+        0x18, 0x30, 0x16, 0x80, 0x14, 0x3c, 0x46, 0x2a, 0x19, 0xfe, 0x92,
+        0x81, 0x75, 0x77, 0x3b, 0xee, 0xb9, 0xa4, 0xbb, 0xcf, 0x98, 0x54,
+        0x40, 0xc9, 0x88, 0x30, 0x0f, 0x06, 0x03, 0x55, 0x1d, 0x13, 0x01,
+        0x01, 0xff, 0x04, 0x05, 0x30, 0x03, 0x01, 0x01, 0xff, 0x30, 0x0e,
+        0x06, 0x03, 0x55, 0x1d, 0x0f, 0x01, 0x01, 0xff, 0x04, 0x04, 0x03,
+        0x02, 0x01, 0x06, 0x30, 0x1d, 0x06, 0x03, 0x55, 0x1d, 0x0e, 0x04,
+        0x16, 0x04, 0x14, 0x3c, 0x46, 0x2a, 0x19, 0xfe, 0x92, 0x81, 0x75,
+        0x77, 0x3b, 0xee, 0xb9, 0xa4, 0xbb, 0xcf, 0x98, 0x54, 0x40, 0xc9,
+        0x88, 0x30, 0x0d, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d,
+        0x01, 0x01, 0x0b, 0x05, 0x00, 0x03, 0x82, 0x01, 0x01, 0x00, 0x16,
+        0x85, 0x0f, 0x8d, 0xe0, 0x3a, 0x77, 0x9a, 0x1f, 0xa0, 0xe6, 0xcd,
+        0x2a, 0x2c, 0x9f, 0x11, 0x42, 0xde, 0xee, 0x15, 0x6e, 0x04, 0x6a,
+        0x97, 0x8c, 0xb9, 0x99, 0xd7, 0xc6, 0x03, 0x95, 0xa3, 0x43, 0xc1,
+        0x4c, 0xe5, 0x1f, 0x29, 0x79, 0xa1, 0xe3, 0xb6, 0x75, 0x78, 0x9b,
+        0xd0, 0xd2, 0xe0, 0xaa, 0x21, 0x8e, 0xb2, 0x23, 0xc2, 0xe5, 0x96,
+        0xe1, 0xf2, 0x1d, 0x12, 0xbe, 0xa7, 0xda, 0x88, 0x8c, 0x69, 0x1a,
+        0xcb, 0xa6, 0x3d, 0x06, 0x8d, 0x35, 0x69, 0xc5, 0xca, 0x1d, 0xb0,
+        0x5d, 0x5d, 0xf3, 0xaa, 0x6b, 0x01, 0xb4, 0x85, 0x9c, 0x00, 0xa9,
+        0x54, 0x4e, 0x1c, 0xc5, 0xfd, 0xce, 0x87, 0x02, 0xb0, 0xec, 0x33,
+        0xc5, 0xfe, 0x03, 0x10, 0x55, 0x53, 0x96, 0x69, 0x87, 0x28, 0xe3,
+        0xe4, 0xdb, 0x57, 0x0d, 0x84, 0x4d, 0xf8, 0x41, 0xf9, 0x21, 0xb0,
+        0x12, 0x69, 0xc1, 0x62, 0x65, 0x57, 0xfc, 0x8d, 0x53, 0x35, 0xb0,
+        0xfe, 0x55, 0xde, 0x84, 0xa9, 0x95, 0x01, 0x6c, 0x3f, 0x34, 0x03,
+        0x85, 0x5f, 0xab, 0x10, 0x08, 0xad, 0x9f, 0xd5, 0x68, 0x65, 0xb5,
+        0xa6, 0x74, 0xa4, 0x35, 0x19, 0xfd, 0x02, 0x36, 0x2a, 0xa4, 0xbd,
+        0xbc, 0x00, 0xbf, 0xf9, 0x5b, 0xfe, 0x29, 0x7e, 0x6f, 0x1d, 0xbf,
+        0xc8, 0xaa, 0x88, 0x04, 0x33, 0xd9, 0x62, 0xb2, 0x43, 0xdb, 0xa2,
+        0x73, 0x6b, 0xbb, 0x72, 0xe4, 0x55, 0x60, 0xe4, 0x2f, 0x24, 0xbe,
+        0x00, 0xc2, 0x08, 0x6c, 0x54, 0x55, 0xea, 0x03, 0x55, 0x83, 0x6a,
+        0x4c, 0x9f, 0xc7, 0xc9, 0xaa, 0x92, 0xfa, 0x28, 0xc9, 0x85, 0x6a,
+        0xbb, 0xdf, 0x77, 0x24, 0x88, 0x1d, 0x8c, 0xdc, 0x2e, 0x74, 0x43,
+        0x3a, 0xd8, 0x52, 0xcc, 0x62, 0xdd, 0x5b, 0x1f, 0x29, 0x18, 0xae,
+        0x3e, 0x81, 0x74, 0xbf, 0x67, 0xef, 0xe7, 0x72, 0xa1, 0x1d, 0x65,
+        0x2c, 0x4f
+    };
+
+    /* CRL naming CA A as its issuer and revoking serial 0x2a, but
+     * carrying CA B's key id in its AKID and signed by CA B. */
+    static const unsigned char crlForged[] = {
+        0x30, 0x82, 0x01, 0xa8, 0x30, 0x81, 0x91, 0x02, 0x01, 0x01, 0x30,
+        0x0d, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01,
+        0x0b, 0x05, 0x00, 0x30, 0x18, 0x31, 0x16, 0x30, 0x14, 0x06, 0x03,
+        0x55, 0x04, 0x03, 0x0c, 0x0d, 0x63, 0x72, 0x6c, 0x2d, 0x74, 0x65,
+        0x73, 0x74, 0x2d, 0x63, 0x61, 0x2d, 0x61, 0x17, 0x0d, 0x32, 0x36,
+        0x30, 0x31, 0x30, 0x31, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x5a,
+        0x17, 0x0d, 0x34, 0x36, 0x30, 0x31, 0x30, 0x31, 0x30, 0x30, 0x30,
+        0x30, 0x30, 0x30, 0x5a, 0x30, 0x14, 0x30, 0x12, 0x02, 0x01, 0x2a,
+        0x17, 0x0d, 0x32, 0x36, 0x30, 0x31, 0x30, 0x31, 0x30, 0x30, 0x30,
+        0x30, 0x30, 0x30, 0x5a, 0xa0, 0x2f, 0x30, 0x2d, 0x30, 0x1f, 0x06,
+        0x03, 0x55, 0x1d, 0x23, 0x04, 0x18, 0x30, 0x16, 0x80, 0x14, 0x3c,
+        0x46, 0x2a, 0x19, 0xfe, 0x92, 0x81, 0x75, 0x77, 0x3b, 0xee, 0xb9,
+        0xa4, 0xbb, 0xcf, 0x98, 0x54, 0x40, 0xc9, 0x88, 0x30, 0x0a, 0x06,
+        0x03, 0x55, 0x1d, 0x14, 0x04, 0x03, 0x02, 0x01, 0x02, 0x30, 0x0d,
+        0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x0b,
+        0x05, 0x00, 0x03, 0x82, 0x01, 0x01, 0x00, 0x16, 0x3a, 0xf8, 0x7c,
+        0x2c, 0x9c, 0xdd, 0x50, 0x91, 0x28, 0x5e, 0xbd, 0x4e, 0xb9, 0x47,
+        0x05, 0x84, 0x47, 0xab, 0x13, 0x9c, 0x94, 0xaf, 0x02, 0x06, 0x3f,
+        0x64, 0xda, 0x9e, 0x18, 0x25, 0x90, 0x68, 0x82, 0x72, 0x28, 0x0e,
+        0xb6, 0x77, 0x5e, 0x3d, 0x04, 0xfd, 0xec, 0x00, 0x5a, 0x24, 0x1b,
+        0x43, 0xa9, 0xcc, 0x90, 0xef, 0xa3, 0x9e, 0x79, 0xc0, 0xc3, 0x8d,
+        0x23, 0x96, 0xcc, 0x0d, 0xe8, 0xba, 0x26, 0x66, 0x43, 0x5a, 0x24,
+        0x56, 0x78, 0xe5, 0x9c, 0xbb, 0x27, 0x0f, 0x46, 0x83, 0x98, 0x63,
+        0x50, 0xab, 0x9e, 0x4d, 0x4b, 0x6d, 0x87, 0x5d, 0x81, 0x84, 0xc0,
+        0x2f, 0xb9, 0x70, 0x84, 0x6d, 0xe9, 0xec, 0xde, 0x53, 0xd6, 0x47,
+        0x27, 0x2e, 0xdf, 0xcc, 0x2c, 0xea, 0x1d, 0x43, 0xd6, 0xda, 0x55,
+        0x5b, 0x00, 0xe2, 0x77, 0x0b, 0xac, 0xfe, 0xc9, 0x01, 0x6f, 0x56,
+        0x2e, 0x42, 0xc1, 0x1e, 0x81, 0xc6, 0x18, 0x07, 0xf5, 0x09, 0x90,
+        0x75, 0x83, 0xfb, 0x83, 0xab, 0xa6, 0xf5, 0x28, 0x6d, 0x40, 0xb6,
+        0x5c, 0x99, 0x48, 0xc2, 0x05, 0x95, 0x9b, 0x56, 0x42, 0xee, 0x81,
+        0x01, 0xa7, 0xbd, 0x79, 0xd3, 0x9b, 0x87, 0x89, 0x7d, 0x74, 0xb2,
+        0x32, 0x80, 0xcc, 0x7e, 0x24, 0x88, 0x3c, 0xa0, 0xf8, 0x75, 0x70,
+        0x64, 0x97, 0x42, 0xef, 0x31, 0x51, 0x15, 0x92, 0x15, 0xad, 0x5e,
+        0xb8, 0x2b, 0xa6, 0x10, 0xac, 0x35, 0xa2, 0x5b, 0x5d, 0x21, 0x9d,
+        0x1c, 0xa4, 0x18, 0xe8, 0xde, 0x5a, 0x84, 0xa1, 0x20, 0x05, 0x90,
+        0xba, 0x94, 0xd1, 0xdf, 0x48, 0xf1, 0x17, 0x60, 0x3b, 0x20, 0x23,
+        0x0c, 0xd3, 0x47, 0x98, 0x0a, 0x52, 0xb1, 0xfd, 0xa0, 0xfc, 0x10,
+        0x51, 0x1a, 0xdd, 0x42, 0x84, 0x4b, 0x01, 0xb5, 0x0e, 0xf2, 0xed,
+        0x77, 0xa9, 0x55, 0x1e, 0xa1, 0x01, 0x64, 0x9c, 0x32, 0xc6
+    };
+
+    /* The same CRL as CA A really issues it: AKID and signature
+     * both CA A. */
+    static const unsigned char crlLegit[] = {
+        0x30, 0x82, 0x01, 0xa8, 0x30, 0x81, 0x91, 0x02, 0x01, 0x01, 0x30,
+        0x0d, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01,
+        0x0b, 0x05, 0x00, 0x30, 0x18, 0x31, 0x16, 0x30, 0x14, 0x06, 0x03,
+        0x55, 0x04, 0x03, 0x0c, 0x0d, 0x63, 0x72, 0x6c, 0x2d, 0x74, 0x65,
+        0x73, 0x74, 0x2d, 0x63, 0x61, 0x2d, 0x61, 0x17, 0x0d, 0x32, 0x36,
+        0x30, 0x31, 0x30, 0x31, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x5a,
+        0x17, 0x0d, 0x34, 0x36, 0x30, 0x31, 0x30, 0x31, 0x30, 0x30, 0x30,
+        0x30, 0x30, 0x30, 0x5a, 0x30, 0x14, 0x30, 0x12, 0x02, 0x01, 0x2a,
+        0x17, 0x0d, 0x32, 0x36, 0x30, 0x31, 0x30, 0x31, 0x30, 0x30, 0x30,
+        0x30, 0x30, 0x30, 0x5a, 0xa0, 0x2f, 0x30, 0x2d, 0x30, 0x1f, 0x06,
+        0x03, 0x55, 0x1d, 0x23, 0x04, 0x18, 0x30, 0x16, 0x80, 0x14, 0x16,
+        0x20, 0x5d, 0x43, 0x64, 0x9c, 0xed, 0xc6, 0x95, 0x92, 0xa4, 0xc6,
+        0x28, 0xdc, 0x1a, 0x06, 0x7f, 0x01, 0x84, 0x0e, 0x30, 0x0a, 0x06,
+        0x03, 0x55, 0x1d, 0x14, 0x04, 0x03, 0x02, 0x01, 0x01, 0x30, 0x0d,
+        0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x0b,
+        0x05, 0x00, 0x03, 0x82, 0x01, 0x01, 0x00, 0x90, 0x8e, 0x52, 0x57,
+        0x62, 0xdd, 0x0d, 0xfb, 0x3c, 0x1b, 0xe2, 0x08, 0x43, 0x7a, 0x31,
+        0xad, 0x9d, 0x99, 0x9d, 0x9f, 0x72, 0xdc, 0x42, 0xf2, 0xdd, 0x5b,
+        0x52, 0x41, 0x3c, 0x6c, 0xaf, 0x07, 0xb2, 0x2c, 0x2f, 0xc2, 0x84,
+        0x19, 0xea, 0xda, 0x2f, 0x17, 0x34, 0x35, 0x28, 0x24, 0x54, 0x4c,
+        0xb8, 0xa3, 0x20, 0x77, 0x09, 0x8c, 0x37, 0x0e, 0xf5, 0xe5, 0xca,
+        0xca, 0x64, 0xb8, 0x3a, 0x04, 0xca, 0x20, 0xbf, 0xc0, 0x23, 0x14,
+        0xb7, 0x4e, 0x51, 0x81, 0xb8, 0x18, 0xe3, 0x8e, 0x8f, 0xee, 0xc0,
+        0xdb, 0x76, 0x2d, 0xee, 0x5e, 0xfa, 0xf7, 0x12, 0x2a, 0xa8, 0xf1,
+        0xa2, 0xcb, 0xab, 0xce, 0x11, 0x62, 0x67, 0x6f, 0x3f, 0x15, 0x06,
+        0xde, 0xf9, 0x1c, 0x8e, 0xde, 0x48, 0xe6, 0xfe, 0xa5, 0x56, 0x18,
+        0xca, 0x23, 0xfa, 0x3b, 0xad, 0xd4, 0x80, 0x19, 0x38, 0x80, 0x80,
+        0xb4, 0xdb, 0x2c, 0x6c, 0x20, 0x41, 0xe3, 0x6f, 0x99, 0x8a, 0x81,
+        0x68, 0xa8, 0xc6, 0x6a, 0x53, 0xbf, 0xba, 0xde, 0x90, 0xd9, 0x32,
+        0xe5, 0xdc, 0x3b, 0x7c, 0x63, 0x59, 0xfd, 0x6a, 0xfc, 0x0e, 0x99,
+        0x21, 0x8e, 0x5a, 0xc9, 0x17, 0xfc, 0xe7, 0x73, 0x61, 0xf2, 0x6a,
+        0xc9, 0x48, 0x19, 0x26, 0x62, 0x29, 0xa9, 0xec, 0xbc, 0x8a, 0x27,
+        0x91, 0xb3, 0x62, 0xa4, 0x5a, 0xf9, 0x23, 0x61, 0x97, 0x0d, 0xe5,
+        0x48, 0x3c, 0xfb, 0xfe, 0x2d, 0x85, 0xef, 0x80, 0xf1, 0x1d, 0x95,
+        0xe6, 0xd1, 0xcf, 0xdf, 0x8f, 0xc9, 0x01, 0x22, 0xc0, 0xe6, 0x7a,
+        0xfd, 0x83, 0xb5, 0x8d, 0x96, 0x57, 0xf5, 0x91, 0x00, 0x3a, 0x4b,
+        0xa4, 0x73, 0x1c, 0x27, 0x47, 0x79, 0xc6, 0x92, 0x74, 0x47, 0xb9,
+        0x51, 0x5a, 0xe5, 0x25, 0xd1, 0xba, 0x39, 0x1c, 0x0e, 0xf1, 0x82,
+        0x64, 0x6c, 0x98, 0x49, 0xff, 0x5e, 0xed, 0x5f, 0x93, 0x8a
+    };
+    const unsigned char* const crlDer[2] = { crlForged, crlLegit };
+    const int crlSz[2] = { (int)sizeof(crlForged), (int)sizeof(crlLegit) };
+    /* The forged CRL must leave the check with no usable CRL for CA A. The
+     * real one revokes the leaf. */
+    const int expect[2] = { WC_NO_ERR_TRACE(CRL_MISSING),
+                            WC_NO_ERR_TRACE(CRL_CERT_REVOKED) };
+    int i;
+
+    for (i = 0; i < 2; i++) {
+        WOLFSSL_CERT_MANAGER* cm = NULL;
+        WOLFSSL_X509_STORE* store = NULL;
+        WOLFSSL_X509_CRL* crl = NULL;
+
+        ExpectNotNull(store = wolfSSL_X509_STORE_new());
+        if (store != NULL)
+            cm = store->cm;
+        /* Both CAs are trusted. Only CA A issued the leaf. */
+        ExpectIntEQ(wolfSSL_CertManagerLoadCABuffer(cm, crl_test_ca_a,
+            sizeof(crl_test_ca_a), WOLFSSL_FILETYPE_ASN1), WOLFSSL_SUCCESS);
+        ExpectIntEQ(wolfSSL_CertManagerLoadCABuffer(cm, caCertB,
+            sizeof(caCertB), WOLFSSL_FILETYPE_ASN1), WOLFSSL_SUCCESS);
+        ExpectIntEQ(wolfSSL_CertManagerEnableCRL(cm, WOLFSSL_CRL_CHECK),
+            WOLFSSL_SUCCESS);
+
+        /* d2i has no certificate manager to check the signature against, so
+         * the entry lands on the list unverified and is checked on use. */
+        ExpectNotNull(crl = wolfSSL_d2i_X509_CRL(NULL, crlDer[i], crlSz[i]));
+        ExpectIntEQ(wolfSSL_X509_STORE_add_crl(store, crl), WOLFSSL_SUCCESS);
+        wolfSSL_X509_CRL_free(crl);
+
+        ExpectIntEQ(wolfSSL_CertManagerCheckCRL(cm, crl_test_leaf_a,
+            (int)sizeof(crl_test_leaf_a)), expect[i]);
+
+        wolfSSL_X509_STORE_free(store);
+    }
+#endif
+    return EXPECT_RESULT();
+}
+
+/* A CRL read from a distribution point, or from anywhere else that does not
+ * check its signature, is stored unverified. Such an entry must not be able
+ * to push out the CRL whose signature the certificate manager has already
+ * checked. */
+int test_wolfSSL_CRL_unverified_no_evict(void)
+{
+    EXPECT_DECLS;
+#if defined(TEST_CRL_UNVERIFIED_NO_EVICT) && !defined(NO_FILESYSTEM)
+    /* CRL number 1 from CA A, revoking nothing, correctly signed. */
+    static const unsigned char crlGood[] = {
+        0x30, 0x82, 0x01, 0x91, 0x30, 0x7b, 0x02, 0x01, 0x01, 0x30, 0x0d,
+        0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x0b,
+        0x05, 0x00, 0x30, 0x18, 0x31, 0x16, 0x30, 0x14, 0x06, 0x03, 0x55,
+        0x04, 0x03, 0x0c, 0x0d, 0x63, 0x72, 0x6c, 0x2d, 0x74, 0x65, 0x73,
+        0x74, 0x2d, 0x63, 0x61, 0x2d, 0x61, 0x17, 0x0d, 0x32, 0x36, 0x30,
+        0x31, 0x30, 0x31, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x5a, 0x17,
+        0x0d, 0x34, 0x36, 0x30, 0x31, 0x30, 0x31, 0x30, 0x30, 0x30, 0x30,
+        0x30, 0x30, 0x5a, 0xa0, 0x2f, 0x30, 0x2d, 0x30, 0x1f, 0x06, 0x03,
+        0x55, 0x1d, 0x23, 0x04, 0x18, 0x30, 0x16, 0x80, 0x14, 0x16, 0x20,
+        0x5d, 0x43, 0x64, 0x9c, 0xed, 0xc6, 0x95, 0x92, 0xa4, 0xc6, 0x28,
+        0xdc, 0x1a, 0x06, 0x7f, 0x01, 0x84, 0x0e, 0x30, 0x0a, 0x06, 0x03,
+        0x55, 0x1d, 0x14, 0x04, 0x03, 0x02, 0x01, 0x01, 0x30, 0x0d, 0x06,
+        0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x0b, 0x05,
+        0x00, 0x03, 0x82, 0x01, 0x01, 0x00, 0x92, 0x93, 0x4b, 0x3a, 0x31,
+        0x0b, 0x72, 0x28, 0x6c, 0x25, 0xb3, 0x36, 0xc4, 0x69, 0xcb, 0x9f,
+        0xee, 0x3c, 0x2a, 0x31, 0xd0, 0xed, 0x1f, 0xed, 0xb8, 0x77, 0x0e,
+        0x57, 0x78, 0xde, 0x75, 0xb9, 0xb8, 0x87, 0x7e, 0x8e, 0x75, 0xd6,
+        0xd7, 0xe2, 0x7a, 0xc2, 0x5b, 0x5f, 0x69, 0x1d, 0x74, 0x42, 0xcd,
+        0x35, 0x72, 0x08, 0xef, 0xd8, 0x25, 0x1d, 0x11, 0x70, 0x41, 0xa8,
+        0xfe, 0xaf, 0xcc, 0xbf, 0x98, 0xfe, 0x4c, 0xed, 0xf8, 0xe1, 0x6e,
+        0x70, 0x50, 0x48, 0x15, 0x82, 0x04, 0xda, 0x14, 0x63, 0xd4, 0x16,
+        0x83, 0x1b, 0xb0, 0xb7, 0x62, 0x53, 0x3c, 0xca, 0xda, 0xab, 0x73,
+        0x03, 0x0c, 0x7e, 0xd2, 0x34, 0xd3, 0x1e, 0x0e, 0x7a, 0xc8, 0xa9,
+        0x40, 0xa2, 0xd3, 0x1d, 0x1a, 0x6e, 0x8a, 0x65, 0xe8, 0x16, 0x14,
+        0x72, 0x4e, 0xfc, 0xd3, 0x31, 0xa4, 0xe9, 0x0c, 0x4d, 0x27, 0x7e,
+        0xb1, 0xde, 0x31, 0xcb, 0x87, 0xf3, 0xd8, 0xa0, 0x78, 0x50, 0x5f,
+        0x91, 0xac, 0x09, 0x35, 0x6b, 0xe0, 0xf7, 0x22, 0xde, 0xba, 0x52,
+        0x84, 0x16, 0xc4, 0xbe, 0x2d, 0xb4, 0x09, 0x94, 0x86, 0x55, 0x8c,
+        0x36, 0xf4, 0xbe, 0xc9, 0x99, 0x0a, 0x5e, 0x34, 0xae, 0xd3, 0x78,
+        0x1c, 0x2a, 0xc9, 0xcb, 0xd5, 0x8e, 0x79, 0x88, 0x7c, 0xc0, 0xfe,
+        0xd4, 0x95, 0xb9, 0xcc, 0xe2, 0x4a, 0x63, 0x8f, 0x21, 0x09, 0xa6,
+        0xd5, 0xa2, 0xcd, 0xe9, 0x7f, 0x1e, 0xa9, 0xa4, 0xeb, 0xfd, 0x33,
+        0x95, 0x36, 0x24, 0x51, 0x4d, 0xc2, 0x31, 0x11, 0x8e, 0x15, 0x6a,
+        0x27, 0x8c, 0xf9, 0x8a, 0x61, 0xfb, 0xf9, 0x95, 0xaf, 0x1e, 0x8f,
+        0xa2, 0x2d, 0xa9, 0xae, 0x7b, 0x6c, 0xc0, 0xe1, 0x90, 0xd7, 0xdf,
+        0x9f, 0x39, 0xd7, 0x07, 0x33, 0xa0, 0xd4, 0x7a, 0xc0, 0xa5, 0x8f,
+        0x8f, 0x6d, 0x9e, 0x72, 0xc4, 0xea, 0x4d, 0xba, 0x3f
+    };
+
+    /* CRL number 2, also naming CA A as issuer, with an AKID no CA
+     * in the store matches and a corrupted signature. */
+    static const char crlBogusPem[] =
+        "-----BEGIN X509 CRL-----\n"
+        "MIIBqDCBkQIBATANBgkqhkiG9w0BAQsFADAYMRYwFAYDVQQDDA1jcmwtdGVzdC1j\n"
+        "YS1hFw0yNjAxMDEwMDAwMDBaFw00NjAxMDEwMDAwMDBaMBQwEgIBKhcNMjYwMTAx\n"
+        "MDAwMDAwWqAvMC0wHwYDVR0jBBgwFoAUq6urq6urq6urq6urq6urq6urq6swCgYD\n"
+        "VR0UBAMCAQIwDQYJKoZIhvcNAQELBQADggEBAJtS0Cryy1LKrfHLgv3Cpf4r7kh1\n"
+        "Oj+1TGmrDq+C//nzuzbJqXFdkqZ1dH/+s5I57rsMMFdy8t2+1nMvT8RFn6cu3rP7\n"
+        "9EehFJugBURpAevcwnrEl4Ts1XhFoLVSe6Cbx8BXzuSixEx1CPgLNg5Ab6E68+so\n"
+        "GfSKQuTWCTHjLZiUj3VUMRBv4OruqBFZ2bC1CZ2MAgsQPEXA4teGHvsrangAdoA1\n"
+        "a7ghS2jBOgihsn+XyzYgK1b9ITYlSh7Ys0SDkGn3MJDhYB91wFsgr3yF5MgR3s88\n"
+        "0LuVjJtXPDC2px+otou+4DlmT+SibAjz5TbHgxba/bZZD/2N4Rtfnv1Np3s=\n"
+        "-----END X509 CRL-----\n";
+    const int bogusSz = (int)sizeof(crlBogusPem) - 1;
+    char tmpDir[16];
+    char bogusFile[64];
+    WOLFSSL_CERT_MANAGER* cm = NULL;
+    WOLFSSL_X509_STORE* store = NULL;
+    XFILE f = XBADFILE;
+
+    XMEMSET(tmpDir, 0, sizeof(tmpDir));
+    XMEMSET(bogusFile, 0, sizeof(bogusFile));
+
+    /* Own directory per run, so unit.test runs sharing a working directory
+     * do not write over each other's fixture. */
+    ExpectNotNull(create_tmp_dir(tmpDir, (int)sizeof(tmpDir) - 1));
+    ExpectIntGT(XSNPRINTF(bogusFile, sizeof(bogusFile), "%s/crl.pem", tmpDir),
+        0);
+
+    ExpectNotNull(store = wolfSSL_X509_STORE_new());
+    if (store != NULL)
+        cm = store->cm;
+    ExpectIntEQ(wolfSSL_CertManagerLoadCABuffer(cm, crl_test_ca_a,
+        sizeof(crl_test_ca_a), WOLFSSL_FILETYPE_ASN1), WOLFSSL_SUCCESS);
+
+    /* The CA is in place, so this entry is verified as it is loaded. */
+    ExpectIntEQ(wolfSSL_CertManagerLoadCRLBuffer(cm, crlGood, sizeof(crlGood),
+        WOLFSSL_FILETYPE_ASN1), WOLFSSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_CertManagerCheckCRL(cm, crl_test_leaf_a,
+        (int)sizeof(crl_test_leaf_a)), WOLFSSL_SUCCESS);
+
+    ExpectTrue((f = XFOPEN(bogusFile, "wb")) != XBADFILE);
+    ExpectIntEQ((int)XFWRITE(crlBogusPem, 1, (size_t)bogusSz, f), bogusSz);
+    if (f != XBADFILE)
+        XFCLOSE(f);
+
+    /* Reading a store location does not check signatures, so the newer CRL
+     * number alone must not be enough to take the entry's place. */
+    ExpectIntNE(wolfSSL_X509_STORE_load_locations(store, bogusFile, NULL),
+        WOLFSSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_CertManagerCheckCRL(cm, crl_test_leaf_a,
+        (int)sizeof(crl_test_leaf_a)), WOLFSSL_SUCCESS);
+
+    /* A newer CRL whose signer is loaded is verified as it is read, so the
+     * same path still replaces a verified entry. crl_reason.pem is CRL
+     * number 1 and revokes serial 01, crl.pem is number 2 and does not. */
+    ExpectIntEQ(wolfSSL_CertManagerLoadCABuffer(cm, ca_cert_der_2048,
+        sizeof_ca_cert_der_2048, WOLFSSL_FILETYPE_ASN1), WOLFSSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_CertManagerLoadCRLFile(cm,
+        "./certs/crl/crl_reason.pem", WOLFSSL_FILETYPE_PEM), WOLFSSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_X509_STORE_load_locations(store,
+        "./certs/crl/crl.pem", NULL), WOLFSSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_CertManagerCheckCRL(cm, server_cert_der_2048,
+        sizeof_server_cert_der_2048), WOLFSSL_SUCCESS);
+
+    if (bogusFile[0] != '\0')
+        (void)rem_file(bogusFile);
+    if (tmpDir[0] != '\0')
+        (void)rem_dir(tmpDir);
+    wolfSSL_X509_STORE_free(store);
+#endif
+    return EXPECT_RESULT();
+}
+
+int test_wolfSSL_cert_critical_policy_constraints(void)
+{
+    EXPECT_DECLS;
+#if !defined(NO_CERTS) && !defined(NO_RSA) && !defined(WOLFSSL_NO_ASN_STRICT)
+    /* Critical policyConstraints is parsed but never enforced, so RFC 5280 Sec 4.2 requires rejecting the cert rather than silently accepting it. */
+    static const unsigned char cert_crit_policy[] = {
+        0x30, 0x82, 0x03, 0x38, 0x30, 0x82, 0x02, 0x20, 0xa0, 0x03, 0x02,
+        0x01, 0x02, 0x02, 0x14, 0x39, 0xd1, 0x63, 0xf8, 0xb6, 0x8f, 0x51,
+        0xc0, 0x2c, 0xef, 0x38, 0x87, 0x6d, 0x40, 0x1c, 0x2c, 0xc0, 0xcd,
+        0xa1, 0x9a, 0x30, 0x0d, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7,
+        0x0d, 0x01, 0x01, 0x0b, 0x05, 0x00, 0x30, 0x23, 0x31, 0x21, 0x30,
+        0x1f, 0x06, 0x03, 0x55, 0x04, 0x03, 0x0c, 0x18, 0x50, 0x6f, 0x6c,
+        0x69, 0x63, 0x79, 0x43, 0x6f, 0x6e, 0x73, 0x74, 0x72, 0x61, 0x69,
+        0x6e, 0x74, 0x43, 0x72, 0x69, 0x74, 0x54, 0x65, 0x73, 0x74, 0x30,
+        0x1e, 0x17, 0x0d, 0x32, 0x30, 0x30, 0x31, 0x30, 0x31, 0x30, 0x30,
+        0x30, 0x30, 0x30, 0x30, 0x5a, 0x17, 0x0d, 0x34, 0x30, 0x30, 0x31,
+        0x30, 0x31, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x5a, 0x30, 0x23,
+        0x31, 0x21, 0x30, 0x1f, 0x06, 0x03, 0x55, 0x04, 0x03, 0x0c, 0x18,
+        0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x43, 0x6f, 0x6e, 0x73, 0x74,
+        0x72, 0x61, 0x69, 0x6e, 0x74, 0x43, 0x72, 0x69, 0x74, 0x54, 0x65,
+        0x73, 0x74, 0x30, 0x82, 0x01, 0x22, 0x30, 0x0d, 0x06, 0x09, 0x2a,
+        0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x01, 0x05, 0x00, 0x03,
+        0x82, 0x01, 0x0f, 0x00, 0x30, 0x82, 0x01, 0x0a, 0x02, 0x82, 0x01,
+        0x01, 0x00, 0xa5, 0x09, 0xd5, 0xa6, 0xb1, 0x07, 0xb6, 0x7e, 0xa0,
+        0x51, 0x74, 0x5d, 0x1b, 0x3f, 0x92, 0x3d, 0xb2, 0xf4, 0x2d, 0xfc,
+        0xd9, 0xa1, 0xa7, 0xc4, 0x2d, 0x28, 0x3e, 0xa5, 0x2e, 0xc0, 0xba,
+        0xcc, 0x82, 0x3f, 0xf7, 0x80, 0x86, 0x4f, 0xb5, 0x3b, 0xeb, 0x67,
+        0x3f, 0x57, 0x43, 0x72, 0xd0, 0x1e, 0xdb, 0xd9, 0x4f, 0xb5, 0x14,
+        0x12, 0xec, 0xa4, 0x7a, 0x2a, 0xb8, 0xd7, 0x12, 0x64, 0x30, 0x32,
+        0xe9, 0xfc, 0x3a, 0x91, 0xe3, 0xa6, 0x59, 0x08, 0x11, 0xde, 0xd0,
+        0xb0, 0xfa, 0xcf, 0x31, 0x37, 0x3d, 0xa8, 0xd6, 0xa1, 0xb0, 0x84,
+        0x25, 0x2d, 0x05, 0x8a, 0x33, 0x32, 0x24, 0x94, 0xa5, 0xef, 0x65,
+        0xb6, 0x58, 0xfa, 0x94, 0xbd, 0x3a, 0xef, 0xfd, 0xcd, 0xeb, 0x56,
+        0xc4, 0x87, 0x65, 0x45, 0x5f, 0xe1, 0x14, 0xa9, 0x3c, 0x6e, 0x94,
+        0xa1, 0xc4, 0xfc, 0x67, 0xcd, 0xff, 0xb4, 0xdb, 0xbd, 0x0e, 0x56,
+        0x26, 0x94, 0xa8, 0xdc, 0xc2, 0x9d, 0xef, 0xb3, 0x95, 0x27, 0xc4,
+        0x97, 0x00, 0xae, 0x9a, 0x42, 0x48, 0x51, 0xe2, 0xbd, 0xb6, 0x12,
+        0xf4, 0xe0, 0xaf, 0x21, 0xd2, 0x92, 0xc3, 0xc1, 0x7d, 0xb1, 0xad,
+        0x11, 0xc9, 0x4e, 0xed, 0xb6, 0x80, 0x81, 0x2a, 0x86, 0xb2, 0xf2,
+        0x6e, 0x8c, 0x6d, 0xe0, 0x55, 0x7a, 0x00, 0x76, 0x81, 0x73, 0x27,
+        0x26, 0x3a, 0xd7, 0xe9, 0x86, 0xfb, 0x26, 0x14, 0x10, 0x1f, 0x0f,
+        0xf8, 0xfd, 0x41, 0x67, 0x37, 0xdc, 0x51, 0xcf, 0xd7, 0x44, 0x2f,
+        0x77, 0x85, 0xb2, 0xbb, 0xd4, 0xe9, 0xf4, 0xbb, 0xfc, 0xb0, 0x08,
+        0xaf, 0xba, 0x8a, 0x73, 0x4c, 0x62, 0x97, 0x7b, 0xd2, 0x5d, 0x01,
+        0x32, 0x5c, 0x84, 0x2d, 0xc7, 0x06, 0x53, 0x13, 0x25, 0xa7, 0xf2,
+        0x85, 0xce, 0x18, 0x7c, 0x80, 0x7d, 0x46, 0xcf, 0x59, 0x4a, 0x6a,
+        0x79, 0xad, 0xfd, 0x10, 0xf3, 0x02, 0x03, 0x01, 0x00, 0x01, 0xa3,
+        0x64, 0x30, 0x62, 0x30, 0x1d, 0x06, 0x03, 0x55, 0x1d, 0x0e, 0x04,
+        0x16, 0x04, 0x14, 0x57, 0x3b, 0x53, 0xa1, 0xea, 0xb0, 0x48, 0x46,
+        0x26, 0x1c, 0x05, 0xa4, 0xb4, 0xca, 0x4c, 0xe7, 0x2d, 0x6c, 0x69,
+        0xc2, 0x30, 0x1f, 0x06, 0x03, 0x55, 0x1d, 0x23, 0x04, 0x18, 0x30,
+        0x16, 0x80, 0x14, 0x57, 0x3b, 0x53, 0xa1, 0xea, 0xb0, 0x48, 0x46,
+        0x26, 0x1c, 0x05, 0xa4, 0xb4, 0xca, 0x4c, 0xe7, 0x2d, 0x6c, 0x69,
+        0xc2, 0x30, 0x0f, 0x06, 0x03, 0x55, 0x1d, 0x24, 0x01, 0x01, 0xff,
+        0x04, 0x05, 0x30, 0x03, 0x80, 0x01, 0x00, 0x30, 0x0f, 0x06, 0x03,
+        0x55, 0x1d, 0x13, 0x01, 0x01, 0xff, 0x04, 0x05, 0x30, 0x03, 0x01,
+        0x01, 0xff, 0x30, 0x0d, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7,
+        0x0d, 0x01, 0x01, 0x0b, 0x05, 0x00, 0x03, 0x82, 0x01, 0x01, 0x00,
+        0x25, 0xb6, 0xa5, 0xb5, 0xbd, 0xa3, 0x8e, 0xcf, 0x06, 0x09, 0x67,
+        0x28, 0x03, 0xf4, 0x6e, 0x6d, 0xa9, 0x4a, 0xe4, 0xac, 0x2e, 0xda,
+        0xdb, 0x98, 0x38, 0x50, 0x5b, 0xdf, 0xc6, 0x17, 0xc7, 0x1c, 0xea,
+        0x05, 0xd8, 0xea, 0xf4, 0x84, 0x41, 0x21, 0xc1, 0x3c, 0x59, 0x4e,
+        0xa3, 0x6e, 0x82, 0xa8, 0xda, 0x28, 0x81, 0x29, 0x02, 0x74, 0x75,
+        0x56, 0xf2, 0xd3, 0x70, 0x3f, 0x24, 0x21, 0x08, 0x73, 0xe9, 0xb2,
+        0x15, 0xc8, 0x30, 0x8c, 0x3b, 0xbe, 0x2a, 0x1c, 0x64, 0xfc, 0xb8,
+        0x9d, 0x9d, 0xa4, 0xf7, 0xda, 0x05, 0x93, 0x6c, 0x1c, 0xaf, 0xa8,
+        0xd3, 0xef, 0x0f, 0x9a, 0x52, 0x84, 0xce, 0x03, 0xbb, 0x06, 0x64,
+        0x8e, 0xa2, 0x70, 0x5e, 0x03, 0xb8, 0xa0, 0xe4, 0x58, 0x84, 0x1b,
+        0xf9, 0xa9, 0xfd, 0x9c, 0xc8, 0xf1, 0x8c, 0x98, 0x0d, 0x22, 0x3d,
+        0x54, 0x80, 0xb2, 0x12, 0xf9, 0xba, 0xa7, 0xfa, 0xcc, 0x77, 0x48,
+        0xe3, 0xe9, 0x46, 0x54, 0x49, 0xd4, 0x9c, 0x60, 0x53, 0x02, 0x4c,
+        0x6b, 0x0a, 0x73, 0xe5, 0x16, 0x0f, 0xea, 0xa2, 0xed, 0xbb, 0xab,
+        0xce, 0xbe, 0x29, 0x45, 0xff, 0xc1, 0xcf, 0x4e, 0x4a, 0x25, 0x8b,
+        0xc8, 0x32, 0x50, 0x62, 0x6a, 0x4a, 0x4c, 0x1a, 0xbc, 0xc4, 0xf4,
+        0x66, 0xf2, 0x19, 0x57, 0x4f, 0x5c, 0x7a, 0xab, 0xe0, 0x79, 0x19,
+        0xeb, 0x9d, 0xc3, 0x56, 0xfa, 0x99, 0xf5, 0xb0, 0x5c, 0xe3, 0x92,
+        0xa4, 0x8a, 0x7c, 0x42, 0xcf, 0xd8, 0x25, 0x80, 0x47, 0x8d, 0x83,
+        0x3e, 0xd7, 0xef, 0x60, 0x1c, 0xfd, 0xe0, 0xd1, 0x2d, 0x04, 0xbf,
+        0xe7, 0x3d, 0x1d, 0xb2, 0xda, 0xfd, 0x4c, 0x7f, 0x20, 0x73, 0xa7,
+        0x7a, 0xd1, 0xf2, 0x43, 0x64, 0x22, 0x9d, 0x7e, 0x2b, 0x7a, 0xeb,
+        0xe6, 0xcd, 0xea, 0x57, 0xea, 0xe1, 0x86, 0x78, 0xcf, 0x09, 0x4d,
+        0x90, 0xb9, 0x62
+    };
+    WOLFSSL_CERT_MANAGER* cm = NULL;
+
+    ExpectNotNull(cm = wolfSSL_CertManagerNew());
+    ExpectIntNE(wolfSSL_CertManagerLoadCABuffer(cm, cert_crit_policy,
+        sizeof(cert_crit_policy), WOLFSSL_FILETYPE_ASN1), WOLFSSL_SUCCESS);
+    wolfSSL_CertManagerFree(cm);
+#endif
+    return EXPECT_RESULT();
+}
+
+#if !defined(NO_CERTS) && defined(HAVE_CRL) && !defined(NO_RSA)
+/* claim-root CA, DER.  Shared by the unknown-critical-CRL-extension tests
+ * below. */
+static const unsigned char crl_unk_ca_der[] = {
+        0x30, 0x82, 0x03, 0x1b, 0x30, 0x82, 0x02, 0x03, 0xa0, 0x03, 0x02,
+        0x01, 0x02, 0x02, 0x14, 0x1e, 0x25, 0xc1, 0x5d, 0x6f, 0x02, 0x21,
+        0xa0, 0xf0, 0x14, 0x15, 0x9c, 0x3b, 0x4d, 0x1d, 0x73, 0x16, 0x00,
+        0xe4, 0x51, 0x30, 0x0d, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7,
+        0x0d, 0x01, 0x01, 0x0b, 0x05, 0x00, 0x30, 0x15, 0x31, 0x13, 0x30,
+        0x11, 0x06, 0x03, 0x55, 0x04, 0x03, 0x0c, 0x0a, 0x63, 0x6c, 0x61,
+        0x69, 0x6d, 0x2d, 0x72, 0x6f, 0x6f, 0x74, 0x30, 0x1e, 0x17, 0x0d,
+        0x32, 0x36, 0x30, 0x34, 0x31, 0x36, 0x31, 0x31, 0x33, 0x38, 0x35,
+        0x35, 0x5a, 0x17, 0x0d, 0x33, 0x36, 0x30, 0x34, 0x31, 0x33, 0x31,
+        0x31, 0x33, 0x38, 0x35, 0x35, 0x5a, 0x30, 0x15, 0x31, 0x13, 0x30,
+        0x11, 0x06, 0x03, 0x55, 0x04, 0x03, 0x0c, 0x0a, 0x63, 0x6c, 0x61,
+        0x69, 0x6d, 0x2d, 0x72, 0x6f, 0x6f, 0x74, 0x30, 0x82, 0x01, 0x22,
+        0x30, 0x0d, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01,
+        0x01, 0x01, 0x05, 0x00, 0x03, 0x82, 0x01, 0x0f, 0x00, 0x30, 0x82,
+        0x01, 0x0a, 0x02, 0x82, 0x01, 0x01, 0x00, 0xba, 0x49, 0x8c, 0xb5,
+        0x17, 0xc1, 0x01, 0x24, 0x6f, 0x56, 0x1a, 0xa9, 0x3b, 0x03, 0xe2,
+        0x9f, 0x24, 0xb1, 0x25, 0x98, 0xfb, 0x38, 0x82, 0x78, 0x54, 0xa7,
+        0x1f, 0x69, 0x87, 0xe4, 0x96, 0x1b, 0x81, 0x18, 0x10, 0xb0, 0xc0,
+        0x5b, 0x4b, 0xbf, 0xb8, 0x1d, 0xf4, 0xee, 0x75, 0x0f, 0xb5, 0x45,
+        0x72, 0x70, 0xce, 0x65, 0x84, 0x44, 0x3e, 0x30, 0x78, 0xc4, 0xf3,
+        0xec, 0xba, 0x96, 0x78, 0xa4, 0x65, 0xfc, 0x62, 0x8d, 0xf5, 0x29,
+        0xf9, 0x7c, 0x3d, 0x78, 0x6c, 0x1d, 0x4a, 0x4c, 0xc9, 0x15, 0x2d,
+        0x22, 0x10, 0xea, 0x93, 0x26, 0xb8, 0xa6, 0x17, 0xd3, 0x0e, 0xbc,
+        0x0c, 0xab, 0x83, 0x63, 0xf6, 0x1c, 0xcc, 0x83, 0x73, 0x29, 0x7e,
+        0x7f, 0x83, 0x7f, 0xbd, 0x63, 0xaa, 0x8d, 0xfa, 0x78, 0x85, 0xd2,
+        0x3e, 0x60, 0x95, 0x5a, 0x8d, 0xfa, 0x8f, 0xcd, 0x94, 0x3f, 0x13,
+        0x28, 0xd9, 0xd0, 0x87, 0x28, 0x17, 0x78, 0xe2, 0x61, 0x8d, 0x79,
+        0x97, 0x01, 0xa9, 0x7c, 0x84, 0xc0, 0x1c, 0xbe, 0x5f, 0x5d, 0xca,
+        0x28, 0x6b, 0x5e, 0xdd, 0x83, 0xa5, 0x55, 0x34, 0x11, 0xba, 0xfa,
+        0x8b, 0x92, 0xa3, 0xde, 0xb6, 0xf3, 0xba, 0xab, 0x7f, 0x1a, 0x67,
+        0xfd, 0x6f, 0x20, 0x85, 0x4c, 0x77, 0xa7, 0x8e, 0xbe, 0xb8, 0xf8,
+        0x8f, 0x70, 0xe3, 0x5a, 0xd3, 0x77, 0xc9, 0x9e, 0x10, 0x60, 0xb4,
+        0xdb, 0x0c, 0xc5, 0x05, 0xe1, 0x1f, 0xbd, 0xe6, 0x79, 0xee, 0x82,
+        0x3f, 0x51, 0x76, 0xe2, 0x7f, 0x5c, 0x11, 0x6d, 0xd3, 0x21, 0x69,
+        0xec, 0x05, 0x11, 0x8b, 0xc8, 0x39, 0xb3, 0x2c, 0xa6, 0x83, 0xb4,
+        0x6f, 0xac, 0x19, 0xd6, 0x6a, 0x65, 0x0d, 0x08, 0x94, 0x58, 0xde,
+        0x3d, 0xc9, 0x0c, 0x54, 0x03, 0x73, 0x0c, 0x8d, 0x24, 0x09, 0xf3,
+        0xb1, 0x5d, 0xd2, 0xe3, 0xeb, 0x56, 0xd6, 0x28, 0x66, 0x5b, 0x02,
+        0x03, 0x01, 0x00, 0x01, 0xa3, 0x63, 0x30, 0x61, 0x30, 0x0f, 0x06,
+        0x03, 0x55, 0x1d, 0x13, 0x01, 0x01, 0xff, 0x04, 0x05, 0x30, 0x03,
+        0x01, 0x01, 0xff, 0x30, 0x0e, 0x06, 0x03, 0x55, 0x1d, 0x0f, 0x01,
+        0x01, 0xff, 0x04, 0x04, 0x03, 0x02, 0x01, 0x06, 0x30, 0x1d, 0x06,
+        0x03, 0x55, 0x1d, 0x0e, 0x04, 0x16, 0x04, 0x14, 0x52, 0x97, 0x58,
+        0x47, 0x98, 0xca, 0xf8, 0x99, 0xa0, 0x7e, 0x8e, 0x1c, 0x38, 0x2e,
+        0xea, 0xbb, 0xea, 0x9b, 0x74, 0x30, 0x30, 0x1f, 0x06, 0x03, 0x55,
+        0x1d, 0x23, 0x04, 0x18, 0x30, 0x16, 0x80, 0x14, 0x52, 0x97, 0x58,
+        0x47, 0x98, 0xca, 0xf8, 0x99, 0xa0, 0x7e, 0x8e, 0x1c, 0x38, 0x2e,
+        0xea, 0xbb, 0xea, 0x9b, 0x74, 0x30, 0x30, 0x0d, 0x06, 0x09, 0x2a,
+        0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x0b, 0x05, 0x00, 0x03,
+        0x82, 0x01, 0x01, 0x00, 0x7d, 0x30, 0xd4, 0x6a, 0x01, 0x89, 0x3b,
+        0x62, 0xed, 0x16, 0x46, 0x59, 0x0f, 0xf2, 0x3b, 0xb5, 0xde, 0x89,
+        0x08, 0x17, 0x68, 0xcb, 0x46, 0xdc, 0x39, 0xa6, 0xcb, 0x56, 0xb0,
+        0x91, 0xeb, 0x03, 0xb2, 0x15, 0xc4, 0x3b, 0x4d, 0x63, 0x55, 0x22,
+        0x0a, 0x26, 0xe6, 0x64, 0x46, 0xe8, 0x0f, 0xa8, 0xf3, 0xde, 0xe1,
+        0x43, 0x54, 0xe6, 0xd7, 0x8a, 0xf4, 0x4f, 0xab, 0x56, 0x93, 0x12,
+        0x71, 0x4b, 0x25, 0x71, 0x0a, 0x31, 0x18, 0x79, 0xee, 0x45, 0xa4,
+        0xf5, 0x72, 0x67, 0xfa, 0x41, 0xd9, 0x87, 0x97, 0x09, 0xef, 0x55,
+        0xad, 0x6f, 0x47, 0x1d, 0x5a, 0xb2, 0xe9, 0xf7, 0x22, 0x05, 0x2d,
+        0x5a, 0x81, 0xa8, 0xe8, 0x53, 0xb0, 0x94, 0xf6, 0x63, 0xff, 0x3f,
+        0x51, 0x7a, 0x08, 0xac, 0x27, 0x9a, 0x57, 0x11, 0x22, 0xa4, 0x00,
+        0x84, 0x70, 0x86, 0x76, 0x39, 0x0f, 0x4f, 0x57, 0xcf, 0x8e, 0x94,
+        0xd2, 0x8e, 0x43, 0xc0, 0xd5, 0x34, 0x7d, 0xf5, 0xa1, 0x45, 0x1e,
+        0xb7, 0xc8, 0x7e, 0x7c, 0xfe, 0x5d, 0x4d, 0x53, 0x43, 0x25, 0x15,
+        0x9e, 0x08, 0x01, 0x56, 0xa4, 0xff, 0x79, 0x59, 0x25, 0xc9, 0x23,
+        0x98, 0xaf, 0x05, 0xaf, 0xc1, 0x0b, 0x29, 0xf1, 0xe2, 0xc4, 0x36,
+        0x31, 0x91, 0xfa, 0xf2, 0xbb, 0x12, 0xe8, 0x67, 0xf9, 0xc7, 0xa1,
+        0x5e, 0x8c, 0xed, 0x92, 0x12, 0xa3, 0x2b, 0xe1, 0xc2, 0xe1, 0xa0,
+        0xb0, 0x0e, 0x12, 0xa7, 0xd0, 0xa2, 0xae, 0xd6, 0xfa, 0x30, 0x21,
+        0x0f, 0x73, 0xfe, 0x24, 0x21, 0x5f, 0x03, 0x86, 0x69, 0xcd, 0xec,
+        0x76, 0x18, 0xe1, 0xfd, 0xb6, 0x64, 0x90, 0xa6, 0x06, 0x2e, 0x19,
+        0x40, 0x93, 0x50, 0x37, 0xe4, 0x90, 0xe3, 0x1f, 0x07, 0xae, 0xfb,
+        0x89, 0xc3, 0xf6, 0xc4, 0x90, 0xab, 0x40, 0x67, 0x4c, 0x43, 0x2c,
+        0xa2, 0xb0, 0x3e, 0x61, 0x16, 0x69, 0x8f
+    };
+
+/* CRL with a critical obsolete CRL-level extension OID 2.5.29.1, 422 bytes
+ * DER.  OID 2.5.29.1 is the old X.509v2 Authority Key Identifier, permanently
+ * superseded by 2.5.29.35. No implementation will ever support it. */
+static const unsigned char crl_obsolete_critical[] = {
+        0x30, 0x82, 0x01, 0xa6, 0x30, 0x81, 0x8f, 0x02, 0x01, 0x01, 0x30,
+        0x0d, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01,
+        0x0b, 0x05, 0x00, 0x30, 0x15, 0x31, 0x13, 0x30, 0x11, 0x06, 0x03,
+        0x55, 0x04, 0x03, 0x0c, 0x0a, 0x63, 0x6c, 0x61, 0x69, 0x6d, 0x2d,
+        0x72, 0x6f, 0x6f, 0x74, 0x17, 0x0d, 0x32, 0x36, 0x30, 0x34, 0x31,
+        0x36, 0x31, 0x35, 0x32, 0x31, 0x30, 0x37, 0x5a, 0x17, 0x0d, 0x33,
+        0x36, 0x30, 0x34, 0x31, 0x33, 0x31, 0x35, 0x32, 0x31, 0x30, 0x37,
+        0x5a, 0xa0, 0x46, 0x30, 0x44, 0x30, 0x1f, 0x06, 0x03, 0x55, 0x1d,
+        0x23, 0x04, 0x18, 0x30, 0x16, 0x80, 0x14, 0x52, 0x97, 0x58, 0x47,
+        0x98, 0xca, 0xf8, 0x99, 0xa0, 0x7e, 0x8e, 0x1c, 0x38, 0x2e, 0xea,
+        0xbb, 0xea, 0x9b, 0x74, 0x30, 0x30, 0x14, 0x06, 0x03, 0x55, 0x1d,
+        0x01, 0x01, 0x01, 0xff, 0x04, 0x0a, 0x0c, 0x08, 0x6f, 0x62, 0x73,
+        0x6f, 0x6c, 0x65, 0x74, 0x65, 0x30, 0x0b, 0x06, 0x03, 0x55, 0x1d,
+        0x14, 0x04, 0x04, 0x02, 0x02, 0x20, 0x02, 0x30, 0x0d, 0x06, 0x09,
+        0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x0b, 0x05, 0x00,
+        0x03, 0x82, 0x01, 0x01, 0x00, 0x05, 0xf3, 0x8f, 0xdb, 0x7f, 0x75,
+        0x2c, 0x34, 0x4b, 0x7e, 0x70, 0x17, 0x5e, 0x34, 0xc6, 0xdb, 0xcb,
+        0x54, 0x33, 0x06, 0x58, 0x6d, 0xae, 0x9c, 0xc8, 0xe3, 0xaf, 0x82,
+        0xe5, 0xf6, 0x86, 0x42, 0xb3, 0x01, 0x72, 0x1a, 0xca, 0xf9, 0x10,
+        0x5d, 0x14, 0xe6, 0x84, 0x34, 0x56, 0x55, 0x74, 0xb5, 0x06, 0x64,
+        0x49, 0x1d, 0xb3, 0xb0, 0x13, 0xff, 0x1c, 0x05, 0x4f, 0x43, 0x29,
+        0xbc, 0xfe, 0xb5, 0x92, 0x54, 0xf6, 0x9b, 0x81, 0x07, 0x5e, 0x2e,
+        0x75, 0xd8, 0xfd, 0x9b, 0x5b, 0xc9, 0xd3, 0xc2, 0x15, 0xa7, 0x6e,
+        0x2f, 0x4b, 0x3a, 0x27, 0x57, 0xef, 0x40, 0x61, 0x8c, 0x11, 0x9d,
+        0x0a, 0xb1, 0x2b, 0x0e, 0xed, 0x5d, 0xf2, 0xf5, 0x1a, 0xce, 0xdc,
+        0xd7, 0x75, 0xc6, 0x25, 0x22, 0xe4, 0x70, 0xad, 0x93, 0xff, 0x36,
+        0xa1, 0xa2, 0xa0, 0xd9, 0x82, 0x23, 0x6e, 0xc8, 0x3a, 0x80, 0x82,
+        0xbf, 0x12, 0xac, 0xa1, 0xf9, 0x03, 0x9c, 0xb9, 0x20, 0x91, 0x33,
+        0x80, 0x7b, 0xb7, 0x6e, 0xa5, 0x32, 0x98, 0xd6, 0x2c, 0x5d, 0x9d,
+        0x3b, 0x64, 0x3b, 0xb4, 0xea, 0x03, 0x2d, 0x65, 0xcf, 0x7f, 0x0f,
+        0x97, 0xef, 0x5b, 0x17, 0x8c, 0xcf, 0x98, 0x69, 0xba, 0x2d, 0x62,
+        0xe9, 0x40, 0xe2, 0x3d, 0xbd, 0xd2, 0x0f, 0x4a, 0xf8, 0xb0, 0xa7,
+        0xdb, 0x80, 0xa3, 0x47, 0x56, 0xe5, 0xe6, 0x6f, 0x93, 0x5c, 0x6f,
+        0xdd, 0x62, 0x43, 0x28, 0x5c, 0xe5, 0x8f, 0x0e, 0x11, 0xa6, 0x1f,
+        0x61, 0xaf, 0x39, 0x15, 0x40, 0xf4, 0x6e, 0x79, 0x40, 0xf6, 0x28,
+        0xf3, 0xd4, 0x30, 0x3b, 0x25, 0xb6, 0xf0, 0x4a, 0x51, 0xc3, 0x18,
+        0xff, 0xad, 0x4d, 0x6e, 0x10, 0x73, 0x68, 0xfa, 0x54, 0x9e, 0xdc,
+        0x34, 0x70, 0xe4, 0x5d, 0x9e, 0x7c, 0xfa, 0x59, 0x97, 0xde, 0x35,
+        0x17, 0xbb, 0xaf, 0xa0, 0x28, 0x78, 0x13, 0xbf
+};
+#endif /* !NO_CERTS && HAVE_CRL && !NO_RSA */
+
+int test_wolfSSL_CRL_unknown_critical_ext(void)
+{
+    EXPECT_DECLS;
+#if !defined(NO_CERTS) && defined(HAVE_CRL) && !defined(NO_RSA)
+    WOLFSSL_CERT_MANAGER* cm = NULL;
+
+    ExpectNotNull(cm = wolfSSL_CertManagerNew());
+    ExpectIntEQ(wolfSSL_CertManagerLoadCABuffer(cm, crl_unk_ca_der,
+        sizeof(crl_unk_ca_der), WOLFSSL_FILETYPE_ASN1), WOLFSSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_CertManagerEnableCRL(cm, WOLFSSL_CRL_CHECKALL),
+        WOLFSSL_SUCCESS);
+
+    ExpectIntNE(wolfSSL_CertManagerLoadCRLBuffer(cm, crl_obsolete_critical,
+        sizeof(crl_obsolete_critical), WOLFSSL_FILETYPE_ASN1),
+        WOLFSSL_SUCCESS);
+
+    wolfSSL_CertManagerFree(cm);
+#endif
+    return EXPECT_RESULT();
+}
+
+int test_wolfSSL_CRL_unknown_critical_entry_ext(void)
+{
+    EXPECT_DECLS;
+#if !defined(NO_CERTS) && defined(HAVE_CRL) && !defined(NO_RSA) && \
+    !defined(NO_FILESYSTEM)
+    WOLFSSL_CERT_MANAGER* cm = NULL;
+
+    ExpectNotNull(cm = wolfSSL_CertManagerNew());
+    ExpectIntEQ(wolfSSL_CertManagerLoadCA(cm,
+        "./certs/crl/extra-crls/claim-root.pem", NULL), WOLFSSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_CertManagerEnableCRL(cm, WOLFSSL_CRL_CHECKALL),
+        WOLFSSL_SUCCESS);
+
+    /* CRL with a revoked entry that carries a critical unknown extension
+     * (OID 2.5.29.1, old X.509v2 AKI, permanently superseded).
+     * Per RFC 5280 Section 5.3, the CRL must not be used. */
+    ExpectIntNE(wolfSSL_CertManagerLoadCRLFile(cm,
+        "./certs/crl/extra-crls/crl_critical_entry.pem", WOLFSSL_FILETYPE_PEM),
+        WOLFSSL_SUCCESS);
+
+    wolfSSL_CertManagerFree(cm);
+#endif
+    return EXPECT_RESULT();
+}
+
+#if !defined(NO_CERTS) && defined(HAVE_CRL) && !defined(NO_RSA) && \
+    !defined(NO_FILESYSTEM) && defined(WC_ASN_UNKNOWN_EXT_CB)
+/* Counter context plus the OID we observed on the unknown extension. */
+typedef struct CRLUnkExtCtx {
+    int   calls;
+    int   sawCritical;
+    int   oidMatched;
+} CRLUnkExtCtx;
+
+/* CRL Reason OID 2.5.29.21 (last component for the entry-ext test) and
+ * obsolete X.509v2 AKI 2.5.29.1 (last component for the CRL-level test). */
+static int crl_unk_ext_cb_accept(const word16* oid, word32 oidSz,
+        int crit, const unsigned char* der, word32 derSz, void* ctxIn)
+{
+    CRLUnkExtCtx* ctx = (CRLUnkExtCtx*)ctxIn;
+    (void)der;
+    (void)derSz;
+    if (ctx != NULL) {
+        ctx->calls++;
+        if (crit)
+            ctx->sawCritical = 1;
+        /* Expect OID arc starts at {2, 5, 29, ...}. */
+        if (oidSz >= 4 && oid[0] == 2 && oid[1] == 5 && oid[2] == 29)
+            ctx->oidMatched = 1;
+    }
+    return 0; /* accept */
+}
+
+static int crl_unk_ext_cb_reject(const word16* oid, word32 oidSz,
+        int crit, const unsigned char* der, word32 derSz, void* ctxIn)
+{
+    (void)oid; (void)oidSz; (void)crit; (void)der; (void)derSz;
+    if (ctxIn != NULL)
+        ((CRLUnkExtCtx*)ctxIn)->calls++;
+    return ASN_PARSE_E;
+}
+
+static int crl_unk_ext_cb_reject_positive(const word16* oid, word32 oidSz,
+        int crit, const unsigned char* der, word32 derSz, void* ctxIn)
+{
+    (void)oid; (void)oidSz; (void)crit; (void)der; (void)derSz;
+    if (ctxIn != NULL)
+        ((CRLUnkExtCtx*)ctxIn)->calls++;
+    return 1;
+}
+
+/* The non-Ex wc_UnknownExtCallback carries no context pointer, so the
+ * callbacks registered through wolfSSL_CertManagerSetCRLUnknownExtCallback()
+ * report what they saw through these file-static counters.  The exercising
+ * test resets them before each load. */
+static int crl_unk_ext_noctx_calls;
+static int crl_unk_ext_noctx_sawCritical;
+static int crl_unk_ext_noctx_oidMatched;
+
+static int crl_unk_ext_cb_noctx_accept(const word16* oid, word32 oidSz,
+        int crit, const unsigned char* der, word32 derSz)
+{
+    (void)der;
+    (void)derSz;
+    crl_unk_ext_noctx_calls++;
+    if (crit)
+        crl_unk_ext_noctx_sawCritical = 1;
+    /* Expect OID arc starts at {2, 5, 29, ...}. */
+    if (oidSz >= 4 && oid[0] == 2 && oid[1] == 5 && oid[2] == 29)
+        crl_unk_ext_noctx_oidMatched = 1;
+    return 0; /* accept */
+}
+
+static int crl_unk_ext_cb_noctx_reject(const word16* oid, word32 oidSz,
+        int crit, const unsigned char* der, word32 derSz)
+{
+    (void)oid; (void)oidSz; (void)crit; (void)der; (void)derSz;
+    crl_unk_ext_noctx_calls++;
+    return ASN_PARSE_E;
+}
+#endif
+
+/* Callback rescues a critical unknown CRL ENTRY extension that would
+ * otherwise be rejected per RFC 5280 5.3.  The fixture
+ * crl_critical_entry.pem carries OID 2.5.29.1 in a revoked entry. */
+int test_wolfSSL_CRL_unknown_ext_cb_rescues_critical_entry_ext(void)
+{
+    EXPECT_DECLS;
+#if !defined(NO_CERTS) && defined(HAVE_CRL) && !defined(NO_RSA) && \
+    !defined(NO_FILESYSTEM) && defined(WC_ASN_UNKNOWN_EXT_CB)
+    WOLFSSL_CERT_MANAGER* cm = NULL;
+    CRLUnkExtCtx ctx = { 0, 0, 0 };
+
+    ExpectNotNull(cm = wolfSSL_CertManagerNew());
+    ExpectIntEQ(wolfSSL_CertManagerLoadCA(cm,
+        "./certs/crl/extra-crls/claim-root.pem", NULL), WOLFSSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_CertManagerEnableCRL(cm, WOLFSSL_CRL_CHECKALL),
+        WOLFSSL_SUCCESS);
+
+    /* Register a callback that accepts any unknown extension. */
+    ExpectIntEQ(wolfSSL_CertManagerSetCRLUnknownExtCallbackEx(cm,
+        crl_unk_ext_cb_accept, &ctx), WOLFSSL_SUCCESS);
+
+    /* Without the callback, this load fails (see
+     * test_wolfSSL_CRL_unknown_critical_entry_ext above).  With an
+     * accepting callback registered, the load must succeed. */
+    ExpectIntEQ(wolfSSL_CertManagerLoadCRLFile(cm,
+        "./certs/crl/extra-crls/crl_critical_entry.pem", WOLFSSL_FILETYPE_PEM),
+        WOLFSSL_SUCCESS);
+
+    /* Callback must have fired at least once on the unknown critical OID. */
+    ExpectIntGT(ctx.calls, 0);
+    ExpectIntEQ(ctx.sawCritical, 1);
+    ExpectIntEQ(ctx.oidMatched, 1);
+
+    wolfSSL_CertManagerFree(cm);
+#endif
+    return EXPECT_RESULT();
+}
+
+/* Callback rescues a critical unknown CRL-LEVEL extension.  Drives the
+ * dispatch in ParseCRL_Extensions (as opposed to the entry-extension test
+ * above, which drives ParseCRL_EntryExtensions) using the same embedded
+ * crl_obsolete_critical fixture that test_wolfSSL_CRL_unknown_critical_ext
+ * proves is rejected without a callback. */
+int test_wolfSSL_CRL_unknown_ext_cb_rescues_critical_crl_ext(void)
+{
+    EXPECT_DECLS;
+#if !defined(NO_CERTS) && defined(HAVE_CRL) && !defined(NO_RSA) && \
+    !defined(NO_FILESYSTEM) && defined(WC_ASN_UNKNOWN_EXT_CB)
+    WOLFSSL_CERT_MANAGER* cm = NULL;
+    CRLUnkExtCtx ctx = { 0, 0, 0 };
+
+    /* Accepting callback: the load must succeed and the callback must have
+     * seen the critical unknown OID. */
+    ExpectNotNull(cm = wolfSSL_CertManagerNew());
+    ExpectIntEQ(wolfSSL_CertManagerLoadCABuffer(cm, crl_unk_ca_der,
+        sizeof(crl_unk_ca_der), WOLFSSL_FILETYPE_ASN1), WOLFSSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_CertManagerEnableCRL(cm, WOLFSSL_CRL_CHECKALL),
+        WOLFSSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_CertManagerSetCRLUnknownExtCallbackEx(cm,
+        crl_unk_ext_cb_accept, &ctx), WOLFSSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_CertManagerLoadCRLBuffer(cm, crl_obsolete_critical,
+        sizeof(crl_obsolete_critical), WOLFSSL_FILETYPE_ASN1),
+        WOLFSSL_SUCCESS);
+    ExpectIntGT(ctx.calls, 0);
+    ExpectIntEQ(ctx.sawCritical, 1);
+    ExpectIntEQ(ctx.oidMatched, 1);
+    wolfSSL_CertManagerFree(cm);
+    cm = NULL;
+
+    /* Rejecting callback: the same CRL must fail to load. */
+    ctx.calls = 0;
+    ExpectNotNull(cm = wolfSSL_CertManagerNew());
+    ExpectIntEQ(wolfSSL_CertManagerLoadCABuffer(cm, crl_unk_ca_der,
+        sizeof(crl_unk_ca_der), WOLFSSL_FILETYPE_ASN1), WOLFSSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_CertManagerEnableCRL(cm, WOLFSSL_CRL_CHECKALL),
+        WOLFSSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_CertManagerSetCRLUnknownExtCallbackEx(cm,
+        crl_unk_ext_cb_reject, &ctx), WOLFSSL_SUCCESS);
+    ExpectIntNE(wolfSSL_CertManagerLoadCRLBuffer(cm, crl_obsolete_critical,
+        sizeof(crl_obsolete_critical), WOLFSSL_FILETYPE_ASN1),
+        WOLFSSL_SUCCESS);
+    ExpectIntGT(ctx.calls, 0);
+
+    wolfSSL_CertManagerFree(cm);
+#endif
+    return EXPECT_RESULT();
+}
+
+/* A callback that rejects with a positive value must not make the load
+ * report success.  WOLFSSL_SUCCESS is 1, and BufferLoadCRL converts its
+ * error code with "ret ? ret : WOLFSSL_SUCCESS", so a positive callback
+ * return that propagates unsanitized out of ParseCRL is indistinguishable
+ * from success while the CRL entry has been discarded. */
+int test_wolfSSL_CRL_unknown_ext_cb_positive_return_fails_load(void)
+{
+    EXPECT_DECLS;
+#if !defined(NO_CERTS) && defined(HAVE_CRL) && !defined(NO_RSA) && \
+    !defined(NO_FILESYSTEM) && defined(WC_ASN_UNKNOWN_EXT_CB)
+    WOLFSSL_CERT_MANAGER* cm = NULL;
+    CRLUnkExtCtx ctx = { 0, 0, 0 };
+    int rc;
+
+    ExpectNotNull(cm = wolfSSL_CertManagerNew());
+    ExpectIntEQ(wolfSSL_CertManagerLoadCA(cm,
+        "./certs/crl/extra-crls/claim-root.pem", NULL), WOLFSSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_CertManagerEnableCRL(cm, WOLFSSL_CRL_CHECKALL),
+        WOLFSSL_SUCCESS);
+
+    ExpectIntEQ(wolfSSL_CertManagerSetCRLUnknownExtCallbackEx(cm,
+        crl_unk_ext_cb_reject_positive, &ctx), WOLFSSL_SUCCESS);
+
+    rc = wolfSSL_CertManagerLoadCRLFile(cm,
+        "./certs/crl/extra-crls/crl_critical_entry.pem", WOLFSSL_FILETYPE_PEM);
+    ExpectIntNE(rc, WOLFSSL_SUCCESS);
+    ExpectIntLT(rc, 0);
+    ExpectIntGT(ctx.calls, 0);
+
+    wolfSSL_CertManagerFree(cm);
+#endif
+    return EXPECT_RESULT();
+}
+
+/* Exercises the context-free entry point
+ * wolfSSL_CertManagerSetCRLUnknownExtCallback() (as opposed to the ...Ex()
+ * variant covered by the tests above).  Confirms NULL-argument rejection,
+ * that an accepting callback rescues a critical unknown CRL-level extension,
+ * and that a rejecting callback fails the load. */
+int test_wolfSSL_CRL_unknown_ext_cb_noctx(void)
+{
+    EXPECT_DECLS;
+#if !defined(NO_CERTS) && defined(HAVE_CRL) && !defined(NO_RSA) && \
+    !defined(NO_FILESYSTEM) && defined(WC_ASN_UNKNOWN_EXT_CB)
+    WOLFSSL_CERT_MANAGER* cm = NULL;
+
+    /* A NULL cert manager is rejected by both registration entry points. */
+    ExpectIntEQ(wolfSSL_CertManagerSetCRLUnknownExtCallback(NULL,
+        crl_unk_ext_cb_noctx_accept), BAD_FUNC_ARG);
+    ExpectIntEQ(wolfSSL_CertManagerSetCRLUnknownExtCallbackEx(NULL,
+        crl_unk_ext_cb_accept, NULL), BAD_FUNC_ARG);
+
+    /* Accepting callback: the critical unknown CRL-level extension in the
+     * crl_obsolete_critical fixture is rescued and the load succeeds.  The
+     * callback must have seen the critical unknown OID. */
+    crl_unk_ext_noctx_calls = 0;
+    crl_unk_ext_noctx_sawCritical = 0;
+    crl_unk_ext_noctx_oidMatched = 0;
+    ExpectNotNull(cm = wolfSSL_CertManagerNew());
+    ExpectIntEQ(wolfSSL_CertManagerLoadCABuffer(cm, crl_unk_ca_der,
+        sizeof(crl_unk_ca_der), WOLFSSL_FILETYPE_ASN1), WOLFSSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_CertManagerEnableCRL(cm, WOLFSSL_CRL_CHECKALL),
+        WOLFSSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_CertManagerSetCRLUnknownExtCallback(cm,
+        crl_unk_ext_cb_noctx_accept), WOLFSSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_CertManagerLoadCRLBuffer(cm, crl_obsolete_critical,
+        sizeof(crl_obsolete_critical), WOLFSSL_FILETYPE_ASN1),
+        WOLFSSL_SUCCESS);
+    ExpectIntGT(crl_unk_ext_noctx_calls, 0);
+    ExpectIntEQ(crl_unk_ext_noctx_sawCritical, 1);
+    ExpectIntEQ(crl_unk_ext_noctx_oidMatched, 1);
+    wolfSSL_CertManagerFree(cm);
+    cm = NULL;
+
+    /* Rejecting callback: the same CRL must fail to load. */
+    crl_unk_ext_noctx_calls = 0;
+    ExpectNotNull(cm = wolfSSL_CertManagerNew());
+    ExpectIntEQ(wolfSSL_CertManagerLoadCABuffer(cm, crl_unk_ca_der,
+        sizeof(crl_unk_ca_der), WOLFSSL_FILETYPE_ASN1), WOLFSSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_CertManagerEnableCRL(cm, WOLFSSL_CRL_CHECKALL),
+        WOLFSSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_CertManagerSetCRLUnknownExtCallback(cm,
+        crl_unk_ext_cb_noctx_reject), WOLFSSL_SUCCESS);
+    ExpectIntNE(wolfSSL_CertManagerLoadCRLBuffer(cm, crl_obsolete_critical,
+        sizeof(crl_obsolete_critical), WOLFSSL_FILETYPE_ASN1),
+        WOLFSSL_SUCCESS);
+    ExpectIntGT(crl_unk_ext_noctx_calls, 0);
+
+    wolfSSL_CertManagerFree(cm);
+#endif
+    return EXPECT_RESULT();
+}
+
+int test_wolfSSL_CertManagerCheckOCSPResponse(void)
+{
+    EXPECT_DECLS;
+#if defined(HAVE_OCSP) && !defined(NO_RSA) && !defined(NO_SHA)
+/* Need one of these for wolfSSL_OCSP_REQUEST_new. */
+#if defined(OPENSSL_ALL) || defined(WOLFSSL_NGINX) || \
+    defined(WOLFSSL_HAPROXY) || defined(WOLFSSL_APACHE_HTTPD) || \
+    defined(HAVE_LIGHTY)
+    WOLFSSL_CERT_MANAGER* cm = NULL;
+    /* Raw OCSP response bytes captured using the following setup:
+     * - Run responder with
+     *      openssl ocsp -port 9999 -ndays 9999
+     *      -index certs/ocsp/index-intermediate1-ca-issued-certs.txt
+     *      -rsigner certs/ocsp/intermediate1-ca-cert.pem
+     *      -rkey certs/ocsp/intermediate1-ca-key.pem
+     *      -CA certs/ocsp/intermediate1-ca-cert.pem
+     * - Run client with
+     *      openssl ocsp -host 127.0.0.1:9999 -respout resp.out
+     *      -issuer certs/ocsp/intermediate1-ca-cert.pem
+     *      -cert certs/ocsp/server1-cert.pem
+     *      -CAfile certs/ocsp/root-ca-cert.pem -noverify
+     * - Convert resp.out to a C array (e.g. xxd -i -c 12 resp.out) and paste
+     *   the bytes below.
+     */
+    static const byte response[] = {
+        0x30, 0x82, 0x07, 0x79, 0x0a, 0x01, 0x00, 0xa0, 0x82, 0x07, 0x72, 0x30,
+        0x82, 0x07, 0x6e, 0x06, 0x09, 0x2b, 0x06, 0x01, 0x05, 0x05, 0x07, 0x30,
+        0x01, 0x01, 0x04, 0x82, 0x07, 0x5f, 0x30, 0x82, 0x07, 0x5b, 0x30, 0x82,
+        0x01, 0x44, 0xa1, 0x81, 0xa5, 0x30, 0x81, 0xa2, 0x31, 0x0b, 0x30, 0x09,
+        0x06, 0x03, 0x55, 0x04, 0x06, 0x13, 0x02, 0x55, 0x53, 0x31, 0x13, 0x30,
+        0x11, 0x06, 0x03, 0x55, 0x04, 0x08, 0x0c, 0x0a, 0x57, 0x61, 0x73, 0x68,
+        0x69, 0x6e, 0x67, 0x74, 0x6f, 0x6e, 0x31, 0x10, 0x30, 0x0e, 0x06, 0x03,
+        0x55, 0x04, 0x07, 0x0c, 0x07, 0x53, 0x65, 0x61, 0x74, 0x74, 0x6c, 0x65,
+        0x31, 0x10, 0x30, 0x0e, 0x06, 0x03, 0x55, 0x04, 0x0a, 0x0c, 0x07, 0x77,
+        0x6f, 0x6c, 0x66, 0x53, 0x53, 0x4c, 0x31, 0x14, 0x30, 0x12, 0x06, 0x03,
+        0x55, 0x04, 0x0b, 0x0c, 0x0b, 0x45, 0x6e, 0x67, 0x69, 0x6e, 0x65, 0x65,
+        0x72, 0x69, 0x6e, 0x67, 0x31, 0x22, 0x30, 0x20, 0x06, 0x03, 0x55, 0x04,
+        0x03, 0x0c, 0x19, 0x77, 0x6f, 0x6c, 0x66, 0x53, 0x53, 0x4c, 0x20, 0x69,
+        0x6e, 0x74, 0x65, 0x72, 0x6d, 0x65, 0x64, 0x69, 0x61, 0x74, 0x65, 0x20,
+        0x43, 0x41, 0x20, 0x31, 0x31, 0x20, 0x30, 0x1e, 0x06, 0x09, 0x2a, 0x86,
+        0x48, 0x86, 0xf7, 0x0d, 0x01, 0x09, 0x01, 0x16, 0x11, 0x66, 0x61, 0x63,
+        0x74, 0x73, 0x40, 0x77, 0x6f, 0x6c, 0x66, 0x73, 0x73, 0x6c, 0x2e, 0x63,
+        0x6f, 0x6d, 0x18, 0x0f, 0x32, 0x30, 0x32, 0x36, 0x30, 0x36, 0x32, 0x35,
+        0x32, 0x32, 0x33, 0x38, 0x32, 0x33, 0x5a, 0x30, 0x64, 0x30, 0x62, 0x30,
+        0x3a, 0x30, 0x09, 0x06, 0x05, 0x2b, 0x0e, 0x03, 0x02, 0x1a, 0x05, 0x00,
+        0x04, 0x14, 0x2a, 0x5a, 0xde, 0x28, 0x38, 0x97, 0xd7, 0xd5, 0x60, 0xa7,
+        0x48, 0xec, 0x04, 0xb3, 0xcb, 0x1b, 0xfd, 0x72, 0x82, 0x5c, 0x04, 0x14,
+        0x83, 0xc6, 0x3a, 0x89, 0x2c, 0x81, 0xf4, 0x02, 0xd7, 0x9d, 0x4c, 0xe2,
+        0x2a, 0xc0, 0x71, 0x82, 0x64, 0x44, 0xda, 0x0e, 0x02, 0x01, 0x05, 0x80,
+        0x00, 0x18, 0x0f, 0x32, 0x30, 0x32, 0x36, 0x30, 0x36, 0x32, 0x35, 0x32,
+        0x32, 0x33, 0x38, 0x32, 0x33, 0x5a, 0xa0, 0x11, 0x18, 0x0f, 0x32, 0x30,
+        0x35, 0x33, 0x31, 0x31, 0x30, 0x39, 0x32, 0x32, 0x33, 0x38, 0x32, 0x33,
+        0x5a, 0xa1, 0x23, 0x30, 0x21, 0x30, 0x1f, 0x06, 0x09, 0x2b, 0x06, 0x01,
+        0x05, 0x05, 0x07, 0x30, 0x01, 0x02, 0x04, 0x12, 0x04, 0x10, 0x77, 0x1a,
+        0x2e, 0xfe, 0x77, 0x6c, 0x64, 0x8f, 0x1a, 0xb6, 0x7b, 0xb7, 0x33, 0xe8,
+        0x5f, 0xaa, 0x30, 0x0d, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d,
+        0x01, 0x01, 0x0b, 0x05, 0x00, 0x03, 0x82, 0x01, 0x01, 0x00, 0xb2, 0x32,
+        0x61, 0x3a, 0xf4, 0x7b, 0xe6, 0xe7, 0x61, 0xd9, 0x1b, 0xc1, 0xdb, 0x49,
+        0x2b, 0x15, 0x64, 0x58, 0xe8, 0xa5, 0x17, 0x3b, 0xa2, 0xd5, 0xc1, 0x2a,
+        0x70, 0x37, 0x23, 0x8d, 0xb5, 0xe0, 0x61, 0x05, 0x28, 0x77, 0x24, 0x5a,
+        0xac, 0xe2, 0x70, 0x2e, 0x16, 0x9d, 0x5e, 0xa7, 0x57, 0x98, 0x68, 0x52,
+        0x25, 0x7a, 0x16, 0x96, 0x1f, 0x98, 0x22, 0x96, 0xbe, 0x3f, 0xe5, 0x3a,
+        0xaa, 0xbc, 0xac, 0x3c, 0xc2, 0xd5, 0x1c, 0x40, 0x97, 0x49, 0x2b, 0x99,
+        0x85, 0xf4, 0x7a, 0x66, 0x38, 0x0b, 0xb0, 0xb3, 0x4b, 0x78, 0x26, 0x07,
+        0xa9, 0xb0, 0x2f, 0xfa, 0xb4, 0xc6, 0x5b, 0x43, 0x33, 0x56, 0x4a, 0xa1,
+        0x81, 0x39, 0x4e, 0x1e, 0x7f, 0xf9, 0xa3, 0xa7, 0x89, 0x29, 0x8c, 0x0d,
+        0x09, 0xc8, 0x32, 0xcb, 0xca, 0x43, 0x2b, 0xbd, 0xd2, 0x81, 0x67, 0xd6,
+        0xe3, 0x83, 0xfa, 0x21, 0x67, 0x25, 0x5d, 0x9c, 0xcf, 0x8c, 0x88, 0xb9,
+        0x6a, 0x78, 0x36, 0xe8, 0x56, 0x39, 0x29, 0x73, 0xe2, 0xd9, 0xe3, 0xe5,
+        0xda, 0xc7, 0x47, 0x77, 0x3f, 0xfa, 0x1e, 0xdd, 0x55, 0x05, 0xf6, 0xaf,
+        0x13, 0xf0, 0x86, 0x6b, 0xba, 0xe2, 0xda, 0x9e, 0xd3, 0xa4, 0xc4, 0x63,
+        0xec, 0x92, 0x4d, 0x1d, 0x1b, 0xdf, 0x8f, 0xa4, 0x6b, 0xdd, 0x59, 0x81,
+        0x7e, 0x30, 0xf8, 0xae, 0x4e, 0x8e, 0x76, 0x99, 0x3c, 0xae, 0x81, 0x12,
+        0x0d, 0x7c, 0x34, 0x63, 0x2d, 0x1c, 0x7e, 0x72, 0xc5, 0xe4, 0x64, 0xf4,
+        0x75, 0x20, 0x90, 0x08, 0x9c, 0x19, 0x22, 0x45, 0x39, 0xdc, 0x18, 0x0f,
+        0xe0, 0x02, 0x16, 0x4e, 0x25, 0x2c, 0x34, 0xd4, 0x90, 0x6d, 0xb2, 0x5a,
+        0xd8, 0xae, 0xa3, 0xd4, 0xba, 0xb3, 0x2f, 0xfa, 0xf2, 0x1a, 0xfe, 0x7d,
+        0xd1, 0xb0, 0x72, 0x5e, 0xba, 0x76, 0xec, 0x28, 0xa8, 0xc2, 0x5c, 0x78,
+        0x90, 0x59, 0xa0, 0x82, 0x04, 0xfb, 0x30, 0x82, 0x04, 0xf7, 0x30, 0x82,
+        0x04, 0xf3, 0x30, 0x82, 0x03, 0xdb, 0xa0, 0x03, 0x02, 0x01, 0x02, 0x02,
+        0x01, 0x01, 0x30, 0x0d, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d,
+        0x01, 0x01, 0x0b, 0x05, 0x00, 0x30, 0x81, 0x98, 0x31, 0x0b, 0x30, 0x09,
+        0x06, 0x03, 0x55, 0x04, 0x06, 0x13, 0x02, 0x55, 0x53, 0x31, 0x13, 0x30,
+        0x11, 0x06, 0x03, 0x55, 0x04, 0x08, 0x0c, 0x0a, 0x57, 0x61, 0x73, 0x68,
+        0x69, 0x6e, 0x67, 0x74, 0x6f, 0x6e, 0x31, 0x10, 0x30, 0x0e, 0x06, 0x03,
+        0x55, 0x04, 0x07, 0x0c, 0x07, 0x53, 0x65, 0x61, 0x74, 0x74, 0x6c, 0x65,
+        0x31, 0x10, 0x30, 0x0e, 0x06, 0x03, 0x55, 0x04, 0x0a, 0x0c, 0x07, 0x77,
+        0x6f, 0x6c, 0x66, 0x53, 0x53, 0x4c, 0x31, 0x14, 0x30, 0x12, 0x06, 0x03,
+        0x55, 0x04, 0x0b, 0x0c, 0x0b, 0x45, 0x6e, 0x67, 0x69, 0x6e, 0x65, 0x65,
+        0x72, 0x69, 0x6e, 0x67, 0x31, 0x18, 0x30, 0x16, 0x06, 0x03, 0x55, 0x04,
+        0x03, 0x0c, 0x0f, 0x77, 0x6f, 0x6c, 0x66, 0x53, 0x53, 0x4c, 0x20, 0x72,
+        0x6f, 0x6f, 0x74, 0x20, 0x43, 0x41, 0x31, 0x20, 0x30, 0x1e, 0x06, 0x09,
+        0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x09, 0x01, 0x16, 0x11, 0x66,
+        0x61, 0x63, 0x74, 0x73, 0x40, 0x77, 0x6f, 0x6c, 0x66, 0x73, 0x73, 0x6c,
+        0x2e, 0x63, 0x6f, 0x6d, 0x30, 0x1e, 0x17, 0x0d, 0x32, 0x36, 0x30, 0x36,
+        0x31, 0x31, 0x32, 0x31, 0x34, 0x34, 0x33, 0x34, 0x5a, 0x17, 0x0d, 0x32,
+        0x39, 0x30, 0x33, 0x30, 0x37, 0x32, 0x31, 0x34, 0x34, 0x33, 0x34, 0x5a,
+        0x30, 0x81, 0xa2, 0x31, 0x0b, 0x30, 0x09, 0x06, 0x03, 0x55, 0x04, 0x06,
+        0x13, 0x02, 0x55, 0x53, 0x31, 0x13, 0x30, 0x11, 0x06, 0x03, 0x55, 0x04,
+        0x08, 0x0c, 0x0a, 0x57, 0x61, 0x73, 0x68, 0x69, 0x6e, 0x67, 0x74, 0x6f,
+        0x6e, 0x31, 0x10, 0x30, 0x0e, 0x06, 0x03, 0x55, 0x04, 0x07, 0x0c, 0x07,
+        0x53, 0x65, 0x61, 0x74, 0x74, 0x6c, 0x65, 0x31, 0x10, 0x30, 0x0e, 0x06,
+        0x03, 0x55, 0x04, 0x0a, 0x0c, 0x07, 0x77, 0x6f, 0x6c, 0x66, 0x53, 0x53,
+        0x4c, 0x31, 0x14, 0x30, 0x12, 0x06, 0x03, 0x55, 0x04, 0x0b, 0x0c, 0x0b,
+        0x45, 0x6e, 0x67, 0x69, 0x6e, 0x65, 0x65, 0x72, 0x69, 0x6e, 0x67, 0x31,
+        0x22, 0x30, 0x20, 0x06, 0x03, 0x55, 0x04, 0x03, 0x0c, 0x19, 0x77, 0x6f,
+        0x6c, 0x66, 0x53, 0x53, 0x4c, 0x20, 0x69, 0x6e, 0x74, 0x65, 0x72, 0x6d,
+        0x65, 0x64, 0x69, 0x61, 0x74, 0x65, 0x20, 0x43, 0x41, 0x20, 0x31, 0x31,
+        0x20, 0x30, 0x1e, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01,
+        0x09, 0x01, 0x16, 0x11, 0x66, 0x61, 0x63, 0x74, 0x73, 0x40, 0x77, 0x6f,
+        0x6c, 0x66, 0x73, 0x73, 0x6c, 0x2e, 0x63, 0x6f, 0x6d, 0x30, 0x82, 0x01,
+        0x22, 0x30, 0x0d, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01,
+        0x01, 0x01, 0x05, 0x00, 0x03, 0x82, 0x01, 0x0f, 0x00, 0x30, 0x82, 0x01,
+        0x0a, 0x02, 0x82, 0x01, 0x01, 0x00, 0xde, 0xb4, 0xc8, 0x5c, 0x77, 0xe0,
+        0x2d, 0xb1, 0xf5, 0xb9, 0xad, 0x16, 0x47, 0x35, 0xa0, 0x35, 0x65, 0x65,
+        0xc6, 0xe1, 0x40, 0xab, 0x1e, 0xb4, 0xb9, 0x13, 0xb7, 0xcb, 0x8c, 0xbb,
+        0x77, 0xa5, 0x76, 0xda, 0x6d, 0x87, 0x87, 0xf6, 0x4a, 0x4d, 0x13, 0xe4,
+        0x26, 0x3e, 0x27, 0x87, 0xee, 0x5b, 0xc7, 0x6a, 0x3f, 0x45, 0x30, 0x61,
+        0x55, 0x5c, 0xf6, 0x35, 0xd1, 0x65, 0xfa, 0x98, 0x11, 0xa3, 0xa7, 0x55,
+        0xd5, 0xbe, 0x91, 0x82, 0x4b, 0xfc, 0xbe, 0x90, 0xd6, 0x50, 0x53, 0x63,
+        0x9a, 0x2c, 0x22, 0xe1, 0x35, 0x11, 0xdc, 0x78, 0x02, 0x97, 0x8a, 0xe4,
+        0x46, 0x92, 0x9c, 0x53, 0x08, 0x76, 0xde, 0x1f, 0x53, 0xb6, 0xb8, 0xca,
+        0x77, 0x3e, 0x79, 0x6e, 0xbc, 0xd0, 0xe3, 0x0d, 0x30, 0x5b, 0x4c, 0xf6,
+        0x94, 0x0d, 0x30, 0x29, 0x64, 0x9f, 0x04, 0xe5, 0xdb, 0xfb, 0x89, 0x60,
+        0x67, 0xbb, 0xaf, 0x26, 0x83, 0x51, 0x77, 0x24, 0x2f, 0x2b, 0x0b, 0xa1,
+        0x94, 0x81, 0x10, 0x98, 0xe8, 0xeb, 0x26, 0xa8, 0x1e, 0x7c, 0xe4, 0xc4,
+        0x6c, 0x67, 0x06, 0x95, 0x55, 0x4a, 0xdd, 0x52, 0xf4, 0xf2, 0x60, 0x6d,
+        0x01, 0x2b, 0x19, 0x91, 0x35, 0x6d, 0xa4, 0x08, 0x47, 0x06, 0x71, 0x24,
+        0x00, 0xd9, 0xde, 0xc6, 0x56, 0xf3, 0x8b, 0x53, 0x2c, 0xe2, 0x9a, 0x96,
+        0xa5, 0xf3, 0x62, 0xe5, 0xc4, 0xe3, 0x23, 0xf2, 0xd2, 0xfc, 0x21, 0xea,
+        0x0f, 0x62, 0x76, 0x8d, 0xd5, 0x99, 0x48, 0xce, 0xdc, 0x58, 0xc4, 0xbb,
+        0x7f, 0xda, 0x94, 0x2c, 0x80, 0x74, 0x83, 0xc5, 0xe0, 0xb0, 0x15, 0x7e,
+        0x41, 0xfd, 0x0e, 0xf2, 0xf4, 0xf0, 0x78, 0x76, 0x7b, 0xad, 0x26, 0x0d,
+        0xaa, 0x48, 0x96, 0x17, 0x2f, 0x21, 0xe3, 0x95, 0x2b, 0x26, 0x37, 0xf9,
+        0xaa, 0x80, 0x2f, 0xfe, 0xde, 0xf6, 0x5e, 0xbc, 0x97, 0x7f, 0x02, 0x03,
+        0x01, 0x00, 0x01, 0xa3, 0x82, 0x01, 0x3a, 0x30, 0x82, 0x01, 0x36, 0x30,
+        0x0c, 0x06, 0x03, 0x55, 0x1d, 0x13, 0x04, 0x05, 0x30, 0x03, 0x01, 0x01,
+        0xff, 0x30, 0x1d, 0x06, 0x03, 0x55, 0x1d, 0x0e, 0x04, 0x16, 0x04, 0x14,
+        0x83, 0xc6, 0x3a, 0x89, 0x2c, 0x81, 0xf4, 0x02, 0xd7, 0x9d, 0x4c, 0xe2,
+        0x2a, 0xc0, 0x71, 0x82, 0x64, 0x44, 0xda, 0x0e, 0x30, 0x81, 0xc5, 0x06,
+        0x03, 0x55, 0x1d, 0x23, 0x04, 0x81, 0xbd, 0x30, 0x81, 0xba, 0x80, 0x14,
+        0x73, 0xb0, 0x1c, 0xa4, 0x2f, 0x82, 0xcb, 0xcf, 0x47, 0xa5, 0x38, 0xd7,
+        0xb0, 0x04, 0x82, 0x3a, 0x7e, 0x72, 0x15, 0x21, 0xa1, 0x81, 0x9e, 0xa4,
+        0x81, 0x9b, 0x30, 0x81, 0x98, 0x31, 0x0b, 0x30, 0x09, 0x06, 0x03, 0x55,
+        0x04, 0x06, 0x13, 0x02, 0x55, 0x53, 0x31, 0x13, 0x30, 0x11, 0x06, 0x03,
+        0x55, 0x04, 0x08, 0x0c, 0x0a, 0x57, 0x61, 0x73, 0x68, 0x69, 0x6e, 0x67,
+        0x74, 0x6f, 0x6e, 0x31, 0x10, 0x30, 0x0e, 0x06, 0x03, 0x55, 0x04, 0x07,
+        0x0c, 0x07, 0x53, 0x65, 0x61, 0x74, 0x74, 0x6c, 0x65, 0x31, 0x10, 0x30,
+        0x0e, 0x06, 0x03, 0x55, 0x04, 0x0a, 0x0c, 0x07, 0x77, 0x6f, 0x6c, 0x66,
+        0x53, 0x53, 0x4c, 0x31, 0x14, 0x30, 0x12, 0x06, 0x03, 0x55, 0x04, 0x0b,
+        0x0c, 0x0b, 0x45, 0x6e, 0x67, 0x69, 0x6e, 0x65, 0x65, 0x72, 0x69, 0x6e,
+        0x67, 0x31, 0x18, 0x30, 0x16, 0x06, 0x03, 0x55, 0x04, 0x03, 0x0c, 0x0f,
+        0x77, 0x6f, 0x6c, 0x66, 0x53, 0x53, 0x4c, 0x20, 0x72, 0x6f, 0x6f, 0x74,
+        0x20, 0x43, 0x41, 0x31, 0x20, 0x30, 0x1e, 0x06, 0x09, 0x2a, 0x86, 0x48,
+        0x86, 0xf7, 0x0d, 0x01, 0x09, 0x01, 0x16, 0x11, 0x66, 0x61, 0x63, 0x74,
+        0x73, 0x40, 0x77, 0x6f, 0x6c, 0x66, 0x73, 0x73, 0x6c, 0x2e, 0x63, 0x6f,
+        0x6d, 0x82, 0x01, 0x63, 0x30, 0x0b, 0x06, 0x03, 0x55, 0x1d, 0x0f, 0x04,
+        0x04, 0x03, 0x02, 0x01, 0x06, 0x30, 0x32, 0x06, 0x08, 0x2b, 0x06, 0x01,
+        0x05, 0x05, 0x07, 0x01, 0x01, 0x04, 0x26, 0x30, 0x24, 0x30, 0x22, 0x06,
+        0x08, 0x2b, 0x06, 0x01, 0x05, 0x05, 0x07, 0x30, 0x01, 0x86, 0x16, 0x68,
+        0x74, 0x74, 0x70, 0x3a, 0x2f, 0x2f, 0x31, 0x32, 0x37, 0x2e, 0x30, 0x2e,
+        0x30, 0x2e, 0x31, 0x3a, 0x32, 0x32, 0x32, 0x32, 0x30, 0x30, 0x0d, 0x06,
+        0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x0b, 0x05, 0x00,
+        0x03, 0x82, 0x01, 0x01, 0x00, 0x1a, 0x4e, 0xf4, 0xe6, 0xeb, 0xdf, 0x9e,
+        0xb0, 0x67, 0x30, 0xf2, 0xea, 0x20, 0xd6, 0xf8, 0x85, 0x8f, 0x5c, 0xe2,
+        0x06, 0x5b, 0x16, 0x98, 0x9e, 0x44, 0xfe, 0xe7, 0xce, 0x5d, 0x19, 0x6d,
+        0x7e, 0x56, 0x1a, 0x4a, 0x41, 0xe9, 0xd8, 0xb5, 0x3a, 0x1d, 0xa9, 0xfa,
+        0x64, 0xe6, 0xe8, 0x00, 0x01, 0x49, 0x6a, 0x63, 0x59, 0xe5, 0x88, 0xdc,
+        0x42, 0x8f, 0xc1, 0xd1, 0x5b, 0x20, 0x79, 0x5c, 0x16, 0xa0, 0xf1, 0x75,
+        0x15, 0x9e, 0x6a, 0x86, 0xa1, 0x6d, 0x19, 0xd1, 0x76, 0xfa, 0x25, 0x92,
+        0xa9, 0x42, 0x8a, 0xac, 0x91, 0x38, 0xef, 0xe0, 0x8c, 0x89, 0xa1, 0x94,
+        0x14, 0x80, 0x46, 0x50, 0x9c, 0x84, 0x8b, 0x3a, 0xc7, 0x69, 0x23, 0x22,
+        0x10, 0x42, 0xad, 0xa9, 0x70, 0x43, 0xda, 0x56, 0x27, 0xfd, 0x7b, 0x97,
+        0x00, 0xcd, 0xa8, 0x6a, 0x87, 0xf4, 0xbb, 0x46, 0x3d, 0xa6, 0xae, 0x08,
+        0x40, 0xee, 0xeb, 0x1c, 0xab, 0xf2, 0x44, 0x79, 0x13, 0x81, 0x68, 0xd2,
+        0xfb, 0xde, 0x78, 0xb7, 0xee, 0xf3, 0xe4, 0x41, 0xf7, 0xaa, 0x39, 0xfc,
+        0x48, 0xfd, 0xa6, 0x69, 0x4a, 0x4c, 0x02, 0xf9, 0xaa, 0xae, 0xa7, 0x5e,
+        0x24, 0x0f, 0x94, 0x81, 0xa5, 0x64, 0xc8, 0x38, 0x1b, 0xdc, 0xe1, 0x78,
+        0x0c, 0x00, 0x45, 0xdc, 0xa4, 0xdd, 0x94, 0xda, 0x8e, 0x6a, 0xd0, 0x2c,
+        0x8a, 0xbf, 0x57, 0xbb, 0xea, 0x74, 0x1b, 0x66, 0xf0, 0xe1, 0x89, 0xf9,
+        0x28, 0x27, 0xe8, 0xcc, 0x81, 0xfe, 0xb3, 0x11, 0xd4, 0x76, 0xb0, 0x32,
+        0xa3, 0x00, 0x1c, 0x04, 0x62, 0x98, 0x14, 0xc7, 0x7d, 0x1e, 0x79, 0xfa,
+        0xe2, 0x6e, 0xf9, 0x65, 0x13, 0xdc, 0x74, 0x4a, 0x38, 0x7b, 0xef, 0x4e,
+        0x3b, 0xbd, 0xa9, 0xdb, 0x52, 0xe9, 0x40, 0xcc, 0xdd, 0x73, 0xb3, 0x95,
+        0xe2, 0x20, 0xd6, 0xa5, 0x99, 0xad, 0x00, 0x82, 0x5b
+    };
+    OcspEntry entry[1];
+    CertStatus status[1];
+    OcspRequest* request = NULL;
+#ifndef NO_FILESYSTEM
+    const char* ca_cert = "./certs/ca-cert.pem";
+#endif
+
+    byte serial[] = {0x05};
+    byte issuerHash[] = {
+        0x2a, 0x5a, 0xde, 0x28, 0x38, 0x97, 0xd7, 0xd5,
+        0x60, 0xa7, 0x48, 0xec, 0x04, 0xb3, 0xcb, 0x1b,
+        0xfd, 0x72, 0x82, 0x5c
+    };
+    byte issuerKeyHash[] = {
+        0x83, 0xc6, 0x3a, 0x89, 0x2c, 0x81, 0xf4, 0x02,
+        0xd7, 0x9d, 0x4c, 0xe2, 0x2a, 0xc0, 0x71, 0x82,
+        0x64, 0x44, 0xda, 0x0e
+    };
+
+
+    XMEMSET(entry, 0, sizeof(OcspEntry));
+    XMEMSET(status, 0, sizeof(CertStatus));
+
+    ExpectNotNull(request = wolfSSL_OCSP_REQUEST_new());
+    ExpectNotNull(request->serial = (byte*)XMALLOC(sizeof(serial), NULL,
+                                                   DYNAMIC_TYPE_OCSP_REQUEST));
+
+    if ((request != NULL) && (request->serial != NULL)) {
+        request->serialSz = sizeof(serial);
+        XMEMCPY(request->serial, serial, sizeof(serial));
+        XMEMCPY(request->issuerHash, issuerHash, sizeof(issuerHash));
+        XMEMCPY(request->issuerKeyHash, issuerKeyHash, sizeof(issuerKeyHash));
+    }
+
+    ExpectNotNull(cm = wolfSSL_CertManagerNew_ex(NULL));
+    ExpectIntEQ(wolfSSL_CertManagerEnableOCSP(cm, 0), WOLFSSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_CertManagerLoadCA(cm,
+        "./certs/ocsp/intermediate1-ca-cert.pem", NULL), WOLFSSL_SUCCESS);
+
+    /* Response should be valid. */
+    ExpectIntEQ(wolfSSL_CertManagerCheckOCSPResponse(cm, (byte *)response,
+        sizeof(response), NULL, status, entry, request), WOLFSSL_SUCCESS);
+
+    /* Flip a byte in the request serial number, response should be invalid
+     * now. */
+    if ((request != NULL) && (request->serial != NULL))
+        request->serial[0] ^= 0xFF;
+    ExpectIntNE(wolfSSL_CertManagerCheckOCSPResponse(cm, (byte *)response,
+        sizeof(response), NULL, status, entry, request), WOLFSSL_SUCCESS);
+
+#ifndef NO_FILESYSTEM
+    ExpectIntEQ(wolfSSL_CertManagerCheckOCSP(cm, server_cert_der_2048,
+        sizeof(server_cert_der_2048)), WC_NO_ERR_TRACE(ASN_NO_SIGNER_E));
+    ExpectIntEQ(WOLFSSL_SUCCESS,
+        wolfSSL_CertManagerLoadCA(cm, ca_cert, NULL));
+    ExpectIntEQ(wolfSSL_CertManagerCheckOCSP(cm, server_cert_der_2048,
+        sizeof(server_cert_der_2048)), 1);
+#endif
+
+    wolfSSL_OCSP_REQUEST_free(request);
+    wolfSSL_CertManagerFree(cm);
+#endif /* OPENSSL_ALL || WOLFSSL_NGINX ||  WOLFSSL_HAPROXY ||
+        * WOLFSSL_APACHE_HTTPD || HAVE_LIGHTY */
+#endif /* HAVE_OCSP */
+    return EXPECT_RESULT();
+}
+
+#ifdef HAVE_CERT_CHAIN_VALIDATION
+#ifndef WOLFSSL_TEST_APPLE_NATIVE_CERT_VALIDATION
+#ifdef WOLFSSL_PEM_TO_DER
+#ifndef NO_SHA256
+static int load_ca_into_cm(WOLFSSL_CERT_MANAGER* cm, char* certA)
+{
+    int ret;
+
+    if ((ret = wolfSSL_CertManagerLoadCA(cm, certA, 0)) != WOLFSSL_SUCCESS) {
+        fprintf(stderr, "loading cert %s failed\n", certA);
+        fprintf(stderr, "Error: (%d): %s\n", ret,
+            wolfSSL_ERR_reason_error_string((word32)ret));
+        return -1;
+    }
+
+    return 0;
+}
+
+static int verify_cert_with_cm(WOLFSSL_CERT_MANAGER* cm, char* certA)
+{
+    int ret;
+    if ((ret = wolfSSL_CertManagerVerify(cm, certA, CERT_FILETYPE))
+                                                         != WOLFSSL_SUCCESS) {
+        fprintf(stderr, "could not verify the cert: %s\n", certA);
+        fprintf(stderr, "Error: (%d): %s\n", ret,
+            wolfSSL_ERR_reason_error_string((word32)ret));
+        return -1;
+    }
+    else {
+        fprintf(stderr, "successfully verified: %s\n", certA);
+    }
+
+    return 0;
+}
+#define LOAD_ONE_CA(a, b, c, d)                         \
+                    do {                                \
+                        (a) = load_ca_into_cm(c, d);    \
+                        if ((a) != 0)                   \
+                            return (b);                 \
+                        else                            \
+                            (b)--;                      \
+                    } while(0)
+
+#define VERIFY_ONE_CERT(a, b, c, d)                     \
+                    do {                                \
+                        (a) = verify_cert_with_cm(c, d);\
+                        if ((a) != 0)                   \
+                            return (b);                 \
+                        else                            \
+                            (b)--;                      \
+                    } while(0)
+
+static int test_chainG(WOLFSSL_CERT_MANAGER* cm)
+{
+    int ret;
+    int i = -1;
+    /* Chain G is a valid chain per RFC 5280 section 4.2.1.9 */
+    char chainGArr[9][50] = {"certs/ca-cert.pem",
+                             "certs/test-pathlen/chainG-ICA7-pathlen100.pem",
+                             "certs/test-pathlen/chainG-ICA6-pathlen10.pem",
+                             "certs/test-pathlen/chainG-ICA5-pathlen20.pem",
+                             "certs/test-pathlen/chainG-ICA4-pathlen5.pem",
+                             "certs/test-pathlen/chainG-ICA3-pathlen99.pem",
+                             "certs/test-pathlen/chainG-ICA2-pathlen1.pem",
+                             "certs/test-pathlen/chainG-ICA1-pathlen0.pem",
+                             "certs/test-pathlen/chainG-entity.pem"};
+
+    LOAD_ONE_CA(ret, i, cm, chainGArr[0]); /* if failure, i = -1 here */
+    LOAD_ONE_CA(ret, i, cm, chainGArr[1]); /* if failure, i = -2 here */
+    LOAD_ONE_CA(ret, i, cm, chainGArr[2]); /* if failure, i = -3 here */
+    LOAD_ONE_CA(ret, i, cm, chainGArr[3]); /* if failure, i = -4 here */
+    LOAD_ONE_CA(ret, i, cm, chainGArr[4]); /* if failure, i = -5 here */
+    LOAD_ONE_CA(ret, i, cm, chainGArr[5]); /* if failure, i = -6 here */
+    LOAD_ONE_CA(ret, i, cm, chainGArr[6]); /* if failure, i = -7 here */
+    LOAD_ONE_CA(ret, i, cm, chainGArr[7]); /* if failure, i = -8 here */
+    VERIFY_ONE_CERT(ret, i, cm, chainGArr[1]); /* if failure, i = -9 here */
+    VERIFY_ONE_CERT(ret, i, cm, chainGArr[2]); /* if failure, i = -10 here */
+    VERIFY_ONE_CERT(ret, i, cm, chainGArr[3]); /* if failure, i = -11 here */
+    VERIFY_ONE_CERT(ret, i, cm, chainGArr[4]); /* if failure, i = -12 here */
+    VERIFY_ONE_CERT(ret, i, cm, chainGArr[5]); /* if failure, i = -13 here */
+    VERIFY_ONE_CERT(ret, i, cm, chainGArr[6]); /* if failure, i = -14 here */
+    VERIFY_ONE_CERT(ret, i, cm, chainGArr[7]); /* if failure, i = -15 here */
+    VERIFY_ONE_CERT(ret, i, cm, chainGArr[8]); /* if failure, i = -16 here */
+
+    /* test validating the entity twice, should have no effect on pathLen since
+     * entity/leaf cert */
+    VERIFY_ONE_CERT(ret, i, cm, chainGArr[8]); /* if failure, i = -17 here */
+
+    return ret;
+}
+
+static int test_chainH(WOLFSSL_CERT_MANAGER* cm)
+{
+    int ret;
+    int i = -1;
+    /* Chain H is NOT a valid chain per RFC5280 section 4.2.1.9:
+     * ICA4-pathlen of 2 signing ICA3-pathlen of 2 (reduce max path len to 2)
+     * ICA3-pathlen of 2 signing ICA2-pathlen of 2 (reduce max path len to 1)
+     * ICA2-pathlen of 2 signing ICA1-pathlen of 0 (reduce max path len to 0)
+     * ICA1-pathlen of 0 signing entity (pathlen is already 0, ERROR)
+     * Test should successfully verify ICA4, ICA3, ICA2 and then fail on ICA1
+     */
+    char chainHArr[6][50] = {"certs/ca-cert.pem",
+                             "certs/test-pathlen/chainH-ICA4-pathlen2.pem",
+                             "certs/test-pathlen/chainH-ICA3-pathlen2.pem",
+                             "certs/test-pathlen/chainH-ICA2-pathlen2.pem",
+                             "certs/test-pathlen/chainH-ICA1-pathlen0.pem",
+                             "certs/test-pathlen/chainH-entity.pem"};
+
+    LOAD_ONE_CA(ret, i, cm, chainHArr[0]); /* if failure, i = -1 here */
+    LOAD_ONE_CA(ret, i, cm, chainHArr[1]); /* if failure, i = -2 here */
+    LOAD_ONE_CA(ret, i, cm, chainHArr[2]); /* if failure, i = -3 here */
+    LOAD_ONE_CA(ret, i, cm, chainHArr[3]); /* if failure, i = -4 here */
+    LOAD_ONE_CA(ret, i, cm, chainHArr[4]); /* if failure, i = -5 here */
+    VERIFY_ONE_CERT(ret, i, cm, chainHArr[1]); /* if failure, i = -6 here */
+    VERIFY_ONE_CERT(ret, i, cm, chainHArr[2]); /* if failure, i = -7 here */
+    VERIFY_ONE_CERT(ret, i, cm, chainHArr[3]); /* if failure, i = -8 here */
+    VERIFY_ONE_CERT(ret, i, cm, chainHArr[4]); /* if failure, i = -9 here */
+    VERIFY_ONE_CERT(ret, i, cm, chainHArr[5]); /* if failure, i = -10 here */
+
+    return ret;
+}
+
+static int test_chainI(WOLFSSL_CERT_MANAGER* cm)
+{
+    int ret;
+    int i = -1;
+    /* Chain I is a valid chain per RFC5280 section 4.2.1.9:
+     * ICA3-pathlen of 2 signing ICA2 without a pathlen (reduce maxPathLen to 2)
+     * ICA2-no_pathlen signing ICA1-no_pathlen (reduce maxPathLen to 1)
+     * ICA1-no_pathlen signing entity (reduce maxPathLen to 0)
+     * Test should successfully verify ICA4, ICA3, ICA2 and then fail on ICA1
+     */
+    char chainIArr[5][50] = {"certs/ca-cert.pem",
+                             "certs/test-pathlen/chainI-ICA3-pathlen2.pem",
+                             "certs/test-pathlen/chainI-ICA2-no_pathlen.pem",
+                             "certs/test-pathlen/chainI-ICA1-no_pathlen.pem",
+                             "certs/test-pathlen/chainI-entity.pem"};
+
+    LOAD_ONE_CA(ret, i, cm, chainIArr[0]); /* if failure, i = -1 here */
+    LOAD_ONE_CA(ret, i, cm, chainIArr[1]); /* if failure, i = -2 here */
+    LOAD_ONE_CA(ret, i, cm, chainIArr[2]); /* if failure, i = -3 here */
+    LOAD_ONE_CA(ret, i, cm, chainIArr[3]); /* if failure, i = -4 here */
+    VERIFY_ONE_CERT(ret, i, cm, chainIArr[1]); /* if failure, i = -5 here */
+    VERIFY_ONE_CERT(ret, i, cm, chainIArr[2]); /* if failure, i = -6 here */
+    VERIFY_ONE_CERT(ret, i, cm, chainIArr[3]); /* if failure, i = -7 here */
+    VERIFY_ONE_CERT(ret, i, cm, chainIArr[4]); /* if failure, i = -8 here */
+
+    return ret;
+}
+
+static int test_chainJ(WOLFSSL_CERT_MANAGER* cm)
+{
+    int ret;
+    int i = -1;
+    /* Chain J is NOT a valid chain per RFC5280 section 4.2.1.9:
+     * ICA4-pathlen of 2 signing ICA3 without a pathlen (reduce maxPathLen to 2)
+     * ICA3-pathlen of 2 signing ICA2 without a pathlen (reduce maxPathLen to 1)
+     * ICA2-no_pathlen signing ICA1-no_pathlen (reduce maxPathLen to 0)
+     * ICA1-no_pathlen signing entity (ERROR, pathlen zero and non-leaf cert)
+     */
+    char chainJArr[6][50] = {"certs/ca-cert.pem",
+                             "certs/test-pathlen/chainJ-ICA4-pathlen2.pem",
+                             "certs/test-pathlen/chainJ-ICA3-no_pathlen.pem",
+                             "certs/test-pathlen/chainJ-ICA2-no_pathlen.pem",
+                             "certs/test-pathlen/chainJ-ICA1-no_pathlen.pem",
+                             "certs/test-pathlen/chainJ-entity.pem"};
+
+    LOAD_ONE_CA(ret, i, cm, chainJArr[0]); /* if failure, i = -1 here */
+    LOAD_ONE_CA(ret, i, cm, chainJArr[1]); /* if failure, i = -2 here */
+    LOAD_ONE_CA(ret, i, cm, chainJArr[2]); /* if failure, i = -3 here */
+    LOAD_ONE_CA(ret, i, cm, chainJArr[3]); /* if failure, i = -4 here */
+    LOAD_ONE_CA(ret, i, cm, chainJArr[4]); /* if failure, i = -5 here */
+    VERIFY_ONE_CERT(ret, i, cm, chainJArr[1]); /* if failure, i = -6 here */
+    VERIFY_ONE_CERT(ret, i, cm, chainJArr[2]); /* if failure, i = -7 here */
+    VERIFY_ONE_CERT(ret, i, cm, chainJArr[3]); /* if failure, i = -8 here */
+    VERIFY_ONE_CERT(ret, i, cm, chainJArr[4]); /* if failure, i = -9 here */
+    VERIFY_ONE_CERT(ret, i, cm, chainJArr[5]); /* if failure, i = -10 here */
+
+    return ret;
+}
+#endif
+#endif
+#endif
+#endif
+
+int test_various_pathlen_chains(void)
+{
+    EXPECT_DECLS;
+#if defined(WOLFSSL_PEM_TO_DER) && defined(HAVE_CERT_CHAIN_VALIDATION) && \
+    !defined(WOLFSSL_TEST_APPLE_NATIVE_CERT_VALIDATION)
+#ifndef NO_SHA256
+    WOLFSSL_CERT_MANAGER* cm = NULL;
+
+    /* Test chain G (large chain with varying pathLens) */
+    ExpectNotNull(cm = wolfSSL_CertManagerNew());
+#if defined(NO_WOLFSSL_CLIENT) && defined(NO_WOLFSSL_SERVER)
+    ExpectIntEQ(test_chainG(cm), -1);
+#else
+    ExpectIntEQ(test_chainG(cm), 0);
+#endif /* NO_WOLFSSL_CLIENT && NO_WOLFSSL_SERVER */
+    ExpectIntEQ(wolfSSL_CertManagerUnloadCAs(cm), WOLFSSL_SUCCESS);
+    wolfSSL_CertManagerFree(cm);
+    /* end test chain G */
+
+    /* Test chain H (5 chain with same pathLens) */
+    ExpectNotNull(cm = wolfSSL_CertManagerNew());
+    ExpectIntLT(test_chainH(cm), 0);
+    ExpectIntEQ(wolfSSL_CertManagerUnloadCAs(cm), WOLFSSL_SUCCESS);
+    wolfSSL_CertManagerFree(cm);
+
+    ExpectNotNull(cm = wolfSSL_CertManagerNew());
+    ExpectIntEQ(wolfSSL_CertManagerUnloadCAs(cm), WOLFSSL_SUCCESS);
+    wolfSSL_CertManagerFree(cm);
+    /* end test chain H */
+
+    /* Test chain I (only first ICA has pathLen set and it's set to 2,
+     * followed by 2 ICA's, should pass) */
+    ExpectNotNull(cm = wolfSSL_CertManagerNew());
+#if defined(NO_WOLFSSL_CLIENT) && defined(NO_WOLFSSL_SERVER)
+    ExpectIntEQ(test_chainI(cm), -1);
+#else
+    ExpectIntEQ(test_chainI(cm), 0);
+#endif /* NO_WOLFSSL_CLIENT && NO_WOLFSSL_SERVER */
+    ExpectIntEQ(wolfSSL_CertManagerUnloadCAs(cm), WOLFSSL_SUCCESS);
+    wolfSSL_CertManagerFree(cm);
+    cm = NULL;
+
+    ExpectNotNull(cm = wolfSSL_CertManagerNew());
+    ExpectIntEQ(wolfSSL_CertManagerUnloadCAs(cm), WOLFSSL_SUCCESS);
+    wolfSSL_CertManagerFree(cm);
+    cm = NULL;
+
+    /* Test chain J (Again only first ICA has pathLen set and it's set to 2,
+     * this time followed by 3 ICA's, should fail */
+    ExpectNotNull(cm = wolfSSL_CertManagerNew());
+    ExpectIntLT(test_chainJ(cm), 0);
+    ExpectIntEQ(wolfSSL_CertManagerUnloadCAs(cm), WOLFSSL_SUCCESS);
+    wolfSSL_CertManagerFree(cm);
+    cm = NULL;
+
+    ExpectNotNull(cm = wolfSSL_CertManagerNew());
+    ExpectIntEQ(wolfSSL_CertManagerUnloadCAs(cm), WOLFSSL_SUCCESS);
+    wolfSSL_CertManagerFree(cm);
+#endif
+#endif
+    return EXPECT_RESULT();
+}
+
+/* Verify that certificates signed with MD5 (md5WithRSAEncryption) are
+ * rejected during chain verification. MD5 must not be acceptable as a
+ * certificate signature hash, even when MD5 is compiled in (e.g. for TLS
+ * 1.0 PRF or HMAC uses). Trust anchors are exempt from this check because
+ * ParseCertRelative skips ConfirmSignature for CA_TYPE. */
+int test_wolfSSL_CertManagerRejectMD5Cert(void)
+{
+    EXPECT_DECLS;
+#if !defined(NO_CERTS) && !defined(NO_RSA) && !defined(NO_MD5) && \
+    !defined(WOLFSSL_ALLOW_MD5_CERT_SIGS) && defined(WOLFSSL_CERT_GEN) && \
+    !defined(NO_WOLFSSL_CM_VERIFY) && !defined(NO_ASN_CRYPT) && \
+    !defined(USE_CERT_BUFFERS_1024) && !defined(NO_ASN_TIME)
+    WOLFSSL_CERT_MANAGER* cm = NULL;
+    RsaKey  caKey;
+    WC_RNG  rng;
+    Cert    leaf;
+    byte*   der = NULL;
+    int     derSz = 0;
+    word32  idx = 0;
+    int     caKeyInit = 0;
+    int     rngInit = 0;
+
+    XMEMSET(&caKey, 0, sizeof(caKey));
+    XMEMSET(&rng,   0, sizeof(rng));
+
+    ExpectIntEQ(wc_InitRng(&rng), 0);
+    if (EXPECT_SUCCESS()) rngInit = 1;
+
+    ExpectIntEQ(wc_InitRsaKey_ex(&caKey, HEAP_HINT, testDevId), 0);
+    if (EXPECT_SUCCESS()) caKeyInit = 1;
+    ExpectIntEQ(wc_RsaPrivateKeyDecode(ca_key_der_2048, &idx, &caKey,
+                sizeof_ca_key_der_2048), 0);
+
+    ExpectNotNull(der = (byte*)XMALLOC(FOURK_BUF, HEAP_HINT,
+                DYNAMIC_TYPE_TMP_BUFFER));
+    if (der == NULL) {
+        goto cleanup;
+    }
+
+    /* Build a leaf certificate whose issuer is the built-in 2048-bit
+     * wolfSSL test CA and sign it with MD5+RSA using the matching CA
+     * private key. */
+    ExpectIntEQ(wc_InitCert(&leaf), 0);
+    leaf.sigType = CTC_MD5wRSA;
+    leaf.isCA    = 0;
+    XSTRNCPY(leaf.subject.country,    "US",              CTC_NAME_SIZE);
+    XSTRNCPY(leaf.subject.state,      "MT",              CTC_NAME_SIZE);
+    XSTRNCPY(leaf.subject.locality,   "Bozeman",         CTC_NAME_SIZE);
+    XSTRNCPY(leaf.subject.org,        "wolfSSL",         CTC_NAME_SIZE);
+    XSTRNCPY(leaf.subject.unit,       "Test",            CTC_NAME_SIZE);
+    XSTRNCPY(leaf.subject.commonName, "md5-leaf",        CTC_NAME_SIZE);
+    XSTRNCPY(leaf.subject.email,      "facts@wolfssl.com", CTC_NAME_SIZE);
+
+    ExpectIntEQ(wc_SetIssuerBuffer(&leaf, ca_cert_der_2048,
+                sizeof_ca_cert_der_2048), 0);
+
+    /* wc_MakeCert needs an RSA public key for the subject; reuse caKey
+     * for simplicity (we only care about signature-side verification). */
+    ExpectIntGT((derSz = wc_MakeCert(&leaf, der, FOURK_BUF, &caKey, NULL,
+                &rng)), 0);
+    ExpectIntGT((derSz = wc_SignCert(leaf.bodySz, leaf.sigType, der,
+                FOURK_BUF, &caKey, NULL, &rng)), 0);
+
+    /* Load the SHA-256 signed CA cert as a trust anchor and attempt
+     * to verify the MD5-signed leaf: it must be rejected because
+     * HashForSignature() now returns HASH_TYPE_E for MD5 in verify mode,
+     * and wolfSSL_CertManagerVerifyBuffer() returns that error. */
+    ExpectNotNull(cm = wolfSSL_CertManagerNew());
+    if (cm != NULL) {
+        ExpectIntEQ(wolfSSL_CertManagerLoadCABuffer(cm, ca_cert_der_2048,
+                    sizeof_ca_cert_der_2048, WOLFSSL_FILETYPE_ASN1),
+                    WOLFSSL_SUCCESS);
+
+        ExpectIntEQ(wolfSSL_CertManagerVerifyBuffer(cm, der, derSz,
+                    WOLFSSL_FILETYPE_ASN1),
+                    WC_NO_ERR_TRACE(HASH_TYPE_E));
+    }
+
+cleanup:
+    wolfSSL_CertManagerFree(cm);
+    XFREE(der, HEAP_HINT, DYNAMIC_TYPE_TMP_BUFFER);
+    if (caKeyInit) wc_FreeRsaKey(&caKey);
+    if (rngInit)   wc_FreeRng(&rng);
+#endif
+    return EXPECT_RESULT();
+}
+
+/* Regression: a Raw Public Key (RFC 7250), a bare SubjectPublicKeyInfo, has no
+ * issuer and no signature, so it can never chain to a CA. With HAVE_RPK the
+ * parser recognises it as a certificate form; it must not be reported as
+ * verified by wolfSSL_CertManagerVerify(), whether or not a CA is loaded.
+ * (RPK trust is established out of band in the TLS handshake only.) */
+int test_wolfSSL_CertManagerRejectRPK(void)
+{
+    EXPECT_DECLS;
+#if defined(HAVE_RPK) && !defined(NO_FILESYSTEM) && !defined(NO_CERTS) && \
+    !defined(NO_WOLFSSL_CM_VERIFY) && !defined(NO_RSA)
+    WOLFSSL_CERT_MANAGER* cm = NULL;
+#ifdef WOLFSSL_PEM_TO_DER
+    const char* caCert  = "./certs/ca-cert.pem";
+#else
+    const char* caCert  = "./certs/ca-cert.der";
+#endif
+    const char* rpkCert = "./certs/rpk/server-cert-rpk.der";
+    const char* svrCert = "./certs/server-cert.der";
+
+    ExpectNotNull(cm = wolfSSL_CertManagerNew());
+
+    /* No trust anchor loaded. */
+    ExpectIntEQ(wolfSSL_CertManagerVerify(cm, rpkCert, WOLFSSL_FILETYPE_ASN1),
+        WC_NO_ERR_TRACE(ASN_NO_SIGNER_E));
+
+    /* The CA that issued the X.509 form of the same key. */
+    ExpectIntEQ(wolfSSL_CertManagerLoadCA(cm, caCert, NULL), WOLFSSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_CertManagerVerify(cm, svrCert, WOLFSSL_FILETYPE_ASN1),
+        WOLFSSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_CertManagerVerify(cm, rpkCert, WOLFSSL_FILETYPE_ASN1),
+        WC_NO_ERR_TRACE(ASN_NO_SIGNER_E));
+
+    wolfSSL_CertManagerFree(cm);
+#endif
+    return EXPECT_RESULT();
+}
+
+int test_wolfSSL_X509_V_ERR_strings(void)
+{
+    EXPECT_DECLS;
+#if !defined(NO_ERROR_STRINGS) && (defined(OPENSSL_EXTRA) || \
+    defined(OPENSSL_EXTRA_X509_SMALL) || \
+    defined(HAVE_WEBSERVER) || defined(HAVE_MEMCACHED))
+    ExpectStrEQ(wolfSSL_ERR_reason_error_string(
+        WOLFSSL_X509_V_ERR_ERROR_IN_CERT_NOT_BEFORE_FIELD),
+        "format error in certificate's notBefore field");
+    ExpectStrEQ(wolfSSL_ERR_reason_error_string(
+        WOLFSSL_X509_V_ERR_ERROR_IN_CERT_NOT_AFTER_FIELD),
+        "format error in certificate's notAfter field");
+#endif
+    return EXPECT_RESULT();
+}
+
+/* Leaf must satisfy a grandparent CA's NCs even when its direct issuer
+ * carries no constraints. */
+int test_wolfSSL_CertManagerNameConstraint_valid_chain(void)
+{
+    EXPECT_DECLS;
+#if !defined(NO_FILESYSTEM) && !defined(NO_CERTS) && \
+    !defined(NO_WOLFSSL_CM_VERIFY) && defined(HAVE_ECC) && \
+    !defined(IGNORE_NAME_CONSTRAINTS) && !defined(NO_SHA256) && \
+    defined(WOLFSSL_ALT_NAMES) && \
+    (defined(WOLFSSL_PEM_TO_DER) || defined(OPENSSL_EXTRA))
+    WOLFSSL_CERT_MANAGER* cm = NULL;
+    const char* root_cert =
+        "./certs/test/nc-ancestor/00-root-cert.pem";
+    const char* uri_permit_ca_cert =
+        "./certs/test/nc-ancestor/01-uri-permit-ca-cert.pem";
+    const char* benign_sub_ca_cert =
+        "./certs/test/nc-ancestor/02-benign-sub-ca-cert.pem";
+    const char* valid_leaf_cert =
+        "./certs/test/nc-ancestor/03-valid-leaf-cert.pem";
+    const char* attacker_leaf_chain =
+        "./certs/test/nc-ancestor/03-leaf-chain.pem";
+
+    ExpectNotNull(cm = wolfSSL_CertManagerNew());
+
+    ExpectIntEQ(wolfSSL_CertManagerLoadCA(cm, root_cert, NULL),
+                WOLFSSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_CertManagerLoadCA(cm, uri_permit_ca_cert, NULL),
+                WOLFSSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_CertManagerLoadCA(cm, benign_sub_ca_cert, NULL),
+                WOLFSSL_SUCCESS);
+
+    /* Positive: leaf satisfies the grandparent permit. */
+    ExpectIntEQ(wolfSSL_CertManagerVerify(cm, valid_leaf_cert,
+                WOLFSSL_FILETYPE_PEM),
+                WOLFSSL_SUCCESS);
+
+    /* Negative: leaf violates the grandparent permit. */
+    ExpectIntEQ(wolfSSL_CertManagerVerify(cm, attacker_leaf_chain,
+                WOLFSSL_FILETYPE_PEM),
+                WC_NO_ERR_TRACE(ASN_NAME_INVALID_E));
+
+    wolfSSL_CertManagerFree(cm);
+#endif
+    return EXPECT_RESULT();
+}
+
+/* Same-DN sibling without NCs is loaded alongside the strict CA. The
+ * walk must use AKID->SKID, not a name-only lookup, to find the real
+ * signer. */
+int test_wolfSSL_CertManagerNameConstraint_skid_disambiguates(void)
+{
+    EXPECT_DECLS;
+#if !defined(NO_FILESYSTEM) && !defined(NO_CERTS) && \
+    !defined(NO_WOLFSSL_CM_VERIFY) && defined(HAVE_ECC) && \
+    !defined(IGNORE_NAME_CONSTRAINTS) && !defined(NO_SHA256) && \
+    !defined(NO_SKID) && defined(WOLFSSL_ALT_NAMES) && \
+    (defined(WOLFSSL_PEM_TO_DER) || defined(OPENSSL_EXTRA))
+    WOLFSSL_CERT_MANAGER* cm = NULL;
+    const char* root_cert =
+        "./certs/test/nc-ancestor/00-root-cert.pem";
+    const char* permissive_cert =
+        "./certs/test/nc-ancestor/00-uri-permit-ca-permissive-cert.pem";
+    const char* strict_cert =
+        "./certs/test/nc-ancestor/01-uri-permit-ca-cert.pem";
+    const char* benign_sub_ca_cert =
+        "./certs/test/nc-ancestor/02-benign-sub-ca-cert.pem";
+    const char* attacker_leaf_chain =
+        "./certs/test/nc-ancestor/03-leaf-chain.pem";
+
+    ExpectNotNull(cm = wolfSSL_CertManagerNew());
+
+    ExpectIntEQ(wolfSSL_CertManagerLoadCA(cm, root_cert, NULL),
+                WOLFSSL_SUCCESS);
+    /* Load permissive sibling first to favor a name-only lookup. */
+    ExpectIntEQ(wolfSSL_CertManagerLoadCA(cm, permissive_cert, NULL),
+                WOLFSSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_CertManagerLoadCA(cm, strict_cert, NULL),
+                WOLFSSL_SUCCESS);
+    ExpectIntEQ(wolfSSL_CertManagerLoadCA(cm, benign_sub_ca_cert, NULL),
+                WOLFSSL_SUCCESS);
+
+    ExpectIntEQ(wolfSSL_CertManagerVerify(cm, attacker_leaf_chain,
+                WOLFSSL_FILETYPE_PEM),
+                WC_NO_ERR_TRACE(ASN_NAME_INVALID_E));
+
+    wolfSSL_CertManagerFree(cm);
+#endif
+    return EXPECT_RESULT();
+}

@@ -1,12 +1,12 @@
 /* silabs_ecc.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -26,12 +26,22 @@
 
 #include <wolfssl/wolfcrypt/settings.h>
 
-#if defined(WOLFSSL_SILABS_SE_ACCEL)
+#if defined(WOLFSSL_SILABS_SE_TYPES) && defined(HAVE_ECC)
 
 #include <wolfssl/wolfcrypt/error-crypt.h>
 #include <wolfssl/wolfcrypt/ecc.h>
 #include <wolfssl/wolfcrypt/port/silabs/silabs_ecc.h>
-#include "sl_se_manager_internal_keys.h"
+
+/* for ForceZero() */
+#ifdef NO_INLINE
+    #include <wolfssl/wolfcrypt/misc.h>
+#else
+    #define WOLFSSL_MISC_INCLUDED
+    #include <wolfcrypt/src/misc.c>
+#endif
+#ifndef WOLFSSL_SILABS_HOST_TEST
+    #include "sl_se_manager_internal_keys.h"
+#endif
 
 #if (_SILICON_LABS_SECURITY_FEATURE == _SILICON_LABS_SECURITY_FEATURE_VAULT)
 static sl_se_key_descriptor_t private_device_key =
@@ -40,23 +50,19 @@ static sl_se_key_descriptor_t private_device_key =
 
 #ifndef WOLFSSL_HAVE_ECC_KEY_GET_PRIV
     /* FIPS build has replaced ecc.h. */
-    #define wc_ecc_key_get_priv(key) (&((key)->k))
+    #define wc_ecc_key_get_priv(key)  (&((key)->k))
+    #define ecc_get_k_raw(key)        (&((key)->k))
+    #define ecc_blind_k_rng(key, rng) 0
     #define WOLFSSL_HAVE_ECC_KEY_GET_PRIV
 #endif
 
 #define SILABS_UNSUPPORTED_KEY_TYPE 0xFFFFFFFF
 
-/* For older Gecko SDK's with spelling error */
-#ifndef SL_SE_KEY_FLAG_ASYMMETRIC_SIGNING_ONLY
-#define SL_SE_KEY_FLAG_ASYMMETRIC_SIGNING_ONLY \
-    SL_SE_KEY_FLAG_ASYMMMETRIC_SIGNING_ONLY
-#endif
-
 static sl_se_key_type_t silabs_map_key_type(ecc_curve_id curve_id)
 {
     sl_se_key_type_t res = SILABS_UNSUPPORTED_KEY_TYPE;
 
-    switch (curve_id) {
+    switch ((int)curve_id) {
     case ECC_SECP192R1:
         res = SL_SE_KEY_TYPE_ECC_P192;
         break;
@@ -96,22 +102,41 @@ static sl_se_key_type_t silabs_map_key_type(ecc_curve_id curve_id)
     return res;
 }
 
-int silabs_ecc_sign_hash(const byte* in, word32 inlen, byte* out,
+/* Raw-status form: negative is a wolfCrypt error, otherwise the SE status
+ * unchanged so the callback port can decline rather than hard-fail. The
+ * wrapper below keeps the direct port's original WC_HW_E contract. */
+int silabs_ecc_sign_hash_status(const byte* in, word32 inlen, byte* out,
     word32 *outlen, ecc_key* key)
 {
     sl_status_t sl_stat;
-    sl_se_key_descriptor_t* slkey = &key->key;
-    word32 siglen = *outlen;
+    sl_se_key_descriptor_t* slkey;
+    word32 siglen;
 
-    if ((int)siglen >= key->dp->size * 2) {
-        siglen = key->dp->size * 2;
+    if (in == NULL || out == NULL || outlen == NULL || key == NULL ||
+            key->dp == NULL)
+        return BAD_FUNC_ARG;
+
+    slkey = &key->key;
+    siglen = key->dp->size * 2;
+
+    if (*outlen < siglen) {
+        return BUFFER_E;
     }
 
 #if (_SILICON_LABS_SECURITY_FEATURE == _SILICON_LABS_SECURITY_FEATURE_VAULT)
-    /* if signing and not private key provided then use vault key */
-    if (key->type != ECC_PRIVATEKEY ||
-            mp_unsigned_bin_size(wc_ecc_key_get_priv(key)) == 0) {
-        slkey = &private_device_key;
+    /* A wrapped or built-in key bound by wc_SilabsSe_EccUse*Key() has no
+     * software private scalar by design: key->key already names the key to
+     * sign with, so use it exactly as bound. */
+    if (!key->silabsKeySet) {
+#ifdef WOLFSSL_SILABS_SE_ACCEL
+        /* Legacy direct-port behavior: with no private scalar, sign with the
+         * SE attestation key. The callback port declines instead rather than
+         * silently sign with a different key than the caller supplied. */
+        if (key->type != ECC_PRIVATEKEY ||
+                mp_unsigned_bin_size(wc_ecc_key_get_priv(key)) == 0) {
+            slkey = &private_device_key;
+        }
+#endif
     }
 #endif
 
@@ -131,16 +156,39 @@ int silabs_ecc_sign_hash(const byte* in, word32 inlen, byte* out,
             siglen
         );
     }
-    return (sl_stat == SL_STATUS_OK) ? 0 : WC_HW_E;
+    if (sl_stat == SL_STATUS_OK) {
+        *outlen = siglen;
+        return 0;
+    }
+    return (int)sl_stat;
+}
+
+int silabs_ecc_sign_hash(const byte* in, word32 inlen, byte* out,
+    word32 *outlen, ecc_key* key)
+{
+    int status = silabs_ecc_sign_hash_status(in, inlen, out, outlen, key);
+
+    if (status < 0) {
+        return status;
+    }
+    return (status != SL_STATUS_OK) ? WC_HW_E : 0;
 }
 
 #ifdef HAVE_ECC_VERIFY
 
-int silabs_ecc_verify_hash(const byte* sig, word32 siglen,
+/* Raw-status form; see silabs_ecc_sign_hash_status(). A rejected signature is
+ * not a failure of the operation: *stat is set to 0 and SL_STATUS_OK returned,
+ * so the caller reports "did not verify" rather than an error. */
+int silabs_ecc_verify_hash_status(const byte* sig, word32 siglen,
                            const byte* hash, word32 hashlen,
                            int* stat, ecc_key* key)
 {
-    sl_status_t sl_stat = sl_se_init_command_context(&key->cmd_ctx);
+    sl_status_t sl_stat;
+
+    if (sig == NULL || hash == NULL || stat == NULL || key == NULL)
+        return BAD_FUNC_ARG;
+
+    sl_stat = sl_se_init_command_context(&key->cmd_ctx);
     if (sl_stat == SL_STATUS_OK) {
         sl_stat = sl_se_ecc_verify(
             &key->cmd_ctx,
@@ -154,18 +202,45 @@ int silabs_ecc_verify_hash(const byte* sig, word32 siglen,
     }
     if (sl_stat == SL_STATUS_OK) {
         *stat = 1;
-    } else if (sl_stat == SL_STATUS_INVALID_SIGNATURE) {
-        *stat = 0;
-    } else {
-        return WC_HW_E;
+        return (int)SL_STATUS_OK;
     }
-    return 0;
+    if (sl_stat == SL_STATUS_INVALID_SIGNATURE) {
+        *stat = 0;
+        return (int)SL_STATUS_OK;
+    }
+    return (int)sl_stat;
+}
+
+int silabs_ecc_verify_hash(const byte* sig, word32 siglen,
+                           const byte* hash, word32 hashlen,
+                           int* stat, ecc_key* key)
+{
+    int status = silabs_ecc_verify_hash_status(sig, siglen, hash, hashlen,
+        stat, key);
+
+    if (status < 0) {
+        return status;
+    }
+    return (status != SL_STATUS_OK) ? WC_HW_E : 0;
 }
 #endif
 
-int silabs_ecc_make_key(ecc_key* key, int keysize)
+/* Raw-status form; see silabs_ecc_sign_hash_status(). */
+int silabs_ecc_make_key_status(ecc_key* key, int keysize)
 {
     sl_status_t sl_stat;
+
+    if (key == NULL || key->dp == NULL)
+        return BAD_FUNC_ARG;
+
+    /* keysize is only a curve-selection hint here: wc_ecc_set_curve resolves
+     * the curve from curve_id and may leave keysize disagreeing with it (the
+     * TLS ECDHE path passes eccTempKeySz with a larger negotiated curve). The
+     * SE lays out, and we read back, X||Y||D at the curve's stride, so use
+     * key->dp->size and bound it against key_raw (3 * ECC_MAX_CRYPTO_HW_SIZE). */
+    keysize = key->dp->size;
+    if (keysize > ECC_MAX_CRYPTO_HW_SIZE)
+        return ECC_BAD_ARG_E;
 
     key->key.type = silabs_map_key_type(key->dp->id);
     if (key->key.type == SILABS_UNSUPPORTED_KEY_TYPE)
@@ -177,26 +252,50 @@ int silabs_ecc_make_key(ecc_key* key, int keysize)
                       SL_SE_KEY_FLAG_ASYMMETRIC_BUFFER_HAS_PUBLIC_KEY |
                       SL_SE_KEY_FLAG_ASYMMETRIC_SIGNING_ONLY);
 
-    sl_stat = sl_se_get_storage_size(&key->key,
-        &key->key.storage.location.buffer.size);
+    sl_stat = sl_se_init_command_context(&key->cmd_ctx);
+    if (sl_stat == SL_STATUS_OK) {
+        sl_stat = sl_se_get_storage_size(&key->key,
+            &key->key.storage.location.buffer.size);
+    }
     if (sl_stat == SL_STATUS_OK) {
         key->key.storage.location.buffer.pointer = key->key_raw;
-        sl_stat = sl_se_generate_key(&key->cmd_ctx,
-                                    &key->key);
+        sl_stat = sl_se_generate_key(&key->cmd_ctx, &key->key);
     }
     if (sl_stat == SL_STATUS_OK) {
         key->type = ECC_PRIVATEKEY;
 
         /* copy key to mp components */
-        mp_read_unsigned_bin(key->pubkey.x,
-            key->key.storage.location.buffer.pointer, keysize);
-        mp_read_unsigned_bin(key->pubkey.y,
-            key->key.storage.location.buffer.pointer  + keysize, keysize);
-        mp_read_unsigned_bin(wc_ecc_key_get_priv(key),
-            key->key.storage.location.buffer.pointer + (2 * keysize), keysize);
+        if ((mp_read_unsigned_bin(key->pubkey.x,
+                key->key.storage.location.buffer.pointer,
+                keysize) != MP_OKAY) ||
+            (mp_read_unsigned_bin(key->pubkey.y,
+                key->key.storage.location.buffer.pointer + keysize,
+                keysize) != MP_OKAY) ||
+            (mp_read_unsigned_bin(ecc_get_k_raw(key),
+                key->key.storage.location.buffer.pointer + (2 * keysize),
+                keysize) != MP_OKAY) ||
+            (ecc_blind_k_rng(key, NULL) != 0)) {
+            return WC_HW_E;
+        }
+        /* The SE returns an affine point. Software consumers of key->pubkey
+         * (the crypto callback port falls back to them) need z set, or the
+         * point reads as the point at infinity. */
+        if (mp_set(key->pubkey.z, 1) != MP_OKAY) {
+            return WC_HW_E;
+        }
     }
 
-    return (sl_stat == SL_STATUS_OK) ? 0 : WC_HW_E;
+    return (int)sl_stat;
+}
+
+int silabs_ecc_make_key(ecc_key* key, int keysize)
+{
+    int status = silabs_ecc_make_key_status(key, keysize);
+
+    if (status < 0) {
+        return status;
+    }
+    return (status != SL_STATUS_OK) ? WC_HW_E : 0;
 }
 
 int silabs_ecc_import(ecc_key* key, word32 keysize, int pub, int priv)
@@ -205,8 +304,20 @@ int silabs_ecc_import(ecc_key* key, word32 keysize, int pub, int priv)
     int err = MP_OKAY;
     word32 used;
 
+    if (key == NULL || key->dp == NULL)
+        return BAD_FUNC_ARG;
+
+    /* keysize comes from the caller (the imported point width) while the key
+     * type comes from key->dp; a keysize that disagrees with the curve or
+     * exceeds ECC_MAX_CRYPTO_HW_SIZE would write 3 * keysize bytes past the
+     * 3 * ECC_MAX_CRYPTO_HW_SIZE key_raw field. Reject it before any write into
+     * key_raw. */
+    if (keysize == 0 || keysize > ECC_MAX_CRYPTO_HW_SIZE ||
+            keysize != (word32)key->dp->size)
+        return ECC_BAD_ARG_E;
+
     key->key.type = silabs_map_key_type(key->dp->id);
-    if (key->key.type == SILABS_UNSUPPORTED_KEY_TYPE || keysize == 0)
+    if (key->key.type == SILABS_UNSUPPORTED_KEY_TYPE)
         return WC_HW_E;
 
     key->key.size = keysize;
@@ -251,7 +362,8 @@ int silabs_ecc_import(ecc_key* key, word32 keysize, int pub, int priv)
     return err;
 }
 
-int silabs_ecc_shared_secret(ecc_key* private_key, ecc_key* public_key,
+/* Raw-status form; see silabs_ecc_sign_hash_status(). */
+int silabs_ecc_shared_secret_status(ecc_key* private_key, ecc_key* public_key,
                              byte* out, word32* outlen)
 {
     sl_se_command_context_t cmd;
@@ -259,6 +371,11 @@ int silabs_ecc_shared_secret(ecc_key* private_key, ecc_key* public_key,
     sl_se_key_descriptor_t pub_key;
     uint32_t pub_sz = 0;
     sl_status_t sl_stat;
+
+    if ((private_key == NULL) || (public_key == NULL) || (out == NULL) ||
+            (outlen == NULL)) {
+        return BAD_FUNC_ARG;
+    }
 
     /* `sl_se_ecdh_compute_shared_secret` returns the full coordinate
      * point, but `wc_ecc_shared_secret` should only return the x
@@ -284,18 +401,32 @@ int silabs_ecc_shared_secret(ecc_key* private_key, ecc_key* public_key,
     key_out.size = pub_sz;
     key_out.storage.location.buffer.size = pub_sz;
 
-    sl_stat = sl_se_ecdh_compute_shared_secret(
-        &cmd,
-        &private_key->key,
-        &pub_key,
-        &key_out);
-
+    sl_stat = sl_se_init_command_context(&cmd);
+    if (sl_stat == SL_STATUS_OK) {
+        sl_stat = sl_se_ecdh_compute_shared_secret(
+            &cmd,
+            &private_key->key,
+            &pub_key,
+            &key_out);
+    }
     if (sl_stat == SL_STATUS_OK) {
         *outlen = pub_key.size;
         XMEMCPY(out, fullpoint, *outlen);
     }
 
-    return (sl_stat == SL_STATUS_OK) ? 0 : WC_HW_E;
+    ForceZero(fullpoint, sizeof(fullpoint));
+    return (int)sl_stat;
+}
+
+int silabs_ecc_shared_secret(ecc_key* private_key, ecc_key* public_key,
+                             byte* out, word32* outlen)
+{
+    int status = silabs_ecc_shared_secret_status(private_key, public_key, out, outlen);
+
+    if (status < 0) {
+        return status;
+    }
+    return (status != SL_STATUS_OK) ? WC_HW_E : 0;
 }
 
 int silabs_ecc_export_public(ecc_key* key, sl_se_key_descriptor_t* seKey)
@@ -304,7 +435,7 @@ int silabs_ecc_export_public(ecc_key* key, sl_se_key_descriptor_t* seKey)
     sl_status_t sl_stat;
     sl_se_command_context_t cmd;
 
-    if (key == NULL || seKey == NULL)
+    if (key == NULL || key->dp == NULL || seKey == NULL)
         return BAD_FUNC_ARG;
 
     if (seKey->type == SL_SE_KEY_TYPE_ECC_P192)
@@ -324,16 +455,24 @@ int silabs_ecc_export_public(ecc_key* key, sl_se_key_descriptor_t* seKey)
     if (ret != 0)
         return ret;
 
-    key->type = ECC_PUBLICKEY;
-    key->key.type = seKey->type;
-    key->key.size = key->dp->size;
-    key->key.storage.method = SL_SE_KEY_STORAGE_EXTERNAL_PLAINTEXT;
-    key->key.flags = (SL_SE_KEY_FLAG_ASYMMETRIC_BUFFER_HAS_PUBLIC_KEY |
-        SL_SE_KEY_FLAG_ASYMMETRIC_SIGNING_ONLY);
+    /* the public X||Y export and readback use key->dp->size strides into
+     * key_raw (3 * ECC_MAX_CRYPTO_HW_SIZE); reject a curve too large to fit. */
+    if (key->dp->size > ECC_MAX_CRYPTO_HW_SIZE)
+        return ECC_BAD_ARG_E;
 
-    sl_stat = sl_se_get_storage_size(&key->key,
-        &key->key.storage.location.buffer.size);
-    key->key.storage.location.buffer.pointer = key->key_raw;
+    sl_stat = sl_se_init_command_context(&cmd);
+    if (sl_stat == SL_STATUS_OK) {
+        key->type = ECC_PUBLICKEY;
+        key->key.type = seKey->type;
+        key->key.size = key->dp->size;
+        key->key.storage.method = SL_SE_KEY_STORAGE_EXTERNAL_PLAINTEXT;
+        key->key.flags = (SL_SE_KEY_FLAG_ASYMMETRIC_BUFFER_HAS_PUBLIC_KEY |
+            SL_SE_KEY_FLAG_ASYMMETRIC_SIGNING_ONLY);
+
+        sl_stat = sl_se_get_storage_size(&key->key,
+            &key->key.storage.location.buffer.size);
+        key->key.storage.location.buffer.pointer = key->key_raw;
+    }
     if (sl_stat == SL_STATUS_OK) {
         sl_stat = sl_se_export_public_key(&cmd, seKey, &key->key);
     }
@@ -362,4 +501,4 @@ int silabs_ecc_load_vault(ecc_key* key)
 }
 #endif
 
-#endif /* WOLFSSL_SILABS_SE_ACCEL */
+#endif /* WOLFSSL_SILABS_SE_TYPES && HAVE_ECC */

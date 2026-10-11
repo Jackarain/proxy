@@ -1,12 +1,12 @@
 /* wolfcaam_hmac.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -54,12 +54,12 @@ int wc_CAAM_Hmac(Hmac* hmac, int macType, const byte* msg, int msgSz,
 {
     int ret = 0;
 
-    if (hmac->ctx.cfd == -1 && hmac->keyLen > 0) {
+    if (hmac->ctx.inited == 0 && hmac->keyLen > 0) {
         ret = wc_DevCrypto_HmacSetKey(hmac, macType, hmac->keyRaw,
                     hmac->keyLen);
         if (ret != 0) {
             WOLFSSL_MSG("Error with set key");
-            if (ret == HASH_TYPE_E) {
+            if (ret == WC_NO_ERR_TRACE(HASH_TYPE_E)) {
                 ret = CRYPTOCB_UNAVAILABLE; /* that hash type is not supported*/
             }
         }

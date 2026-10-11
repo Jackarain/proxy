@@ -9,7 +9,16 @@ EXTRA_DIST += \
          certs/test/cert-ext-nc.cfg \
          certs/test/cert-ext-nc.der \
          certs/test/cert-ext-nc.pem \
+         certs/test/cert-ext-nc-combined.der \
+         certs/test/cert-ext-nc-combined.pem \
+         certs/test/cert-ext-ncip.der \
+         certs/test/cert-ext-ncip.pem \
+         certs/test/cert-ext-ncrid.der \
+         certs/test/cert-ext-ncrid.pem \
          certs/test/cert-ext-ncdns.der \
+         certs/test/cert-ext-ncdns.pem \
+         certs/test/cert-ext-ncmulti.der \
+         certs/test/cert-ext-ncmulti.pem \
          certs/test/cert-ext-ncmixed.der \
          certs/test/cert-ext-mnc.der \
          certs/test/cert-ext-nct.cfg \
@@ -22,6 +31,8 @@ EXTRA_DIST += \
          certs/test/cert-ext-ndir-exc.cfg \
          certs/test/cert-ext-ndir-exc.der \
          certs/test/cert-ext-ndir-exc.pem \
+         certs/test/cert-ext-oid-collide.der \
+         certs/test/gen-oid-collide-cert.sh \
          certs/test/gen-ext-certs.sh \
          certs/test/server-duplicate-policy.pem \
          certs/test/cert-ext-joi.der \
@@ -29,7 +40,15 @@ EXTRA_DIST += \
          certs/test/cert-ext-joi.cfg \
          certs/test/cert-ext-multiple.cfg \
          certs/test/cert-ext-multiple.der \
-         certs/test/cert-ext-multiple.pem
+         certs/test/cert-ext-multiple.pem \
+         certs/test/cert-bad-neg-int.der \
+         certs/test/cert-bad-oid.der \
+         certs/test/cert-bad-utf8.der \
+         certs/test/cert-over-max-altnames.cfg \
+         certs/test/cert-over-max-altnames.pem \
+         certs/test/cert-over-max-nc.cfg \
+         certs/test/cert-over-max-nc.pem \
+         certs/test/client-ecc-cert-ski.hex
 
 # The certs/server-cert with the last byte (signature byte) changed
 EXTRA_DIST += \
@@ -60,7 +79,10 @@ EXTRA_DIST += \
          certs/test/server-badaltname.pem \
          certs/test/server-localhost.der \
          certs/test/server-localhost.pem \
+         certs/test/ossl-trusted-cert.pem \
          certs/test/ktri-keyid-cms.msg \
+         certs/test/kari-keyid-cms.msg \
+         certs/test/encrypteddata.msg \
          certs/test/smime-test.p7s \
          certs/test/smime-test-canon.p7s \
          certs/test/smime-test-multipart.p7s \
@@ -84,3 +106,18 @@ EXTRA_DIST += \
          certs/test/expired/expired-ca.der \
          certs/test/expired/expired-cert.pem \
          certs/test/expired/expired-cert.der
+
+EXTRA_DIST += \
+         certs/test/nc-ancestor/gen-nc-ancestor.sh \
+         certs/test/nc-ancestor/00-root-cert.pem \
+         certs/test/nc-ancestor/00-root-key.pem \
+         certs/test/nc-ancestor/00-uri-permit-ca-permissive-cert.pem \
+         certs/test/nc-ancestor/00-uri-permit-ca-permissive-key.pem \
+         certs/test/nc-ancestor/01-uri-permit-ca-cert.pem \
+         certs/test/nc-ancestor/01-uri-permit-ca-key.pem \
+         certs/test/nc-ancestor/02-benign-sub-ca-cert.pem \
+         certs/test/nc-ancestor/02-benign-sub-ca-key.pem \
+         certs/test/nc-ancestor/03-leaf-attacker-key.pem \
+         certs/test/nc-ancestor/03-leaf-chain.pem \
+         certs/test/nc-ancestor/03-valid-leaf-cert.pem \
+         certs/test/nc-ancestor/03-valid-leaf-key.pem

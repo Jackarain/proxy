@@ -200,6 +200,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\wolfcrypt\src\aes_gcm_asm.asm"
+				>
+			</File>
+			<File
 				RelativePath=".\wolfcrypt\src\arc4.c"
 				>
 			</File>
@@ -228,11 +232,19 @@
 				>
 			</File>
 			<File
+				RelativePath=".\wolfcrypt\src\chacha_asm.asm"
+				>
+			</File>
+			<File
 				RelativePath=".\wolfcrypt\src\chacha20_poly1305.c"
 				>
 			</File>
 			<File
 				RelativePath=".\wolfcrypt\src\des3.c"
+				>
+			</File>
+			<File
+				RelativePath=".\wolfcrypt\src\wc_mldsa.c"
 				>
 			</File>
 			<File
@@ -249,6 +261,10 @@
 			</File>
 			<File
 				RelativePath=".\wolfcrypt\src\error.c"
+				>
+			</File>
+			<File
+				RelativePath=".\wolfcrypt\src\falcon.c"
 				>
 			</File>
 			<File
@@ -277,6 +293,14 @@
 			</File>
 			<File
 				RelativePath=".\wolfcrypt\src\integer.c"
+				>
+			</File>
+			<File
+				RelativePath=".\wolfcrypt\src\wc_mlkem.c"
+				>
+			</File>
+			<File
+				RelativePath=".\wolfcrypt\src\wc_mlkem_poly.c"
 				>
 			</File>
 			<File
@@ -309,6 +333,10 @@
 			</File>
 			<File
 				RelativePath=".\wolfcrypt\src\poly1305.c"
+				>
+			</File>
+			<File
+				RelativePath=".\wolfcrypt\src\poly1305_asm.asm"
 				>
 			</File>
 			<File
@@ -372,6 +400,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\wolfcrypt\src\tsp.c"
+				>
+			</File>
+			<File
 				RelativePath=".\wolfcrypt\src\wc_encrypt.c"
 				>
 			</File>
@@ -381,6 +413,10 @@
 			</File>
 			<File
 				RelativePath=".\wolfcrypt\src\wc_port.c"
+				>
+			</File>
+			<File
+				RelativePath=".\wolfcrypt\src\wc_slhdsa.c"
 				>
 			</File>
 			<File

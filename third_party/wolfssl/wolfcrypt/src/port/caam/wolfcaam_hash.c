@@ -1,12 +1,12 @@
 /* wolfcaam_hash.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -26,7 +26,7 @@
 #include <wolfssl/wolfcrypt/settings.h>
 
 #if defined(WOLFSSL_CAAM) && defined(WOLFSSL_CAAM_HASH) \
-	&& !defined(WOLFSSL_IMXRT1170_CAAM)
+        && !defined(WOLFSSL_IMXRT1170_CAAM)
 
 #include <wolfssl/wolfcrypt/logging.h>
 #include <wolfssl/wolfcrypt/error-crypt.h>
@@ -66,12 +66,13 @@
   ****************************************************************************/
 
 #ifndef WOLFSSL_HASH_KEEP
-static int _ShaUpdate(byte* buffer, word32* buffLen, const byte* ctx,
+static int _ShaUpdate(byte* buffer, word32* buffLen, byte* ctx,
     const byte* data, word32 len, word32 digestSz, word32 type)
 {
     CAAM_BUFFER buf[2];
     word32 arg[4];
     int ret;
+    int idx = 0;
 
     if (buffer == NULL || ctx == NULL || (data == NULL && len > 0)) {
         return BAD_FUNC_ARG;
@@ -91,7 +92,7 @@ static int _ShaUpdate(byte* buffer, word32* buffLen, const byte* ctx,
         if (*buffLen == WC_CAAM_HASH_BLOCK) {
             /* Set buffer for context */
             buf[idx].BufferType = DataBuffer;
-            buf[idx].TheAddress = (CAAM_ADDRESS)sha->ctx;
+            buf[idx].TheAddress = (CAAM_ADDRESS)ctx;
             buf[idx].Length     = digestSz + WC_CAAM_CTXLEN;
         #if defined(__INTEGRITY) || defined(INTEGRITY)
             buf[idx].Transferred = 0;
@@ -100,7 +101,7 @@ static int _ShaUpdate(byte* buffer, word32* buffLen, const byte* ctx,
 
             /* data to update with */
             buf[idx].BufferType = DataBuffer | LastBuffer;
-            buf[idx].TheAddress = (CAAM_ADDRESS)sha->buffer;
+            buf[idx].TheAddress = (CAAM_ADDRESS)buffer;
             buf[idx].Length     = *buffLen;
         #if defined(__INTEGRITY) || defined(INTEGRITY)
             buf[idx].Transferred = 0;
@@ -126,7 +127,7 @@ static int _ShaUpdate(byte* buffer, word32* buffLen, const byte* ctx,
 
         /* Set buffer for context */
         buf[idx].BufferType = DataBuffer;
-        buf[idx].TheAddress = (CAAM_ADDRESS)sha->ctx;
+        buf[idx].TheAddress = (CAAM_ADDRESS)ctx;
         buf[idx].Length     = digestSz + WC_CAAM_CTXLEN;
     #if defined(__INTEGRITY) || defined(INTEGRITY)
         buf[idx].Transferred = 0;
@@ -261,8 +262,8 @@ int wc_CAAM_Sha224Hash(wc_Sha224* sha224, const byte* in, word32 inSz,
     #ifdef WOLFSSL_HASH_KEEP
         ret = wc_Sha224_Grow(sha224, in, inSz);
     #else
-        ret = _ShaUpdate(sha224->buffer, &sha224->bufferLen,
-            (byte*)sha224->digest, data, len, SHA224_DIGEST_SIZE, CAAM_SHA224);
+        ret = _ShaUpdate((byte*)sha224->buffer, &sha224->buffLen,
+            (byte*)sha224->digest, in, inSz, SHA224_DIGEST_SIZE, CAAM_SHA224);
     #endif
     }
 
@@ -277,7 +278,7 @@ int wc_CAAM_Sha224Hash(wc_Sha224* sha224, const byte* in, word32 inSz,
         wc_InitSha224_ex(sha224, heap, devId);
     #else
         ret = _ShaFinal((byte*)sha224->digest, SHA224_DIGEST_SIZE,
-            (byte*)sha224->buffer, sha224->bufferLen, digest, CAAM_SHA224);
+            (byte*)sha224->buffer, sha224->buffLen, digest, CAAM_SHA224);
     #endif
     }
     return ret;

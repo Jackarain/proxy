@@ -1,0 +1,87 @@
+name: Build Rust Wrapper
+
+# START OF COMMON SECTION
+on:
+  push:
+    branches: [ 'release/**' ]
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches: [ '*' ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+# END OF COMMON SECTION
+
+jobs:
+  build_wolfssl:
+    name: Build wolfSSL Rust Wrapper
+    if: ${{ (github.repository_owner == 'wolfssl') && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
+    runs-on: ${{ matrix.os }}
+    # This should be a safe limit for the tests to run.
+    timeout-minutes: 10
+    steps:
+    - name: Build wolfSSL
+      uses: wolfSSL/actions-build-autotools-project@v1
+      with:
+        path: wolfssl
+        configure: ${{ matrix.config }}
+    - name: Build Rust Wrapper
+      working-directory: wolfssl
+      run: make -C wrapper/rust
+    - name: Run Rust Wrapper Tests
+      working-directory: wolfssl
+      run: make -C wrapper/rust test
+    strategy:
+      matrix:
+        os: [ ubuntu-24.04 ]
+        config: [
+          # Add new configs here
+          '',
+          '--enable-all',
+          '--enable-all --enable-dilithium',
+          '--enable-cryptonly --disable-examples',
+          '--enable-cryptonly --disable-examples --disable-mlkem --disable-aes --disable-aesgcm',
+          '--enable-cryptonly --disable-examples --disable-mlkem --disable-aescbc',
+          '--enable-cryptonly --disable-examples --disable-mlkem --disable-aeseax',
+          '--enable-cryptonly --disable-examples --disable-mlkem --disable-aesecb',
+          '--enable-cryptonly --disable-examples --disable-mlkem --disable-aesccm',
+          '--enable-cryptonly --disable-examples --disable-mlkem --disable-aescfb',
+          '--enable-cryptonly --disable-examples --disable-mlkem --disable-aesctr',
+          '--enable-cryptonly --disable-examples --disable-mlkem --disable-aescts',
+          '--enable-cryptonly --disable-examples --disable-mlkem --disable-aesgcm',
+          '--enable-cryptonly --disable-examples --disable-mlkem --disable-aesgcm-stream',
+          '--enable-cryptonly --disable-examples --disable-mlkem --disable-aesofb',
+          '--enable-cryptonly --disable-examples --disable-mlkem --disable-aesxts',
+          '--enable-cryptonly --disable-examples --disable-mlkem --disable-cmac',
+          '--enable-cryptonly --disable-examples --disable-mlkem --disable-dh',
+          '--enable-cryptonly --disable-examples --disable-mlkem --disable-ecc',
+          '--enable-cryptonly --disable-examples --disable-mlkem --disable-ed25519',
+          '--enable-cryptonly --disable-examples --disable-mlkem --disable-ed25519-stream',
+          '--enable-cryptonly --disable-examples --disable-mlkem --disable-ed448',
+          '--enable-cryptonly --disable-examples --disable-mlkem --disable-ed448-stream',
+          '--enable-cryptonly --disable-examples --disable-mlkem --disable-hkdf',
+          '--enable-cryptonly --disable-examples --disable-mlkem --disable-hmac',
+          '--enable-cryptonly --disable-examples --disable-mlkem --disable-rng',
+          '--enable-cryptonly --disable-examples --disable-mlkem --disable-rsa',
+          '--enable-cryptonly --disable-examples --disable-mlkem --disable-rsapss',
+          '--enable-cryptonly --disable-examples --disable-mlkem --disable-sha224',
+          '--enable-cryptonly --disable-examples --disable-mlkem --disable-sha3',
+          '--enable-cryptonly --disable-examples --disable-mlkem --disable-sha384',
+          '--enable-cryptonly --disable-examples --disable-mlkem --disable-sha512',
+          '--enable-cryptonly --disable-examples --disable-mlkem --disable-shake128',
+          '--enable-cryptonly --disable-examples --disable-mlkem --disable-shake256',
+          '--enable-cryptonly --disable-examples --disable-mlkem --disable-srtp-kdf',
+          '--enable-cryptonly --disable-examples --disable-mlkem --disable-x963kdf',
+        ]
+        include:
+          # Core configs also run on ARM
+          - os: ubuntu-24.04-arm
+            config: ''
+          - os: ubuntu-24.04-arm
+            config: '--enable-all'
+          - os: ubuntu-24.04-arm
+            config: '--enable-all --enable-dilithium'

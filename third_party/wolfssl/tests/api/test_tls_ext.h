@@ -1,0 +1,105 @@
+/* test_tls_ext.h
+ *
+ * Copyright (C) 2006-2026 wolfSSL Inc.
+ *
+ * This file is part of wolfSSL.
+ *
+ * wolfSSL is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * wolfSSL is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1335, USA
+ */
+
+#ifndef TESTS_API_TEST_TLS_EXT_H
+#define TESTS_API_TEST_TLS_EXT_H
+
+int test_tls_ems_downgrade(void);
+int test_tls_ems_resumption_downgrade(void);
+int test_tls_ems_resumption_server_downgrade(void);
+int test_tls_ems_server_disable(void);
+int test_tls_ems_server_disable_resumption(void);
+int test_tls_ems_client_disable_resumption(void);
+int test_tls_ems_upgrade_resumption(void);
+int test_tls_ems_clear_reuse(void);
+int test_tls_ems_disable_v23(void);
+int test_tls_require_ems(void);
+int test_tls_require_ems_resumption(void);
+int test_tls_require_ems_secret_cb(void);
+int test_tls_ems_server_disable_secret_cb(void);
+int test_tls12_chacha20_poly1305_bad_tag(void);
+int test_tls13_null_cipher_bad_hmac(void);
+int test_scr_verify_data_mismatch(void);
+int test_scr_no_renegotiation_option(void);
+int test_helloRequest_no_renegotiation_option(void);
+int test_helloRequest_advertise_only_refused(void);
+int test_tls13_hrr_cipher_suite_mismatch(void);
+int test_tls13_ticket_age_out_of_window(void);
+int test_wolfSSL_DisableExtendedMasterSecret(void);
+int test_wolfSSL_RequireExtendedMasterSecret(void);
+int test_certificate_authorities_certificate_request(void);
+int test_certificate_authorities_client_hello(void);
+int test_certificate_authorities_empty_client_hello(void);
+int test_certificate_authorities_empty_cert_request(void);
+int test_certificate_authorities_short_parse(void);
+int test_wolfSSL_UseCertificateAuthority_args(void);
+int test_wolfSSL_UseCertificateAuthority_size_limits(void);
+int test_wolfSSL_UseCertificateAuthority_counts(void);
+int test_TLSX_certificate_authorities_empty_vector(void);
+int test_wolfSSL_GetPeerCertificateAuthority_empty(void);
+int test_wolfSSL_CertificateAuthority_handshake(void);
+int test_wolfSSL_CertificateAuthority_ctx_handshake(void);
+int test_wolfSSL_CertificateAuthority_cert_cb(void);
+int test_TLSX_TCA_Find(void);
+int test_TLSX_SNI_GetSize_overflow(void);
+int test_TLSX_ECH_msg_type_validation(void);
+int test_TLSX_CSR2_tls13_msg_type_validation(void);
+int test_TLSX_SRTP_msg_type_validation(void);
+int test_TLSX_TCA_tls13_msg_type_validation(void);
+int test_TLSX_QUIC_TP_non_quic(void);
+int test_TLSX_ALPN_server_response_count(void);
+int test_TLSX_SupportedCurve_empty_or_unsupported(void);
+int test_TLSX_SignatureAlgorithmsCert_parse(void);
+int test_TLSX_PointFormat_uncompressed_required(void);
+int test_wolfSSL_CTX_add_client_custom_ext(void);
+int test_wolfSSL_custom_ext_handshake(void);
+int test_wolfSSL_custom_ext_flexible_handshake(void);
+int test_wolfSSL_custom_ext_tls13_handshake(void);
+int test_wolfSSL_custom_ext_parse(void);
+int test_wolfSSL_custom_ext_unsolicited(void);
+int test_wolfSSL_custom_ext_duplicate(void);
+int test_wolfSSL_custom_ext_resumption_ignored(void);
+int test_wolfSSL_custom_ext_resumption_fallback(void);
+int test_wolfSSL_custom_ext_ticket_fallback(void);
+int test_wolfSSL_custom_ext_add_null(void);
+
+#define TEST_TLS_EXT_DECLS                                                    \
+        TEST_DECL_GROUP("tls", test_tls_ems_downgrade),                      \
+        TEST_DECL_GROUP("tls", test_tls_ems_resumption_downgrade),           \
+        TEST_DECL_GROUP("tls", test_tls_ems_resumption_server_downgrade),    \
+        TEST_DECL_GROUP("tls", test_scr_verify_data_mismatch),               \
+        TEST_DECL_GROUP("tls", test_scr_no_renegotiation_option),            \
+        TEST_DECL_GROUP("tls", test_helloRequest_no_renegotiation_option),   \
+        TEST_DECL_GROUP("tls", test_helloRequest_advertise_only_refused),    \
+        TEST_DECL_GROUP("tls", test_tls13_hrr_cipher_suite_mismatch),        \
+        TEST_DECL_GROUP("tls", test_tls13_ticket_age_out_of_window),         \
+        TEST_DECL_GROUP("tls", test_certificate_authorities_certificate_request), \
+        TEST_DECL_GROUP("tls", test_certificate_authorities_client_hello),   \
+        TEST_DECL_GROUP("tls", test_TLSX_TCA_Find),                          \
+        TEST_DECL_GROUP("tls", test_TLSX_SNI_GetSize_overflow),              \
+        TEST_DECL_GROUP("tls", test_TLSX_ECH_msg_type_validation),           \
+        TEST_DECL_GROUP("tls", test_TLSX_CSR2_tls13_msg_type_validation),    \
+        TEST_DECL_GROUP("tls", test_TLSX_SRTP_msg_type_validation),          \
+        TEST_DECL_GROUP("tls", test_TLSX_ALPN_server_response_count),        \
+        TEST_DECL_GROUP("tls", test_TLSX_SupportedCurve_empty_or_unsupported), \
+        TEST_DECL_GROUP("tls", test_TLSX_PointFormat_uncompressed_required)
+
+#endif /* TESTS_API_TEST_TLS_EXT_H */

@@ -1,12 +1,12 @@
 /* sakke.h
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -40,6 +40,7 @@
 #define WOLFCRYPT_SAKKE_CLIENT
 
 #define SAKKE_ID_MAX_SIZE       128
+#define SAKKE_EB_BUF_SIZE       128
 
 /* Maximum number of loops of attempting to generate a key. */
 #ifndef SAKKE_MAX_GEN_COUNT
@@ -64,15 +65,15 @@ typedef struct SakkeKeyParams {
     ecc_point* base;
 
     /** Bit indicate prime is set as an MP integer in SAKKE key. */
-    byte havePrime:1;
+    WC_BITFIELD havePrime:1;
     /** Bit indicates q (order) is set as an MP integer in SAKKE key. */
-    byte haveQ:1;
+    WC_BITFIELD haveQ:1;
     /** Bit indicates g (pairing base) is set as an MP integer in SAKKE key. */
-    byte haveG:1;
+    WC_BITFIELD haveG:1;
     /** Bit indicates a is set as an MP integer in SAKKE key. */
-    byte haveA:1;
+    WC_BITFIELD haveA:1;
     /** Bit indicates base point is set as an ECC point in SAKKE key. */
-    byte haveBase:1;
+    WC_BITFIELD haveBase:1;
 } SakkeKeyParams;
 
 /** Temporary values to use in SAKKE calculations. */
@@ -116,7 +117,7 @@ typedef struct SakkeKeyRsk {
     /** Length of table */
     word32 tableLen;
     /** Indicates whether an RSK value has been set. */
-    byte set:1;
+    WC_BITFIELD set:1;
 } SakkeKeyRsk;
 #endif
 
@@ -153,9 +154,9 @@ typedef struct SakkeKey {
     void* heap;
 
     /** Bit indicates Z, public key, is in montgomery form. */
-    byte zMont:1;
+    WC_BITFIELD zMont:1;
     /** Bit indicate MP integers have been initialized. */
-    byte mpInit:1;
+    WC_BITFIELD mpInit:1;
 } SakkeKey;
 
 #ifdef __cplusplus

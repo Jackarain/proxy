@@ -1,6 +1,17 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # external.test
+
+# timeout(1) is GNU coreutils and absent on macOS; where it's missing, run the
+# command unbounded (the flaky hang this guards against is Linux-only CI).
+# A prefix variable rather than a shell function: backgrounding a function
+# makes $! the forked subshell, so a later "kill $server_pid" would stop the
+# wrapper and orphan the server it was meant to kill.
+if command -v timeout >/dev/null 2>&1; then
+    TIMEOUT_KILL_2M="timeout -s KILL 2m"
+else
+    TIMEOUT_KILL_2M=""
+fi
 
 SCRIPT_DIR="$(dirname "$0")"
 
@@ -16,23 +27,35 @@ if ! ./examples/client/client -V | grep -q 3; then
 fi
 
 # cloudflare seems to change CAs quickly, disabled by default
-if test -n "$WOLFSSL_EXTERNAL_TEST"; then
-
-    BUILD_FLAGS="$(./examples/client/client '-#')"
-    if echo "$BUILD_FLAGS" | fgrep -q -e ' -DWOLFSSL_SNIFFER '; then
-        echo 'skipping WOLFSSL_EXTERNAL_TEST because -DWOLFSSL_SNIFFER configuration of build is incompatible.'
-        exit 77
-    fi
-
-    if echo "$BUILD_FLAGS" | fgrep -v -q -e ' -DHAVE_ECC '; then
-        echo 'skipping WOLFSSL_EXTERNAL_TEST because -UHAVE_ECC configuration of build is incompatible.'
-        exit 77
-    fi
-
-    echo "WOLFSSL_EXTERNAL_TEST set, running test..."
-else
-    echo "WOLFSSL_EXTERNAL_TEST NOT set, won't run"
+if ! test -n "$WOLFSSL_EXTERNAL_TEST"; then
+    echo "WOLFSSL_EXTERNAL_TEST not set, won't run"
     exit 77
+fi
+if test "$WOLFSSL_EXTERNAL_TEST" == "0"; then
+    echo "WOLFSSL_EXTERNAL_TEST is defined to zero, won't run"
+    exit 77
+fi
+
+
+BUILD_FLAGS="$(./examples/client/client '-#')"
+if echo "$BUILD_FLAGS" | fgrep -q -e ' -DWOLFSSL_SNIFFER '; then
+    echo 'skipping WOLFSSL_EXTERNAL_TEST because -DWOLFSSL_SNIFFER configuration of build is incompatible.'
+    exit 77
+fi
+
+if echo "$BUILD_FLAGS" | fgrep -v -q -e ' -DHAVE_ECC '; then
+    echo 'skipping WOLFSSL_EXTERNAL_TEST because -UHAVE_ECC configuration of build is incompatible.'
+    exit 77
+fi
+
+echo "WOLFSSL_EXTERNAL_TEST set, running test..."
+
+# The CDN in front of $server answers a request without SNI using its own
+# default certificate, whose chain needs a larger RSA key than some builds
+# support, so name the host wherever the build can.
+sni=""
+if ./examples/client/client -S check | grep -q 'SNI is: ON'; then
+    sni="-S $server"
 fi
 
 # is our desired server there?
@@ -41,7 +64,7 @@ RESULT=$?
 [ $RESULT -ne 0 ] && exit 0
 
 # client test against the server
-./examples/client/client -X -C -h $server -p 443 -g -A $ca
+$TIMEOUT_KILL_2M ./examples/client/client -X -C -h $server $sni -p 443 -g -A $ca
 RESULT=$?
 [ $RESULT -ne 0 ] && echo -e "\n\nClient connection failed" && exit 1
 
@@ -51,7 +74,7 @@ RESULT=$?
 BUILD_FLAGS="$(./examples/client/client '-#')"
 if echo "$BUILD_FLAGS" | grep -q "WOLFSSL_SYS_CA_CERTS" && ! echo "$BUILD_FLAGS" | grep -q "WOLFSSL_STATIC_MEMORY"; then
     echo -e "\nConnecting using WOLFSSL_SYS_CA_CERTS..."
-    ./examples/client/client -X -C -h $server -p 443 -g --sys-ca-certs
+    ./examples/client/client -X -C -h $server $sni -p 443 -g --sys-ca-certs
     RESULT=$?
     [ $RESULT -ne 0 ] && echo -e "\n\nClient connection failed when using WOLFSSL_SYS_CA_CERTS" && exit 1
 fi

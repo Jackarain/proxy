@@ -1,12 +1,12 @@
 /* md2.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -19,18 +19,11 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1335, USA
  */
 
-
-
-#ifdef HAVE_CONFIG_H
-    #include <config.h>
-#endif
-
-#include <wolfssl/wolfcrypt/settings.h>
+#include <wolfssl/wolfcrypt/libwolfssl_sources.h>
 
 #ifdef WOLFSSL_MD2
 
 #include <wolfssl/wolfcrypt/md2.h>
-#include <wolfssl/wolfcrypt/error-crypt.h>
 
 #ifdef NO_INLINE
     #include <wolfssl/wolfcrypt/misc.h>
@@ -40,16 +33,21 @@
 #endif
 
 
-void wc_InitMd2(Md2* md2)
+int wc_InitMd2(wc_Md2* md2)
 {
-    XMEMSET(md2->X, 0, MD2_X_SIZE);
-    XMEMSET(md2->C, 0, MD2_BLOCK_SIZE);
-    XMEMSET(md2->buffer, 0, MD2_BLOCK_SIZE);
+    if (md2 == NULL)
+        return BAD_FUNC_ARG;
+
+    XMEMSET(md2->X, 0, WC_MD2_X_SIZE);
+    XMEMSET(md2->C, 0, WC_MD2_BLOCK_SIZE);
+    XMEMSET(md2->buffer, 0, WC_MD2_BLOCK_SIZE);
     md2->count = 0;
+
+    return 0;
 }
 
 
-void wc_Md2Update(Md2* md2, const byte* data, word32 len)
+int wc_Md2Update(wc_Md2* md2, const byte* data, word32 len)
 {
     static const byte S[256] =
     {
@@ -73,31 +71,34 @@ void wc_Md2Update(Md2* md2, const byte* data, word32 len)
         31, 26, 219, 153, 141, 51, 159, 17, 131, 20
     };
 
+    if (md2 == NULL || (data == NULL && len != 0))
+        return BAD_FUNC_ARG;
+
     while (len) {
-        word32 L = (MD2_PAD_SIZE - md2->count) < len ?
-                   (MD2_PAD_SIZE - md2->count) : len;
+        word32 L = (WC_MD2_PAD_SIZE - md2->count) < len ?
+                   (WC_MD2_PAD_SIZE - md2->count) : len;
         XMEMCPY(md2->buffer + md2->count, data, L);
         md2->count += L;
         data += L;
         len  -= L;
 
-        if (md2->count == MD2_PAD_SIZE) {
+        if (md2->count == WC_MD2_PAD_SIZE) {
             int  i;
             byte t;
 
             md2->count = 0;
-            XMEMCPY(md2->X + MD2_PAD_SIZE, md2->buffer, MD2_PAD_SIZE);
+            XMEMCPY(md2->X + WC_MD2_PAD_SIZE, md2->buffer, WC_MD2_PAD_SIZE);
             t = md2->C[15];
 
-            for(i = 0; i < MD2_PAD_SIZE; i++) {
-                md2->X[32 + i] = md2->X[MD2_PAD_SIZE + i] ^ md2->X[i];
+            for(i = 0; i < WC_MD2_PAD_SIZE; i++) {
+                md2->X[32 + i] = md2->X[WC_MD2_PAD_SIZE + i] ^ md2->X[i];
                 t = md2->C[i] ^= S[md2->buffer[i] ^ t];
             }
 
             t=0;
             for(i = 0; i < 18; i++) {
                 int j;
-                for(j = 0; j < MD2_X_SIZE; j += 8) {
+                for(j = 0; j < WC_MD2_X_SIZE; j += 8) {
                     t = md2->X[j+0] ^= S[t];
                     t = md2->X[j+1] ^= S[t];
                     t = md2->X[j+2] ^= S[t];
@@ -111,50 +112,55 @@ void wc_Md2Update(Md2* md2, const byte* data, word32 len)
             }
         }
     }
+
+    return 0;
 }
 
 
-void wc_Md2Final(Md2* md2, byte* hash)
+int wc_Md2Final(wc_Md2* md2, byte* hash)
 {
-    byte   padding[MD2_BLOCK_SIZE];
-    word32 padLen = MD2_PAD_SIZE - md2->count;
+    byte   padding[WC_MD2_BLOCK_SIZE];
+    word32 padLen;
     word32 i;
+    int    ret;
 
+    if (md2 == NULL || hash == NULL)
+        return BAD_FUNC_ARG;
+
+    padLen = WC_MD2_PAD_SIZE - md2->count;
     for (i = 0; i < padLen; i++)
         padding[i] = (byte)padLen;
 
-    wc_Md2Update(md2, padding, padLen);
-    wc_Md2Update(md2, md2->C, MD2_BLOCK_SIZE);
+    /* cppcheck-suppress uninitvar */
+    ret = wc_Md2Update(md2, padding, padLen);
+    if (ret == 0)
+        ret = wc_Md2Update(md2, md2->C, WC_MD2_BLOCK_SIZE);
+    if (ret != 0)
+        return ret;
 
-    XMEMCPY(hash, md2->X, MD2_DIGEST_SIZE);
+    XMEMCPY(hash, md2->X, WC_MD2_DIGEST_SIZE);
 
-    wc_InitMd2(md2);
+    return wc_InitMd2(md2);
 }
 
 
 int wc_Md2Hash(const byte* data, word32 len, byte* hash)
 {
-#ifdef WOLFSSL_SMALL_STACK
-    Md2* md2;
-#else
-    Md2 md2[1];
-#endif
+    int ret;
+    WC_DECLARE_VAR(md2, wc_Md2, 1, 0);
 
-#ifdef WOLFSSL_SMALL_STACK
-    md2 = (Md2*)XMALLOC(sizeof(Md2), NULL, DYNAMIC_TYPE_TMP_BUFFER);
-    if (md2 == NULL)
-        return MEMORY_E;
-#endif
+    WC_ALLOC_VAR_EX(md2, wc_Md2, 1, NULL, DYNAMIC_TYPE_TMP_BUFFER,
+        return MEMORY_E);
 
-    wc_InitMd2(md2);
-    wc_Md2Update(md2, data, len);
-    wc_Md2Final(md2, hash);
+    ret = wc_InitMd2(md2);
+    if (ret == 0)
+        ret = wc_Md2Update(md2, data, len);
+    if (ret == 0)
+        ret = wc_Md2Final(md2, hash);
 
-#ifdef WOLFSSL_SMALL_STACK
-    XFREE(md2, NULL, DYNAMIC_TYPE_TMP_BUFFER);
-#endif
+    WC_FREE_VAR_EX(md2, NULL, DYNAMIC_TYPE_TMP_BUFFER);
 
-    return 0;
+    return ret;
 }
 
 

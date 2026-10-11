@@ -1,12 +1,12 @@
 /* cmac-test.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -41,13 +41,13 @@ static int createTag(const byte* key, int keySz, byte* msg, int msgSz,
         byte* msg2, int msg2Sz)
 {
     Cmac cmac;
-    byte tag[AES_BLOCK_SIZE];
+    byte tag[WC_AES_BLOCK_SIZE];
     word32 i, tagSz;
     byte out[48];
     word32 outSz;
 
     XMEMSET(tag, 0, sizeof(tag));
-    tagSz = AES_BLOCK_SIZE;
+    tagSz = WC_AES_BLOCK_SIZE;
 
     outSz = 48;
     wc_caamCoverKey((byte*)key, keySz, out, &outSz, 0);

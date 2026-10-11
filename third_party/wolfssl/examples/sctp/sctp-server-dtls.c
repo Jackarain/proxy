@@ -1,12 +1,12 @@
 /* sctp-server-dtls.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -19,6 +19,10 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1335, USA
  */
 
+#ifdef HAVE_CONFIG_H
+    #include <config.h>
+#endif
+
 /* wolfssl */
 #ifndef WOLFSSL_USER_SETTINGS
     #include <wolfssl/options.h>
@@ -26,7 +30,7 @@
 #include <wolfssl/wolfcrypt/settings.h>
 #include <wolfssl/ssl.h>
 
-#if defined(WOLFSSL_SCTP) && defined(WOLFSSL_DTLS)
+#if defined(WOLFSSL_SCTP) && defined(WOLFSSL_DTLS) && !defined(WOLFSSL_NO_TLS12)
 /* sctp */
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -47,13 +51,24 @@ static int err_sys(const char* msg)
     perror(msg);
     exit(EXIT_FAILURE);
 }
-#endif /* WOLFSSL_SCTP && WOLFSSL_DTLS */
+
+/* errno says nothing about a wolfSSL failure, so report the library error. */
+static void err_ssl(WOLFSSL* ssl, int ret, const char* msg)
+{
+    char buf[WOLFSSL_MAX_ERROR_SZ];
+
+    fprintf(stderr, "%s: %s\n", msg,
+            wolfSSL_ERR_error_string((unsigned long)wolfSSL_get_error(ssl, ret),
+                                     buf));
+    exit(EXIT_FAILURE);
+}
+#endif /* WOLFSSL_SCTP && WOLFSSL_DTLS && !WOLFSSL_NO_TLS12 */
 
 int main(int argc, char **argv)
 {
     (void)argc;
     (void)argv;
-#if defined(WOLFSSL_SCTP) && defined(WOLFSSL_DTLS)
+#if defined(WOLFSSL_SCTP) && defined(WOLFSSL_DTLS) && !defined(WOLFSSL_NO_TLS12)
     int sd = socket(PF_INET, SOCK_STREAM, IPPROTO_SCTP);
 
     if (sd < 0)
@@ -108,23 +123,38 @@ int main(int argc, char **argv)
     printf("Cipher Suite is %s\n",
            wolfSSL_CIPHER_get_name(wolfSSL_get_current_cipher(ssl)));
 
-    int got = wolfSSL_read(ssl, buffer, sizeof(buffer));
-    if (got > 0) {
-        buffer[got] = 0;
-        printf("client said: %s\n", buffer);
-    }
-    wolfSSL_write(ssl, response, (int)strlen(response));
+    int got = wolfSSL_read(ssl, buffer, sizeof(buffer) - 1);
+    if (got <= 0)
+        err_ssl(ssl, got, "ssl read failed");
+    buffer[got] = 0;
+    printf("client said: %s\n", buffer);
+
+    int len = (int)strlen(response);
+    ret = wolfSSL_write(ssl, response, len);
+    if (ret != len)
+        err_ssl(ssl, ret, "ssl write failed");
 
     unsigned char bigBuf[4096];
 
-    wolfSSL_read(ssl, bigBuf, sizeof(bigBuf));
-    wolfSSL_write(ssl, bigBuf, sizeof(bigBuf));
+    ret = wolfSSL_read(ssl, bigBuf, sizeof(bigBuf));
+    if (ret != (int)sizeof(bigBuf))
+        err_ssl(ssl, ret, "ssl read of big message failed");
+    ret = wolfSSL_write(ssl, bigBuf, sizeof(bigBuf));
+    if (ret != (int)sizeof(bigBuf))
+        err_ssl(ssl, ret, "ssl write of big message failed");
 
-    wolfSSL_shutdown(ssl);
+    /* Wait for the peer's close_notify so the socket is not torn down under
+     * the client while it is still shutting down. */
+    ret = wolfSSL_shutdown(ssl);
+    if (ret == WC_NO_ERR_TRACE(WOLFSSL_SHUTDOWN_NOT_DONE))
+        ret = wolfSSL_shutdown(ssl);
+    if (ret != WOLFSSL_SUCCESS)
+        err_ssl(ssl, ret, "ssl shutdown failed");
+
     wolfSSL_free(ssl);
     wolfSSL_CTX_free(ctx);
 
     close(sd);
-#endif /* WOLFSSL_SCTP && WOLFSSL_DTLS */
+#endif /* WOLFSSL_SCTP && WOLFSSL_DTLS && !WOLFSSL_NO_TLS12 */
     return 0;
 }

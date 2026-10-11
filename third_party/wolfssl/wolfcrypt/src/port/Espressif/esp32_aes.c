@@ -1,12 +1,12 @@
 /* esp32_aes.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -48,6 +48,9 @@ static const char* TAG = "wolf_hw_aes";
 /* mutex */
 static wolfSSL_Mutex aes_mutex;
 
+/* Maximum time to wait for AES HW in FreeRTOS ticks */
+#define WOLFSSL_AES_MUTEX_WAIT 5000
+
 /* keep track as to whether esp aes is initialized */
 static int espaes_CryptHwMutexInit = 0;
 
@@ -86,7 +89,13 @@ static int esp_aes_hw_InUse(void)
          * of esp_CryptHwMutexLock(&aes_mutex ...) in code  */
         /* TODO - do we really want to wait?
          *    probably not */
-        ret = esp_CryptHwMutexLock(&aes_mutex, portMAX_DELAY);
+        ret = esp_CryptHwMutexLock(&aes_mutex, WOLFSSL_AES_MUTEX_WAIT);
+        if (ret == ESP_OK) {
+            ESP_LOGV(TAG, "esp_CryptHwMutexLock aes success");
+        }
+        else {
+            ESP_LOGW(TAG, "esp_CryptHwMutexLock aes timeout! %d", ret);
+        }
     }
     else {
         ESP_LOGE(TAG, "aes engine lock failed.");
@@ -466,15 +475,17 @@ int wc_esp32AesDecrypt(Aes *aes, const byte* in, byte* out)
 
     ESP_LOGV(TAG, "enter wc_esp32AesDecrypt");
     /* lock the hw engine */
-    esp_aes_hw_InUse();
-    /* load the key into the register */
-    ret = esp_aes_hw_Set_KeyMode(aes, ESP32_AES_UPDATEKEY_DECRYPT);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "wc_esp32AesDecrypt failed "
-                      "during esp_aes_hw_Set_KeyMode");
-        /* release hw */
-        esp_aes_hw_Leave();
-        ret = BAD_FUNC_ARG;
+    ret = esp_aes_hw_InUse();
+    if (ret == ESP_OK) {
+        /* load the key into the register */
+        ret = esp_aes_hw_Set_KeyMode(aes, ESP32_AES_UPDATEKEY_DECRYPT);
+        if (ret != ESP_OK) {
+            ESP_LOGE(TAG, "wc_esp32AesDecrypt failed "
+                          "during esp_aes_hw_Set_KeyMode");
+            /* release hw */
+            esp_aes_hw_Leave();
+            ret = BAD_FUNC_ARG;
+        }
     }
 
     if (ret == ESP_OK) {
@@ -505,9 +516,9 @@ int wc_esp32AesCbcEncrypt(Aes* aes, byte* out, const byte* in, word32 sz)
     int ret;
     int i;
     int offset = 0;
-    word32 blocks = (sz / AES_BLOCK_SIZE);
+    word32 blocks = (sz / WC_AES_BLOCK_SIZE);
     byte *iv;
-    byte temp_block[AES_BLOCK_SIZE];
+    byte temp_block[WC_AES_BLOCK_SIZE];
 
     ESP_LOGV(TAG, "enter wc_esp32AesCbcEncrypt");
 
@@ -524,19 +535,19 @@ int wc_esp32AesCbcEncrypt(Aes* aes, byte* out, const byte* in, word32 sz)
 
     if (ret == ESP_OK) {
         while (blocks--) {
-            XMEMCPY(temp_block, in + offset, AES_BLOCK_SIZE);
+            XMEMCPY(temp_block, in + offset, WC_AES_BLOCK_SIZE);
 
             /* XOR block with IV for CBC */
-            for (i = 0; i < AES_BLOCK_SIZE; i++) {
+            for (i = 0; i < WC_AES_BLOCK_SIZE; i++) {
                 temp_block[i] ^= iv[i];
             }
 
             esp_aes_bk(temp_block, (out + offset));
 
-            offset += AES_BLOCK_SIZE;
+            offset += WC_AES_BLOCK_SIZE;
 
             /* store IV for next block */
-            XMEMCPY(iv, out + offset - AES_BLOCK_SIZE, AES_BLOCK_SIZE);
+            XMEMCPY(iv, out + offset - WC_AES_BLOCK_SIZE, WC_AES_BLOCK_SIZE);
         } /* while (blocks--) */
     } /* if Set Mode successful (ret == ESP_OK) */
 
@@ -564,9 +575,9 @@ int wc_esp32AesCbcDecrypt(Aes* aes, byte* out, const byte* in, word32 sz)
 
     int i;
     int offset = 0;
-    word32 blocks = (sz / AES_BLOCK_SIZE);
+    word32 blocks = (sz / WC_AES_BLOCK_SIZE);
     byte* iv;
-    byte temp_block[AES_BLOCK_SIZE];
+    byte temp_block[WC_AES_BLOCK_SIZE];
 
     ESP_LOGV(TAG, "enter wc_esp32AesCbcDecrypt");
 
@@ -583,19 +594,19 @@ int wc_esp32AesCbcDecrypt(Aes* aes, byte* out, const byte* in, word32 sz)
 
     if (ret == ESP_OK) {
         while (blocks--) {
-            XMEMCPY(temp_block, in + offset, AES_BLOCK_SIZE);
+            XMEMCPY(temp_block, in + offset, WC_AES_BLOCK_SIZE);
 
             esp_aes_bk((in + offset), (out + offset));
 
             /* XOR block with IV for CBC */
-            for (i = 0; i < AES_BLOCK_SIZE; i++) {
+            for (i = 0; i < WC_AES_BLOCK_SIZE; i++) {
                 (out + offset)[i] ^= iv[i];
             }
 
             /* store IV for next block */
-            XMEMCPY(iv, temp_block, AES_BLOCK_SIZE);
+            XMEMCPY(iv, temp_block, WC_AES_BLOCK_SIZE);
 
-            offset += AES_BLOCK_SIZE;
+            offset += WC_AES_BLOCK_SIZE;
         } /* while (blocks--) */
     } /* if Set Mode was successful (ret == ESP_OK) */
 
@@ -628,7 +639,7 @@ int esp_hw_show_aes_metrics(void)
 #if defined(WOLFSSL_HW_METRICS)
 
     ESP_LOGI(TAG, "--------------------------------------------------------");
-    ESP_LOGI(TAG, "------------- wolfSSL ESP HW AES Metrics----------------");
+    ESP_LOGI(TAG, "-------------  wolfSSL ESP HW AES Metrics  -------------");
     ESP_LOGI(TAG, "--------------------------------------------------------");
 
     ESP_LOGI(TAG, "esp_aes_unsupported_length_usage_ct = %lu",

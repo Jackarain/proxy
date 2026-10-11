@@ -1,12 +1,12 @@
 /* ocsp.h
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -48,6 +48,16 @@ typedef struct OcspEntry WOLFSSL_OCSP_SINGLERESP;
 typedef struct OcspRequest WOLFSSL_OCSP_ONEREQ;
 
 typedef struct OcspRequest WOLFSSL_OCSP_REQUEST;
+
+typedef struct {
+    WOLFSSL_BIO *bio;
+    WOLFSSL_BIO *reqResp; /* First used for request then for response */
+    byte* buf;
+    int bufLen;
+    int state;
+    int ioState;
+    int sent;
+} WOLFSSL_OCSP_REQ_CTX;
 #endif
 
 WOLFSSL_LOCAL int  InitOCSP(WOLFSSL_OCSP* ocsp, WOLFSSL_CERT_MANAGER* cm);
@@ -58,22 +68,42 @@ WOLFSSL_LOCAL int  CheckCertOCSP_ex(WOLFSSL_OCSP* ocsp, DecodedCert* cert,
                                     WOLFSSL* ssl);
 WOLFSSL_LOCAL int  CheckOcspRequest(WOLFSSL_OCSP* ocsp,
                  OcspRequest* ocspRequest, WOLFSSL_BUFFER_INFO* responseBuffer,
-                 void* heap);
+                 WOLFSSL* ssl);
+WOLFSSL_LOCAL int  OcspNoUrlPolicy(WOLFSSL_CERT_MANAGER* cm);
 WOLFSSL_LOCAL int CheckOcspResponse(WOLFSSL_OCSP *ocsp, byte *response, int responseSz,
                                     WOLFSSL_BUFFER_INFO *responseBuffer, CertStatus *status,
                                     OcspEntry *entry, OcspRequest *ocspRequest,
-                                    void* heap);
+                                    void* heap, WOLFSSL* ssl);
 
-WOLFSSL_LOCAL int CheckOcspResponder(OcspResponse *bs, DecodedCert *cert,
-                                     void* vp);
+#ifndef CheckOcspResponder
+WOLFSSL_LOCAL int CheckOcspResponder(OcspResponse *bs, byte* subjectNameHash,
+        byte* subjectKeyHash, byte extExtKeyUsage, byte* issuerNameHash,
+        byte* issuerKeyHash);
+#endif
 
-#if defined(OPENSSL_ALL) || defined(WOLFSSL_NGINX) || defined(WOLFSSL_HAPROXY) || \
-    defined(WOLFSSL_APACHE_HTTPD) || defined(HAVE_LIGHTY)
+/* Allocates and initializes a WOLFSSL_OCSP object */
+WOLFSSL_API WOLFSSL_OCSP* wc_NewOCSP(WOLFSSL_CERT_MANAGER* cm);
+/* Frees a WOLFSSL_OCSP object allocated by wc_NewOCSP */
+WOLFSSL_API void wc_FreeOCSP(WOLFSSL_OCSP* ocsp);
+WOLFSSL_API int wc_CheckCertOcspResponse(WOLFSSL_OCSP *ocsp, DecodedCert *cert,
+        byte *response, int responseSz, void* heap);
 
-    WOLFSSL_API int wolfSSL_OCSP_resp_find_status(WOLFSSL_OCSP_BASICRESP *bs,
-                                                  WOLFSSL_OCSP_CERTID *id, int *status, int *reason,
-                                                  WOLFSSL_ASN1_TIME **revtime, WOLFSSL_ASN1_TIME **thisupd,
-                                                  WOLFSSL_ASN1_TIME **nextupd);
+WOLFSSL_API OcspRequest* wc_OcspRequest_new(void* heap);
+WOLFSSL_API void wc_OcspRequest_free(OcspRequest* request);
+
+WOLFSSL_API int wc_InitOcspRequest(OcspRequest* req, DecodedCert* cert,
+                                    byte useNonce, void* heap);
+WOLFSSL_API int wc_EncodeOcspRequest(OcspRequest* req, byte* output,
+                                      word32 size);
+
+WOLFSSL_API OcspResponse* wc_OcspResponse_new(void* heap);
+WOLFSSL_API void wc_OcspResponse_free(OcspResponse* response);
+
+#ifdef OPENSSL_EXTRA
+WOLFSSL_API int wolfSSL_OCSP_resp_find_status(WOLFSSL_OCSP_BASICRESP *bs,
+                                              WOLFSSL_OCSP_CERTID *id, int *status, int *reason,
+                                              WOLFSSL_ASN1_TIME **revtime, WOLFSSL_ASN1_TIME **thisupd,
+                                              WOLFSSL_ASN1_TIME **nextupd);
 WOLFSSL_API const char *wolfSSL_OCSP_cert_status_str(long s);
 WOLFSSL_API int wolfSSL_OCSP_check_validity(WOLFSSL_ASN1_TIME* thisupd,
     WOLFSSL_ASN1_TIME* nextupd, long sec, long maxsec);
@@ -132,8 +162,21 @@ WOLFSSL_API int wolfSSL_OCSP_resp_count(WOLFSSL_OCSP_BASICRESP *bs);
 WOLFSSL_API WOLFSSL_OCSP_SINGLERESP* wolfSSL_OCSP_resp_get0(
     WOLFSSL_OCSP_BASICRESP *bs, int idx);
 
-#endif
-#ifdef OPENSSL_EXTRA
+WOLFSSL_API WOLFSSL_OCSP_REQ_CTX* wolfSSL_OCSP_REQ_CTX_new(WOLFSSL_BIO *bio,
+        int maxline);
+WOLFSSL_API void wolfSSL_OCSP_REQ_CTX_free(WOLFSSL_OCSP_REQ_CTX *ctx);
+WOLFSSL_API WOLFSSL_OCSP_REQ_CTX *wolfSSL_OCSP_sendreq_new(WOLFSSL_BIO *bio,
+        const char *path, OcspRequest *req, int maxline);
+WOLFSSL_API int wolfSSL_OCSP_REQ_CTX_set1_req(WOLFSSL_OCSP_REQ_CTX *ctx,
+        OcspRequest *req);
+WOLFSSL_API int wolfSSL_OCSP_REQ_CTX_add1_header(WOLFSSL_OCSP_REQ_CTX *ctx,
+                             const char *name, const char *value);
+WOLFSSL_API int wolfSSL_OCSP_REQ_CTX_http(WOLFSSL_OCSP_REQ_CTX *ctx,
+        const char *op, const char *path);
+WOLFSSL_API int wolfSSL_OCSP_REQ_CTX_nbio(WOLFSSL_OCSP_REQ_CTX *ctx);
+WOLFSSL_API int wolfSSL_OCSP_sendreq_nbio(OcspResponse **presp,
+        WOLFSSL_OCSP_REQ_CTX *rctx);
+
 WOLFSSL_API int wolfSSL_OCSP_REQUEST_add_ext(OcspRequest* req,
         WOLFSSL_X509_EXTENSION* ext, int idx);
 WOLFSSL_API OcspResponse* wolfSSL_OCSP_response_create(int status,
@@ -148,7 +191,34 @@ WOLFSSL_API int wolfSSL_OCSP_request_add1_nonce(OcspRequest* req,
         unsigned char* val, int sz);
 WOLFSSL_API int wolfSSL_OCSP_check_nonce(OcspRequest* req,
         WOLFSSL_OCSP_BASICRESP* bs);
-#endif
+#endif /* OPENSSL_EXTRA */
+
+#ifdef HAVE_OCSP_RESPONDER
+/* OCSP Responder API */
+WOLFSSL_API OcspResponder* wc_OcspResponder_new(void* heap, int sendCerts);
+WOLFSSL_API void wc_OcspResponder_free(OcspResponder* responder);
+
+/* Add a cert that this responder can respond for (DER format only) */
+WOLFSSL_API int wc_OcspResponder_AddSigner(OcspResponder* responder,
+    const byte* signerDer, word32 signerDerSz,
+    const byte* keyDer, word32 keyDerSz,
+    const byte* issuerCertDer, word32 issuerCertDerSz);
+
+/* Add a certificate status for a specific CA */
+WOLFSSL_API int wc_OcspResponder_SetCertStatus(OcspResponder* responder,
+    const char* caSubject, word32 caSubjectSz,
+    const byte* serial, word32 serialSz, enum Ocsp_Cert_Status status,
+    time_t revocationTime, enum WC_CRL_Reason revocationReason,
+    word32 validityPeriod);
+
+/* Generate OCSP response for a request */
+WOLFSSL_API int wc_OcspResponder_WriteResponse(OcspResponder* responder,
+    const byte* request, word32 requestSz,
+    byte* response, word32* responseSz);
+WOLFSSL_API int wc_OcspResponder_WriteErrorResponse(
+    enum Ocsp_Response_Status status,
+    byte* response, word32* responseSz);
+#endif /* HAVE_OCSP_RESPONDER */
 
 
 #ifdef __cplusplus

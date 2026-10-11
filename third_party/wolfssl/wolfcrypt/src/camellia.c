@@ -27,13 +27,13 @@
 
 /* camellia.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -52,18 +52,11 @@
  *  http://info.isl.ntt.co.jp/crypt/eng/camellia/specifications.html
  */
 
-
-#ifdef HAVE_CONFIG_H
-    #include <config.h>
-#endif
-
-#include <wolfssl/wolfcrypt/settings.h>
+#include <wolfssl/wolfcrypt/libwolfssl_sources.h>
 
 #ifdef HAVE_CAMELLIA
 
 #include <wolfssl/wolfcrypt/camellia.h>
-#include <wolfssl/wolfcrypt/error-crypt.h>
-#include <wolfssl/wolfcrypt/logging.h>
 #ifdef NO_INLINE
     #include <wolfssl/wolfcrypt/misc.h>
 #else
@@ -71,8 +64,7 @@
     #include <wolfcrypt/src/misc.c>
 #endif
 
-/* u32 must be 32bit word */
-typedef unsigned int u32;
+typedef word32 u32;
 typedef unsigned char u8;
 
 /* key constants */
@@ -711,10 +703,8 @@ static int camellia_setup128(const unsigned char *key, u32 *subkey)
     dw = CamelliaSubkeyL(23) ^ CamelliaSubkeyR(23), dw = CAMELLIA_RL8(dw);
     CamelliaSubkeyR(23) = CamelliaSubkeyL(23) ^ dw, CamelliaSubkeyL(23) = dw;
 
-#ifdef WOLFSSL_SMALL_STACK
-    XFREE(subL, NULL, DYNAMIC_TYPE_TMP_BUFFER);
-    XFREE(subR, NULL, DYNAMIC_TYPE_TMP_BUFFER);
-#endif
+    WC_FREE_VAR_EX(subL, NULL, DYNAMIC_TYPE_TMP_BUFFER);
+    WC_FREE_VAR_EX(subR, NULL, DYNAMIC_TYPE_TMP_BUFFER);
 
     return 0;
 }
@@ -1018,10 +1008,8 @@ static int camellia_setup256(const unsigned char *key, u32 *subkey)
     dw = CamelliaSubkeyL(31) ^ CamelliaSubkeyR(31), dw = CAMELLIA_RL8(dw);
     CamelliaSubkeyR(31) = CamelliaSubkeyL(31) ^ dw,CamelliaSubkeyL(31) = dw;
 
-#ifdef WOLFSSL_SMALL_STACK
-    XFREE(subL, NULL, DYNAMIC_TYPE_TMP_BUFFER);
-    XFREE(subR, NULL, DYNAMIC_TYPE_TMP_BUFFER);
-#endif
+    WC_FREE_VAR_EX(subL, NULL, DYNAMIC_TYPE_TMP_BUFFER);
+    WC_FREE_VAR_EX(subR, NULL, DYNAMIC_TYPE_TMP_BUFFER);
 
     return 0;
 }
@@ -1029,7 +1017,7 @@ static int camellia_setup256(const unsigned char *key, u32 *subkey)
 static int camellia_setup192(const unsigned char *key, u32 *subkey)
 {
     unsigned char kk[32];
-    u32 krll, krlr, krrl,krrr;
+    u32 krll = 0, krlr = 0, krrl = 0, krrr = 0;
 
     XMEMCPY(kk, key, 24);
     XMEMCPY((unsigned char *)&krll, key+16,4);
@@ -1466,7 +1454,7 @@ static void camellia_decrypt256(const u32 *subkey, u32 *io)
 
 static void Camellia_EncryptBlock(const word32 keyBitLength,
                            const unsigned char *plaintext,
-                           const KEY_TABLE_TYPE keyTable,
+                           const WC_CAMELLIA_KEY_TABLE_TYPE keyTable,
                            unsigned char *ciphertext)
 {
     u32 tmp[4];
@@ -1497,7 +1485,7 @@ static void Camellia_EncryptBlock(const word32 keyBitLength,
 
 static void Camellia_DecryptBlock(const word32 keyBitLength,
                            const unsigned char *ciphertext,
-                           const KEY_TABLE_TYPE keyTable,
+                           const WC_CAMELLIA_KEY_TABLE_TYPE keyTable,
                            unsigned char *plaintext)
 {
     u32 tmp[4];
@@ -1529,13 +1517,13 @@ static void Camellia_DecryptBlock(const word32 keyBitLength,
 
 /* wolfCrypt wrappers to the Camellia code */
 
-int wc_CamelliaSetKey(Camellia* cam, const byte* key, word32 len, const byte* iv)
+int wc_CamelliaSetKey(wc_Camellia* cam, const byte* key, word32 len, const byte* iv)
 {
     int ret = 0;
 
-    if (cam == NULL) return BAD_FUNC_ARG;
+    if (cam == NULL || key == NULL) return BAD_FUNC_ARG;
 
-    XMEMSET(cam->key, 0, CAMELLIA_TABLE_BYTE_LEN);
+    XMEMSET(cam->key, 0, WC_CAMELLIA_TABLE_BYTE_LEN);
 
     switch (len) {
         case 16:
@@ -1560,24 +1548,34 @@ int wc_CamelliaSetKey(Camellia* cam, const byte* key, word32 len, const byte* iv
 }
 
 
-int wc_CamelliaSetIV(Camellia* cam, const byte* iv)
+int wc_CamelliaSetIV(wc_Camellia* cam, const byte* iv)
 {
     if (cam == NULL)
         return BAD_FUNC_ARG;
 
     if (iv)
-        XMEMCPY(cam->reg, iv, CAMELLIA_BLOCK_SIZE);
+        XMEMCPY(cam->reg, iv, WC_CAMELLIA_BLOCK_SIZE);
     else
-        XMEMSET(cam->reg,  0, CAMELLIA_BLOCK_SIZE);
+        XMEMSET(cam->reg,  0, WC_CAMELLIA_BLOCK_SIZE);
 
     return 0;
 }
 
 
-int wc_CamelliaEncryptDirect(Camellia* cam, byte* out, const byte* in)
+/* Returns 1 when a valid key has been configured, 0 otherwise. */
+static int CamelliaKeyIsSet(const wc_Camellia* cam)
+{
+    return (cam->keySz == 128 || cam->keySz == 192 || cam->keySz == 256);
+}
+
+
+int wc_CamelliaEncryptDirect(wc_Camellia* cam, byte* out, const byte* in)
 {
     if (cam == NULL || out == NULL || in == NULL) {
         return BAD_FUNC_ARG;
+    }
+    if (!CamelliaKeyIsSet(cam)) {
+        return MISSING_KEY;
     }
     Camellia_EncryptBlock(cam->keySz, in, cam->key, out);
 
@@ -1585,10 +1583,13 @@ int wc_CamelliaEncryptDirect(Camellia* cam, byte* out, const byte* in)
 }
 
 
-int wc_CamelliaDecryptDirect(Camellia* cam, byte* out, const byte* in)
+int wc_CamelliaDecryptDirect(wc_Camellia* cam, byte* out, const byte* in)
 {
     if (cam == NULL || out == NULL || in == NULL) {
         return BAD_FUNC_ARG;
+    }
+    if (!CamelliaKeyIsSet(cam)) {
+        return MISSING_KEY;
     }
     Camellia_DecryptBlock(cam->keySz, in, cam->key, out);
 
@@ -1596,47 +1597,67 @@ int wc_CamelliaDecryptDirect(Camellia* cam, byte* out, const byte* in)
 }
 
 
-int wc_CamelliaCbcEncrypt(Camellia* cam, byte* out, const byte* in, word32 sz)
+int wc_CamelliaCbcEncrypt(wc_Camellia* cam, byte* out, const byte* in, word32 sz)
 {
     word32 blocks;
     if (cam == NULL || out == NULL || in == NULL) {
         return BAD_FUNC_ARG;
     }
-    blocks = sz / CAMELLIA_BLOCK_SIZE;
+    if (sz % WC_CAMELLIA_BLOCK_SIZE != 0) {
+        return BAD_LENGTH_E;
+    }
+    if (!CamelliaKeyIsSet(cam)) {
+        return MISSING_KEY;
+    }
+    blocks = sz / WC_CAMELLIA_BLOCK_SIZE;
 
     while (blocks--) {
-        xorbuf((byte*)cam->reg, in, CAMELLIA_BLOCK_SIZE);
+        xorbuf((byte*)cam->reg, in, WC_CAMELLIA_BLOCK_SIZE);
         Camellia_EncryptBlock(cam->keySz, (byte*)cam->reg,
                                                      cam->key, (byte*)cam->reg);
-        XMEMCPY(out, cam->reg, CAMELLIA_BLOCK_SIZE);
+        XMEMCPY(out, cam->reg, WC_CAMELLIA_BLOCK_SIZE);
 
-        out += CAMELLIA_BLOCK_SIZE;
-        in  += CAMELLIA_BLOCK_SIZE;
+        out += WC_CAMELLIA_BLOCK_SIZE;
+        in  += WC_CAMELLIA_BLOCK_SIZE;
     }
 
     return 0;
 }
 
 
-int wc_CamelliaCbcDecrypt(Camellia* cam, byte* out, const byte* in, word32 sz)
+int wc_CamelliaCbcDecrypt(wc_Camellia* cam, byte* out, const byte* in, word32 sz)
 {
     word32 blocks;
     if (cam == NULL || out == NULL || in == NULL) {
         return BAD_FUNC_ARG;
     }
-    blocks = sz / CAMELLIA_BLOCK_SIZE;
+    if (sz % WC_CAMELLIA_BLOCK_SIZE != 0) {
+        return BAD_LENGTH_E;
+    }
+    if (!CamelliaKeyIsSet(cam)) {
+        return MISSING_KEY;
+    }
+    blocks = sz / WC_CAMELLIA_BLOCK_SIZE;
 
     while (blocks--) {
-        XMEMCPY(cam->tmp, in, CAMELLIA_BLOCK_SIZE);
+        XMEMCPY(cam->tmp, in, WC_CAMELLIA_BLOCK_SIZE);
         Camellia_DecryptBlock(cam->keySz, (byte*)cam->tmp, cam->key, out);
-        xorbuf(out, (byte*)cam->reg, CAMELLIA_BLOCK_SIZE);
-        XMEMCPY(cam->reg, cam->tmp, CAMELLIA_BLOCK_SIZE);
+        xorbuf(out, (byte*)cam->reg, WC_CAMELLIA_BLOCK_SIZE);
+        XMEMCPY(cam->reg, cam->tmp, WC_CAMELLIA_BLOCK_SIZE);
 
-        out += CAMELLIA_BLOCK_SIZE;
-        in  += CAMELLIA_BLOCK_SIZE;
+        out += WC_CAMELLIA_BLOCK_SIZE;
+        in  += WC_CAMELLIA_BLOCK_SIZE;
     }
 
     return 0;
+}
+
+
+void wc_CamelliaFree(wc_Camellia* cam)
+{
+    if (cam == NULL)
+        return;
+    ForceZero(cam, sizeof(wc_Camellia));
 }
 
 

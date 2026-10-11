@@ -1,0 +1,466 @@
+#![cfg(ed25519)]
+
+mod common;
+
+#[cfg(all(ed25519_make_key, random))]
+use wolfssl_wolfcrypt::random::RNG;
+use wolfssl_wolfcrypt::ed25519::*;
+
+#[test]
+#[cfg(all(ed25519_make_key, ed25519_import, ed25519_export, random))]
+fn test_make_public() {
+    common::setup();
+
+    let mut rng = RNG::new().expect("Error creating RNG");
+    let ed = Ed25519::generate(&mut rng).expect("Error with generate()");
+    let mut private = [0u8; Ed25519::KEY_SIZE];
+    ed.export_private_only(&mut private).expect("Error with export_private_only()");
+    let mut ed = Ed25519::new().expect("Error with new()");
+    ed.import_private_only(&private).expect("Error with import_private_only()");
+    let mut public = [0u8; Ed25519::KEY_SIZE];
+    ed.make_public(&mut public).expect("Error with make_public()");
+}
+
+#[test]
+#[cfg(all(ed25519_make_key, random))]
+fn test_check_key() {
+    let mut rng = RNG::new().expect("Error creating RNG");
+    let mut ed = Ed25519::generate(&mut rng).expect("Error with generate()");
+    ed.check_key().expect("Error with check_key()");
+}
+
+#[test]
+#[cfg(all(ed25519_import, ed25519_sign, ed25519_verify))]
+fn test_sign_verify() {
+    let private_key = [
+        0xc5u8,0xaa,0x8d,0xf4,0x3f,0x9f,0x83,0x7b,
+        0xed,0xb7,0x44,0x2f,0x31,0xdc,0xb7,0xb1,
+        0x66,0xd3,0x85,0x35,0x07,0x6f,0x09,0x4b,
+        0x85,0xce,0x3a,0x2e,0x0b,0x44,0x58,0xf7
+    ];
+    let public_key = [
+        0xfcu8,0x51,0xcd,0x8e,0x62,0x18,0xa1,0xa3,
+        0x8d,0xa4,0x7e,0xd0,0x02,0x30,0xf0,0x58,
+        0x08,0x16,0xed,0x13,0xba,0x33,0x03,0xac,
+        0x5d,0xeb,0x91,0x15,0x48,0x90,0x80,0x25
+    ];
+    let message = [0xAFu8, 0x82];
+    let expected_signature = [
+        0x62u8,0x91,0xd6,0x57,0xde,0xec,0x24,0x02,
+        0x48,0x27,0xe6,0x9c,0x3a,0xbe,0x01,0xa3,
+        0x0c,0xe5,0x48,0xa2,0x84,0x74,0x3a,0x44,
+        0x5e,0x36,0x80,0xd7,0xdb,0x5a,0xc3,0xac,
+        0x18,0xff,0x9b,0x53,0x8d,0x16,0xf2,0x90,
+        0xae,0x67,0xf7,0x60,0x98,0x4d,0xc6,0x59,
+        0x4a,0x7c,0x15,0xe9,0x71,0x6e,0xd2,0x8d,
+        0xc0,0x27,0xbe,0xce,0xea,0x1e,0xc4,0x0a
+    ];
+
+    let mut ed = Ed25519::new().expect("Error with new()");
+    ed.import_private_key(&private_key, Some(&public_key)).expect("Error with import_private_key()");
+
+    let mut signature = [0u8; Ed25519::SIG_SIZE];
+    ed.sign_msg(&message, &mut signature).expect("Error with sign_msg()");
+    assert_eq!(signature, expected_signature);
+
+    let signature_valid = ed.verify_msg(&signature, &message).expect("Error with verify_msg()");
+    assert!(signature_valid);
+
+    let mut signature = [0u8; Ed25519::SIG_SIZE];
+    ed.sign_msg_ex(&message, None, Ed25519::ED25519, &mut signature).expect("Error with sign_msg_ex()");
+    assert_eq!(signature, expected_signature);
+
+    let signature_valid = ed.verify_msg_ex(&signature, &message, None, Ed25519::ED25519).expect("Error with verify_msg_ex()");
+    assert!(signature_valid);
+}
+
+#[test]
+#[cfg(all(ed25519_import, ed25519_sign, ed25519_streaming_verify))]
+fn test_sign_streaming_verify() {
+    let private_key = [
+        0xc5u8,0xaa,0x8d,0xf4,0x3f,0x9f,0x83,0x7b,
+        0xed,0xb7,0x44,0x2f,0x31,0xdc,0xb7,0xb1,
+        0x66,0xd3,0x85,0x35,0x07,0x6f,0x09,0x4b,
+        0x85,0xce,0x3a,0x2e,0x0b,0x44,0x58,0xf7
+    ];
+    let public_key = [
+        0xfcu8,0x51,0xcd,0x8e,0x62,0x18,0xa1,0xa3,
+        0x8d,0xa4,0x7e,0xd0,0x02,0x30,0xf0,0x58,
+        0x08,0x16,0xed,0x13,0xba,0x33,0x03,0xac,
+        0x5d,0xeb,0x91,0x15,0x48,0x90,0x80,0x25
+    ];
+    let message = [0xAFu8, 0x82];
+    let expected_signature = [
+        0x62u8,0x91,0xd6,0x57,0xde,0xec,0x24,0x02,
+        0x48,0x27,0xe6,0x9c,0x3a,0xbe,0x01,0xa3,
+        0x0c,0xe5,0x48,0xa2,0x84,0x74,0x3a,0x44,
+        0x5e,0x36,0x80,0xd7,0xdb,0x5a,0xc3,0xac,
+        0x18,0xff,0x9b,0x53,0x8d,0x16,0xf2,0x90,
+        0xae,0x67,0xf7,0x60,0x98,0x4d,0xc6,0x59,
+        0x4a,0x7c,0x15,0xe9,0x71,0x6e,0xd2,0x8d,
+        0xc0,0x27,0xbe,0xce,0xea,0x1e,0xc4,0x0a
+    ];
+
+    let mut ed = Ed25519::new().expect("Error with new()");
+    ed.import_private_key(&private_key, Some(&public_key)).expect("Error with import_private_key()");
+
+    let mut signature = [0u8; Ed25519::SIG_SIZE];
+    ed.sign_msg(&message, &mut signature).expect("Error with sign_msg()");
+    assert_eq!(signature, expected_signature);
+
+    ed.verify_msg_init(&signature, None, Ed25519::ED25519).expect("Error with verify_msg_init()");
+    ed.verify_msg_update(&message[0..1]).expect("Error with verify_msg_update()");
+    ed.verify_msg_update(&message[1..2]).expect("Error with verify_msg_update()");
+    let signature_valid = ed.verify_msg_final(&signature).expect("Error with verify_msg_final()");
+    assert!(signature_valid);
+}
+
+#[test]
+#[cfg(all(ed25519_import, ed25519_sign, ed25519_verify))]
+fn test_ctx_sign_verify() {
+    let private_key = [
+        0x03u8,0x05,0x33,0x4e,0x38,0x1a,0xf7,0x8f,
+        0x14,0x1c,0xb6,0x66,0xf6,0x19,0x9f,0x57,
+        0xbc,0x34,0x95,0x33,0x5a,0x25,0x6a,0x95,
+        0xbd,0x2a,0x55,0xbf,0x54,0x66,0x63,0xf6
+    ];
+    let public_key = [
+        0xdfu8,0xc9,0x42,0x5e,0x4f,0x96,0x8f,0x7f,
+        0x0c,0x29,0xf0,0x25,0x9c,0xf5,0xf9,0xae,
+        0xd6,0x85,0x1c,0x2b,0xb4,0xad,0x8b,0xfb,
+        0x86,0x0c,0xfe,0xe0,0xab,0x24,0x82,0x92
+    ];
+    let message = [
+        0xf7u8,0x26,0x93,0x6d,0x19,0xc8,0x00,0x49,
+        0x4e,0x3f,0xda,0xff,0x20,0xb2,0x76,0xa8
+    ];
+    let context = [0x66u8,0x6f,0x6f];
+    let expected_signature = [
+        0x55u8,0xa4,0xcc,0x2f,0x70,0xa5,0x4e,0x04,
+        0x28,0x8c,0x5f,0x4c,0xd1,0xe4,0x5a,0x7b,
+        0xb5,0x20,0xb3,0x62,0x92,0x91,0x18,0x76,
+        0xca,0xda,0x73,0x23,0x19,0x8d,0xd8,0x7a,
+        0x8b,0x36,0x95,0x0b,0x95,0x13,0x00,0x22,
+        0x90,0x7a,0x7f,0xb7,0xc4,0xe9,0xb2,0xd5,
+        0xf6,0xcc,0xa6,0x85,0xa5,0x87,0xb4,0xb2,
+        0x1f,0x4b,0x88,0x8e,0x4e,0x7e,0xdb,0x0d
+    ];
+
+    let mut ed = Ed25519::new().expect("Error with new()");
+    ed.import_private_key(&private_key, Some(&public_key)).expect("Error with import_private_key()");
+
+    let mut signature = [0u8; Ed25519::SIG_SIZE];
+    ed.sign_msg_ctx(&message, &context, &mut signature).expect("Error with sign_msg_ctx()");
+    assert_eq!(signature, expected_signature);
+
+    let signature_valid = ed.verify_msg_ctx(&signature, &message, &context).expect("Error with verify_msg_ctx()");
+    assert!(signature_valid);
+}
+
+#[test]
+#[cfg(all(ed25519_import, ed25519_sign, ed25519_verify))]
+fn test_ph_sign_verify() {
+    let private_key = [
+        0x83u8,0x3f,0xe6,0x24,0x09,0x23,0x7b,0x9d,
+        0x62,0xec,0x77,0x58,0x75,0x20,0x91,0x1e,
+        0x9a,0x75,0x9c,0xec,0x1d,0x19,0x75,0x5b,
+        0x7d,0xa9,0x01,0xb9,0x6d,0xca,0x3d,0x42
+    ];
+    let public_key = [
+        0xecu8,0x17,0x2b,0x93,0xad,0x5e,0x56,0x3b,
+        0xf4,0x93,0x2c,0x70,0xe1,0x24,0x50,0x34,
+        0xc3,0x54,0x67,0xef,0x2e,0xfd,0x4d,0x64,
+        0xeb,0xf8,0x19,0x68,0x34,0x67,0xe2,0xbf
+    ];
+    let message = [0x61u8,0x62,0x63];
+    let context = [0x66u8,0x6f,0x6f];
+    let hash = [
+        0xddu8,0xaf,0x35,0xa1,0x93,0x61,0x7a,0xba,
+        0xcc,0x41,0x73,0x49,0xae,0x20,0x41,0x31,
+        0x12,0xe6,0xfa,0x4e,0x89,0xa9,0x7e,0xa2,
+        0x0a,0x9e,0xee,0xe6,0x4b,0x55,0xd3,0x9a,
+        0x21,0x92,0x99,0x2a,0x27,0x4f,0xc1,0xa8,
+        0x36,0xba,0x3c,0x23,0xa3,0xfe,0xeb,0xbd,
+        0x45,0x4d,0x44,0x23,0x64,0x3c,0xe8,0x0e,
+        0x2a,0x9a,0xc9,0x4f,0xa5,0x4c,0xa4,0x9f
+    ];
+    let expected_signature = [
+        0xe0u8,0x39,0x70,0x2b,0x4c,0x25,0x95,0xa6,
+        0xa5,0x41,0xac,0x85,0x09,0x23,0x6e,0x29,
+        0x90,0x47,0x47,0x95,0x33,0x0c,0x9b,0x34,
+        0xa7,0x5f,0x58,0xa6,0x60,0x12,0x9e,0x08,
+        0xfd,0x73,0x69,0x43,0xfb,0x19,0x43,0xa5,
+        0x57,0x20,0xb9,0xe0,0x95,0x7b,0x1e,0xd6,
+        0x73,0x48,0x16,0x61,0x9f,0x13,0x88,0xf4,
+        0x3f,0x73,0xe6,0xe3,0xba,0xa8,0x1c,0x0e
+    ];
+
+    let mut ed = Ed25519::new().expect("Error with new()");
+    ed.import_private_key(&private_key, Some(&public_key)).expect("Error with import_private_key()");
+
+    let mut signature = [0u8; Ed25519::SIG_SIZE];
+    ed.sign_msg_ph(&message, Some(&context), &mut signature).expect("Error with sign_msg_ph()");
+    assert_eq!(signature, expected_signature);
+
+    let signature_valid = ed.verify_msg_ph(&signature, &message, Some(&context)).expect("Error with verify_msg_ph()");
+    assert!(signature_valid);
+
+    let mut signature = [0u8; Ed25519::SIG_SIZE];
+    ed.sign_hash_ph(&hash, Some(&context), &mut signature).expect("Error with sign_hash_ph()");
+    assert_eq!(signature, expected_signature);
+
+    let signature_valid = ed.verify_hash_ph(&signature, &hash, Some(&context)).expect("Error with verify_hash_ph()");
+    assert!(signature_valid);
+}
+
+// The following tests exercise the Ok(false) return path (a well-formed but
+// invalid signature) of every Ed25519 verify function. Each test signs a
+// message, then flips a bit in the R portion (first byte) of the signature.
+// This keeps the signature structurally valid (the S portion remains less
+// than the group order) but makes the verification comparison fail, which is
+// expected to produce Ok(false).
+//
+// The underlying wolfCrypt verify functions return SIG_VERIFY_E for a
+// well-formed but invalid signature instead of returning 0 with the result
+// flag cleared. The Rust wrappers map SIG_VERIFY_E to Ok(false) so that an
+// invalid signature is reported as Ok(false) rather than an error.
+
+#[test]
+#[cfg(all(ed25519_make_key, ed25519_sign, ed25519_verify, random))]
+fn test_verify_msg_bad_sig() {
+    common::setup();
+
+    let mut rng = RNG::new().expect("Error creating RNG");
+    let mut ed = Ed25519::generate(&mut rng).expect("Error with generate()");
+
+    let message = [0x42u8, 33, 55, 66];
+    let mut signature = [0u8; Ed25519::SIG_SIZE];
+    ed.sign_msg(&message, &mut signature).expect("Error with sign_msg()");
+    signature[0] ^= 0x01;
+
+    assert_eq!(ed.verify_msg(&signature, &message), Ok(false));
+}
+
+#[test]
+#[cfg(all(ed25519_make_key, ed25519_sign, ed25519_verify, random))]
+fn test_verify_msg_ex_bad_sig() {
+    common::setup();
+
+    let mut rng = RNG::new().expect("Error creating RNG");
+    let mut ed = Ed25519::generate(&mut rng).expect("Error with generate()");
+
+    let message = [0x42u8, 33, 55, 66];
+    let mut signature = [0u8; Ed25519::SIG_SIZE];
+    ed.sign_msg_ex(&message, None, Ed25519::ED25519, &mut signature).expect("Error with sign_msg_ex()");
+    signature[0] ^= 0x01;
+
+    assert_eq!(ed.verify_msg_ex(&signature, &message, None, Ed25519::ED25519), Ok(false));
+}
+
+#[test]
+#[cfg(all(ed25519_make_key, ed25519_sign, ed25519_verify, random))]
+fn test_verify_msg_ctx_bad_sig() {
+    common::setup();
+
+    let mut rng = RNG::new().expect("Error creating RNG");
+    let mut ed = Ed25519::generate(&mut rng).expect("Error with generate()");
+
+    let message = [0x42u8, 33, 55, 66];
+    let context = b"context";
+    let mut signature = [0u8; Ed25519::SIG_SIZE];
+    ed.sign_msg_ctx(&message, context, &mut signature).expect("Error with sign_msg_ctx()");
+    signature[0] ^= 0x01;
+
+    assert_eq!(ed.verify_msg_ctx(&signature, &message, context), Ok(false));
+}
+
+#[test]
+#[cfg(all(ed25519_make_key, ed25519_sign, ed25519_verify, random))]
+fn test_verify_msg_ph_bad_sig() {
+    common::setup();
+
+    let mut rng = RNG::new().expect("Error creating RNG");
+    let mut ed = Ed25519::generate(&mut rng).expect("Error with generate()");
+
+    let message = [0x42u8, 33, 55, 66];
+    let context = b"context";
+    let mut signature = [0u8; Ed25519::SIG_SIZE];
+    ed.sign_msg_ph(&message, Some(context), &mut signature).expect("Error with sign_msg_ph()");
+    signature[0] ^= 0x01;
+
+    assert_eq!(ed.verify_msg_ph(&signature, &message, Some(context)), Ok(false));
+}
+
+#[test]
+#[cfg(all(ed25519_make_key, ed25519_sign, ed25519_verify, random))]
+fn test_verify_hash_ph_bad_sig() {
+    common::setup();
+
+    let mut rng = RNG::new().expect("Error creating RNG");
+    let mut ed = Ed25519::generate(&mut rng).expect("Error with generate()");
+
+    let hash = [0x55u8; 64];
+    let context = b"context";
+    let mut signature = [0u8; Ed25519::SIG_SIZE];
+    ed.sign_hash_ph(&hash, Some(context), &mut signature).expect("Error with sign_hash_ph()");
+    signature[0] ^= 0x01;
+
+    assert_eq!(ed.verify_hash_ph(&signature, &hash, Some(context)), Ok(false));
+}
+
+#[test]
+#[cfg(all(ed25519_make_key, ed25519_sign, ed25519_streaming_verify, random))]
+fn test_verify_msg_final_bad_sig() {
+    common::setup();
+
+    let mut rng = RNG::new().expect("Error creating RNG");
+    let mut ed = Ed25519::generate(&mut rng).expect("Error with generate()");
+
+    let message = [0x42u8, 33, 55, 66];
+    let mut signature = [0u8; Ed25519::SIG_SIZE];
+    ed.sign_msg(&message, &mut signature).expect("Error with sign_msg()");
+    signature[0] ^= 0x01;
+
+    ed.verify_msg_init(&signature, None, Ed25519::ED25519).expect("Error with verify_msg_init()");
+    ed.verify_msg_update(&message[0..2]).expect("Error with verify_msg_update()");
+    ed.verify_msg_update(&message[2..4]).expect("Error with verify_msg_update()");
+
+    assert_eq!(ed.verify_msg_final(&signature), Ok(false));
+}
+
+#[test]
+#[cfg(all(ed25519_make_key, ed25519_import, ed25519_export, random))]
+fn test_import_export() {
+    common::setup();
+
+    let mut rng = RNG::new().expect("Error creating RNG");
+    let ed = Ed25519::generate(&mut rng).expect("Error with generate()");
+
+    let mut private = [0u8; Ed25519::PRV_KEY_SIZE];
+    let mut public = [0u8; Ed25519::PUB_KEY_SIZE];
+    ed.export_key(&mut private, &mut public).expect("Error with export_key()");
+
+    let mut public2 = [0u8; Ed25519::PUB_KEY_SIZE];
+    ed.export_public(&mut public2).expect("Error with export_public()");
+    assert_eq!(public2, public);
+
+    let mut private2 = [0u8; Ed25519::PRV_KEY_SIZE];
+    ed.export_private(&mut private2).expect("Error with export_private()");
+    assert_eq!(private2, private);
+
+    let mut private_only = [0u8; Ed25519::KEY_SIZE];
+    ed.export_private_only(&mut private_only).expect("Error with export_private_only()");
+
+    let mut ed = Ed25519::new().expect("Error with new()");
+    ed.import_private_key_ex(&private, Some(&public), false).expect("Error with import_private_key_ex()");
+
+    let mut ed = Ed25519::new().expect("Error with new()");
+    ed.import_private_only(&private_only).expect("Error with import_private_only()");
+    ed.import_public(&public).expect("Error with import_public()");
+    ed.import_public_ex(&public, false).expect("Error with import_public_ex()");
+}
+
+#[test]
+#[cfg(all(feature = "signature", ed25519_make_key, ed25519_import, ed25519_export, ed25519_sign, ed25519_verify, random))]
+fn test_signature_traits() {
+    use signature::{Keypair, SignerMut, Verifier};
+
+    common::setup();
+
+    let rng = RNG::new().expect("Error creating RNG");
+    let mut sk = SigningKey::generate(&rng).expect("Error with SigningKey::generate()");
+
+    let message = b"message to sign via RustCrypto signature trait";
+    let sig: Signature = sk.sign(message);
+
+    // Round-trip the signature bytes through the SignatureEncoding machinery.
+    let bytes = sig.to_bytes();
+    assert_eq!(bytes.len(), Ed25519::SIG_SIZE);
+    let sig_round_trip = Signature::try_from(bytes.as_ref()).expect("Signature::try_from bytes");
+    assert_eq!(sig, sig_round_trip);
+
+    // Reject signatures of the wrong length.
+    assert!(Signature::try_from(&bytes[..bytes.len() - 1]).is_err());
+
+    // VerifyingKey obtained via the Keypair trait verifies this signature.
+    let vk: VerifyingKey = sk.verifying_key();
+    vk.verify(message, &sig).expect("Verifier::verify failed");
+
+    // A tampered message must fail verification.
+    let mut tampered = *message;
+    tampered[0] ^= 0x01;
+    assert!(vk.verify(&tampered, &sig).is_err());
+
+    // VerifyingKey bytes round-trip.
+    let vk_bytes = vk.to_bytes();
+    let vk2 = VerifyingKey::try_from(vk_bytes.as_ref()).expect("VerifyingKey::try_from bytes");
+    assert_eq!(vk, vk2);
+}
+
+#[test]
+#[cfg(all(feature = "signature", ed25519_make_key, ed25519_import, ed25519_export, ed25519_sign, ed25519_verify, random))]
+fn test_signing_key_from_incomplete_key() {
+    use signature::{Keypair, SignerMut, Verifier};
+
+    common::setup();
+
+    let rng = RNG::new().expect("Error creating RNG");
+    let ed = Ed25519::generate(&rng).expect("Error with generate()");
+    let mut private = [0u8; Ed25519::KEY_SIZE];
+    let mut public = [0u8; Ed25519::PUB_KEY_SIZE];
+    ed.export_private_only(&mut private).expect("Error with export_private_only()");
+    ed.export_public(&mut public).expect("Error with export_public()");
+
+    // A key with no public key at all cannot become a SigningKey.
+    let empty = Ed25519::new().expect("Error with new()");
+    assert!(SigningKey::from_key(empty).is_err());
+
+    // Nor can one holding only the private scalar.
+    let mut private_only = Ed25519::new().expect("Error with new()");
+    private_only.import_private_only(&private).expect("Error with import_private_only()");
+    assert!(SigningKey::from_key(private_only).is_err());
+
+    // Nor can a public-only key, which could never sign.
+    let mut public_only = Ed25519::new().expect("Error with new()");
+    public_only.import_public(&public).expect("Error with import_public()");
+    assert!(SigningKey::from_key(public_only).is_err());
+
+    // from_private_only() derives the public key instead of failing.
+    let mut sk = SigningKey::from_private_only(&private)
+        .expect("Error with SigningKey::from_private_only()");
+    assert_eq!(sk.verifying_key().to_bytes(), public);
+
+    // As does importing the pair, and both agree on signatures.
+    let mut sk2 = SigningKey::from_keypair(&private, &public)
+        .expect("Error with SigningKey::from_keypair()");
+    assert_eq!(sk2.verifying_key(), sk.verifying_key());
+
+    let message = b"message signed by a derived signing key";
+    let sig: Signature = sk.sign(message);
+    assert_eq!(sig, sk2.sign(message));
+    sk.verifying_key().verify(message, &sig).expect("Verifier::verify failed");
+
+    // A public key that does not match the private key is rejected.
+    let mut wrong_public = public;
+    wrong_public[0] ^= 0x01;
+    assert!(SigningKey::from_keypair(&private, &wrong_public).is_err());
+}
+
+#[test]
+#[cfg(all(ed25519_make_key, random))]
+fn test_sizes() {
+    let mut rng = RNG::new().expect("Error creating RNG");
+    let ed = Ed25519::generate(&mut rng).expect("Error with generate()");
+
+    let size = ed.size().expect("Error with size()");
+    assert_eq!(size, Ed25519::KEY_SIZE);
+
+    let size = ed.priv_size().expect("Error with priv_size()");
+    assert_eq!(size, Ed25519::PRV_KEY_SIZE);
+
+    let size = ed.pub_size().expect("Error with pub_size()");
+    assert_eq!(size, Ed25519::PUB_KEY_SIZE);
+
+    let size = ed.sig_size().expect("Error with sig_size()");
+    assert_eq!(size, Ed25519::SIG_SIZE);
+}

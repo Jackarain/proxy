@@ -1,12 +1,12 @@
 /* devcrypto_hmac.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -19,18 +19,11 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1335, USA
  */
 
-
-#ifdef HAVE_CONFIG_H
-    #include <config.h>
-#endif
-
-#include <wolfssl/wolfcrypt/settings.h>
+#include <wolfssl/wolfcrypt/libwolfssl_sources.h>
 
 #if defined(WOLFSSL_DEVCRYPTO_HMAC)
 
-#include <wolfssl/wolfcrypt/error-crypt.h>
 #include <wolfssl/wolfcrypt/hmac.h>
-#include <wolfssl/wolfcrypt/logging.h>
 #include <wolfssl/wolfcrypt/port/devcrypto/wc_devcrypto.h>
 
 static int InternalTypeToDevcrypto(int t)
@@ -57,7 +50,9 @@ int wc_DevCrypto_HmacSetKey(Hmac* hmac, int t, const byte* key, word32 keySz)
 {
     int hType;
 
-    hmac->ctx.cfd = -1;
+    /* Re-keying releases any session already held, so it is not orphaned by
+     * the wc_DevCryptoCreate() below. */
+    wc_DevCryptoFree(&hmac->ctx);
     hType = InternalTypeToDevcrypto(t);
     if (hType < 0) {
         return hType;
@@ -73,14 +68,15 @@ int wc_DevCrypto_HmacUpdate(Hmac* hmac, const byte* input, word32 inputSz)
     WC_CRYPTODEV*   dev;
     struct crypt_op crt;
 
+    if (hmac == NULL) {
+        return BAD_FUNC_ARG;
+    }
+
     if (inputSz == 0) {
         return 0;
     }
 
-    if ((dev = &hmac->ctx) == NULL) {
-        WOLFSSL_MSG("Unsupported hash type");
-        return BAD_FUNC_ARG;
-    }
+    dev = &hmac->ctx;
 
     wc_SetupCrypt(&crt, dev, (byte*)input, inputSz, NULL, NULL,
             COP_FLAG_UPDATE, COP_ENCRYPT);
@@ -98,10 +94,11 @@ int wc_DevCrypto_HmacFinal(Hmac* hmac, byte* out)
     WC_CRYPTODEV*   dev;
     struct crypt_op crt;
 
-    if ((dev = &hmac->ctx) == NULL) {
-        WOLFSSL_MSG("Unsupported hash type");
+    if (hmac == NULL || out == NULL) {
         return BAD_FUNC_ARG;
     }
+
+    dev = &hmac->ctx;
 
     wc_SetupCrypt(&crt, dev, NULL, 0, NULL, out, COP_FLAG_FINAL, COP_ENCRYPT);
     if (ioctl(dev->cfd, CIOCCRYPT, &crt)) {

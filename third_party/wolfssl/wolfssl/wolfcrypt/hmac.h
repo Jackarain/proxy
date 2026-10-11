@@ -1,12 +1,12 @@
 /* hmac.h
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -30,8 +30,7 @@
 
 #ifndef NO_HMAC
 
-#if defined(HAVE_FIPS) && \
-        defined(HAVE_FIPS_VERSION) && (HAVE_FIPS_VERSION >= 2)
+#if FIPS_VERSION3_GE(2,0,0)
     #include <wolfssl/wolfcrypt/fips.h>
 #endif
 
@@ -39,9 +38,17 @@
     extern "C" {
 #endif
 
+#if FIPS_VERSION3_GE(6,0,0)
+    extern const unsigned int wolfCrypt_FIPS_hmac_ro_sanity[2];
+    WOLFSSL_LOCAL int wolfCrypt_FIPS_HMAC_sanity(void);
+#endif
+
+#if FIPS_VERSION3_GE(6,0,0)
+    #define FIPS_ALLOW_SHORT 1
+#endif
+
 /* avoid redefinition of structs */
-#if !defined(HAVE_FIPS) || \
-    (defined(HAVE_FIPS_VERSION) && (HAVE_FIPS_VERSION >= 2))
+#if !defined(HAVE_FIPS) || FIPS_VERSION3_GE(2,0,0)
 
 #ifdef WOLFSSL_ASYNC_CRYPT
     #include <wolfssl/wolfcrypt/async.h>
@@ -59,8 +66,9 @@
 #define WC_HMAC_INNER_HASH_KEYED_DEV    2
 
 enum {
-    HMAC_FIPS_MIN_KEY = 14,   /* 112 bit key length minimum */
-
+    HMAC_FIPS_MIN_KEY = 14,   /* 112 bit key length minimum. Note that this
+                               * minimum also applies to the salt length for
+                               * HKDF. */
     IPAD    = 0x36,
     OPAD    = 0x5C,
 
@@ -112,38 +120,15 @@ enum {
     #error "You have to have some kind of hash if you want to use HMAC."
 #endif
 
-
-/* hmac hash union */
-typedef union {
-#ifndef NO_MD5
-    wc_Md5 md5;
-#endif
-#ifndef NO_SHA
-    wc_Sha sha;
-#endif
-#ifdef WOLFSSL_SHA224
-    wc_Sha224 sha224;
-#endif
-#ifndef NO_SHA256
-    wc_Sha256 sha256;
-#endif
-#ifdef WOLFSSL_SHA384
-    wc_Sha384 sha384;
-#endif
-#ifdef WOLFSSL_SHA512
-    wc_Sha512 sha512;
-#endif
-#ifdef WOLFSSL_SHA3
-    wc_Sha3 sha3;
-#endif
-#ifdef WOLFSSL_SM3
-    wc_Sm3 sm3;
-#endif
-} wc_HmacHash;
+typedef wc_Hashes wc_HmacHash;
 
 /* Hmac digest */
 struct Hmac {
     wc_HmacHash hash;
+#ifdef WOLFSSL_HMAC_COPY_HASH
+    wc_HmacHash i_hash;
+    wc_HmacHash o_hash;
+#endif
     word32  ipad[WC_HMAC_BLOCK_SIZE  / sizeof(word32)];  /* same block size all*/
     word32  opad[WC_HMAC_BLOCK_SIZE  / sizeof(word32)];
     word32  innerHash[WC_MAX_DIGEST_SIZE / sizeof(word32)];
@@ -173,6 +158,13 @@ struct Hmac {
 #if defined(WOLFSSL_ASYNC_CRYPT) || defined(WOLF_CRYPTO_CB)
     word16  keyLen;          /* hmac key length (key in ipad) */
 #endif
+#if defined(STM32_HASH) && defined(STM32_HMAC)
+    STM32_HASH_Context stmCtx;
+    word32 stmAlgo;       /* cached STM32 HASH algo selection */
+    word32 stmBlockSize;  /* cached hash block size */
+    word32 stmDigestSize; /* cached digest size */
+    word32 stmKeyLen;     /* key length (raw key stored in ipad) */
+#endif
 };
 
 #ifndef WC_HMAC_TYPE_DEFINED
@@ -184,9 +176,12 @@ struct Hmac {
 #endif /* HAVE_FIPS */
 
 /* does init */
-WOLFSSL_API int wc_HmacSetKey(Hmac* hmac, int type, const byte* key, word32 keySz);
-WOLFSSL_API int wc_HmacUpdate(Hmac* hmac, const byte* in, word32 sz);
-WOLFSSL_API int wc_HmacFinal(Hmac* hmac, byte* out);
+WOLFSSL_API int wc_HmacSetKey(Hmac* hmac, int type, const byte* key,
+                              word32 length);
+WOLFSSL_API int wc_HmacSetKey_ex(Hmac* hmac, int type, const byte* key,
+                                 word32 length, int allowFlag);
+WOLFSSL_API int wc_HmacUpdate(Hmac* hmac, const byte* msg, word32 length);
+WOLFSSL_API int wc_HmacFinal(Hmac* hmac, byte* hash);
 #ifdef WOLFSSL_KCAPI_HMAC
 WOLFSSL_API int wc_HmacSetKey_Software(Hmac* hmac, int type, const byte* key,
                                        word32 keySz);
@@ -202,16 +197,26 @@ WOLFSSL_API int wc_HmacInit_Id(Hmac* hmac, byte* id, int len, void* heap,
 WOLFSSL_API int wc_HmacInit_Label(Hmac* hmac, const char* label, void* heap,
                                   int devId);
 #endif
+WOLFSSL_API int wc_HmacCopy(Hmac* src, Hmac* dst);
 WOLFSSL_API void wc_HmacFree(Hmac* hmac);
 
 WOLFSSL_API int wolfSSL_GetHmacMaxSize(void);
 
 WOLFSSL_LOCAL int _InitHmac(Hmac* hmac, int type, void* heap);
+WOLFSSL_LOCAL int _HmacInitIOHashes(Hmac* hmac);
 
 #ifdef HAVE_HKDF
 
+WOLFSSL_API int wc_HKDF_Extract_ex(int type, const byte* salt, word32 saltSz,
+                                const byte* inKey, word32 inKeySz, byte* out,
+                                void* heap, int devId);
+
 WOLFSSL_API int wc_HKDF_Extract(int type, const byte* salt, word32 saltSz,
                                 const byte* inKey, word32 inKeySz, byte* out);
+
+WOLFSSL_API int wc_HKDF_Expand_ex(int type, const byte* inKey, word32 inKeySz,
+                               const byte* info, word32 infoSz,
+                               byte* out, word32 outSz, void* heap, int devId);
 WOLFSSL_API int wc_HKDF_Expand(int type, const byte* inKey, word32 inKeySz,
                                const byte* info, word32 infoSz,
                                byte* out, word32 outSz);
@@ -220,6 +225,10 @@ WOLFSSL_API int wc_HKDF(int type, const byte* inKey, word32 inKeySz,
                     const byte* salt, word32 saltSz,
                     const byte* info, word32 infoSz,
                     byte* out, word32 outSz);
+WOLFSSL_API int wc_HKDF_ex(int type, const byte* inKey, word32 inKeySz,
+                       const byte* salt, word32 saltSz,
+                       const byte* info, word32 infoSz,
+                       byte* out, word32 outSz, void* heap, int devId);
 
 #endif /* HAVE_HKDF */
 

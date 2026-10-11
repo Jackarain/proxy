@@ -1,0 +1,45 @@
+name: Test gencertbuf script
+
+# START OF COMMON SECTION
+on:
+  push:
+    branches: [ 'release/**' ]
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches: [ '*' ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+# END OF COMMON SECTION
+
+jobs:
+  gencertbuf:
+    name: gencertbuf
+    if: ${{ (github.repository_owner == 'wolfssl') && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
+    runs-on: ubuntu-24.04
+    # This should be a safe limit for the tests to run.
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v5
+        name: Checkout wolfSSL
+
+      - name: Test generate wolfssl/certs_test.h
+        run: ./gencertbuf.pl
+
+      - name: Test wolfSSL
+        run: |
+          ./autogen.sh
+          ./configure --enable-all --enable-experimental --enable-dilithium --enable-kyber
+          make -j
+          ./wolfcrypt/test/testwolfcrypt
+
+      - name: Print errors
+        if: ${{ failure() }}
+        run: |
+          if [ -f test-suite.log ] ; then
+            cat test-suite.log
+          fi

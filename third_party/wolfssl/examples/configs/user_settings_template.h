@@ -1,12 +1,12 @@
 /* user_settings_template.h
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -41,8 +41,8 @@ extern "C" {
 /* ------------------------------------------------------------------------- */
 #define WOLFSSL_GENERAL_ALIGNMENT 4
 #define SIZEOF_LONG_LONG 8
-#if 0
-    #define NO_64BIT /* disable use of 64-bit variables */
+#if 0 /* Disable 64-bit types */
+    #define NO_64BIT
 #endif
 
 #ifdef TARGET_EMBEDDED
@@ -62,7 +62,7 @@ extern "C" {
 /* Math Configuration */
 /* ------------------------------------------------------------------------- */
 /* Wolf Single Precision Math */
-#if 1
+#if 1 /* SP Math (recommended) */
     #define WOLFSSL_HAVE_SP_RSA
     #define WOLFSSL_HAVE_SP_DH
     #define WOLFSSL_HAVE_SP_ECC
@@ -78,10 +78,9 @@ extern "C" {
     #ifdef TARGET_EMBEDDED
         /* use smaller version of code */
         #define WOLFSSL_SP_SMALL
-    #else
-        /* SP Assembly Speedups - specific to chip type */
-        #define WOLFSSL_SP_ASM
     #endif
+    /* SP Assembly Speedups - specific to chip type */
+    //#define WOLFSSL_SP_ASM
     //#define WOLFSSL_SP_X86_64
     //#define WOLFSSL_SP_X86
     //#define WOLFSSL_SP_ARM32_ASM
@@ -103,7 +102,7 @@ extern "C" {
 /* ------------------------------------------------------------------------- */
 /* RSA */
 #undef NO_RSA
-#if 1
+#if 1 /* RSA */
     #ifdef USE_FAST_MATH
         /* Maximum math bits (Max RSA key bits * 2) */
         #define FP_MAX_BITS 4096
@@ -123,9 +122,9 @@ extern "C" {
 
 /* DH */
 #undef  NO_DH
-#if 1
-    /* Use table for DH instead of -lm (math) lib dependency */
-    #if 1
+#if 1 /* DH */
+    /* Use table for DH instead of -lm (math) lib */
+    #if 1 /* FFDHE parameters */
         #define WOLFSSL_DH_CONST
         #define HAVE_FFDHE_2048
         //#define HAVE_FFDHE_4096
@@ -138,7 +137,7 @@ extern "C" {
 
 /* ECC */
 #undef HAVE_ECC
-#if 1
+#if 1 /* ECC */
     #define HAVE_ECC
 
     /* Manually define enabled curves */
@@ -195,7 +194,7 @@ extern "C" {
 
 /* AES */
 #undef NO_AES
-#if 1
+#if 1 /* AES */
     #define HAVE_AES_CBC
 
     /* GCM Method: GCM_TABLE_4BIT, GCM_SMALL, GCM_WORD32 or GCM_TABLE */
@@ -210,6 +209,11 @@ extern "C" {
     //#define HAVE_AES_ECB
     //#define WOLFSSL_AES_COUNTER
     //#define HAVE_AESCCM
+
+    /* One key carries one tag length, per SP 800-38D 5.2.1.2. Define this
+     * to let one key use several, which departs from that requirement.
+     * A FIPS v7 or later build refuses it. */
+    //#define WOLFSSL_NO_AES_TAG_ASSOCIATION
 #else
     #define NO_AES
 #endif
@@ -217,7 +221,7 @@ extern "C" {
 
 /* DES3 */
 #undef NO_DES3
-#if 0
+#if 0 /* DES3 (legacy, not recommended) */
 #else
     #define NO_DES3
 #endif
@@ -225,7 +229,7 @@ extern "C" {
 /* ChaCha20 / Poly1305 */
 #undef HAVE_CHACHA
 #undef HAVE_POLY1305
-#if 1
+#if 1 /* ChaCha20 / Poly1305 */
     #define HAVE_CHACHA
     #define HAVE_POLY1305
 
@@ -236,12 +240,12 @@ extern "C" {
 /* Ed25519 / Curve25519 */
 #undef HAVE_CURVE25519
 #undef HAVE_ED25519
-#if 0
+#if 0 /* Ed25519 / Curve25519 */
     #define HAVE_CURVE25519
     #define HAVE_ED25519 /* ED25519 Requires SHA512 */
 
-    /* Optionally use small math (less flash usage, but much slower) */
-    #if 1
+    /* Optionally use small math (less flash, slower) */
+    #if 1 /* Small Curve25519 */
         #define CURVED25519_SMALL
     #endif
 #endif
@@ -252,7 +256,7 @@ extern "C" {
 /* ------------------------------------------------------------------------- */
 /* Sha */
 #undef NO_SHA
-#if 1
+#if 1 /* SHA-1 */
     /* 1k smaller, but 25% slower */
     //#define USE_SLOW_SHA
 #else
@@ -261,12 +265,12 @@ extern "C" {
 
 /* Sha256 */
 #undef NO_SHA256
-#if 1
+#if 1 /* SHA-256 */
     /* not unrolled - ~2k smaller and ~25% slower */
     //#define USE_SLOW_SHA256
 
-    /* Sha224 */
-    #if 0
+    /* SHA-224 (requires SHA-256) */
+    #if 0 /* SHA-224 */
         #define WOLFSSL_SHA224
     #endif
 #else
@@ -275,12 +279,12 @@ extern "C" {
 
 /* Sha512 */
 #undef WOLFSSL_SHA512
-#if 0
+#if 0 /* SHA-512 */
     #define WOLFSSL_SHA512
 
-    /* Sha384 */
+    /* SHA-384 (requires SHA-512) */
     #undef  WOLFSSL_SHA384
-    #if 0
+    #if 0 /* SHA-384 */
         #define WOLFSSL_SHA384
     #endif
 
@@ -290,27 +294,27 @@ extern "C" {
 
 /* Sha3 */
 #undef WOLFSSL_SHA3
-#if 0
+#if 0 /* SHA-3 */
     #define WOLFSSL_SHA3
 #endif
 
 /* MD5 */
 #undef  NO_MD5
-#if 0
-
+#if 0 /* MD5 (legacy, not recommended) */
+    /* MD5 enabled */
 #else
     #define NO_MD5
 #endif
 
 /* HKDF */
 #undef HAVE_HKDF
-#if 1
+#if 1 /* HKDF (TLS 1.3 requires this) */
     #define HAVE_HKDF
 #endif
 
 /* CMAC */
 #undef WOLFSSL_CMAC
-#if 0
+#if 0 /* CMAC */
     #define WOLFSSL_CMAC
 #endif
 
@@ -335,10 +339,10 @@ extern "C" {
 
 #undef DEBUG_WOLFSSL
 #undef NO_ERROR_STRINGS
-#if 0
+#if 0 /* Enable debug logging */
     #define DEBUG_WOLFSSL
 #else
-    #if 0
+    #if 0 /* Disable error strings to save flash */
         #define NO_ERROR_STRINGS
     #endif
 #endif
@@ -349,11 +353,12 @@ extern "C" {
 /* ------------------------------------------------------------------------- */
 
 /* Override Memory API's */
-#if 0
+#if 0 /* Custom malloc/free/realloc */
     #define XMALLOC_OVERRIDE
 
     /* prototypes for user heap override functions */
     /* Note: Realloc only required for normal math */
+    /* Note2: XFREE(NULL) must be properly handled */
     #include <stddef.h>  /* for size_t */
     extern void *myMalloc(size_t n, void* heap, int type);
     extern void myFree(void *p, void* heap, int type);
@@ -364,24 +369,23 @@ extern "C" {
     #define XREALLOC(p, n, h, t) myRealloc(p, n, h, t)
 #endif
 
-#if 0
-    /* Static memory requires fast math */
+#if 0 /* Static memory (no heap) */
     #define WOLFSSL_STATIC_MEMORY
 
     /* Disable fallback malloc/free */
     #define WOLFSSL_NO_MALLOC
-    #if 1
+    #if 1 /* Trap malloc failure */
         #define WOLFSSL_MALLOC_CHECK /* trap malloc failure */
     #endif
 #endif
 
 /* Memory callbacks */
-#if 0
+#if 0 /* wolfSSL memory callbacks */
     #undef  USE_WOLFSSL_MEMORY
     #define USE_WOLFSSL_MEMORY
 
     /* Use this to measure / print heap usage */
-    #if 0
+    #if 0 /* Memory tracking / debug */
         #define WOLFSSL_TRACK_MEMORY
         #define WOLFSSL_DEBUG_MEMORY
     #endif
@@ -398,7 +402,7 @@ extern "C" {
 /* ------------------------------------------------------------------------- */
 
 /* Override Current Time */
-#if 0
+#if 0 /* Custom time function */
     /* Allows custom "custom_time()" function to be used for benchmark */
     #define WOLFSSL_USER_CURRTIME
     #define WOLFSSL_GMTIME
@@ -413,9 +417,9 @@ extern "C" {
 /* ------------------------------------------------------------------------- */
 
 /* Choose RNG method */
-#if 1
+#if 1 /* P-RNG with hash DRBG */
     /* Custom Seed Source */
-    #if 0
+    #if 0 /* Custom HW RNG seed */
         /* Size of returned HW RNG value */
         #define CUSTOM_RAND_TYPE      unsigned int
         extern unsigned int my_rng_seed_gen(void);
@@ -437,13 +441,31 @@ extern "C" {
     #define CUSTOM_RAND_GENERATE_BLOCK  my_rng_gen_block
 #endif
 
+#if 0 /* Threaded build that never shares one WC_RNG between threads.
+       * CMSIS-RTOS v1 builds have no lock already: a ten-mutex pool */
+    #undef  WC_RNG_NO_AUTO_LOCK
+    #define WC_RNG_NO_AUTO_LOCK
+#endif
+#if 0 /* pthread_atfork handlers: a forked child keeps using its WC_RNG */
+    /* configure probes for this; here it is asserted.  Needs pthreads,
+     * a heap, the lock above (not WC_RNG_NO_AUTO_LOCK) and unnamed POSIX
+     * semaphores (sem_init, so not macOS) and pthread_setcancelstate (so
+     * not Android); the pin needs dladdr and dlopen,
+     * -ldl on glibc before 2.34, and keeps the library mapped, since the
+     * handlers cannot be removed.  Left out with SINGLE_THREADED,
+     * entropy-memuse, the RNG bank, netRandom, selftest, FIPS before v7,
+     * memory zero checking, memory tracking or failure counting */
+    #undef  WC_RNG_AUTOFORK
+    #define WC_RNG_AUTOFORK
+#endif
+
 
 /* ------------------------------------------------------------------------- */
 /* Custom Standard Lib */
 /* ------------------------------------------------------------------------- */
 /* Allows override of all standard library functions */
 #undef STRING_USER
-#if 0
+#if 0 /* Custom standard library overrides */
     #define STRING_USER
 
     #include <string.h>
@@ -454,7 +476,7 @@ extern "C" {
     #define USE_WOLF_STRTOK
     #define XSTRTOK(s1,d,ptr) wc_strtok((s1),(d),(ptr))
 
-    #define XSTRNSTR(s1,s2,n) mystrnstr((s1),(s2),(n))
+    #define XSTRNSTR(s1,s2,n) wolfSSL_strnstr((s1),(s2),(n))
 
     #define XMEMCPY(d,s,l)    memcpy((d),(s),(l))
     #define XMEMSET(b,c,l)    memset((b),(c),(l))
@@ -470,6 +492,9 @@ extern "C" {
     #define XSTRNCASECMP(s1,s2,n) strncasecmp((s1),(s2),(n))
 
     #define XSNPRINTF snprintf
+
+    #include <stdlib.h>
+    #define XATOI(s)          atoi((s))
 #endif
 
 
@@ -489,7 +514,7 @@ extern "C" {
 //#define HAVE_COMP_KEY
 
 /* TLS Session Cache */
-#if 0
+#if 0 /* Small session cache */
     #define SMALL_SESSION_CACHE
 #else
     #define NO_SESSION_CACHE

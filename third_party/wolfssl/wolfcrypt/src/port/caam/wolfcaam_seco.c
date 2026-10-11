@@ -1,12 +1,12 @@
 /* wolfcaam_seco.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -829,8 +829,8 @@ static hsm_err_t wc_SECO_CMAC(unsigned int args[4], CAAM_BUFFER* buf, int sz)
         mac_args.payload_size = buf[2].Length;
 
         mac_args.mac      = (uint8_t*)buf[1].TheAddress;
-        mac_args.mac_size = (buf[1].Length < AES_BLOCK_SIZE)? buf[1].Length:
-                                                              AES_BLOCK_SIZE;
+        mac_args.mac_size = (buf[1].Length < WC_AES_BLOCK_SIZE)? buf[1].Length:
+                                                              WC_AES_BLOCK_SIZE;
     #ifdef DEBUG_SECO
         printf("CMAC arguments used:\n");
         printf("\tkey id       = %d\n", mac_args.key_identifier);
@@ -960,6 +960,10 @@ static hsm_err_t wc_SECO_AESCCM(unsigned int args[4], CAAM_BUFFER* buf, int sz)
     cipherAndTagSz = buf[4].Length + buf[2].Length;
     cipherAndTag   = (byte*)XMALLOC(cipherAndTagSz, NULL,
         DYNAMIC_TYPE_TMP_BUFFER);
+    if (cipherAndTag == NULL) {
+        return HSM_OUT_OF_MEMORY;
+    }
+
     dir = args[0] & 0xFFFF; /* get if doing enc or dec */
     if (dir == CAAM_ENC) {
         in = (uint8_t*)buf[2].TheAddress;
@@ -1012,6 +1016,11 @@ static hsm_err_t wc_SECO_AESGCM(unsigned int args[4], CAAM_BUFFER* buf, int sz)
         cipherAndTagSz = buf[4].Length + buf[2].Length;
         cipherAndTag   = (byte*)XMALLOC(cipherAndTagSz, NULL,
             DYNAMIC_TYPE_TMP_BUFFER);
+        if (cipherAndTag == NULL) {
+            (void)hsm_close_cipher_service(cipher_hdl);
+            return HSM_OUT_OF_MEMORY;
+        }
+
         if (dir == CAAM_ENC) {
             in = (uint8_t*)buf[2].TheAddress;
             inSz  = buf[2].Length;
@@ -1075,7 +1084,7 @@ static hsm_err_t wc_SECO_AESGCM(unsigned int args[4], CAAM_BUFFER* buf, int sz)
     }
     XFREE(cipherAndTag, NULL, DYNAMIC_TYPE_TMP_BUFFER);
     (void)sz;
-    return HSM_NO_ERROR;
+    return err;
 }
 
 
@@ -1105,7 +1114,7 @@ word32 wc_SECO_WrapKey(word32 keyId, byte* in, word32 inSz, byte* iv,
     }
 
     /* iv + key + tag */
-    wrappedKeySz = GCM_NONCE_MID_SZ + inSz + AES_BLOCK_SIZE;
+    wrappedKeySz = GCM_NONCE_MID_SZ + inSz + WC_AES_BLOCK_SIZE;
     wrappedKey = (byte*)XMALLOC(wrappedKeySz, NULL, DYNAMIC_TYPE_TMP_BUFFER);
     if (wrappedKey == NULL) {
         WOLFSSL_MSG("Error malloc'ing buffer for wrapped key");
@@ -1142,6 +1151,8 @@ word32 wc_SECO_WrapKey(word32 keyId, byte* in, word32 inSz, byte* iv,
             }
         }
 
+        ForceZero(KEK, sizeof(KEK));
+
         key_args.flags |= HSM_OP_MANAGE_KEY_FLAGS_PART_UNIQUE_ROOT_KEK;
         #if 0
             /* for now only using the unique kek, this would be for common */
@@ -1155,7 +1166,7 @@ word32 wc_SECO_WrapKey(word32 keyId, byte* in, word32 inSz, byte* iv,
 
     if (ret == 0) {
         ret = wc_AesGcmEncrypt(&aes, wrappedKey + ivSz, in, inSz,
-                wrappedKey, ivSz, wrappedKey + ivSz + inSz, AES_BLOCK_SIZE,
+                wrappedKey, ivSz, wrappedKey + ivSz + inSz, WC_AES_BLOCK_SIZE,
                 NULL, 0);
         if (ret != 0) {
             WOLFSSL_MSG("error with AES-GCM encrypt when wrapping key");
@@ -1215,9 +1226,7 @@ word32 wc_SECO_WrapKey(word32 keyId, byte* in, word32 inSz, byte* iv,
         }
     }
 
-    if (wrappedKey != NULL) {
-        XFREE(wrappedKey, NULL, DYNAMIC_TYPE_TMP_BUFFER);
-    }
+    XFREE(wrappedKey, NULL, DYNAMIC_TYPE_TMP_BUFFER);
 
     if (wc_TranslateHSMError(0, err) != Success) {
         return 0;

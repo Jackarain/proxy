@@ -1,12 +1,12 @@
 /* wc_encrypt.h
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -73,6 +73,9 @@
     #ifndef CCM_NONCE_MIN_SZ
         #define CCM_NONCE_MIN_SZ 7
     #endif
+    #ifndef CCM_NONCE_MAX_SZ
+        #define CCM_NONCE_MAX_SZ 13
+    #endif
 #endif
 
 
@@ -114,8 +117,8 @@ WOLFSSL_API int wc_Des3_CbcDecryptWithKey(byte* out,
 
 #ifndef NO_PWDBASED
     WOLFSSL_LOCAL int wc_CryptKey(const char* password, int passwordSz,
-        byte* salt, int saltSz, int iterations, int id, byte* input, int length,
-        int version, byte* cbcIv, int enc, int shaOid);
+        const byte* salt, int saltSz, int iterations, int id, byte* input,
+        int length, int version, byte* cbcIv, int enc, int shaOid);
 #endif
 
 #ifdef __cplusplus

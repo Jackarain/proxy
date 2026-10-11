@@ -1,12 +1,12 @@
 /* echoserver.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -23,6 +23,14 @@
 #ifdef HAVE_CONFIG_H
     #include <config.h>
 #endif
+
+#ifndef WOLFSSL_USER_SETTINGS
+    #include <wolfssl/options.h>
+#endif
+#include <wolfssl/wolfcrypt/settings.h>
+
+#undef TEST_OPENSSL_COEXIST /* can't use this option with this example */
+#undef OPENSSL_COEXIST /* can't use this option with this example */
 
 #include <wolfssl/ssl.h> /* name change portability layer */
 #include <wolfssl/wolfcrypt/settings.h>
@@ -48,7 +56,7 @@
 
 #include "examples/echoserver/echoserver.h"
 
-#ifndef NO_WOLFSSL_SERVER
+#if !defined(NO_WOLFSSL_SERVER) && !defined(NO_TLS)
 
 #ifdef NO_FILESYSTEM
 #ifdef NO_RSA
@@ -89,7 +97,6 @@ THREAD_RETURN WOLFSSL_THREAD echoserver_test(void* args)
     WOLFSSL_CTX*    ctx    = 0;
 
     int    ret = 0;
-    int    doDTLS = 0;
     int    doPSK;
     int    outCreated = 0;
     int    shutDown = 0;
@@ -116,12 +123,8 @@ THREAD_RETURN WOLFSSL_THREAD echoserver_test(void* args)
 
     ((func_args*)args)->return_code = -1; /* error state */
 
-#ifdef WOLFSSL_DTLS
-    doDTLS  = 1;
-#endif
-
-#if (defined(NO_RSA) && !defined(HAVE_ECC) && !defined(HAVE_ED25519) && \
-                                !defined(HAVE_ED448)) || defined(WOLFSSL_LEANPSK)
+#if defined(NO_CERTS) || defined(WOLFSSL_LEANPSK) || \
+    (defined(TEST_NO_CLASSIC_AUTH) && !defined(TEST_HAVE_PQC_CERT_AUTH))
     doPSK = 1;
 #else
     doPSK = 0;
@@ -145,16 +148,11 @@ THREAD_RETURN WOLFSSL_THREAD echoserver_test(void* args)
     fdOpenSession(Task_self());
 #endif
 
-    tcp_listen(&sockfd, &port, useAnyAddr, doDTLS, 0);
+    tcp_listen(&sockfd, &port, useAnyAddr, 0, 0);
 
-#if defined(WOLFSSL_DTLS)
-    #ifdef WOLFSSL_DTLS13
-    method = wolfDTLSv1_3_server_method();
-    #elif !defined(WOLFSSL_NO_TLS12)
-    method  = wolfDTLSv1_2_server_method();
-    #endif
-#elif !defined(NO_TLS)
-    #if defined(WOLFSSL_TLS13) && defined(WOLFSSL_SNIFFER)
+#if !defined(NO_TLS)
+    #if defined(WOLFSSL_TLS13) && defined(WOLFSSL_SNIFFER) && \
+        !defined(WOLFSSL_NO_TLS12)
     method = wolfTLSv1_2_server_method();
     #else
     method = wolfSSLv23_server_method();
@@ -181,29 +179,29 @@ THREAD_RETURN WOLFSSL_THREAD echoserver_test(void* args)
 
 #ifndef NO_FILESYSTEM
     if (doPSK == 0) {
-    #if defined(HAVE_ECC) && !defined(WOLFSSL_SNIFFER)
+    #if defined(HAVE_ECC) && !defined(NO_CERTS) && !defined(WOLFSSL_SNIFFER)
         /* ecc */
-        if (wolfSSL_CTX_use_certificate_file(ctx, eccCertFile, WOLFSSL_FILETYPE_PEM)
+        if (wolfSSL_CTX_use_certificate_file(ctx, eccCertFile, CERT_FILETYPE)
                 != WOLFSSL_SUCCESS)
             err_sys("can't load server cert file, "
                     "Please run from wolfSSL home dir");
 
-        if (wolfSSL_CTX_use_PrivateKey_file(ctx, eccKeyFile, WOLFSSL_FILETYPE_PEM)
+        if (wolfSSL_CTX_use_PrivateKey_file(ctx, eccKeyFile, CERT_FILETYPE)
                 != WOLFSSL_SUCCESS)
             err_sys("can't load server key file, "
                     "Please run from wolfSSL home dir");
-    #elif defined(HAVE_ED25519) && !defined(WOLFSSL_SNIFFER)
+    #elif defined(HAVE_ED25519) && !defined(NO_CERTS) && !defined(WOLFSSL_SNIFFER)
         /* ed25519 */
         if (wolfSSL_CTX_use_certificate_chain_file(ctx, edCertFile)
                 != WOLFSSL_SUCCESS)
             err_sys("can't load server cert file, "
                     "Please run from wolfSSL home dir");
 
-        if (wolfSSL_CTX_use_PrivateKey_file(ctx, edKeyFile, WOLFSSL_FILETYPE_PEM)
+        if (wolfSSL_CTX_use_PrivateKey_file(ctx, edKeyFile, CERT_FILETYPE)
                 != WOLFSSL_SUCCESS)
             err_sys("can't load server key file, "
                     "Please run from wolfSSL home dir");
-    #elif defined(HAVE_ED448) && !defined(WOLFSSL_SNIFFER)
+    #elif defined(HAVE_ED448) && !defined(NO_CERTS) && !defined(WOLFSSL_SNIFFER)
         /* ed448 */
         if (wolfSSL_CTX_use_certificate_chain_file(ctx, ed448CertFile)
                 != WOLFSSL_SUCCESS)
@@ -211,19 +209,43 @@ THREAD_RETURN WOLFSSL_THREAD echoserver_test(void* args)
                     "Please run from wolfSSL home dir");
 
         if (wolfSSL_CTX_use_PrivateKey_file(ctx, ed448KeyFile,
-                WOLFSSL_FILETYPE_PEM) != WOLFSSL_SUCCESS)
+                CERT_FILETYPE) != WOLFSSL_SUCCESS)
+            err_sys("can't load server key file, "
+                    "Please run from wolfSSL home dir");
+    #elif defined(NO_RSA) && defined(TEST_HAVE_MLDSA_CERTS) && \
+          !defined(NO_CERTS) && !defined(WOLFSSL_SNIFFER)
+        /* ML-DSA (post-quantum-only) */
+        if (wolfSSL_CTX_use_certificate_chain_file(ctx, mldsaCertFile)
+                != WOLFSSL_SUCCESS)
+            err_sys("can't load server cert file, "
+                    "Please run from wolfSSL home dir");
+
+        if (wolfSSL_CTX_use_PrivateKey_file(ctx, mldsaKeyFile, CERT_FILETYPE)
+                != WOLFSSL_SUCCESS)
+            err_sys("can't load server key file, "
+                    "Please run from wolfSSL home dir");
+    #elif defined(NO_RSA) && defined(TEST_HAVE_SLHDSA_CERTS) && \
+          !defined(NO_CERTS) && !defined(WOLFSSL_SNIFFER)
+        /* SLH-DSA (post-quantum-only); entity certs are PEM only */
+        if (wolfSSL_CTX_use_certificate_chain_file(ctx, slhdsaCertFile)
+                != WOLFSSL_SUCCESS)
+            err_sys("can't load server cert file, "
+                    "Please run from wolfSSL home dir");
+
+        if (wolfSSL_CTX_use_PrivateKey_file(ctx, slhdsaKeyFile,
+                CERT_FILETYPE) != WOLFSSL_SUCCESS)
             err_sys("can't load server key file, "
                     "Please run from wolfSSL home dir");
     #elif defined(NO_CERTS)
         /* do nothing, just don't load cert files */
     #else
         /* normal */
-        if (wolfSSL_CTX_use_certificate_file(ctx, svrCertFile, WOLFSSL_FILETYPE_PEM)
+        if (wolfSSL_CTX_use_certificate_file(ctx, svrCertFile, CERT_FILETYPE)
                 != WOLFSSL_SUCCESS)
             err_sys("can't load server cert file, "
                     "Please run from wolfSSL home dir");
 
-        if (wolfSSL_CTX_use_PrivateKey_file(ctx, svrKeyFile, WOLFSSL_FILETYPE_PEM)
+        if (wolfSSL_CTX_use_PrivateKey_file(ctx, svrKeyFile, CERT_FILETYPE)
                 != WOLFSSL_SUCCESS)
             err_sys("can't load server key file, "
                     "Please run from wolfSSL home dir");
@@ -243,10 +265,13 @@ THREAD_RETURN WOLFSSL_THREAD echoserver_test(void* args)
     }
 #endif
 
-#if defined(WOLFSSL_SNIFFER)
+#if defined(WOLFSSL_SNIFFER) && !defined(WOLFSSL_NO_TLS12)
     /* Only set if not running testsuite */
     if (XSTRSTR(argv[0], "testsuite") == NULL) {
-        /* don't use EDH, can't sniff tmp keys */
+        /* don't use EDH, can't sniff tmp keys. A TLS 1.3 sniffer needs a key
+         * log file or static ephemeral keys instead, so this static RSA suite
+         * is only pinned where TLS 1.2 exists. Advisory: a build without the
+         * suite's ciphers keeps the default list. */
         wolfSSL_CTX_set_cipher_list(ctx, "AES256-SHA");
     }
 #endif
@@ -304,53 +329,24 @@ THREAD_RETURN WOLFSSL_THREAD echoserver_test(void* args)
         int     err = 0;
         SOCKADDR_IN_T client;
         socklen_t     client_len = sizeof(client);
-#ifndef WOLFSSL_DTLS
         clientfd = accept(sockfd, (struct sockaddr*)&client,
                          (ACCEPT_THIRD_T)&client_len);
-#else
-        clientfd = sockfd;
-        {
-            /* For DTLS, peek at the next datagram so we can get the client's
-             * address and set it into the ssl object later to generate the
-             * cookie. */
-            int n;
-            byte b[1500];
-            n = (int)recvfrom(clientfd, (char*)b, sizeof(b), MSG_PEEK,
-                              (struct sockaddr*)&client, &client_len);
-            if (n <= 0)
-                err_sys("recvfrom failed");
-        }
-#endif
         if (WOLFSSL_SOCKET_IS_INVALID(clientfd)) err_sys("tcp accept failed");
 
         ssl = wolfSSL_new(ctx);
         if (ssl == NULL) err_sys("SSL_new failed");
         wolfSSL_set_fd(ssl, clientfd);
-        #ifdef WOLFSSL_DTLS
-            wolfSSL_dtls_set_peer(ssl, &client, client_len);
-        #endif
         #if !defined(NO_FILESYSTEM) && !defined(NO_DH) && !defined(NO_ASN)
-            wolfSSL_SetTmpDH_file(ssl, dhParamFile, WOLFSSL_FILETYPE_PEM);
+            wolfSSL_SetTmpDH_file(ssl, dhParamFile, CERT_FILETYPE);
         #elif !defined(NO_DH)
             SetDH(ssl);  /* will repick suites with DHE, higher than PSK */
         #endif
 
-        do {
-            err = 0; /* Reset error */
-            ret = wolfSSL_accept(ssl);
-            if (ret != WOLFSSL_SUCCESS) {
-                err = wolfSSL_get_error(ssl, 0);
-            #ifdef WOLFSSL_ASYNC_CRYPT
-                if (err == WC_PENDING_E) {
-                    ret = wolfSSL_AsyncPoll(ssl, WOLF_POLL_FLAG_CHECK_HW);
-                    if (ret < 0) break;
-                }
-            #endif
-            }
-        } while (err == WC_PENDING_E);
+        WOLFSSL_ASYNC_WHILE_PENDING(ret = wolfSSL_accept(ssl),
+                                    ret != WOLFSSL_SUCCESS);
         if (ret != WOLFSSL_SUCCESS) {
             fprintf(stderr, "SSL_accept error = %d, %s\n", err,
-                wolfSSL_ERR_error_string(err, buffer));
+                wolfSSL_ERR_error_string((unsigned long)err, buffer));
             fprintf(stderr, "SSL_accept failed\n");
             wolfSSL_free(ssl);
             CloseSocket(clientfd);
@@ -375,23 +371,12 @@ THREAD_RETURN WOLFSSL_THREAD echoserver_test(void* args)
         while (1) {
             int echoSz;
 
-            do {
-                err = 0; /* reset error */
-                ret = wolfSSL_read(ssl, command, sizeof(command)-1);
-                if (ret <= 0) {
-                    err = wolfSSL_get_error(ssl, 0);
-                #ifdef WOLFSSL_ASYNC_CRYPT
-                    if (err == WC_PENDING_E) {
-                        ret = wolfSSL_AsyncPoll(ssl, WOLF_POLL_FLAG_CHECK_HW);
-                        if (ret < 0) break;
-                    }
-                #endif
-                }
-            } while (err == WC_PENDING_E);
+            WOLFSSL_ASYNC_WHILE_PENDING(ret = wolfSSL_read(ssl, command, sizeof(command)-1),
+                                        ret <= 0);
             if (ret <= 0) {
                 if (err != WOLFSSL_ERROR_WANT_READ && err != WOLFSSL_ERROR_ZERO_RETURN){
                     fprintf(stderr, "SSL_read echo error %d, %s!\n", err,
-                        wolfSSL_ERR_error_string(err, buffer));
+                        wolfSSL_ERR_error_string((unsigned long)err, buffer));
                 }
                 break;
             }
@@ -438,22 +423,11 @@ THREAD_RETURN WOLFSSL_THREAD echoserver_test(void* args)
                 }
                 strncpy(command, resp, sizeof(command));
 
-                do {
-                    err = 0; /* reset error */
-                    ret = wolfSSL_write(write_ssl, command, echoSz);
-                    if (ret <= 0) {
-                        err = wolfSSL_get_error(write_ssl, 0);
-                    #ifdef WOLFSSL_ASYNC_CRYPT
-                        if (err == WC_PENDING_E) {
-                            ret = wolfSSL_AsyncPoll(write_ssl, WOLF_POLL_FLAG_CHECK_HW);
-                            if (ret < 0) break;
-                        }
-                    #endif
-                    }
-                } while (err == WC_PENDING_E);
+                WOLFSSL_ASYNC_WHILE_PENDING(ret = wolfSSL_write(write_ssl, command, echoSz),
+                                            ret <= 0);
                 if (ret != echoSz) {
                     fprintf(stderr, "SSL_write get error = %d, %s\n", err,
-                        wolfSSL_ERR_error_string(err, buffer));
+                        wolfSSL_ERR_error_string((unsigned long)err, buffer));
                     err_sys("SSL_write get failed");
                 }
                 break;
@@ -464,38 +438,20 @@ THREAD_RETURN WOLFSSL_THREAD echoserver_test(void* args)
             LIBCALL_CHECK_RET(fputs(command, fout));
         #endif
 
-            do {
-                err = 0; /* reset error */
-                ret = wolfSSL_write(write_ssl, command, echoSz);
-                if (ret <= 0) {
-                    err = wolfSSL_get_error(write_ssl, 0);
-                #ifdef WOLFSSL_ASYNC_CRYPT
-                    if (err == WC_PENDING_E) {
-                        ret = wolfSSL_AsyncPoll(write_ssl, WOLF_POLL_FLAG_CHECK_HW);
-                        if (ret < 0) break;
-                    }
-                #endif
-                }
-            } while (err == WC_PENDING_E);
-
+            WOLFSSL_ASYNC_WHILE_PENDING(ret = wolfSSL_write(write_ssl, command, echoSz),
+                                        ret <= 0);
             if (ret != echoSz) {
                 fprintf(stderr, "SSL_write echo error = %d, %s\n", err,
-                        wolfSSL_ERR_error_string(err, buffer));
+                        wolfSSL_ERR_error_string((unsigned long)err, buffer));
                 err_sys("SSL_write echo failed");
             }
         }
-#ifndef WOLFSSL_DTLS
         wolfSSL_shutdown(ssl);
-#endif
 #ifdef HAVE_WRITE_DUP
         wolfSSL_free(write_ssl);
 #endif
         wolfSSL_free(ssl);
         CloseSocket(clientfd);
-#ifdef WOLFSSL_DTLS
-        tcp_listen(&sockfd, &port, useAnyAddr, doDTLS, 0);
-        SignalReady(args, port);
-#endif
     }
 
     CloseSocket(sockfd);
@@ -528,7 +484,7 @@ THREAD_RETURN WOLFSSL_THREAD echoserver_test(void* args)
     WOLFSSL_RETURN_FROM_THREAD(0);
 }
 
-#endif /* !NO_WOLFSSL_SERVER */
+#endif /* !NO_WOLFSSL_SERVER && !NO_TLS */
 
 
 /* so overall tests can pull in test function */
@@ -554,7 +510,7 @@ THREAD_RETURN WOLFSSL_THREAD echoserver_test(void* args)
         wolfSSL_Debugging_ON();
 #endif
         ChangeToWolfRoot();
-#ifndef NO_WOLFSSL_SERVER
+#if !defined(NO_WOLFSSL_SERVER) && !defined(NO_TLS)
         echoserver_test(&args);
 #endif
         wolfSSL_Cleanup();

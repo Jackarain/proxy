@@ -1,12 +1,12 @@
 /* ssl-dummy.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -27,12 +27,12 @@
 #include <wolfssl/ssl.h>
 #include <wolfssl/internal.h>
 
-Signer* GetCA(void* vp, byte* hash)
+Signer* GetCA(WOLFSSL_CERT_MANAGER* cm, byte* hash)
 {
     return NULL;
 }
 
-Signer* GetCAByName(void* vp, byte* hash)
+Signer* GetCAByName(WOLFSSL_CERT_MANAGER* cm, byte* hash)
 {
     return NULL;
 }

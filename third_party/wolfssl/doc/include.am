@@ -3,7 +3,13 @@
 # All paths should be given relative to the root
 
 dist_doc_DATA+= doc/README.txt \
-	doc/QUIC.md
+	doc/QUIC.md \
+	doc/dilithium-to-mldsa-migration.md \
+	doc/SBOM.md \
+	doc/CRA.md \
+	doc/ASM_AND_MATH_DEFINES.md \
+	doc/ALGORITHM_DEFINES.md \
+	doc/OPENSSL_OPTION_MAPPING.md
 
 
 dox-pdf:
@@ -16,8 +22,7 @@ dox-html:
 
 dox: dox-html dox-pdf
 
-clean-local:
-	-rm -rf doc/build/
-	-rm -rf doc/html/
-	-rm -f doc/refman.pdf
-	-rm -f doc/doxygen_warnings
+# NOTE: `clean-local` (doc build artefacts + the OmniBOR/advisory outputs) is
+# defined in the top-level Makefile.am.  automake permits a single clean-local,
+# and the OmniBOR/advisory products belong with the other top-level build
+# outputs, so all local-clean removals are consolidated there.

@@ -1,12 +1,12 @@
 /* wolfssl_tsip_unit_test.c
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -44,6 +44,7 @@
     #include <wolfcrypt/src/misc.c>
 #endif
 #include <wolfssl/wolfcrypt/port/Renesas/renesas-tsip-crypt.h>
+WOLFSSL_API int wc_CryptoCb_CryptInitRenesasCmn(struct WOLFSSL* ssl, void* ctx);
 
 #ifdef FREERTOS
 #include "FreeRTOS.h"
@@ -56,11 +57,11 @@
 #endif
 
 #ifndef NO_SHA
- int sha_test();
+ int sha_test(void);
 #endif
 
 #ifndef NO_SHA256
- int sha256_test();
+ int sha256_test(void);
 #endif
 
 #define SMALL_STACK_SIZE (1 * 1024)
@@ -71,27 +72,27 @@
                          else \
                           printf(" failed \n");
 #ifdef FREERTOS
-static xSemaphoreHandle exit_semaph;
-static byte exit_loop = 0;
-static byte sha_multTst_rslt = 0;
-static byte sha256_multTst_rslt = 0;
-static byte Aes128_Cbc_multTst_rslt = 0;
-static byte Aes256_Cbc_multTst_rslt = 0;
-static byte Aes128_Gcm_multTst_rslt = 0;
-static byte Aes256_Gcm_multTst_rslt = 0;
+    static xSemaphoreHandle exit_semaph;
+    static byte exit_loop = 0;
+    static byte sha_multTst_rslt = 0;
+    static byte sha256_multTst_rslt = 0;
+    static byte Aes128_Cbc_multTst_rslt = 0;
+    static byte Aes256_Cbc_multTst_rslt = 0;
+    static byte Aes128_Gcm_multTst_rslt = 0;
+    static byte Aes256_Gcm_multTst_rslt = 0;
 #endif /* FREERTOS */
 
 #if defined(HAVE_AES_CBC)
 
-# if defined(WOLFSSL_AES_128)
- static tsip_aes_key_index_t g_user_aes128_key_index1;
- static tsip_aes_key_index_t g_user_aes128_key_index2;
-# endif
+ #if defined(WOLFSSL_AES_128)
+  static tsip_aes_key_index_t g_user_aes128_key_index1;
+  static tsip_aes_key_index_t g_user_aes128_key_index2;
+ #endif
 
-# if defined(WOLFSSL_AES_256)
- static tsip_aes_key_index_t g_user_aes256_key_index1;
- static tsip_aes_key_index_t g_user_aes256_key_index2;
-# endif
+ #if defined(WOLFSSL_AES_256)
+  static tsip_aes_key_index_t g_user_aes256_key_index1;
+  static tsip_aes_key_index_t g_user_aes256_key_index2;
+ #endif
 
 #endif
 
@@ -107,39 +108,80 @@ typedef struct tagInfo
 
  void Clr_CallbackCtx(TsipUserCtx *g)
  {
-
-     if (g->rsa1024pri_keyIdx != NULL)
-         XFREE(g->rsa1024pri_keyIdx,
-                             NULL, DYNAMIC_TYPE_TMP_BUFFER);
-
-     if (g->rsa1024pub_keyIdx != NULL)
-         XFREE(g->rsa1024pub_keyIdx,
-                             NULL, DYNAMIC_TYPE_TMP_BUFFER);
-
-     if (g->rsa2048pri_keyIdx != NULL)
-         XFREE(g->rsa2048pri_keyIdx,
-                             NULL, DYNAMIC_TYPE_TMP_BUFFER);
-
-     if (g->rsa2048pub_keyIdx != NULL)
-         XFREE(g->rsa2048pub_keyIdx,
-                             NULL, DYNAMIC_TYPE_TMP_BUFFER);
-     XMEMSET(g, 0, sizeof(TsipUserCtx));
+    #ifndef NO_RSA
+     #if defined(TSIP_RSAES_1024) && TSIP_RSAES_1024 == 1
+        XFREE(g->rsa1024pri_keyIdx, NULL, DYNAMIC_TYPE_TMP_BUFFER);
+        XFREE(g->rsa1024pub_keyIdx, NULL, DYNAMIC_TYPE_TMP_BUFFER);
+     #endif
+     #if defined(TSIP_RSAES_2048) && TSIP_RSAES_2048 == 1
+        XFREE(g->rsa2048pri_keyIdx, NULL, DYNAMIC_TYPE_TMP_BUFFER);
+        XFREE(g->rsa2048pub_keyIdx, NULL, DYNAMIC_TYPE_TMP_BUFFER);
+     #endif
+    #endif
+    XMEMSET(g, 0, sizeof(TsipUserCtx));
  }
 
+ int TSIP_AesKeyGeneration(TsipUserCtx *g, byte sz)
+ {
+	e_tsip_err_t tsip_error_code;
+    /* Generate AES tsip Key */
+    if (sz == 16) {
+        tsip_error_code = R_TSIP_GenerateAes128RandomKeyIndex(
+                &g_user_aes128_key_index1);
+        if (tsip_error_code == TSIP_SUCCESS) {
+            XMEMCPY(&g->user_aes128_key_index, &g_user_aes128_key_index1,
+                    sizeof(g_user_aes128_key_index1));
+            g->user_aes128_key_set = 1;
+        } else {
+            printf("Failed to generate Aes 256 Key Index %d\n",
+                                                        tsip_error_code);
+            return -1;
+        }
+
+        tsip_error_code = R_TSIP_GenerateAes128RandomKeyIndex(
+                        &g_user_aes128_key_index2);
+        if (tsip_error_code != TSIP_SUCCESS) {
+            printf("Failed to generate Aes 128 Key Index %d\n",
+                                                        tsip_error_code);
+            return -1;
+        }
+    } else if (sz == 32) {
+        tsip_error_code = R_TSIP_GenerateAes256RandomKeyIndex(
+                    &g_user_aes256_key_index1);
+        if (tsip_error_code == TSIP_SUCCESS) {
+            XMEMCPY(&g->user_aes256_key_index, &g_user_aes256_key_index1,
+                    sizeof(g_user_aes256_key_index1));
+            g->user_aes256_key_set = 1;
+        } else {
+            printf("Failed to generate Aes 256 Key Index %d\n",
+                                                        tsip_error_code);
+            return -1;
+        }
+
+        tsip_error_code = R_TSIP_GenerateAes256RandomKeyIndex(
+                    &g_user_aes256_key_index2);
+        if (tsip_error_code != TSIP_SUCCESS) {
+            printf("Failed to generate Aes 256 Key Index %d\n",
+                                                        tsip_error_code);
+            return -1;
+        }
+    } else
+        return -1;
+
+    return 0;
+ }
 #endif
 
 #if defined(HAVE_AES_CBC) && defined(WOLFSSL_AES_128)
-
-static int tsip_aes_cbc_test(int prnt, tsip_aes_key_index_t* aes_key)
+static int tsip_aes128_cbc_test(int prnt, int devId)
 {
-
     Aes  aes[1];
 
-    byte cipher[AES_BLOCK_SIZE];
-    byte plain[AES_BLOCK_SIZE];
+    byte cipher[WC_AES_BLOCK_SIZE];
+    byte plain[WC_AES_BLOCK_SIZE];
     int  ret = 0;
 
-    WOLFSSL_SMALL_STACK_STATIC const byte msg[] = { 
+    WOLFSSL_SMALL_STACK_STATIC const byte msg[] = {
         /* "Now is the time for all " w/o trailing 0 */
         0x6e,0x6f,0x77,0x20,0x69,0x73,0x20,0x74,
         0x68,0x65,0x20,0x74,0x69,0x6d,0x65,0x20,
@@ -148,22 +190,19 @@ static int tsip_aes_cbc_test(int prnt, tsip_aes_key_index_t* aes_key)
     byte key[] = "0123456789abcdef   ";  /* align */
     byte iv[]  = "1234567890abcdef   ";  /* align */
 
-    ForceZero(cipher, AES_BLOCK_SIZE);
-    ForceZero(plain, AES_BLOCK_SIZE);
+    ForceZero(cipher, WC_AES_BLOCK_SIZE);
+    ForceZero(plain, WC_AES_BLOCK_SIZE);
 
     if (prnt) {
-        printf(" tsip_aes_cbc_test() ");
+        printf(" tsip_aes128_cbc_test() ");
     }
-    
-    ret = wc_AesInit(aes, NULL, INVALID_DEVID);
-    if (ret == 0) {
-        ret = wc_AesSetKey(aes, key, AES_BLOCK_SIZE, iv, AES_ENCRYPTION);
-        XMEMCPY(&aes->ctx.tsip_keyIdx, aes_key,
-                        sizeof(tsip_aes_key_index_t));
 
+    ret = wc_AesInit(aes, NULL, devId);
+    if (ret == 0) {
+        ret = wc_AesSetKey(aes, key, WC_AES_BLOCK_SIZE, iv, AES_ENCRYPTION);
         aes->ctx.keySize = aes->keylen;
         if (ret == 0) {
-            ret = wc_tsip_AesCbcEncrypt(aes, cipher, msg, AES_BLOCK_SIZE);
+            ret = wc_AesCbcEncrypt(aes, cipher, msg, WC_AES_BLOCK_SIZE);
         }
 
         wc_AesFree(aes);
@@ -174,20 +213,17 @@ static int tsip_aes_cbc_test(int prnt, tsip_aes_key_index_t* aes_key)
 
 #ifdef HAVE_AES_DECRYPT
     if (ret == 0)
-        ret = wc_AesInit(aes, NULL, INVALID_DEVID);
+        ret = wc_AesInit(aes, NULL, devId);
     if (ret == 0) {
-        ret = wc_AesSetKey(aes, key, AES_BLOCK_SIZE, iv, AES_DECRYPTION);
-        XMEMCPY(&aes->ctx.tsip_keyIdx, aes_key,
-                sizeof(tsip_aes_key_index_t));
-        aes->ctx.keySize = aes->keylen;
+        ret = wc_AesSetKey(aes, key, WC_AES_BLOCK_SIZE, iv, AES_DECRYPTION);
         if (ret == 0)
-            ret = wc_tsip_AesCbcDecrypt(aes, plain, cipher, AES_BLOCK_SIZE);
+            ret = wc_AesCbcDecrypt(aes, plain, cipher, WC_AES_BLOCK_SIZE);
 
         wc_AesFree(aes);
     }
     if (ret != 0)
         ret = -2;
-    if (XMEMCMP(plain, msg, AES_BLOCK_SIZE) != 0)
+    if (XMEMCMP(plain, msg, WC_AES_BLOCK_SIZE) != 0)
         ret = -3;
 #endif /* HAVE_AES_DECRYPT */
 
@@ -196,16 +232,317 @@ static int tsip_aes_cbc_test(int prnt, tsip_aes_key_index_t* aes_key)
     if (prnt) {
         RESULT_STR(ret)
     }
-    
+
     return ret;
 }
+
+#if defined(WOLFSSL_AES_COUNTER)
+#if (defined(TSIP_AES_128_CTR) && TSIP_AES_128_CTR == 1) &&\
+    (defined(WOLFSSL_AES_128))
+static int tsip_aes128_ctr_test(int prnt, int devId)
+{
+    int ret;
+    Aes *enc = NULL;
+    Aes *dec = NULL;
+    byte cipher[WC_AES_BLOCK_SIZE * 4];
+    byte plain [WC_AES_BLOCK_SIZE * 4];
+    /* test vectors from "Recommendation for Block Cipher Modes of
+     * Operation" NIST Special Publication 800-38A */
+
+    WOLFSSL_SMALL_STACK_STATIC const byte ctrIv[] =
+    {
+        0xf0,0xf1,0xf2,0xf3,0xf4,0xf5,0xf6,0xf7,
+        0xf8,0xf9,0xfa,0xfb,0xfc,0xfd,0xfe,0xff
+    };
+
+    WOLFSSL_SMALL_STACK_STATIC const byte ctrPlain[] =
+    {
+        0x6b,0xc1,0xbe,0xe2,0x2e,0x40,0x9f,0x96,
+        0xe9,0x3d,0x7e,0x11,0x73,0x93,0x17,0x2a,
+        0xae,0x2d,0x8a,0x57,0x1e,0x03,0xac,0x9c,
+        0x9e,0xb7,0x6f,0xac,0x45,0xaf,0x8e,0x51,
+        0x30,0xc8,0x1c,0x46,0xa3,0x5c,0xe4,0x11,
+        0xe5,0xfb,0xc1,0x19,0x1a,0x0a,0x52,0xef,
+        0xf6,0x9f,0x24,0x45,0xdf,0x4f,0x9b,0x17,
+        0xad,0x2b,0x41,0x7b,0xe6,0x6c,0x37,0x10
+    };
+    WOLFSSL_SMALL_STACK_STATIC const byte ctrIvWrap128[] =
+    {
+        0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+        0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff
+    };
+    WOLFSSL_SMALL_STACK_STATIC const byte ctr128Key[] =
+    {
+        0x2b,0x7e,0x15,0x16,0x28,0xae,0xd2,0xa6,
+        0xab,0xf7,0x15,0x88,0x09,0xcf,0x4f,0x3c
+    };
+
+    WOLFSSL_SMALL_STACK_STATIC const byte ctr128Cipher[] =
+    {
+        0x87,0x4d,0x61,0x91,0xb6,0x20,0xe3,0x26,
+        0x1b,0xef,0x68,0x64,0x99,0x0d,0xb6,0xce,
+        0x98,0x06,0xf6,0x6b,0x79,0x70,0xfd,0xff,
+        0x86,0x17,0x18,0x7b,0xb9,0xff,0xfd,0xff,
+        0x5a,0xe4,0xdf,0x3e,0xdb,0xd5,0xd3,0x5e,
+        0x5b,0x4f,0x09,0x02,0x0d,0xb0,0x3e,0xab,
+        0x1e,0x03,0x1d,0xda,0x2f,0xbe,0x03,0xd1,
+        0x79,0x21,0x70,0xa0,0xf3,0x00,0x9c,0xee
+    };
+    WOLFSSL_SMALL_STACK_STATIC const byte ctr128Wrap128CipherLong[] =
+    {
+        0xe1,0x33,0x38,0xe3,0x6c,0xb7,0x19,0x62,
+        0xe0,0x0d,0x02,0x0b,0x4c,0xed,0xbd,0x86,
+        0xd3,0xda,0xe1,0x5b,0x04,0xbb,0x35,0x2f,
+        0xa0,0xf5,0x9f,0xeb,0xfc,0xb4,0xda,0x3e
+    };
+    WOLFSSL_SMALL_STACK_STATIC const byte oddCipher[] =
+    {
+        0xb9,0xd7,0xcb,0x08,0xb0,0xe1,0x7b,0xa0,
+        0xc2
+    };
+    WOLFSSL_SMALL_STACK_STATIC const byte ctr128Wrap128Cipher[] =
+    {
+        0xe1,0x33,0x38,0xe3,0x6c,0xb7,0x19,0x62,
+        0xe0,0x0d,0x02,0x0b,0x4c,0xed,0xbd,0x86,
+        0xd3,0xda,0xe1,0x5b,0x04
+    };
+
+    int i;
+    struct {
+        const byte* key;
+        int         keySz;
+        const byte* iv;
+        const byte* plain;
+        int         len;
+        const byte* cipher;
+    } testVec[] = {
+        { ctr128Key, (int)sizeof(ctr128Key), ctrIv,
+          ctrPlain, (int)sizeof(ctrPlain), ctr128Cipher },
+        /* let's try with just 9 bytes, non block size test */
+        { ctr128Key, (int)sizeof(ctr128Key), ctrIv,
+          ctrPlain, (int)sizeof(oddCipher), ctr128Cipher },
+        /* and an additional 9 bytes to reuse tmp left buffer */
+        { NULL, 0, NULL, ctrPlain, (int)sizeof(oddCipher), oddCipher },
+        /* Counter wrapping */
+        { ctr128Key, (int)sizeof(ctr128Key), ctrIvWrap128,
+          ctrPlain, (int)sizeof(ctr128Wrap128Cipher), ctr128Wrap128Cipher },
+        { ctr128Key, (int)sizeof(ctr128Key), ctrIvWrap128,
+          ctrPlain, (int)sizeof(ctr128Wrap128CipherLong),
+          ctr128Wrap128CipherLong },
+    };
+    int AES_CTR_TEST_LEN = (int)(sizeof(testVec) / sizeof(*testVec));
+
+    if (prnt)
+        printf(" tsip_aes128_ctr_test() ");
+
+    enc = wc_AesNew(NULL, devId, &ret);
+    if (enc == NULL){
+        ret = -1;
+        goto out;
+    }
+    dec = wc_AesNew(NULL, devId, &ret);
+    if (dec == NULL){
+        ret = -2;
+        goto out;
+    }
+
+    for (i = 0; i < AES_CTR_TEST_LEN; i++) {
+        if (testVec[i].key != NULL) {
+            ret = wc_AesSetKeyDirect(enc, testVec[i].key, (word32)testVec[i].keySz,
+                testVec[i].iv, AES_ENCRYPTION);
+
+            if (ret != 0) {
+                ret = -3;
+                goto out;
+            }
+            /* Ctr only uses encrypt, even on key setup */
+            ret = wc_AesSetKeyDirect(dec, testVec[i].key, (word32)testVec[i].keySz,
+                testVec[i].iv, AES_ENCRYPTION);
+            if (ret != 0) {
+                ret = -4;
+                goto out;
+            }
+        }
+
+        ret = wc_AesCtrEncrypt(enc, cipher, testVec[i].plain, (word32)testVec[i].len);
+        if (ret != 0) {
+            ret = -5;
+            goto out;
+        }
+        ret = wc_AesCtrEncrypt(dec, plain, cipher, (word32)testVec[i].len);
+        if (ret != 0) {
+            ret = -6;
+            goto out;
+        }
+
+        if (XMEMCMP(plain, ctrPlain, (size_t)testVec[i].len)) {
+            ret = -7;
+            goto out;
+        }
+    }
+out:
+    wc_AesDelete(enc, &enc);
+    wc_AesDelete(dec, &dec);
+
+    return ret;
+}
+#endif /* WOLFSSL_AES_128 */
+#if (defined(TSIP_AES_256_CTR) && TSIP_AES_256_CTR == 1) &&\
+    (defined(WOLFSSL_AES_256))
+static int tsip_aes256_ctr_test(int prnt, int devId)
+{
+    int ret;
+    Aes *enc = NULL;
+    Aes *dec = NULL;
+    byte cipher[WC_AES_BLOCK_SIZE * 4];
+    byte plain [WC_AES_BLOCK_SIZE * 4];
+    /* test vectors from "Recommendation for Block Cipher Modes of
+     * Operation" NIST Special Publication 800-38A */
+
+    WOLFSSL_SMALL_STACK_STATIC const byte ctrIv[] =
+    {
+        0xf0,0xf1,0xf2,0xf3,0xf4,0xf5,0xf6,0xf7,
+        0xf8,0xf9,0xfa,0xfb,0xfc,0xfd,0xfe,0xff
+    };
+
+    WOLFSSL_SMALL_STACK_STATIC const byte ctrPlain[] =
+    {
+        0x6b,0xc1,0xbe,0xe2,0x2e,0x40,0x9f,0x96,
+        0xe9,0x3d,0x7e,0x11,0x73,0x93,0x17,0x2a,
+        0xae,0x2d,0x8a,0x57,0x1e,0x03,0xac,0x9c,
+        0x9e,0xb7,0x6f,0xac,0x45,0xaf,0x8e,0x51,
+        0x30,0xc8,0x1c,0x46,0xa3,0x5c,0xe4,0x11,
+        0xe5,0xfb,0xc1,0x19,0x1a,0x0a,0x52,0xef,
+        0xf6,0x9f,0x24,0x45,0xdf,0x4f,0x9b,0x17,
+        0xad,0x2b,0x41,0x7b,0xe6,0x6c,0x37,0x10
+    };
+    WOLFSSL_SMALL_STACK_STATIC const byte ctrIvWrap128[] =
+    {
+        0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+        0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff
+    };
+    WOLFSSL_SMALL_STACK_STATIC const byte ctr256Key[] =
+    {
+        0x60,0x3d,0xeb,0x10,0x15,0xca,0x71,0xbe,
+        0x2b,0x73,0xae,0xf0,0x85,0x7d,0x77,0x81,
+        0x1f,0x35,0x2c,0x07,0x3b,0x61,0x08,0xd7,
+        0x2d,0x98,0x10,0xa3,0x09,0x14,0xdf,0xf4
+    };
+
+    WOLFSSL_SMALL_STACK_STATIC const byte ctr256Cipher[] =
+    {
+        0x60,0x1e,0xc3,0x13,0x77,0x57,0x89,0xa5,
+        0xb7,0xa7,0xf5,0x04,0xbb,0xf3,0xd2,0x28,
+        0xf4,0x43,0xe3,0xca,0x4d,0x62,0xb5,0x9a,
+        0xca,0x84,0xe9,0x90,0xca,0xca,0xf5,0xc5,
+        0x2b,0x09,0x30,0xda,0xa2,0x3d,0xe9,0x4c,
+        0xe8,0x70,0x17,0xba,0x2d,0x84,0x98,0x8d,
+        0xdf,0xc9,0xc5,0x8d,0xb6,0x7a,0xad,0xa6,
+        0x13,0xc2,0xdd,0x08,0x45,0x79,0x41,0xa6
+    };
+    WOLFSSL_SMALL_STACK_STATIC const byte ctr256Wrap128CipherLong[] =
+    {
+        0x50,0xfd,0x97,0xc3,0xe6,0x1a,0xbb,0x48,
+        0x73,0xfb,0x78,0xdf,0x1e,0x8e,0x77,0xe6,
+        0x4b,0x45,0x7c,0xd6,0x8a,0xcc,0xda,0x4a,
+        0x89,0xfa,0x23,0x6c,0x06,0xbf,0x26,0x05
+    };
+    WOLFSSL_SMALL_STACK_STATIC const byte oddCipher[] =
+    {
+        0xb9,0xd7,0xcb,0x08,0xb0,0xe1,0x7b,0xa0,
+        0xc2
+    };
+    WOLFSSL_SMALL_STACK_STATIC const byte ctr256Wrap128Cipher[] =
+    {
+        0x50,0xfd,0x97,0xc3,0xe6,0x1a,0xbb,0x48,
+        0x73,0xfb,0x78,0xdf,0x1e,0x8e,0x77,0xe6,
+        0x4b,0x45,0x7c,0xd6,0x8a
+    };
+    int i;
+    struct {
+        const byte* key;
+        int         keySz;
+        const byte* iv;
+        const byte* plain;
+        int         len;
+        const byte* cipher;
+    } testVec[] = {
+        { ctr256Key, (int)sizeof(ctr256Key), ctrIv,
+          ctrPlain, (int)sizeof(ctrPlain), ctr256Cipher },
+        /* let's try with just 9 bytes, non block size test */
+        { ctr256Key, (int)sizeof(ctr256Key), ctrIv,
+          ctrPlain, (int)sizeof(oddCipher), ctr256Cipher },
+        /* Counter wrapping */
+        { ctr256Key, (int)sizeof(ctr256Key), ctrIvWrap128,
+          ctrPlain, (int)sizeof(ctr256Wrap128Cipher), ctr256Wrap128Cipher },
+        { ctr256Key, (int)sizeof(ctr256Key), ctrIvWrap128,
+          ctrPlain, (int)sizeof(ctr256Wrap128CipherLong),
+          ctr256Wrap128CipherLong },
+    };
+    int AES_CTR_TEST_LEN = (int)(sizeof(testVec) / sizeof(*testVec));
+
+    if (prnt)
+        printf(" tsip_aes256_ctr_test() ");
+
+    enc = wc_AesNew(NULL, devId, &ret);
+    if (enc == NULL){
+        ret = -1;
+        goto out;
+    }
+    dec = wc_AesNew(NULL, devId, &ret);
+    if (dec == NULL){
+        ret = -2;
+        goto out;
+    }
+
+    for (i = 0; i < AES_CTR_TEST_LEN; i++) {
+        if (testVec[i].key != NULL) {
+            ret = wc_AesSetKeyDirect(enc, testVec[i].key, (word32)testVec[i].keySz,
+                testVec[i].iv, AES_ENCRYPTION);
+            if (ret != 0) {
+                ret = -3;
+                goto out;
+            }
+            /* Ctr only uses encrypt, even on key setup */
+            ret = wc_AesSetKeyDirect(dec, testVec[i].key, (word32)testVec[i].keySz,
+                testVec[i].iv, AES_ENCRYPTION);
+            if (ret != 0) {
+                ret = -4;
+                goto out;
+            }
+        }
+
+        ret = wc_AesCtrEncrypt(enc, cipher, testVec[i].plain, (word32)testVec[i].len);
+        if (ret != 0) {
+            ret = -5;
+            goto out;
+        }
+        ret = wc_AesCtrEncrypt(dec, plain, cipher, (word32)testVec[i].len);
+        if (ret != 0) {
+            ret = -6;
+            goto out;
+        }
+
+        if (XMEMCMP(plain, ctrPlain, (size_t)testVec[i].len)) {
+            ret = -7;
+            goto out;
+        }
+    }
+out:
+    wc_AesDelete(enc, &enc);
+    wc_AesDelete(dec, &dec);
+
+    return ret;
+}
+#endif /* WOLFSSL_AES_256 */
+#endif /* TSIP_AES_256_CTR && WOLFSSL_AES_COUNTER */
 
 #ifdef FREERTOS
 static void tskAes128_Cbc_Test(void *pvParam)
 {
     int ret = 0;
     Info *p = (Info*)pvParam;
-    
+
     while (exit_loop == false) {
         ret = tsip_aes_cbc_test(0, &p->aes_key);
         vTaskDelay(10/portTICK_PERIOD_MS);
@@ -222,11 +559,11 @@ static void tskAes128_Cbc_Test(void *pvParam)
 #endif
 
 #ifdef WOLFSSL_AES_256
-static int tsip_aes256_test(int prnt, tsip_aes_key_index_t* aes_key)
+static int tsip_aes256_cbc_test(int prnt, int devId)
 {
     Aes enc[1];
-    byte cipher[AES_BLOCK_SIZE];
-    byte plain[AES_BLOCK_SIZE];
+    byte cipher[WC_AES_BLOCK_SIZE];
+    byte plain[WC_AES_BLOCK_SIZE];
     Aes dec[1];
     int  ret = 0;
 
@@ -256,14 +593,14 @@ static int tsip_aes256_test(int prnt, tsip_aes_key_index_t* aes_key)
     (void)verify;
 
     if (prnt)
-        printf(" tsip_aes256_test() ");
-    
-    if (wc_AesInit(enc, NULL, INVALID_DEVID) != 0) {
+        printf(" tsip_aes256_cbc_test() ");
+
+    if (wc_AesInit(enc, NULL, devId) != 0) {
         ret = -1;
         goto out;
     }
 
-    if (wc_AesInit(dec, NULL, INVALID_DEVID) != 0){
+    if (wc_AesInit(dec, NULL, devId) != 0){
         ret = -2;
         goto out;
     }
@@ -272,32 +609,24 @@ static int tsip_aes256_test(int prnt, tsip_aes_key_index_t* aes_key)
     if (ret != 0){
         ret = -3;
         goto out;
-    } else {
-        XMEMCPY(&enc->ctx.tsip_keyIdx, aes_key,
-                                sizeof(tsip_aes_key_index_t));
-        enc->ctx.keySize = enc->keylen;
     }
 
     ret = wc_AesSetKey(dec, key, (int) sizeof(key), iv, AES_DECRYPTION);
     if (ret != 0) {
         ret = -4;
         goto out;
-    } else {
-        XMEMCPY(&dec->ctx.tsip_keyIdx, aes_key,
-                                sizeof(tsip_aes_key_index_t));
-        dec->ctx.keySize = dec->keylen;
     }
 
-    ForceZero(cipher, AES_BLOCK_SIZE);
-    ret = wc_tsip_AesCbcEncrypt(enc, cipher, msg, (int) sizeof(msg));
+    ForceZero(cipher, WC_AES_BLOCK_SIZE);
+    ret = wc_AesCbcEncrypt(enc, cipher, msg, (int) sizeof(msg));
 
     if (ret != 0) {
         ret = -5;
         goto out;
     }
 
-    ForceZero(plain, AES_BLOCK_SIZE);
-    ret = wc_tsip_AesCbcDecrypt(dec, plain, cipher, (int) sizeof(cipher));
+    ForceZero(plain, WC_AES_BLOCK_SIZE);
+    ret = wc_AesCbcDecrypt(dec, plain, cipher, (int) sizeof(cipher));
 
     if (ret != 0){
         ret = -6;
@@ -315,7 +644,7 @@ out:
     if (prnt) {
         RESULT_STR(ret)
     }
-    
+
     return ret;
 }
 #ifdef FREERTOS
@@ -323,7 +652,7 @@ static void tskAes256_Cbc_Test(void *pvParam)
 {
     int ret = 0;
     Info *p = (Info*)pvParam;
-    
+
     while (exit_loop == false) {
         ret = tsip_aes256_test(0, &p->aes_key);
         vTaskDelay(10/portTICK_PERIOD_MS);
@@ -340,13 +669,11 @@ static void tskAes256_Cbc_Test(void *pvParam)
 #endif /* WOLFSSL_AES_256 */
 
 #if defined(WOLFSSL_AES_256)
-static int tsip_aesgcm256_test(int prnt, tsip_aes_key_index_t* aes256_key)
+static int tsip_aesgcm256_test(int prnt, int devId)
 {
     Aes enc[1];
     Aes dec[1];
-    TsipUserCtx userContext;
-    
-    
+
     /*
      * This is Test Case 16 from the document Galois/
      * Counter Mode of Operation (GCM) by McGrew and
@@ -404,8 +731,8 @@ static int tsip_aesgcm256_test(int prnt, tsip_aes_key_index_t* aes256_key)
     };
 
     byte resultT[sizeof(t1)];
-    byte resultP[sizeof(p) + AES_BLOCK_SIZE];
-    byte resultC[sizeof(p) + AES_BLOCK_SIZE];
+    byte resultP[sizeof(p) + WC_AES_BLOCK_SIZE];
+    byte resultC[sizeof(p) + WC_AES_BLOCK_SIZE];
     int  result = 0;
     int  ret;
 
@@ -416,17 +743,16 @@ static int tsip_aesgcm256_test(int prnt, tsip_aes_key_index_t* aes256_key)
     if (prnt) {
         printf(" tsip_aes256_gcm_test() ");
     }
-    
-    ForceZero(resultT, sizeof(resultT));
-    ForceZero(resultC, sizeof(resultC));
-    ForceZero(resultP, sizeof(resultP));
-    ForceZero(&userContext, sizeof(TsipUserCtx));
 
-    if (wc_AesInit(enc, NULL, INVALID_DEVID) != 0) {
+    XMEMSET(resultT, 0, sizeof(resultT));
+    XMEMSET(resultC, 0, sizeof(resultC));
+    XMEMSET(resultP, 0, sizeof(resultP));
+
+    if (wc_AesInit(enc, NULL, devId) != 0) {
         ret = -1;
         goto out;
     }
-    if (wc_AesInit(dec, NULL, INVALID_DEVID) != 0) {
+    if (wc_AesInit(dec, NULL, devId) != 0) {
         ret = -2;
         goto out;
     }
@@ -435,18 +761,13 @@ static int tsip_aesgcm256_test(int prnt, tsip_aes_key_index_t* aes256_key)
     if (result != 0) {
         ret = -3;
         goto out;
-    } else {
-        XMEMCPY(&userContext.user_aes256_key_index, aes256_key,
-                                sizeof(tsip_aes_key_index_t));
-        userContext.user_aes256_key_set = 1;
-        enc->ctx.keySize = enc->keylen;
     }
 
     /* AES-GCM encrypt and decrypt both use AES encrypt internally */
-    result = wc_tsip_AesGcmEncrypt(enc, resultC, p, sizeof(p), 
-                        (byte*)iv1, sizeof(iv1), resultT, sizeof(resultT), 
-                        a, sizeof(a), &userContext);
-
+    result = wc_AesGcmEncrypt(enc,
+        resultC, p, sizeof(p),
+        (byte*)iv1, sizeof(iv1), resultT, sizeof(resultT),
+        a, sizeof(a));
     if (result != 0) {
         ret = -4;
         goto out;
@@ -460,9 +781,10 @@ static int tsip_aesgcm256_test(int prnt, tsip_aes_key_index_t* aes256_key)
         dec->ctx.keySize = enc->keylen;
     }
 
-    result = wc_tsip_AesGcmDecrypt(dec, resultP, resultC, sizeof(c1),
-                        iv1, sizeof(iv1), resultT, sizeof(resultT), 
-                        a, sizeof(a), &userContext);
+    result = wc_AesGcmDecrypt(dec,
+        resultP, resultC, sizeof(c1),
+        iv1, sizeof(iv1), resultT, sizeof(resultT),
+        a, sizeof(a));
     if (result != 0){
         ret = -8;
         goto out;
@@ -478,18 +800,19 @@ static int tsip_aesgcm256_test(int prnt, tsip_aes_key_index_t* aes256_key)
 
     wc_AesGcmSetKey(enc, k1, sizeof(k1));
     /* AES-GCM encrypt and decrypt both use AES encrypt internally */
-    result = wc_tsip_AesGcmEncrypt(enc, resultC, p, sizeof(p), iv1, sizeof(iv1),
-                                resultT + 1, sizeof(resultT) - 1, 
-                                a, sizeof(a), &userContext);
+    result = wc_AesGcmEncrypt(enc,
+        resultC, p, sizeof(p), iv1, sizeof(iv1),
+        resultT + 1, sizeof(resultT) - 1,
+        a, sizeof(a));
     if (result != 0) {
         ret = -10;
         goto out;
     }
 
-    result = wc_tsip_AesGcmDecrypt(enc, resultP, resultC, sizeof(p),
-                            iv1, sizeof(iv1), resultT + 1, sizeof(resultT) - 1, 
-                            a, sizeof(a), &userContext);
-
+    result = wc_AesGcmDecrypt(enc,
+        resultP, resultC, sizeof(p),
+        iv1, sizeof(iv1), resultT + 1, sizeof(resultT) - 1,
+        a, sizeof(a));
     if (result != 0) {
         ret = -11;
         goto out;
@@ -504,11 +827,11 @@ static int tsip_aesgcm256_test(int prnt, tsip_aes_key_index_t* aes256_key)
   out:
     wc_AesFree(enc);
     wc_AesFree(dec);
-    
+
     if (prnt) {
         RESULT_STR(ret)
     }
-    
+
     return ret;
 }
 #ifdef FREERTOS
@@ -516,7 +839,7 @@ static void tskAes256_Gcm_Test(void *pvParam)
 {
     int ret = 0;
     Info *p = (Info*)pvParam;
-    
+
     while (exit_loop == false) {
         ret = tsip_aesgcm256_test(0, &p->aes_key);
         vTaskDelay(10/portTICK_PERIOD_MS);
@@ -532,13 +855,12 @@ static void tskAes256_Gcm_Test(void *pvParam)
 #endif /* FREERTOS */
 #endif
 
-#if defined(WOLFSSL_AES_128)
+#if defined(WOLFSSL_AES_128) && defined(HAVE_AESGCM)
 
-static int tsip_aesgcm128_test(int prnt, tsip_aes_key_index_t* aes128_key)
+static int tsip_aesgcm128_test(int prnt, int devId)
 {
     Aes enc[1];
     Aes dec[1];
-    TsipUserCtx userContext;
 
     /* The following is an interesting test case from the example
      * FIPS test vectors for AES-GCM. IVlen = 1 byte */
@@ -577,9 +899,9 @@ static int tsip_aesgcm128_test(int prnt, tsip_aes_key_index_t* aes128_key)
         0x31, 0x2e, 0x2a, 0xf9, 0x57, 0x7a, 0x1e, 0xa6
     };
 
-    byte resultT[16];
-    byte resultP[60 + AES_BLOCK_SIZE];
-    byte resultC[60 + AES_BLOCK_SIZE];
+    byte resultT[sizeof(t3)];
+    byte resultP[sizeof(p3) + WC_AES_BLOCK_SIZE];
+    byte resultC[sizeof(p3) + WC_AES_BLOCK_SIZE];
     int  result = 0;
     int ret;
 
@@ -590,17 +912,16 @@ static int tsip_aesgcm128_test(int prnt, tsip_aes_key_index_t* aes128_key)
         printf(" tsip_aes128_gcm_test() ");
     }
 
-    ForceZero(resultT, sizeof(resultT));
-    ForceZero(resultC, sizeof(resultC));
-    ForceZero(resultP, sizeof(resultP));
-    ForceZero(&userContext, sizeof(TsipUserCtx));
+    XMEMSET(resultT, 0, sizeof(resultT));
+    XMEMSET(resultC, 0, sizeof(resultC));
+    XMEMSET(resultP, 0, sizeof(resultP));
 
-    if (wc_AesInit(enc, NULL, INVALID_DEVID) != 0) {
+    if (wc_AesInit(enc, NULL, devId) != 0) {
         ret = -1;
         goto out;
     }
 
-    if (wc_AesInit(dec, NULL, INVALID_DEVID) != 0) {
+    if (wc_AesInit(dec, NULL, devId) != 0) {
         ret = -2;
         goto out;
     }
@@ -609,28 +930,22 @@ static int tsip_aesgcm128_test(int prnt, tsip_aes_key_index_t* aes128_key)
     if (result != 0) {
         ret = -3;
         goto out;
-    } else {
-        XMEMCPY(&userContext.user_aes128_key_index, aes128_key,
-                                sizeof(tsip_aes_key_index_t));
-        userContext.user_aes128_key_set = 1;
-        enc->ctx.keySize = enc->keylen;
     }
     /* AES-GCM encrypt and decrypt both use AES encrypt internally */
-    result = wc_tsip_AesGcmEncrypt(enc, resultC, p3, sizeof(p3), 
-                                        iv3, sizeof(iv3),
-                                        resultT, sizeof(t3), 
-                                        a3, sizeof(a3), &userContext);
+    result = wc_AesGcmEncrypt(enc,resultC, p3, sizeof(p3), iv3, sizeof(iv3),
+            resultT, sizeof(t3),a3, sizeof(a3));
     if (result != 0) {
         ret = -4;
         goto out;
     }
-    result = wc_tsip_AesGcmDecrypt(enc, resultP, resultC, sizeof(c3),
-                                iv3, sizeof(iv3), resultT, sizeof(resultT), 
-                                a3, sizeof(a3), &userContext);
+
+    result = wc_AesGcmDecrypt(enc, resultP, resultC, sizeof(c3),
+        iv3, sizeof(iv3), resultT, sizeof(resultT), a3, sizeof(a3));
     if (result != 0) {
         ret = -5;
         goto out;
     }
+
     if (XMEMCMP(p3, resultP, sizeof(p3))) {
         ret = -6;
         goto out;
@@ -641,11 +956,11 @@ static int tsip_aesgcm128_test(int prnt, tsip_aes_key_index_t* aes128_key)
   out:
     wc_AesFree(enc);
     wc_AesFree(dec);
-    
+
     if (prnt) {
         RESULT_STR(ret)
     }
-    
+
     return ret;
 }
 #ifdef FREERTOS
@@ -667,7 +982,166 @@ static void tskAes128_Gcm_Test(void *pvParam)
     vTaskDelete(NULL);
 }
 #endif /* FREERTOS */
-#endif
+#endif /* WOLFSSL_AES_128 && HAVE_AESGCM */
+
+#if defined(HAVE_AESGCM) && \
+    (defined(WOLFSSL_AES_128) || defined(WOLFSSL_AES_256))
+/* Regression test for zero-length payload/AAD handling in
+ * wc_tsip_AesGcmEncrypt()/wc_tsip_AesGcmDecrypt() (renesas_tsip_aes.c): a
+ * payload or AAD length of 0 is a legal AES-GCM input, but those functions
+ * used to XMALLOC(0, ...) a same-sized scratch buffer for it and treat a
+ * NULL result as an allocation failure -- whether that happened depended on
+ * the platform allocator's handling of a zero-byte request, not on the
+ * actual GCM inputs. Decrypt also rejected sz == 0; now it is accepted.
+ * keySz (16 or 32) selects the TSIP AES-128 or AES-256 GCM entry points.
+ */
+static int tsip_aesgcm_zerolen_test(int prnt, int devId, int keySz)
+{
+    Aes enc[1];
+    Aes dec[1];
+
+    WOLFSSL_SMALL_STACK_STATIC const byte key[] =
+    {
+        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+        0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
+        0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
+        0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f
+    };
+
+    WOLFSSL_SMALL_STACK_STATIC const byte iv[] =
+    {
+        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+        0x08, 0x09, 0x0a, 0x0b
+    };
+
+    WOLFSSL_SMALL_STACK_STATIC const byte aad[] =
+    {
+        0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
+        0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f
+    };
+
+    WOLFSSL_SMALL_STACK_STATIC const byte plain[] =
+    {
+        0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27,
+        0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e, 0x2f
+    };
+
+    byte resultT[WC_AES_BLOCK_SIZE];
+    byte resultC[sizeof(plain) + WC_AES_BLOCK_SIZE];
+    byte resultP[sizeof(plain) + WC_AES_BLOCK_SIZE];
+    int  ret;
+
+    if (prnt) {
+        printf(" tsip_aes%d_gcm_zerolen_test() ", keySz * 8);
+    }
+
+    if (wc_AesInit(enc, NULL, devId) != 0) {
+        ret = -1;
+        goto out;
+    }
+    if (wc_AesInit(dec, NULL, devId) != 0) {
+        ret = -2;
+        goto out;
+    }
+    wc_AesGcmSetKey(enc, key, keySz);
+    wc_AesGcmSetKey(dec, key, keySz);
+
+    /* (a) empty payload, non-empty AAD -- used to fail because plainBuf was
+     * XMALLOC(0, ...)'d in wc_tsip_AesGcmEncrypt(). */
+    XMEMSET(resultT, 0, sizeof(resultT));
+    ret = wc_AesGcmEncrypt(enc, NULL, NULL, 0, iv, sizeof(iv),
+                            resultT, sizeof(resultT), aad, sizeof(aad));
+    if (ret != 0) {
+        ret = -3;
+        goto out;
+    }
+
+    /* (b) non-empty payload, empty AAD -- used to fail the same way via
+     * aadBuf, in both wc_tsip_AesGcmEncrypt() and wc_tsip_AesGcmDecrypt().
+     * A non-zero sz decrypt is fully supported by TSIP, so round-trip
+     * through both. */
+    XMEMSET(resultT, 0, sizeof(resultT));
+    XMEMSET(resultC, 0, sizeof(resultC));
+    XMEMSET(resultP, 0, sizeof(resultP));
+    ret = wc_AesGcmEncrypt(enc, resultC, plain, sizeof(plain), iv, sizeof(iv),
+                            resultT, sizeof(resultT), NULL, 0);
+    if (ret != 0) {
+        ret = -4;
+        goto out;
+    }
+    ret = wc_AesGcmDecrypt(dec, resultP, resultC, sizeof(plain), iv,
+                            sizeof(iv), resultT, sizeof(resultT), NULL, 0);
+    if (ret != 0) {
+        ret = -5;
+        goto out;
+    }
+    if (XMEMCMP(plain, resultP, sizeof(plain))) {
+        ret = -6;
+        goto out;
+    }
+
+    /* (c) empty payload and empty AAD together -- both skip paths in
+     * wc_tsip_AesGcmEncrypt() exercised in the same call. */
+    XMEMSET(resultT, 0, sizeof(resultT));
+    ret = wc_AesGcmEncrypt(enc, NULL, NULL, 0, iv, sizeof(iv),
+                            resultT, sizeof(resultT), NULL, 0);
+    if (ret != 0) {
+        ret = -7;
+        goto out;
+    }
+
+    /* (d) empty payload, non-empty AAD, round trip */
+    XMEMSET(resultT, 0, sizeof(resultT));
+    ret = wc_AesGcmEncrypt(enc, NULL, NULL, 0, iv, sizeof(iv),
+                            resultT, sizeof(resultT), aad, sizeof(aad));
+    if (ret != 0) {
+        ret = -8;
+        goto out;
+    }
+    ret = wc_AesGcmDecrypt(dec, NULL, NULL, 0, iv, sizeof(iv),
+                            resultT, sizeof(resultT), aad, sizeof(aad));
+    if (ret != 0) {
+        ret = -9;
+        goto out;
+    }
+
+    /* (e) corrupted tag must fail */
+    resultT[0] ^= 0x01;
+    ret = wc_AesGcmDecrypt(dec, NULL, NULL, 0, iv, sizeof(iv),
+                            resultT, sizeof(resultT), aad, sizeof(aad));
+    if (ret == 0) {
+        ret = -10;
+        goto out;
+    }
+
+    /* (f) empty payload and empty AAD, round trip */
+    XMEMSET(resultT, 0, sizeof(resultT));
+    ret = wc_AesGcmEncrypt(enc, NULL, NULL, 0, iv, sizeof(iv),
+                            resultT, sizeof(resultT), NULL, 0);
+    if (ret != 0) {
+        ret = -11;
+        goto out;
+    }
+    ret = wc_AesGcmDecrypt(dec, NULL, NULL, 0, iv, sizeof(iv),
+                            resultT, sizeof(resultT), NULL, 0);
+    if (ret != 0) {
+        ret = -12;
+        goto out;
+    }
+
+    ret = 0;
+
+  out:
+    wc_AesFree(enc);
+    wc_AesFree(dec);
+
+    if (prnt) {
+        RESULT_STR(ret)
+    }
+
+    return ret;
+}
+#endif /* HAVE_AESGCM && (WOLFSSL_AES_128 || WOLFSSL_AES_256) */
 
 
 #ifdef FREERTOS
@@ -712,7 +1186,7 @@ static void tskSha256_Test(void *pvParam)
 #endif
 #endif /* FREERTOS */
 
-#if !defined(NO_RSA)
+#if !defined(NO_RSA) && defined(WOLFSSL_KEY_GEN)
 
 /* testing rsa sign/verify w/ rsa 2048 bit key */
 #define TEST_STRING     "Everyone gets Friday off."
@@ -720,41 +1194,44 @@ static void tskSha256_Test(void *pvParam)
 #define TEST_STRING_SZ   25
 #define RSA_TEST_BYTES   256 /* up to 2048-bit key */
 
-static int tsip_rsa_SignVerify_test(int prnt, int keySize)
+static int tsip_rsa_test(int prnt, int keySize)
 {
     int ret = 0;
 
-    RsaKey *key = (RsaKey *)XMALLOC(sizeof *key, NULL, DYNAMIC_TYPE_TMP_BUFFER);
+    RsaKey *key = NULL;
     WC_RNG rng;
     const char inStr [] = TEST_STRING;
-    const char inStr2[] = TEST_STRING2;
     const word32 inLen = (word32)TEST_STRING_SZ;
     const word32 outSz = RSA_TEST_BYTES;
-
+    word32 out_actual_len = 0;
     byte *in = NULL;
-    byte *in2 = NULL;
     byte *out= NULL;
+    byte *outplain = NULL;
+    int initRsa = 0;
+    int devId = 7890; /* fixed devid for TSIP/SCE */
 
+    XMEMSET(&rng, 0, sizeof(rng));
+
+    key = (RsaKey *)XMALLOC(sizeof(*key), NULL, DYNAMIC_TYPE_TMP_BUFFER);
     in = (byte*)XMALLOC(inLen, NULL, DYNAMIC_TYPE_TMP_BUFFER);
-    in2 = (byte*)XMALLOC(inLen, NULL, DYNAMIC_TYPE_TMP_BUFFER);
-    out= (byte*)XMALLOC(outSz, NULL, DYNAMIC_TYPE_TMP_BUFFER);
+    out = (byte*)XMALLOC(outSz, NULL, DYNAMIC_TYPE_TMP_BUFFER);
+    outplain = (byte*)XMALLOC(outSz, NULL, DYNAMIC_TYPE_TMP_BUFFER);
 
-    (void) prnt;
-
-    if (key == NULL || in == NULL || out == NULL) {
+    if (key == NULL || in == NULL || out == NULL || outplain == NULL) {
         ret = -1;
         goto out;
     }
 
-    XMEMSET(&rng, 0, sizeof(rng));
-    XMEMSET(key, 0, sizeof *key);
+    XMEMSET(key, 0, sizeof(*key));
     XMEMCPY(in, inStr, inLen);
-    XMEMCPY(in2, inStr2, inLen);
+    XMEMSET(out,  0, outSz);
+    XMEMSET(outplain, 0, outSz);
 
-    ret = wc_InitRsaKey_ex(key, NULL, 7890/* fixed devid for TSIP/SCE*/);
+    ret = wc_InitRsaKey_ex(key, NULL, devId);
     if (ret != 0) {
         goto out;
     }
+    initRsa = 1;
 
     if ((ret = wc_InitRng(&rng)) != 0)
         goto out;
@@ -762,7 +1239,91 @@ static int tsip_rsa_SignVerify_test(int prnt, int keySize)
     if ((ret = wc_RsaSetRNG(key, &rng)) != 0)
         goto out;
 
-    /* make rsa key by SCE */
+    /* Generate a new RSA key to use with TSIP/SCE */
+    if ((ret = wc_MakeRsaKey(key, keySize, 65537, &rng)) != 0) {
+        goto out;
+    }
+
+    ret = wc_RsaPublicEncrypt(in, inLen, out, outSz, key, &rng);
+    if (ret < 0) {
+        goto out;
+    }
+
+    ret = wc_RsaPrivateDecrypt(out, (word32)(keySize/8), outplain, outSz, key);
+    if (ret < 0) {
+        ret = -1;
+        goto out;
+    }
+
+    if (XMEMCMP(in, outplain, inLen) != 0) {
+        ret = -2;
+        goto out;
+    }
+
+    ret = 0;
+out:
+
+    wc_FreeRng(&rng);
+    if (key != NULL) {
+        if (initRsa)
+            wc_FreeRsaKey(key);
+        XFREE(key, NULL, DYNAMIC_TYPE_TMP_BUFFER);
+    }
+    XFREE(in, NULL, DYNAMIC_TYPE_TMP_BUFFER);
+    XFREE(out, NULL, DYNAMIC_TYPE_TMP_BUFFER);
+    XFREE(outplain, NULL, DYNAMIC_TYPE_TMP_BUFFER);
+
+    (void)prnt;
+    return ret;
+}
+
+
+static int tsip_rsa_SignVerify_test(int prnt, int keySize)
+{
+    int ret = 0;
+
+    RsaKey *key = NULL;
+    WC_RNG rng;
+    const char inStr [] = TEST_STRING;
+    const char inStr2[] = TEST_STRING2;
+    const word32 inLen = (word32)TEST_STRING_SZ;
+    const word32 outSz = RSA_TEST_BYTES;
+    word32 signSz = 0;
+    byte *in = NULL;
+    byte *in2 = NULL;
+    byte *out= NULL;
+    int initRsa = 0;
+    int devId = 7890; /* fixed devid for TSIP/SCE */
+
+    XMEMSET(&rng, 0, sizeof(rng));
+
+    key = (RsaKey *)XMALLOC(sizeof(*key), NULL, DYNAMIC_TYPE_TMP_BUFFER);
+    in = (byte*)XMALLOC(inLen, NULL, DYNAMIC_TYPE_TMP_BUFFER);
+    in2 = (byte*)XMALLOC(inLen, NULL, DYNAMIC_TYPE_TMP_BUFFER);
+    out = (byte*)XMALLOC(outSz, NULL, DYNAMIC_TYPE_TMP_BUFFER);
+
+    if (key == NULL || in == NULL || out == NULL) {
+        ret = -1;
+        goto out;
+    }
+
+    XMEMSET(key, 0, sizeof(*key));
+    XMEMCPY(in, inStr, inLen);
+    XMEMCPY(in2, inStr2, inLen);
+
+    ret = wc_InitRsaKey_ex(key, NULL, devId);
+    if (ret != 0) {
+        goto out;
+    }
+    initRsa = 1;
+
+    if ((ret = wc_InitRng(&rng)) != 0)
+        goto out;
+
+    if ((ret = wc_RsaSetRNG(key, &rng)) != 0)
+        goto out;
+
+    /* Generate a new RSA key to use with TSIP/SCE */
     if ((ret = wc_MakeRsaKey(key, keySize, 65537, &rng)) != 0) {
         goto out;
     }
@@ -771,48 +1332,48 @@ static int tsip_rsa_SignVerify_test(int prnt, int keySize)
     if (ret < 0) {
         goto out;
     }
+    signSz = ret;
 
     /* this should fail */
-    ret = wc_RsaSSL_Verify(in2, inLen, out, keySize/8, key);
+    ret = wc_RsaSSL_Verify(out, signSz, in2, inLen, key);
     if (ret != SIG_VERIFY_E) {
         ret = -1;
         goto out;
     }
     /* this should succeed */
-    ret = wc_RsaSSL_Verify(in, inLen, out, keySize/8, key);
+    ret = wc_RsaSSL_Verify(out, signSz, in, inLen, key);
     if (ret < 0) {
         ret = -1;
         goto out;
     }
     ret = 0;
+
   out:
+
+    wc_FreeRng(&rng);
     if (key != NULL) {
-        wc_FreeRsaKey(key);
+        if (initRsa)
+            wc_FreeRsaKey(key);
         XFREE(key, NULL, DYNAMIC_TYPE_TMP_BUFFER);
     }
-    if (in != NULL) {
-        XFREE(in, NULL, DYNAMIC_TYPE_TMP_BUFFER);
-    }
-    if (in2 != NULL) {
-        XFREE(in2, NULL, DYNAMIC_TYPE_TMP_BUFFER);
-    }
-    if (out != NULL) {
-        XFREE(out, NULL, DYNAMIC_TYPE_TMP_BUFFER);
-    }
+    XFREE(in, NULL, DYNAMIC_TYPE_TMP_BUFFER);
+    XFREE(in2, NULL, DYNAMIC_TYPE_TMP_BUFFER);
+    XFREE(out, NULL, DYNAMIC_TYPE_TMP_BUFFER);
 
+    (void)prnt;
     return ret;
 }
 #endif /* NO_RSA */
 
 
 #ifdef TSIP_MULTIUNIT_TEST
-int tsip_crypt_sha_multitest()
+int tsip_crypt_sha_multitest(void)
 {
     int ret = 0;
     int num = 0;
     int i;
     BaseType_t xRet;
-    
+
 #ifndef NO_SHA
     num++;
 #endif
@@ -825,14 +1386,14 @@ int tsip_crypt_sha_multitest()
 
     exit_semaph = xSemaphoreCreateCounting(num, 0);
     xRet = pdPASS;
-    
+
 #ifndef NO_SHA
-    xRet = xTaskCreate(tskSha_Test, "sha_test", 
+    xRet = xTaskCreate(tskSha_Test, "sha_test",
                             SMALL_STACK_SIZE, NULL, 3, NULL);
 #endif
 #ifndef NO_SHA256
     if (xRet == pdPASS)
-        xRet = xTaskCreate(tskSha256_Test, "sha256_test", 
+        xRet = xTaskCreate(tskSha256_Test, "sha256_test",
                             SMALL_STACK_SIZE, NULL, 3, NULL);
 #endif
 
@@ -849,22 +1410,22 @@ int tsip_crypt_sha_multitest()
             }
         }
     }
-    
+
     vSemaphoreDelete(exit_semaph);
-    
+
     if ((xRet == pdPASS) &&
        (sha_multTst_rslt == 0 && sha256_multTst_rslt == 0))
         ret = 0;
     else
         ret = -1;
-    
+
     RESULT_STR(ret)
 
     return ret;
 }
 
 
-int tsip_crypt_AesCbc_multitest()
+int tsip_crypt_AesCbc_multitest(void)
 {
     int ret = 0;
     int num = 0;
@@ -874,7 +1435,7 @@ int tsip_crypt_AesCbc_multitest()
     Info info_aes256_1;
     Info info_aes256_2;
     BaseType_t xRet;
-    
+
 #if defined(HAVE_AES_CBC) && defined(WOLFSSL_AES_128)
     num+=2;
 #endif
@@ -887,7 +1448,7 @@ int tsip_crypt_AesCbc_multitest()
 
     exit_semaph = xSemaphoreCreateCounting(num, 0);
     xRet = pdPASS;
-    
+
 #if defined(HAVE_AES_CBC) && defined(WOLFSSL_AES_128)
     XMEMCPY(&info_aes1.aes_key, &g_user_aes128_key_index1,
                                             sizeof(tsip_aes_key_index_t));
@@ -916,7 +1477,7 @@ int tsip_crypt_AesCbc_multitest()
         xRet = xTaskCreate(tskAes256_Cbc_Test, "aes256_cbc_test2",
                 SMALL_STACK_SIZE, &info_aes256_2, 3, NULL);
 #endif
-    
+
     if (xRet == pdPASS) {
     printf(" Waiting for completing tasks ...");
         vTaskDelay(10000/portTICK_PERIOD_MS);
@@ -930,7 +1491,7 @@ int tsip_crypt_AesCbc_multitest()
             }
         }
     }
-    
+
     vSemaphoreDelete(exit_semaph);
 
     if ((xRet == pdPASS) &&
@@ -945,7 +1506,7 @@ int tsip_crypt_AesCbc_multitest()
 }
 
 
-int tsip_crypt_AesGcm_multitest()
+int tsip_crypt_AesGcm_multitest(void)
 {
     int ret = 0;
     int num = 0;
@@ -955,7 +1516,7 @@ int tsip_crypt_AesGcm_multitest()
     Info info_aes256_1;
     Info info_aes256_2;
     BaseType_t xRet;
-    
+
 #if defined(WOLFSSL_AES_128)
     num+=2;
 #endif
@@ -1010,7 +1571,7 @@ int tsip_crypt_AesGcm_multitest()
             }
         }
     }
-    
+
     vSemaphoreDelete(exit_semaph);
 
     if ((xRet == pdPASS) &&
@@ -1024,7 +1585,7 @@ int tsip_crypt_AesGcm_multitest()
     return ret;
 }
 
-int tsip_crypt_Sha_AesCbcGcm_multitest()
+int tsip_crypt_Sha_AesCbcGcm_multitest(void)
 {
     int ret = 0;
     int num = 0;
@@ -1032,7 +1593,7 @@ int tsip_crypt_Sha_AesCbcGcm_multitest()
     Info info_aes256cbc;
     Info info_aes256gcm;
     BaseType_t xRet;
-    
+
 #ifndef NO_SHA
     num++;
 #endif
@@ -1051,7 +1612,7 @@ int tsip_crypt_Sha_AesCbcGcm_multitest()
 
     exit_semaph = xSemaphoreCreateCounting(num, 0);
     xRet = pdPASS;
-    
+
 #ifndef NO_SHA
     xRet = xTaskCreate(tskSha_Test, "sha_test",
                                 SMALL_STACK_SIZE, NULL, 3, NULL);
@@ -1069,7 +1630,7 @@ int tsip_crypt_Sha_AesCbcGcm_multitest()
     XMEMCPY(&info_aes256gcm.aes_key, &g_user_aes256_key_index2,
                                                 sizeof(tsip_aes_key_index_t));
     if (xRet == pdPASS)
-        xRet = xTaskCreate(tskAes256_Gcm_Test, "aes256_gcm_test2", 
+        xRet = xTaskCreate(tskAes256_Gcm_Test, "aes256_gcm_test2",
                                     STACK_SIZE, &info_aes256gcm, 3, NULL);
 #endif
 
@@ -1086,9 +1647,9 @@ int tsip_crypt_Sha_AesCbcGcm_multitest()
             }
         }
     }
-    
+
     vSemaphoreDelete(exit_semaph);
-    
+
     if (xRet == pdPASS && sha_multTst_rslt == 0 &&
        (Aes256_Cbc_multTst_rslt == 0 && Aes256_Gcm_multTst_rslt == 0)) {
         ret = 0;
@@ -1096,7 +1657,7 @@ int tsip_crypt_Sha_AesCbcGcm_multitest()
     else {
         ret = -1;
     }
-    
+
     RESULT_STR(ret)
 
     return ret;
@@ -1104,79 +1665,316 @@ int tsip_crypt_Sha_AesCbcGcm_multitest()
 #endif
 
 
-int tsip_crypt_test()
+#if !defined(NO_SHA256) && !defined(NO_WOLFSSL_RENESAS_TSIP_CRYPT_HASH)
+static int tsip_sha256_hash_test(int prnt)
+{
+    wc_Sha256 sha;
+    byte hash1[WC_SHA256_DIGEST_SIZE];
+    byte hash2[WC_SHA256_DIGEST_SIZE];
+    int  ret = 0;
+    int  shaInited = 0;
+
+    /* SHA-256("abc") */
+    static const byte msg[] = { 0x61, 0x62, 0x63 };
+    static const byte expected[WC_SHA256_DIGEST_SIZE] = {
+        0xba, 0x78, 0x16, 0xbf, 0x8f, 0x01, 0xcf, 0xea,
+        0x41, 0x41, 0x40, 0xde, 0x5d, 0xae, 0x22, 0x23,
+        0xb0, 0x03, 0x61, 0xa3, 0x96, 0x17, 0x7a, 0x9c,
+        0xb4, 0x10, 0xff, 0x61, 0xf2, 0x00, 0x15, 0xad
+    };
+
+    if (prnt)
+        printf(" tsip_sha256_hash_test() ");
+
+    /* wc_Sha256Final: correct digest */
+    ret = wc_InitSha256_ex(&sha, NULL, 0);
+    if (ret != 0) {
+        ret = -1;
+        goto out;
+    }
+    shaInited = 1;
+    ret = wc_Sha256Update(&sha, msg, sizeof(msg));
+    if (ret != 0) {
+        ret = -2;
+        goto out;
+    }
+    XMEMSET(hash1, 0, sizeof(hash1));
+    ret = wc_Sha256Final(&sha, hash1);
+    if (ret != 0) {
+        ret = -3;
+        goto out;
+    }
+    if (XMEMCMP(hash1, expected, WC_SHA256_DIGEST_SIZE) != 0) {
+        ret = -4; goto out;
+    }
+
+    /* wc_Sha256GetHash: non-destructive, same digest on repeated calls */
+    ret = wc_Sha256Update(&sha, msg, sizeof(msg));
+    if (ret != 0) {
+        ret = -5;
+        goto out;
+    }
+    XMEMSET(hash1, 0, sizeof(hash1));
+    ret = wc_Sha256GetHash(&sha, hash1);
+    if (ret != 0) {
+        ret = -6;
+        goto out;
+    }
+    if (XMEMCMP(hash1, expected, WC_SHA256_DIGEST_SIZE) != 0) {
+        ret = -7;
+        goto out;
+    }
+    XMEMSET(hash2, 0, sizeof(hash2));
+    ret = wc_Sha256GetHash(&sha, hash2);
+    if (ret != 0) {
+        ret = -8;
+        goto out;
+    }
+    if (XMEMCMP(hash1, hash2, WC_SHA256_DIGEST_SIZE) != 0) {
+        ret = -9; goto out;
+    }
+
+    /* Final after GetHash must also match */
+    XMEMSET(hash2, 0, sizeof(hash2));
+    ret = wc_Sha256Final(&sha, hash2);
+    if (ret != 0) {
+        ret = -10;
+        goto out;
+    }
+    if (XMEMCMP(hash1, hash2, WC_SHA256_DIGEST_SIZE) != 0) {
+        ret = -11; goto out;
+    }
+
+out:
+    if (shaInited)
+        wc_Sha256Free(&sha);
+    if (prnt) {
+        if (ret != 0)
+            printf("(code=%d) ", ret);
+        RESULT_STR(ret)
+    }
+    return ret;
+}
+#endif /* !NO_SHA256 && !NO_WOLFSSL_RENESAS_TSIP_CRYPT_HASH */
+
+#if !defined(NO_SHA) && !defined(NO_WOLFSSL_RENESAS_TSIP_CRYPT_HASH)
+static int tsip_sha1_hash_test(int prnt)
+{
+    wc_Sha sha;
+    byte hash1[WC_SHA_DIGEST_SIZE];
+    byte hash2[WC_SHA_DIGEST_SIZE];
+    int  ret = 0;
+    int  shaInited = 0;
+
+    /* NIST FIPS 180-4: SHA-1("abc") */
+    static const byte msg[] = { 0x61, 0x62, 0x63 };
+    static const byte expected[WC_SHA_DIGEST_SIZE] = {
+        0xa9, 0x99, 0x3e, 0x36, 0x47, 0x06, 0x81, 0x6a,
+        0xba, 0x3e, 0x25, 0x71, 0x78, 0x50, 0xc2, 0x6c,
+        0x9c, 0xd0, 0xd8, 0x9d
+    };
+
+    if (prnt)
+        printf(" tsip_sha1_hash_test() ");
+
+    /* wc_ShaFinal: correct digest */
+    ret = wc_InitSha_ex(&sha, NULL, 0);
+    if (ret != 0) {
+        ret = -1;
+        goto out;
+    }
+    shaInited = 1;
+    ret = wc_ShaUpdate(&sha, msg, sizeof(msg));
+    if (ret != 0) {
+        ret = -2;
+        goto out;
+    }
+    XMEMSET(hash1, 0, sizeof(hash1));
+    ret = wc_ShaFinal(&sha, hash1);
+    if (ret != 0) {
+        ret = -3;
+        goto out;
+    }
+    if (XMEMCMP(hash1, expected, WC_SHA_DIGEST_SIZE) != 0) {
+        ret = -4;
+        goto out;
+    }
+
+    /* wc_ShaGetHash: non-destructive, same digest on repeated calls */
+    ret = wc_ShaUpdate(&sha, msg, sizeof(msg));
+    if (ret != 0) {
+        ret = -5;
+        goto out;
+    }
+    XMEMSET(hash1, 0, sizeof(hash1));
+    ret = wc_ShaGetHash(&sha, hash1);
+    if (ret != 0) {
+        ret = -6;
+        goto out;
+    }
+    if (XMEMCMP(hash1, expected, WC_SHA_DIGEST_SIZE) != 0) {
+        ret = -7;
+        goto out;
+    }
+    XMEMSET(hash2, 0, sizeof(hash2));
+    ret = wc_ShaGetHash(&sha, hash2);
+    if (ret != 0) {
+        ret = -8;
+        goto out;
+    }
+
+    if (XMEMCMP(hash1, hash2, WC_SHA_DIGEST_SIZE) != 0) {
+        ret = -9;
+        goto out;
+    }
+
+    /* Final after GetHash must also match */
+    XMEMSET(hash2, 0, sizeof(hash2));
+    ret = wc_ShaFinal(&sha, hash2);
+    if (ret != 0) {
+        ret = -10;
+        goto out;
+    }
+    if (XMEMCMP(hash1, hash2, WC_SHA_DIGEST_SIZE) != 0) {
+        ret = -11; goto out;
+    }
+
+out:
+    if (shaInited)
+        wc_ShaFree(&sha);
+    if (prnt) {
+        if (ret != 0)
+            printf("(code=%d) ", ret);
+        RESULT_STR(ret)
+    }
+    return ret;
+}
+#endif /* !NO_SHA && !NO_WOLFSSL_RENESAS_TSIP_CRYPT_HASH */
+
+int tsip_crypt_test(void)
 {
     int ret = 0;
-    e_tsip_err_t tsip_error_code;
+    int devId;
 
-    /* Generate AES tsip Key */
-    tsip_error_code = R_TSIP_GenerateAes128RandomKeyIndex(
-                &g_user_aes128_key_index1);
+    Clr_CallbackCtx(&userContext);
 
-    if (tsip_error_code == TSIP_SUCCESS)
-    tsip_error_code = R_TSIP_GenerateAes128RandomKeyIndex(
-                &g_user_aes128_key_index2);
+    devId = wc_CryptoCb_CryptInitRenesasCmn(NULL, &userContext);
+    if (devId > 0){
+        ret = 0;
+    }
 
-    if (tsip_error_code == TSIP_SUCCESS)
-    tsip_error_code = R_TSIP_GenerateAes256RandomKeyIndex(
-                &g_user_aes256_key_index1);
-
-    if (tsip_error_code == TSIP_SUCCESS)
-    tsip_error_code = R_TSIP_GenerateAes256RandomKeyIndex(
-                &g_user_aes256_key_index2);
-
-    if (tsip_error_code == TSIP_SUCCESS) {
-
-   #ifndef NO_SHA
+    if (ret == 0) {
+    #ifndef NO_SHA
         printf(" sha_test()");
         ret = sha_test();
-        RESULT_STR(ret)
-   #endif
+        RESULT_STR(ret);
+    #endif
 
-   #ifndef NO_SHA256
+    #ifndef NO_SHA256
         printf(" sha256_test()");
-        ret = sha256_test();
-        RESULT_STR(ret)
-   #endif
-
-        ret = tsip_aes_cbc_test(1, &g_user_aes128_key_index1);
-
         if (ret == 0) {
-
-            ret = tsip_aes256_test(1, &g_user_aes256_key_index1);
-
+            ret = sha256_test();
+            RESULT_STR(ret);
         }
+    #endif
 
+    #if !defined(NO_SHA256) && !defined(NO_WOLFSSL_RENESAS_TSIP_CRYPT_HASH)
+        if (ret == 0)
+            ret = tsip_sha256_hash_test(1);
+    #endif
+
+    #if !defined(NO_SHA) && !defined(NO_WOLFSSL_RENESAS_TSIP_CRYPT_HASH)
+        if (ret == 0)
+            ret = tsip_sha1_hash_test(1);
+    #endif
+
+    #ifdef HAVE_AES_CBC
+        ret = TSIP_AesKeyGeneration(&userContext, 16);
+        if (ret == 0)
+            ret = tsip_aes128_cbc_test(1, devId);
         if (ret == 0) {
-
-            ret = tsip_aesgcm128_test(1, &g_user_aes128_key_index1);
-
-        }
-
-        if (ret == 0) {
-
-            ret = tsip_aesgcm256_test(1, &g_user_aes256_key_index1);
-
-        }
-   #if defined(WOLFSSL_KEY_GEN)&& \
-       defined(WOLFSSL_RENESAS_TSIP_CRYPTONLY)
-
-        if (ret == 0) {
-
             Clr_CallbackCtx(&userContext);
+            ret = TSIP_AesKeyGeneration(&userContext, 32);
+            if (ret == 0)
+                ret = tsip_aes256_cbc_test(1, devId);
+        }
+    #endif
 
-            ret = wc_CryptoCb_CryptInitRenesasCmn(NULL, &userContext);
+    #ifdef HAVE_AESGCM
+        if (ret == 0) {
+            Clr_CallbackCtx(&userContext);
+            ret = TSIP_AesKeyGeneration(&userContext, 16);
+            if (ret == 0)
+                ret = tsip_aesgcm128_test(1, devId);
+        }
+        if (ret == 0) {
+            Clr_CallbackCtx(&userContext);
+            ret = TSIP_AesKeyGeneration(&userContext, 32);
+            if (ret == 0)
+                ret = tsip_aesgcm256_test(1, devId);
+        }
+    #if defined(WOLFSSL_AES_128)
+        if (ret == 0) {
+            Clr_CallbackCtx(&userContext);
+            ret = TSIP_AesKeyGeneration(&userContext, 16);
+            if (ret == 0)
+                ret = tsip_aesgcm_zerolen_test(1, devId, 16);
+        }
+    #endif
+    #if defined(WOLFSSL_AES_256)
+        if (ret == 0) {
+            Clr_CallbackCtx(&userContext);
+            ret = TSIP_AesKeyGeneration(&userContext, 32);
+            if (ret == 0)
+                ret = tsip_aesgcm_zerolen_test(1, devId, 32);
+        }
+    #endif
+    #endif
 
-            if (ret > 0)
-                ret = 0;
+    #if defined(WOLFSSL_AES_COUNTER) &&\
+        (defined(TSIP_AES_128_CTR) && TSIP_AES_128_CTR == 1)
+        #if defined(WOLFSSL_AES_128)
+        Clr_CallbackCtx(&userContext);
+        ret = TSIP_AesKeyGeneration(&userContext, 16);
+        if (ret == 0) {
+            ret = tsip_aes128_ctr_test(1, devId);
+            RESULT_STR(ret);
+        }
+        #endif
+        #if defined(WOLFSSL_AES_256)
+        Clr_CallbackCtx(&userContext);
+        ret = TSIP_AesKeyGeneration(&userContext, 32);
+        if (ret == 0) {
+            ret = tsip_aes256_ctr_test(1, devId);
+            RESULT_STR(ret);
+        }
+        #endif
+    #endif
+
+    #if defined(WOLFSSL_KEY_GEN) && \
+        defined(WOLFSSL_RENESAS_TSIP_CRYPTONLY)
+    #if RSA_MIN_SIZE <= 1024
+        if (ret == 0) {
+            userContext.wrappedKeyType = TSIP_KEY_TYPE_RSA1024;
+            printf(" tsip_rsa_test(1024)");
+            ret = tsip_rsa_test(1, 1024);
+            RESULT_STR(ret)
+        }
+    #endif
+        if (ret == 0) {
+            userContext.wrappedKeyType = TSIP_KEY_TYPE_RSA2048;
+            printf(" tsip_rsa_test(2048)");
+            ret = tsip_rsa_test(1, 2048);
+            RESULT_STR(ret)
         }
 
-        if (ret == 0) {
 
+    #if RSA_MIN_SIZE <= 1024
+        if (ret == 0) {
             printf(" tsip_rsa_SignVerify_test(1024)");
 
             userContext.wrappedKeyType = TSIP_KEY_TYPE_RSA1024;
-            userContext.sing_hash_type = sha256_mac;
+            userContext.sign_hash_type = sha256_mac;
             userContext.keyflgs_crypt.bits.message_type = 0;
 
             ret = tsip_rsa_SignVerify_test(1, 1024);
@@ -1184,12 +1982,13 @@ int tsip_crypt_test()
         }
 
         Clr_CallbackCtx(&userContext);
+    #endif
 
         if (ret == 0) {
             printf(" tsip_rsa_SignVerify_test(2048)");
 
             userContext.wrappedKeyType = TSIP_KEY_TYPE_RSA2048;
-            userContext.sing_hash_type = sha256_mac;
+            userContext.sign_hash_type = sha256_mac;
             userContext.keyflgs_crypt.bits.message_type = 0;
 
             ret = tsip_rsa_SignVerify_test(1, 2048);
@@ -1197,12 +1996,11 @@ int tsip_crypt_test()
         }
 
         Clr_CallbackCtx(&userContext);
-   #endif
+#endif /* WOLFSSL_KEY_GEN && WOLFSSL_RENESAS_TSIP_CRYPTONLY */
     }
-    else
+    else {
         ret = -1;
-
-
+    }
     return ret;
 }
 

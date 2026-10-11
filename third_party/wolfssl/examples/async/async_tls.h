@@ -1,12 +1,12 @@
 /* async-tls.h
  *
- * Copyright (C) 2006-2023 wolfSSL Inc.
+ * Copyright (C) 2006-2026 wolfSSL Inc.
  *
  * This file is part of wolfSSL.
  *
  * wolfSSL is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * wolfSSL is distributed in the hope that it will be useful,
@@ -23,16 +23,109 @@
 #ifndef WOLFSSL_ASYNC_TLS_EXAMPLES_H
 #define WOLFSSL_ASYNC_TLS_EXAMPLES_H
 
+typedef struct WOLFSSL WOLFSSL;
+#ifdef WOLF_CRYPTO_CB
+typedef struct wc_CryptoInfo wc_CryptoInfo;
+#endif
+
 #define DEFAULT_PORT 11111
+#define DEFAULT_TLS_PORT 11111
+#define DEFAULT_TLS_HOST "127.0.0.1"
 #define TEST_BUF_SZ  256
+#define WOLFSSL_ASYNC_READYFILE_ENV "WOLFSSL_ASYNC_READYFILE"
+#define WOLFSSL_ASYNC_READYFILE_TIMEOUT_MS 5000
+
+/* Force ECC-only certs/keys for these async TLS examples. */
+#ifndef ASYNC_ECC_ONLY
+#if defined(WC_ECC_NONBLOCK)
+#define ASYNC_ECC_ONLY 1
+#else
+#define ASYNC_ECC_ONLY 0
+#endif
+#endif
 
 #ifdef WOLF_CRYPTO_CB
 /* Example custom context for crypto callback */
+/* Max simultaneous simulated pending requests (device job table) */
+#ifndef ASYNC_TLS_PEND_JOBS
+#define ASYNC_TLS_PEND_JOBS 64
+#endif
 typedef struct {
-    int pendingCount; /* track pending tries test count */
+    int pendingCount; /* total WC_PENDING_E returns (statistic) */
+    /* Simulated device job table. A pended request is identified by a
+     * hash of its wc_CryptoInfo so the re-invocation with identical
+     * arguments can be matched and completed. */
+    unsigned long jobHash[ASYNC_TLS_PEND_JOBS];
+    int  jobTries[ASYNC_TLS_PEND_JOBS];
+    int  jobCount;
+    int  jobFullCount; /* requests completed synchronously: table full */
+    /* Set by the application when TLS 1.2 was selected: restricts the
+     * simulated pending to the operations the TLS 1.2 state machines can
+     * retry. TLS 1.3 (0, the default) pends every supported class. */
+    int  tls12;
 } AsyncTlsCryptoCbCtx;
 int AsyncTlsCryptoCb(int devIdArg, wc_CryptoInfo* info, void* ctx);
 #endif /* WOLF_CRYPTO_CB */
+
+/* Override transport by defining NET_USER_HEADER and/or NET_*.
+ * Example: -DNET_USER_HEADER='"my_net_port.h"' */
+#ifdef NET_USER_HEADER
+    #include NET_USER_HEADER
+#define NET_CUSTOM 1
+#endif
+
+int async_readyfile_touch(const char* path);
+int async_readyfile_wait(const char* path, int timeout_ms);
+void async_readyfile_clear(const char* path);
+
+/* Default POSIX transport hooks (override with NET_* macros). */
+#ifndef NET_CUSTOM
+#ifndef NET_CONNECT
+#define NET_CONNECT(host, port) posix_net_connect((host), (port))
+#define NET_SET_NONBLOCKING(fd) posix_set_nonblocking((fd))
+#define NET_ACCEPT(fd, addr, len) accept((fd), (addr), (len))
+#define NET_SEND(fd, buf, sz) send((fd), (buf), (size_t)(sz), 0)
+#define NET_RECV(fd, buf, sz) recv((fd), (buf), (size_t)(sz), 0)
+#define NET_CLOSE(fd) close((fd))
+#endif
+#endif
+
+int async_posix_send_cb(WOLFSSL* ssl, char* buf, int sz, void* ctx);
+int async_posix_recv_cb(WOLFSSL* ssl, char* buf, int sz, void* ctx);
+int async_posix_getdevrandom(unsigned char *out, unsigned int sz);
+
+#ifndef NET_CUSTOM
+#define NET_IO_SEND_CB async_posix_send_cb
+#define NET_IO_RECV_CB async_posix_recv_cb
+#else
+#ifndef NET_IO_SEND_CB
+#error NET_IO_SEND_CB must be defined when NET_USER_HEADER is used
+#endif
+#ifndef NET_IO_RECV_CB
+#error NET_IO_RECV_CB must be defined when NET_USER_HEADER is used
+#endif
+#ifndef NET_CONNECT
+#error NET_CONNECT must be defined when NET_USER_HEADER is used
+#endif
+#ifndef NET_SET_NONBLOCKING
+#error NET_SET_NONBLOCKING must be defined when NET_USER_HEADER is used
+#endif
+#ifndef NET_ACCEPT
+#error NET_ACCEPT must be defined when NET_USER_HEADER is used
+#endif
+#ifndef NET_SEND
+#error NET_SEND must be defined when NET_USER_HEADER is used
+#endif
+#ifndef NET_RECV
+#error NET_RECV must be defined when NET_USER_HEADER is used
+#endif
+#ifndef NET_CLOSE
+#error NET_CLOSE must be defined when NET_USER_HEADER is used
+#endif
+#ifndef NET_GETDEVRANDOM
+#error NET_GETDEVRANDOM must be defined when NET_USER_HEADER is used
+#endif
+#endif
 
 
 int client_async_test(int argc, char** argv);

@@ -1,0 +1,151 @@
+name: TROPIC01 simulator test
+
+# START OF COMMON SECTION
+on:
+  push:
+    branches: [ 'release/**' ]
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches: [ '*' ]
+  # Weekend cron and manual workflow_dispatch refresh the shared ghcr build
+  # cache that PR runs read (cache-to below is gated to those two events).
+  schedule:
+    - cron: '45 6 * * 6'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+# END OF COMMON SECTION
+
+permissions:
+  contents: read
+  packages: write
+
+# Build the TROPIC01 software simulator (https://github.com/wolfSSL/simulators,
+# TROPIC01Sim/ subdirectory), build wolfSSL --with-tropic01 against libtropic
+# v0.1.0 + the simulator's TCP HAL, and run Tropic Square's wolfssl-test app
+# against the simulator TCP server. Also runs the in-tree AES-GCM and
+# AES-CBC callback known-answer tests (tests/tropic01_gcm_kat.c and
+# tests/tropic01_cbc_kat.c), which verify the callback's GCM and CBC
+# key-swap paths against precomputed vectors.
+#
+# The simulator's own Dockerfile.wolfcrypt clones wolfSSL master and applies
+# one sed patch to it (s/ForceZero/wc_ForceZero/ in
+# wolfcrypt/src/port/tropicsquare/tropic01.c). That patch is now upstreamed
+# in wolfSSL itself, so we:
+#   1. COPY the PR checkout instead of cloning master.
+#   2. Neutralise the now-redundant ForceZero sed RUN block.
+# The -DLT_SEPARATE_L3_BUFF=0 CFLAG stays in the Dockerfile -- it's a
+# libtropic v0.1.0 compatibility shim, not a wolfSSL concern.
+
+env:
+  SIMULATORS_REF: 32a14301983acab4663fe31b5fd7f3e51cf8a534
+
+jobs:
+  tropic01_sim:
+    name: wolfCrypt against TROPIC01 simulator
+    if: ${{ (github.repository_owner == 'wolfssl') && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout wolfSSL (PR source)
+        uses: actions/checkout@v5
+        with:
+          path: wolfssl-src
+
+      - name: Clone TROPIC01 simulator
+        run: |
+          git clone https://github.com/wolfSSL/simulators simulators
+          cd simulators && git checkout "$SIMULATORS_REF"
+
+      - name: Stage PR wolfSSL into simulator build context
+        run: mv wolfssl-src simulators/TROPIC01Sim/wolfssl
+
+      - name: Patch Dockerfile to use PR wolfSSL and drop redundant ForceZero patch
+        working-directory: simulators/TROPIC01Sim
+        run: |
+          # 1. Replace the (two-line) upstream `RUN git clone --branch
+          #    ${WOLFSSL_REF} --depth 1 \ https://.../wolfssl.git /app/wolfssl`
+          #    with a COPY of the PR checkout.
+          sed -i '/^RUN git clone --branch \${WOLFSSL_REF} --depth 1 \\$/,/wolfssl\.git \/app\/wolfssl$/c\
+          COPY wolfssl /app/wolfssl' Dockerfile.wolfcrypt
+          # Fail fast if the pattern drifted upstream -- better a clear error
+          # than a CI run that silently tests master.
+          grep -q '^COPY wolfssl /app/wolfssl$' Dockerfile.wolfcrypt
+          ! grep -q 'git clone .*wolfssl\.git' Dockerfile.wolfcrypt
+
+          # 2. Neutralise the ForceZero sed-patch RUN block: the fix
+          #    (s/ForceZero/wc_ForceZero/ in tropic01.c) is now upstream,
+          #    and rerunning the non-word-boundary-anchored simulator
+          #    substitution on already-fixed source would corrupt it to
+          #    `wc_wc_ForceZero`. Range matches from the ForceZero RUN sed
+          #    line to its tropic01.c continuation line.
+          sed -i '/^RUN sed -i .*ForceZero/,/tropic01\.c$/c\RUN true' Dockerfile.wolfcrypt
+          ! grep -q 'sed -i .*ForceZero' Dockerfile.wolfcrypt
+
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Log in to ghcr (cache refresh on cron/manual dispatch)
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Build wolfCrypt-TROPIC01 test image
+        uses: docker/build-push-action@v7
+        with:
+          context: simulators/TROPIC01Sim
+          file: simulators/TROPIC01Sim/Dockerfile.wolfcrypt
+          push: false
+          load: true
+          tags: wolfssl-tropic01-sim:ci
+          cache-from: type=registry,ref=ghcr.io/wolfssl/wolfssl-sim-cache:tropic01
+          cache-to: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'type=registry,ref=ghcr.io/wolfssl/wolfssl-sim-cache:tropic01,mode=max' || '' }}
+
+      - name: Run wolfCrypt tests against simulator
+        run: docker run --rm wolfssl-tropic01-sim:ci
+
+      # The upstream test app covers RNG / AES-CBC / Ed25519 only. This runs
+      # both in-tree callback KATs: each drives Tropic01_CryptoCb the same
+      # way TLS does (context created with WOLF_TROPIC01_DEVID and set with
+      # a caller key) and checks the ciphertext (plus the auth tag for GCM)
+      # against precomputed vectors for the device-resident key, so a GHASH
+      # subkey left stale from the caller's key, or a CBC chain restarted
+      # from the device IV, is caught.
+      - name: Run TROPIC01 callback KATs
+        run: |
+          docker run --rm wolfssl-tropic01-sim:ci bash -c '
+            set -eu
+            # Compile the KATs with the exact CFLAGS the library was built
+            # with (LIBWOLFSSL_GLOBAL_CFLAGS in .build_params), so the Aes
+            # struct layout matches the installed libwolfssl.a. The -I and
+            # -W flags are dropped and re-added explicitly below.
+            FLAGS=$(sed -n "s/^#define LIBWOLFSSL_GLOBAL_CFLAGS \"\(.*\)\" LIBWOLFSSL_GLOBAL_EXTRA_CFLAGS$/\1/p" /app/wolfssl/.build_params | tr " " "\n" | grep -v -- "-include" | grep -v "build_params" | grep -v -- "-I" | grep -v -- "-pthread" | grep -v -- "-Werror" | grep -v -- "-W" | tr "\n" " ")
+            gcc -Wall -Wextra -O2 ${FLAGS} \
+                -I/app/libtropic/include -I/app/wolfssl \
+                /app/wolfssl/tests/tropic01_gcm_kat.c \
+                /app/libtropic/hal/port/unix/lt_port_unix_tcp.c \
+                -L/usr/local/lib -L/app/libtropic/build \
+                -L/app/libtropic/build/trezor_crypto \
+                -lwolfssl -ltropic -ltrezor_crypto -lm \
+                -o /tmp/tropic01_gcm_kat
+            gcc -Wall -Wextra -O2 ${FLAGS} \
+                -I/app/libtropic/include -I/app/wolfssl \
+                /app/wolfssl/tests/tropic01_cbc_kat.c \
+                /app/libtropic/hal/port/unix/lt_port_unix_tcp.c \
+                -L/usr/local/lib -L/app/libtropic/build \
+                -L/app/libtropic/build/trezor_crypto \
+                -lwolfssl -ltropic -ltrezor_crypto -lm \
+                -o /tmp/tropic01_cbc_kat
+            TROPIC01_SIM_BIND=127.0.0.1 TROPIC01_SIM_PORT=28992 \
+                TROPIC01_SIM_FRESH=1 /app/tcp_server &
+            SIM_PID=$!
+            trap "kill ${SIM_PID} 2>/dev/null || true" EXIT
+            for i in $(seq 1 50); do
+                if (echo > /dev/tcp/127.0.0.1/28992) 2>/dev/null; then
+                    break
+                fi
+                sleep 0.1
+            done
+            /tmp/tropic01_gcm_kat
+            /tmp/tropic01_cbc_kat
+          '

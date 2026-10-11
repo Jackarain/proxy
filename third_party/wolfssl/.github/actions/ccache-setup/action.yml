@@ -1,0 +1,183 @@
+name: 'Set up ccache'
+description: >
+  Install ccache (Ubuntu via apt, macOS via brew), restore the ccache
+  directory from a previous run, and prepend the ccache compiler-symlink
+  dir to PATH. Subsequent gcc/cc/g++/c++/clang invocations are
+  transparently intercepted by ccache, so no other workflow step needs to
+  change. On scheduled (cron) runs the cache is reseeded from clean
+  compiles (CCACHE_RECACHE) instead of only being updated incrementally,
+  so it can't drift indefinitely.
+
+inputs:
+  workflow-id:
+    description: 'Cache namespace - typically the calling workflow name.'
+    required: true
+  config-hash:
+    description: >
+      Optional short string distinguishing matrix entries. Each unique
+      value gets its own primary cache key. Leave empty to share one
+      cache across all entries in the workflow.
+    required: false
+    default: 'shared'
+  max-size:
+    description: 'Per-job ccache max size (passed to ccache -M).'
+    required: false
+    default: '500M'
+  read-only:
+    description: >
+      When 'true', restore the cache but do NOT save it (no post-job
+      upload). Callers should set this to the result of the expression
+      github.event_name == 'pull_request' so PR runs consume the shared
+      cache read-only - no per-PR entries, no churn - while scheduled/push
+      runs (read-only false) refresh it.
+    required: false
+    default: 'false'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install ccache
+      shell: bash
+      run: |
+        if command -v ccache >/dev/null 2>&1; then
+          echo "ccache already installed: $(ccache --version | head -1)"
+        elif [ "${{ runner.os }}" = "Linux" ]; then
+          export DEBIAN_FRONTEND=noninteractive
+          # install-apt-deps exports the ghcr bundle it unpacked as a local apt
+          # repository, and ccache is in every bundle's package list. Reuse it:
+          # same repository, same versions, no apt-get update, nothing to stall
+          # on. Every other path here reaches the mirror, which is what used to
+          # hang these jobs for 10-40 min after the bundle had already
+          # installed cleanly.
+          sudo dpkg --configure -a >/dev/null 2>&1 || true
+          if [ -n "${WOLFSSL_APT_BUNDLE_SOURCES:-}" ] && \
+             sudo DEBIAN_FRONTEND=noninteractive apt-get \
+               -o Dir::Etc::SourceList="$WOLFSSL_APT_BUNDLE_SOURCES" \
+               -o Dir::Etc::SourceParts=/dev/null \
+               -o Dir::State::Lists="$WOLFSSL_APT_BUNDLE_LISTS" \
+               -o Acquire::Languages=none -o Acquire::Retries=0 \
+               -o APT::Sandbox::User=root \
+               -o Acquire::http::Proxy=http://127.0.0.1:9 \
+               -o Acquire::https::Proxy=http://127.0.0.1:9 \
+               install -y --no-install-recommends ccache; then
+            echo "ccache installed offline from the staged .deb bundle"
+          else
+            # Same defence in depth as install-apt-deps: Acquire timeouts drop
+            # a stalled connection, `timeout` hard-kills a wedged apt-get, and
+            # only then does the retry loop get a non-zero exit to act on.
+            # 60s+90s x2: ccache is a ~700 KB package, and this loop has no
+            # budget input of its own, so it has to stay small enough to chain
+            # after install-apt-deps inside a 10-minute job.
+
+            # No wolfSSL job installs from the runner's Google/Microsoft apt repos,
+            # and a bad index on either fails apt-get update for everyone. Drop them.
+            grep -rlE 'dl\.google\.com|packages\.microsoft\.com' \
+              /etc/apt/sources.list.d/ 2>/dev/null | xargs -r sudo rm -vf || true
+            APT_OPTS=(-o Acquire::Retries=3 -o Acquire::http::Timeout=30
+                      -o Acquire::https::Timeout=30)
+            ok=""
+            for i in 1 2; do
+              sudo dpkg --configure -a >/dev/null 2>&1 || true
+              if sudo DEBIAN_FRONTEND=noninteractive timeout -k 10 60 \
+                     apt-get "${APT_OPTS[@]}" update -q && \
+                 sudo DEBIAN_FRONTEND=noninteractive timeout -k 10 90 \
+                     apt-get "${APT_OPTS[@]}" install -y \
+                     --no-install-recommends ccache; then
+                ok=1
+                break
+              fi
+              echo "::warning::ccache apt install failed (attempt $i/2)"
+              # No sleep after the last attempt - this loop is not budgeted by
+              # the caller and chains onto install-apt-deps in the same job.
+              [ "$i" -eq 2 ] || sleep 5
+            done
+            [ -n "$ok" ] || { echo "::error::could not install ccache"; exit 1; }
+          fi
+        elif [ "${{ runner.os }}" = "macOS" ]; then
+          brew install ccache
+        else
+          echo "::error::ccache install not supported on ${{ runner.os }}"
+          exit 1
+        fi
+
+    # read-only=false (default): restore + post-job save (the run_id in the
+    # key never hits, so it always saves its contribution).
+    # Skip restore on reseed-only scheduled runs, cache built from scratch.
+    - name: Restore + save ccache
+      if: inputs.read-only != 'true' && github.event_name != 'schedule'
+      uses: actions/cache@v5
+      with:
+        path: ~/.ccache
+        # Unique per run+attempt+config so each job persists its own
+        # contribution; restore-keys falls back to the most recent
+        # cache for this workflow/os/config.
+        key: ccache-${{ inputs.workflow-id }}-${{ runner.os }}-${{ runner.arch }}-${{ inputs.config-hash }}-${{ github.run_id }}-${{ github.run_attempt }}
+        restore-keys: |
+          ccache-${{ inputs.workflow-id }}-${{ runner.os }}-${{ runner.arch }}-${{ inputs.config-hash }}-
+          ccache-${{ inputs.workflow-id }}-${{ runner.os }}-${{ runner.arch }}-
+    # Scheduled reseed: no restore, save only
+    - name: Save ccache (scheduled reseed, no restore)
+      if: inputs.read-only != 'true' && github.event_name == 'schedule'
+      uses: actions/cache@v5
+      with:
+        path: ~/.ccache
+        key: ccache-${{ inputs.workflow-id }}-${{ runner.os }}-${{ runner.arch }}-${{ inputs.config-hash }}-${{ github.run_id }}-${{ github.run_attempt }}
+    # read-only=true: restore the shared cache but never upload (PR runs).
+    - name: Restore ccache (read-only)
+      if: inputs.read-only == 'true'
+      uses: actions/cache/restore@v5
+      with:
+        path: ~/.ccache
+        # Same key shape as the save branch, for symmetry. This branch never
+        # saves, so the run_id/run_attempt primary key is never an exact hit -
+        # the restore-keys below always supply the most recent seeded cache.
+        key: ccache-${{ inputs.workflow-id }}-${{ runner.os }}-${{ runner.arch }}-${{ inputs.config-hash }}-${{ github.run_id }}-${{ github.run_attempt }}
+        restore-keys: |
+          ccache-${{ inputs.workflow-id }}-${{ runner.os }}-${{ runner.arch }}-${{ inputs.config-hash }}-
+          ccache-${{ inputs.workflow-id }}-${{ runner.os }}-${{ runner.arch }}-
+
+    - name: Configure ccache and PATH
+      shell: bash
+      run: |
+        # Set CCACHE_DIR for the commands below too, not only via
+        # GITHUB_ENV (which applies to later steps): without it the
+        # settings land in a different default dir on runs where
+        # ~/.ccache does not exist yet, and seed runs then compile
+        # with mismatched hash settings that later runs cannot reuse.
+        export CCACHE_DIR="$HOME/.ccache"
+        mkdir -p "$CCACHE_DIR"
+        ccache -M "${{ inputs.max-size }}"
+        # base_dir lets ccache reuse hits across different workspace
+        # checkout paths (different runs use different /home/.../work/ dirs).
+        ccache --set-config=base_dir="$GITHUB_WORKSPACE"
+        ccache --set-config=hash_dir=false
+        ccache -z   # zero stats so the post-build summary is per-job
+        # The ccache compiler-symlink dir (gcc, g++, cc, c++, clang, ...
+        # all resolving to ccache) differs by platform. Prepending it to
+        # PATH makes the build transparently use ccache without changing
+        # any configure/make invocation. On macOS the symlinks live under
+        # the Homebrew libexec dir, whose prefix is /opt/homebrew on arm64
+        # and /usr/local on Intel - resolve it via `brew --prefix`.
+        if [ "${{ runner.os }}" = "macOS" ]; then
+          CCACHE_LIBEXEC="$(brew --prefix)/opt/ccache/libexec"
+        else
+          CCACHE_LIBEXEC="/usr/lib/ccache"
+        fi
+        echo "$CCACHE_LIBEXEC" >> "$GITHUB_PATH"
+        echo "CCACHE_DIR=$CCACHE_DIR" >> "$GITHUB_ENV"
+
+    # On the scheduled (cron) refresh, force every compile to miss the
+    # cache and re-store a fresh result (CCACHE_RECACHE still writes, it
+    # just skips lookups). This reseeds the shared cache from clean
+    # compiles instead of only layering deltas onto whatever accumulated,
+    # so a bad/stale entry can't live forever. The cache is still saved
+    # (read-only is false on schedule), and PR/push runs are unaffected -
+    # they keep their warm hits. Cost: the scheduled jobs recompile fully.
+    - name: Force fresh compiles on scheduled reseed
+      if: github.event_name == 'schedule'
+      shell: bash
+      run: echo "CCACHE_RECACHE=1" >> "$GITHUB_ENV"
+
+    - name: Show ccache stats (initial)
+      shell: bash
+      run: ccache -s

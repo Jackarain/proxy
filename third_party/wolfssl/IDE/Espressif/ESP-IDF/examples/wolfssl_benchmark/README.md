@@ -1,12 +1,72 @@
 # wolfSSL Benchmark Example
 
-The Example contains of wolfSSL benchmark program.
+This ESP32 example uses the [wolfSSL wolfcrypt Benchmark Application](https://github.com/wolfSSL/wolfssl/tree/master/wolfcrypt/benchmark).
 
-1. `idf.py menuconfig` to configure the program.  
+For general information on [wolfSSL examples for Espressif](../README.md), see the
+[README](https://github.com/wolfSSL/wolfssl/blob/master/IDE/Espressif/ESP-IDF/README.md) file.
+
+## Espressif ESP Component Registry
+
+See the wolfSSL namespace and additional details:
+
+https://www.wolfssl.com/wolfssl-now-available-in-espressif-component-registry/
+
+## Windows COM Port
+
+All of these examples use COM20 on Windows. The DOS `change port` command can be use to assign any
+other local port to `COM20` as needed:
+
+```
+change port com20=com23
+```
+
+## Bulk Testing
+
+If you have a test jig with multiple ESP32 devices and you'd like to run this wolfcrypt benchmark on all of them, check out
+the `testAll.sh` and `testMonitor.sh` scripts in the [../wolfssl_test](../wolfssl_test/README.md) directory. Copy those
+bash script files to this project. See the `esp32[NN]_PORT` and `esp32[NN]_PUTTY` settings in `testMonitor.sh` that will
+be machine-specific.
+
+## VisualGDB
+
+Open the VisualGDB Visual Studio Project file in the VisualGDB directory and click the "Start" button.
+No wolfSSL setup is needed. You may need to adjust your specific COM port. The default is `COM20`.
+
+Include in the respective project `./VisualGDB` directory are [VisualGDB](https://visualgdb.com/) project files.
+Individual project files are included for convenience to new users,
+as there are [difficulties switching between ESP-IDF Versions or Chipsets](https://sysprogs.com/w/forums/topic/difficulties-switching-espressif-esp-idf-version-or-chipset/)
+using the VisualGDB extension.
+
+The naming convention for project files is: `[project name]_IDF_[Version]_[chipset].vgdbproj`. The solution files (filename[.sln]) often will contain shortcuts to commonly used source and configuration files used by the respective project.
+
+ChipSet  | ESP-IDF v4.4 | ESP-IDF v5.2 |
+-------- |------------- |------------- |
+ESP32    |      x       |              |
+ESP32-S2 |              |              |
+ESP32-S3 |      x       |      x       |
+ESP32-C3 |      x       |      x       |
+ESP32-C6 |              |              |
+
+
+The default directories are:
+
+- `C:\SysGCC` - The root directory install of VisualGDB
+- `C:\SysGCC\esp32` - The default for ESP-IDF v5.x
+- `C:\SysGCC\esp32-8.4` - Many need to manually select this name for ESP-IDF v4.x install
+- `C:\SysGCC\esp8266`- The default for ESP8266
+
+Windows ports assigned with the `change port` command may not appear in the VisualGDB dropdowns but can still
+be used when manually typed.
+See the [feature request](https://sysprogs.com/w/forums/topic/feature-request-show-windows-change-port-results-in-com-port-dropdown-lists/).
+
+## ESP-IDF Commandline
+
+1. `idf.py menuconfig` to configure the program.
     1-1. Example Configuration ->
 
-    BENCH_ARG : argument that you want to use. Default is "-lng 0"  
-    The list of argument can be find in help.
+    BENCH_ARG : argument that you want to use. Default is "-lng 0"
+    The list of arguments can be found in help. See [benchmark/README.md](https://github.com/wolfSSL/wolfssl/blob/master/wolfcrypt/benchmark/README.md)
+    Features to be benchmarked are enabled in the `user_settings.h`.
 
 When you want to run the benchmark program
 
@@ -22,27 +82,60 @@ Reminder than when building on WSL in `/mnt/c` there will be a noticeable perfor
 Example build on WSL:
 
 ```
-Optionally install wolfSSL component
-# cd /mnt/c/workspace/wolfssl/IDE/Espressif/ESP-IDF
-./setup.sh
+Optionally update toolchain
 
-cd /mnt/c/workspace/wolfssl/IDE/Espressif/ESP-IDF/examples/wolfssl_benchmark
+cd /mnt/c/SysGCC/esp32/esp-idf/master
+git fetch
+git pull
+git submodule update --init --recursive
 
-# Pick ESP-IDF install directory, this one for v4.4.2 in VisualGDB
-. /mnt/c/SysGCC/esp32/esp-idf/v4.4.2/export.sh
+# pick your workspace location
+# cd ~/workspace/wolfssl/IDE/Espressif/ESP-IDF/examples/wolfssl_benchmark
+# cd /mnt/c/workspace/wolfssl/IDE/Espressif/ESP-IDF/examples/wolfssl_benchmark
+# cd /mnt/c/workspace/wolfssl-master/IDE/Espressif/ESP-IDF/examples/wolfssl_benchmark
+cd /mnt/c/workspace/wolfssl-$USER/IDE/Espressif/ESP-IDF/examples/wolfssl_benchmark
+
+# The ESP8266 uses a completely different toolchain:
+WRK_IDF_PATH=/mnt/c/SysGCC/esp8266/rtos-sdk/v3.4
+
+# Pick ESP-IDF toolchain install directory
+WRK_IDF_PATH=~/esp/esp-idf
+
+# ESP-IDF v4.x uses toolchain v8.4
+WRK_IDF_PATH=/mnt/c/SysGCC/esp32-8.4/esp-idf/v4.4.1
+
+# ESP-IDF v5.0 with toolchain v12.4
+WRK_IDF_PATH=/mnt/c/SysGCC/esp32-12.4/esp-idf/v5.0
+
+# ESP-IDF v5.0 to v5.2.1 uses toolchain v12.4
+WRK_IDF_PATH=/mnt/c/SysGCC/esp32-12.4/esp-idf/v5.0
+WRK_IDF_PATH=/mnt/c/SysGCC/esp32-12.4/esp-idf/v5.1
+WRK_IDF_PATH=/mnt/c/SysGCC/esp32-12.4/esp-idf/v5.2.1
+
+# The most recent version:
+# ESP-IDF v5.2 uses toolchain v13.2
+WRK_IDF_PATH=/mnt/c/SysGCC/esp32/esp-idf/v5.2
 
 
-idf.py build flash -p /dev/ttyS20 -b 921600 monitor
+. $WRK_IDF_PATH/export.sh
+
+# Set target SoC
+idf.py set-target esp32c3
+
+# Optionally erase
+
+# Build and flash
+idf.py build flash -p /dev/ttyS20 -b 115200 monitor
 ```
 
 ## Example Output
 
-Note the default wolfSSL `user_settings.h` is configured by default to be the most 
+Note the default wolfSSL `user_settings.h` is configured by default to be the most
 compatible across the widest ranges of targets. Contact wolfSSL at support@wolfssl.com
-for help in optimizing for your particular application, or see the 
+for help in optimizing for your particular application, or see the
 [docs](https://www.wolfssl.com/documentation/manuals/wolfssl/index.html).
 
-Compiled and flashed with `idf.py build  flash -p /dev/ttyS7 -b 921600 monitor`:
+Compiled and flashed with `idf.py build  flash -p /dev/ttyS7 -b 115200 monitor`:
 
 ```
 --- idf_monitor on /dev/ttyS7 115200 ---
@@ -186,5 +279,7 @@ compilation terminated.
 A 'clean` may be needed after freshly installing a new component:
 
 ```
-idf.py clean build  flash -p /dev/ttyS7 -b 921600 monitor
+idf.py clean build  flash -p /dev/ttyS7 -b 115200 monitor
 ```
+
+See the README.md file in the upper level 'examples' directory for [more information about examples](../README.md).
