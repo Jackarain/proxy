@@ -696,6 +696,27 @@ namespace util {
 		throw boost::variant2::bad_variant_access{};
 	}
 
+	// 关闭变体流的底层连接, 用于中止挂起的 I/O 操作 (使在途的异步读写尽快失败
+	// 返回), 但不会销毁流对象本身. 需要在异步操作完成后由持有者自行销毁对象时,
+	// 应使用本函数而非直接析构流对象, 以避免 use-after-free.
+	inline void close_stream(variant_stream_type& stream) noexcept
+	{
+		boost::variant2::visit([](auto& sock) noexcept
+			{
+				using StreamType = std::decay_t<decltype(sock)>;
+
+				if constexpr (std::same_as<StreamType, stdio_stream>)
+				{
+					return;
+				}
+				else
+				{
+					boost::system::error_code ignore_ec;
+					boost::beast::get_lowest_layer(sock).close(ignore_ec);
+				}
+			}, stream);
+	}
+
 	template <typename CompletionToken>
 	auto async_wait(variant_stream_type& socket, CompletionToken&& token) noexcept
 	{

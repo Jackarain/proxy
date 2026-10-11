@@ -917,26 +917,7 @@ R"x*x*x(<html>
 
 	void proxy_session::stream_cancel(variant_stream_type& stream) noexcept
 	{
-		boost::variant2::visit([](auto& s) mutable
-		{
-			using ValueType = std::decay_t<decltype(s)>;
-
-			// proxy_tcp_socket / proxy_uds_socket
-			if constexpr (std::same_as<util::proxy_tcp_socket, ValueType> ||
-				std::same_as<util::proxy_uds_socket, ValueType>)
-			{
-				boost::system::error_code ec;
-				s.next_layer().lowest_layer().close(ec);
-			}
-			// ssl_tcp_stream / ssl_uds_stream
-			else if constexpr (std::same_as<util::ssl_tcp_stream, ValueType> ||
-				std::same_as<util::ssl_uds_stream, ValueType>)
-			{
-				boost::system::error_code ec;
-				s.next_layer().next_layer().lowest_layer().close(ec);
-			}
-			// stdio_stream: 无需关闭
-		}, stream);
+		util::close_stream(stream);
 	}
 
 	void proxy_session::stream_rate_limit(variant_stream_type& stream, int rate) noexcept

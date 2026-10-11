@@ -2082,13 +2082,11 @@ void proxy_server::close() noexcept
 
 				for (auto& [_, flow] : tmp_flows)
 				{
+					// 只中止底层连接使在途的异步 I/O 尽快失败返回, 不在异步
+					// 操作未完成时销毁 socket/流对象; 实际销毁由持有该 flow
+					// 的协程在其操作完成后负责.
 					if (flow)
-					{
-						flow->backend_sock_.reset();
-						flow->relay_sock_.reset();
-						flow->udp_http_sock_.reset();
-						flow->notify_timer_.reset();
-					}
+						abort_udp_tproxy_flow(flow);
 				}
 			});
 	}
@@ -3305,6 +3303,44 @@ size_t proxy_server::make_udp_flow_key(const udp::endpoint& client, const udp::e
 	return h;
 }
 
+void proxy_server::abort_udp_tproxy_flow(const udp_tproxy_flow_ptr& flow) noexcept
+{
+	if (!flow)
+		return;
+
+	// 置位关闭标志, 通知发送协程退出.
+	flow->closing_ = true;
+
+	boost::system::error_code ignore_ec;
+
+	// 关闭 backend socket, 使 in-flight 的 async_receive 立即失败返回.
+	if (flow->backend_sock_)
+		flow->backend_sock_->close(ignore_ec);
+
+	// 关闭 relay socket.
+	if (flow->relay_sock_)
+		flow->relay_sock_->close(ignore_ec);
+
+	// 关闭 connect-udp 隧道的底层连接, 使 in-flight 的 TLS/TCP 读写失败返回.
+	// 这里只关闭底层连接而不销毁流对象.
+	if (flow->udp_http_sock_)
+		close_stream(*flow->udp_http_sock_);
+
+	// 取消通知定时器以唤醒等待发送队列的发送协程, 但不销毁它.
+	if (flow->notify_timer_)
+		flow->notify_timer_->cancel();
+}
+
+void proxy_server::erase_udp_tproxy_flow(const udp_tproxy_flow_ptr& flow) noexcept
+{
+	if (!flow)
+		return;
+
+	auto it = m_udp_tproxy_flows.find(flow->flow_key_);
+	if (it != m_udp_tproxy_flows.end() && it->second == flow)
+		m_udp_tproxy_flows.erase(it);
+}
+
 net::awaitable<void> proxy_server::udp_tproxy_check() noexcept
 {
 	std::vector<size_t> expired_keys;
@@ -3326,14 +3362,9 @@ net::awaitable<void> proxy_server::udp_tproxy_check() noexcept
 			<< ", client: " << flow->client_endp_
 			<< ", original_dest: " << flow->original_endp_;
 
-		flow->backend_sock_.reset();
-		flow->relay_sock_.reset();
-		flow->udp_http_sock_.reset();
-
-		if (flow->notify_timer_)
-			flow->notify_timer_->cancel();
-
-		flow->notify_timer_.reset();
+		// 只中止底层连接, 不在异步操作未完成时销毁 socket/流对象;
+		// 实际销毁由持有该 flow 的协程在其所有在途操作完成后负责.
+		abort_udp_tproxy_flow(flow);
 
 		expired_keys.push_back(key);
 	}
@@ -3733,7 +3764,8 @@ net::awaitable<void> proxy_server::udp_tproxy_response_loop(udp_tproxy_flow_ptr 
 {
 	auto self = shared_from_this();
 
-	// 退出时清理 flow, 防止 map 泄漏.
+	// 退出时清理 flow, 防止 map 泄漏. 此时本协程所有在途操作均已完成, 可以安全
+	// 销毁 socket/流对象; 条件移除避免误删已被新 flow 占用的同名 key.
 	boost::scope::scope_exit flows_guard([this, flow]()
 	{
 		if (!flow)
@@ -3743,7 +3775,7 @@ net::awaitable<void> proxy_server::udp_tproxy_response_loop(udp_tproxy_flow_ptr 
 		flow->relay_sock_.reset();
 		flow->udp_http_sock_.reset();
 
-		m_udp_tproxy_flows.erase(flow->flow_key_);
+		erase_udp_tproxy_flow(flow);
 	});
 
 	// 创建 backend socket 用于接收来自 proxy_pass 的 UDP 数据包.
@@ -3954,8 +3986,6 @@ void proxy_server::udp_tproxy_forward_packet(
 	backend_sock.send_to(net::buffer(buf_ptr, total_len), m_backend_endp, 0, ec);
 	if (ec)
 	{
-		flow->backend_sock_.reset();
-
 		XLOG_WARN
 			<< "tproxy flow: " << flow->flow_key_
 			<< ", forward error: " << ec.message()
@@ -3963,7 +3993,10 @@ void proxy_server::udp_tproxy_forward_packet(
 			<< ", dest: " << flow->original_endp_
 			<< ", backend endp: " << m_backend_endp;
 
-		m_udp_tproxy_flows.erase(flow->flow_key_);
+		// 只关闭 backend socket 使响应循环中的在途接收立即失败返回, 不在异步操作
+		// 未完成时销毁 socket; 对象的销毁交给响应循环协程完成.
+		abort_udp_tproxy_flow(flow);
+		erase_udp_tproxy_flow(flow);
 	}
 }
 
@@ -4084,6 +4117,10 @@ net::awaitable<void> proxy_server::start_udp_tproxy_listen(udp::socket& udp_sock
 void proxy_server::udp_tproxy_forward_packet_http(
 	udp_tproxy_flow_ptr flow, const char* data, std::size_t len)
 {
+	// flow 正在关闭, 不再入队.
+	if (!flow || flow->closing_)
+		return;
+
 	// 构建 DATAGRAM capsule (RFC 9297):
 	//   capsule type (varint) = 0x00
 	//   capsule length (varint) = len + 1  # 这里 + 1 是因为 context ID 为 0 占用一字节
@@ -4124,20 +4161,16 @@ net::awaitable<void> proxy_server::udp_tproxy_http_udp_loop(udp_tproxy_flow_ptr 
 {
 	auto self = shared_from_this();
 
-	// 退出时清理.
+	// 退出时清理. 此时可能仍有发送协程在该 flow 的 udp_http_sock_ 上执行在途写入,
+	// 因此这里只中止底层连接并通知发送协程退出, 不销毁流对象; 对象的销毁由最后一个
+	// 持有该 flow 的协程 (本协程或发送协程) 自然释放 shared_ptr 时完成.
 	boost::scope::scope_exit flows_guard([this, flow]()
 	{
 		if (!flow)
 			return;
 
-		flow->udp_http_sock_.reset();
-		flow->backend_sock_.reset();
-		flow->notify_timer_.reset();
-
-		auto flow_key = make_udp_flow_key(
-			flow->client_endp_, flow->original_endp_);
-
-		m_udp_tproxy_flows.erase(flow_key);
+		abort_udp_tproxy_flow(flow);
+		erase_udp_tproxy_flow(flow);
 	});
 
 	if (!init_relay_socket(flow))
@@ -4278,7 +4311,7 @@ net::awaitable<void> proxy_server::udp_tproxy_http_udp_loop(udp_tproxy_flow_ptr 
 	{
 		boost::system::error_code ec;
 
-		while (!self->m_abort)
+		while (!self->m_abort && !flow->closing_)
 		{
 			std::vector<char> item;
 
@@ -4288,8 +4321,8 @@ net::awaitable<void> proxy_server::udp_tproxy_http_udp_loop(udp_tproxy_flow_ptr 
 				flow->send_queue_.pop_front();
 			}
 
-			// 检查 socket 或 timer 是否仍有效.
-			if (!flow->udp_http_sock_ || !flow->notify_timer_)
+			// flow 已关闭或 socket/timer 失效时结束发送协程.
+			if (flow->closing_ || !flow->udp_http_sock_ || !flow->notify_timer_)
 				break;
 
 			if (item.empty())

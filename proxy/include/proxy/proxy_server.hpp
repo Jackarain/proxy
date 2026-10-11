@@ -115,6 +115,10 @@ namespace proxy {
 		// udp_http_sock_ 导致 capsule 数据在 TCP 流上交错损坏.
 		std::deque<std::vector<char>> send_queue_;
 
+		// closing_ 置位表示该 flow 正在关闭. 读取协程退出时置位并唤醒发送协程,
+		// 使最后一个释放 flow 的协程在没有任何在途 I/O 时才销毁 flow 内的流对象.
+		bool closing_{ false };
+
 		// 用于通知发送协程有新数据到达的定时器.
 		// 当有新的 UDP 数据包推入 send_queue_ 时, 取消此定时器以唤醒发送协程.
 		std::optional<net::steady_timer> notify_timer_;
@@ -405,6 +409,15 @@ namespace proxy {
 
 		// UDP TPROXY 使用 RFC 9298 connect-udp 转发循环.
 		net::awaitable<void> udp_tproxy_http_udp_loop(udp_tproxy_flow_ptr flow);
+
+		// 中止一个 UDP TPROXY flow: 关闭其底层连接以使在途的异步 I/O 尽快失败返回,
+		// 但不销毁 socket/流对象. 对象的销毁由持有它的协程在操作完成后负责, 避免在
+		// 异步操作未完成时销毁对象导致的 use-after-free.
+		void abort_udp_tproxy_flow(const udp_tproxy_flow_ptr& flow) noexcept;
+
+		// 仅在 flow 表中仍保存着该 flow 对象时将其移除, 避免旧协程误删已被新
+		// flow 占用的同名 key.
+		void erase_udp_tproxy_flow(const udp_tproxy_flow_ptr& flow) noexcept;
 
 		// 初始化 relay socket.
 		bool init_relay_socket(udp_tproxy_flow_ptr flow);
