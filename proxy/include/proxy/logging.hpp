@@ -1312,7 +1312,6 @@ inline void logger_writer__(int64_t time, const logger_level__& level,
 #if defined(_WIN32) || defined(WIN32)
 static LONG WINAPI unexpectedExceptionHandling(EXCEPTION_POINTERS* info);
 #endif
-void signal_handler(int);
 void fatal_signal_handler(int);
 
 namespace logger_aux__ {
@@ -1342,8 +1341,10 @@ namespace logger_aux__ {
 			m_unexpected_exception_handler =
 				SetUnhandledExceptionFilter(unexpectedExceptionHandling);
 #endif
-			signal(SIGTERM, signal_handler);
-
+			// 不在此注册 SIGTERM: 交由应用(asio signal_set)统一处理优雅
+			// 退出并落盘日志; 若在此用 signal() 注册会与 signal_set 相互
+			// 覆盖, 且注册一个会返回的处理函数将使进程无法被 SIGTERM 终止.
+			//
 			// SIGABRT/SIGFPE/SIGSEGV/SIGILL 属于致命信号, 处理函数绝不能返回.
 			signal(SIGABRT, fatal_signal_handler);
 			signal(SIGFPE, fatal_signal_handler);
@@ -1454,11 +1455,6 @@ static LONG WINAPI unexpectedExceptionHandling(EXCEPTION_POINTERS* e)
 	return old(e);
 }
 #endif
-
-inline void signal_handler(int)
-{
-	global_logger_obj___.reset();
-}
 
 // 致命信号处理: 尽量刷新日志后恢复默认处理并重新触发该信号, 使进程立即终止.
 //
