@@ -657,7 +657,7 @@ namespace proxy {
 	{
 		std::string key;
 		key.reserve(hostname.size() + cacert_path.size() + 3);
-		key += "doh\n";
+		key += "client\n";
 		key += disable_check_cert ? '1' : '0';
 		key += '\n';
 		key += hostname;

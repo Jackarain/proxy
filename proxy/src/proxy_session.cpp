@@ -3913,16 +3913,17 @@ R"x*x*x(<html>
 				auto sni = m_option.proxy_ssl_name_.empty()
 					? proxy_host : m_option.proxy_ssl_name_;
 
-				net::ssl::context cli_ctx(net::ssl::context::sslv23_client);
-				ec = configure_ssl_client_ctx(cli_ctx,
+				// 复用进程内共享的 SSL context (按 是否校验证书/SNI/自定义 CA 路径
+				// 缓存), 避免每次建立 UDP 关联都重新创建 context 并加载 CA 根证书.
+				auto cli_ctx = get_shared_ssl_client_ctx(
 					m_option.disable_check_cert_,
 					sni,
 					m_option.ssl_cacert_path_);
-				if (ec)
+				if (cli_ctx.has_error())
 				{
 					log_conn_warning()
 						<< ", connect-udp: configure ssl context: "
-						<< ec.message();
+						<< cli_ctx.error().message();
 
 					http::response<http::string_body> res{
 						http::status::bad_gateway, req.version() };
@@ -3935,7 +3936,7 @@ R"x*x*x(<html>
 				}
 
 				socks5_control.emplace(
-					init_proxy_stream(std::move(remote_socket), cli_ctx));
+					init_proxy_stream(std::move(remote_socket), *cli_ctx.value()));
 				auto& ssl_socket =
 					boost::variant2::get<ssl_tcp_stream>(*socks5_control);
 
