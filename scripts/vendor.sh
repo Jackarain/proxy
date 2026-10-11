@@ -15,7 +15,7 @@
 #              （稀疏检出，避免拉取其内嵌 third_party/）
 #   tunio      jackarain/tunio，默认分支（master）最新提交
 #   wintun     wintun.net 发行包 0.14.1；ring_buffer.h 取自 OpenVPN v2.5.10
-#   wolfssl    官方仓库，固定 commit，并应用 scripts/patch/wolfssl 下的补丁
+#   wolfssl    官方仓库，默认分支最新提交；其安装规则由宿主 CMake 关闭(WOLFSSL_INSTALL=OFF)
 #   zlib       官方仓库，固定 tag
 #
 # 用法: scripts/vendor.sh <库名 ... | all>
@@ -160,12 +160,6 @@ update_wintun() {
         > "${third_party}/wintun/include/ring_buffer.h"
 }
 
-# wolfssl：拉取后由宿主 CMake 通过 WOLFSSL_INSTALL=OFF 关闭其安装规则，无需打补丁。
-update_wolfssl() {
-    clone_lib wolfssl https://github.com/wolfSSL/wolfssl.git \
-        latest
-}
-
 # 全部库名，同时作为不带参数时的更新顺序。
 ALL_LIBS=(boost boringssl fmt httpc openssl snmalloc tinyrpc tunio wintun wolfssl zlib)
 
@@ -191,7 +185,7 @@ update_lib() {
         wintun)
             update_wintun ;;
         wolfssl)
-            update_wolfssl ;;
+            clone_lib wolfssl https://github.com/wolfSSL/wolfssl.git latest ;;
         zlib)
             clone_lib zlib https://github.com/madler/zlib.git v1.3.2 .github .gitignore ;;
         *)
