@@ -10,7 +10,7 @@
 #   fmt        仅刷新 include/ 与 src/，保留仓库内定制 CMakeLists.txt
 #   httpc      jackarain/httpc，固定分支（适配提交后建议改为固定 commit）
 #   openssl    官方仓库 master，克隆后在临时目录运行 scripts/gen_cmake.py 生成精简工程
-#   snmalloc   官方仓库，固定 tag
+#   snmalloc   官方仓库，默认分支最新提交
 #   tinyrpc    jackarain/tinyrpc，默认分支（master）最新提交；仅保留 include/
 #              （稀疏检出，避免拉取其内嵌 third_party/）
 #   tunio      jackarain/tunio，默认分支（master）最新提交
@@ -183,7 +183,7 @@ update_lib() {
         openssl)
             clone_openssl master ;;
         snmalloc)
-            clone_lib snmalloc https://github.com/microsoft/snmalloc.git 0.7.3 ;;
+            clone_lib snmalloc https://github.com/microsoft/snmalloc.git latest ;;
         tinyrpc)
             update_tinyrpc ;;
         tunio)
