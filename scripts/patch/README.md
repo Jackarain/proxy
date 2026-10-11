@@ -12,8 +12,6 @@ scripts/patch/
 │   ├── 0001-Add-option-BOOST_ASIO_BUILD_CONTEXT.patch
 │   ├── 0001-Enable-UTF-8-paths-with-BOOST_FILESYSTEM_USE_UTF8_CO.patch
 │   └── 0001-Resolve-mismatched-tags-compiler-warning.patch
-├── wolfssl/
-│   └── remove-install.patch
 └── README.md
 ```
 
@@ -53,17 +51,6 @@ spawn / Boost.Context（协程基于 C++20 协程），并在根 `CMakeLists.txt
 **为什么**：`io_object` 实际定义为 `struct`，前置声明写成 `class` 会触发 Clang 的
 `-Wmismatched-tags` 告警。
 
-## wolfssl/
-
-### remove-install.patch
-
-- **作用对象**：`third_party/wolfssl/CMakeLists.txt`
-- **修改内容**：删除 wolfssl 的 `install()` 规则（库、头文件、pkgconfig、导出集等）。
-
-**为什么**：wolfssl 作为 `third_party` 由 `add_subdirectory` 引入时，不应向宿主工程的安装
-目标注入自身的安装规则（否则安装宿主工程会连带安装 wolfssl）。移除后由宿主工程自行决定
-安装内容。
-
 ## 使用方式
 
 `scripts/vendor.sh` 在拉取对应库后会自动套用，无需手工执行。脚本必须显式指定要更新的库（多个库名或 `all`），只有
@@ -94,3 +81,8 @@ git apply scripts/patch/boost/0001-Add-option-BOOST_ASIO_BUILD_CONTEXT.patch
 - `vendor.sh` 拉取 boost 后按 `BOOST_KEEP_LIBS`（在 `scripts/vendor.sh` 中）裁剪目录树，
   只保留用到的库（含传递依赖，由 `scripts/prune_boost.py` 计算）。本工程新用到某个 boost
   库时，需要把库名补进 `BOOST_KEEP_LIBS`，否则该库不会出现在 `third_party/boost/libs` 下。
+- wolfssl 曾经用 `remove-install.patch` 删除其 `install()` 规则，上游此后提供了同名开关，
+  已改由宿主 `CMakeLists.txt` 中的 `set(WOLFSSL_INSTALL OFF CACHE BOOL ...)` 关闭（无补丁）。
+  注意该开关必须写成 cache 变量，普通变量会被 wolfssl 的 `add_option()` 覆盖。若将来固定到
+  没有该选项的旧版本，可改用 `CMAKE_SKIP_INSTALL_RULES`（在 `add_subdirectory` 前后开关）
+  或重新引入补丁。

@@ -328,6 +328,13 @@ if (ENABLE_USE_WOLFSSL)
 
 	set(WOLFSSL_EXAMPLES OFF)
 	set(WOLFSSL_CRYPT_TESTS OFF)
+	# 作为 third_party 引入时不注入其安装规则(库/头文件/pkgconfig/导出集).
+	# 必须用 cache 变量: wolfssl 通过 add_option() 设置同名 cache 项, 普通变量会被其覆盖.
+	set(WOLFSSL_INSTALL OFF CACHE BOOL "Create install target for bundled wolfssl")
+
+	# 新版 wolfssl 不再由 settings.h 自动包含生成的 options.h, 需要消费者显式声明.
+	# 只对 C++ 生效, 避免影响 wolfssl 自身的 C/ASM 构建(其配置来自 CFLAGS).
+	add_compile_definitions($<$<COMPILE_LANGUAGE:CXX>:WOLFSSL_USE_OPTIONS_H>)
 
 	# 打开 wolfssl 的 asio 支持, 它会自动定义 asio 所用到的 openssl 函数以及相关的宏.
 	set(WOLFSSL_ASIO ON)

@@ -160,11 +160,10 @@ update_wintun() {
         > "${third_party}/wintun/include/ring_buffer.h"
 }
 
-# wolfssl：固定上游 commit，并移除其安装规则（作为 third_party 由宿主工程接管安装）。
+# wolfssl：拉取后由宿主 CMake 通过 WOLFSSL_INSTALL=OFF 关闭其安装规则，无需打补丁。
 update_wolfssl() {
     clone_lib wolfssl https://github.com/wolfSSL/wolfssl.git \
-        5297cc74b4ec1fa52eac153e230d5b9e14b6e95a
-    apply_patches wolfssl
+        latest
 }
 
 # 全部库名，同时作为不带参数时的更新顺序。
