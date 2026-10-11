@@ -1310,6 +1310,7 @@ inline void logger_writer__(int64_t time, const logger_level__& level,
 static LONG WINAPI unexpectedExceptionHandling(EXCEPTION_POINTERS* info);
 #endif
 void signal_handler(int);
+void fatal_signal_handler(int);
 
 namespace logger_aux__ {
 	using namespace std::chrono_literals;
@@ -1339,10 +1340,12 @@ namespace logger_aux__ {
 				SetUnhandledExceptionFilter(unexpectedExceptionHandling);
 #endif
 			signal(SIGTERM, signal_handler);
-			signal(SIGABRT, signal_handler);
-			signal(SIGFPE, signal_handler);
-			signal(SIGSEGV, signal_handler);
-			signal(SIGILL, signal_handler);
+
+			// SIGABRT/SIGFPE/SIGSEGV/SIGILL 属于致命信号, 处理函数绝不能返回.
+			signal(SIGABRT, fatal_signal_handler);
+			signal(SIGFPE, fatal_signal_handler);
+			signal(SIGSEGV, fatal_signal_handler);
+			signal(SIGILL, fatal_signal_handler);
 		}
 		~async_logger___()
 		{
@@ -1452,6 +1455,19 @@ static LONG WINAPI unexpectedExceptionHandling(EXCEPTION_POINTERS* e)
 inline void signal_handler(int)
 {
 	global_logger_obj___.reset();
+}
+
+// 致命信号处理: 尽量刷新日志后恢复默认处理并重新触发该信号, 使进程立即终止.
+//
+// SIGSEGV/SIGILL/SIGFPE 由故障指令同步触发, 若处理函数返回, 处理器会重新执行
+// 引发信号的那条指令, 从而再次触发同一信号并陷入无限循环(表现为进程持续 100%
+// CPU 且无法恢复); SIGABRT 同理. 因此这里绝不从处理函数中返回.
+inline void fatal_signal_handler(int sig)
+{
+	global_logger_obj___.reset();
+
+	signal(sig, SIG_DFL);
+	raise(sig);
 }
 
 inline void init_logging(const std::string& path = "")
