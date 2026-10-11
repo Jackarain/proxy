@@ -17,6 +17,7 @@
 #include <boost/asio/steady_timer.hpp>
 #include <boost/asio/ssl/stream.hpp>
 #include <boost/beast/core/flat_buffer.hpp>
+#include <boost/beast/core/stream_traits.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/json.hpp>
 
@@ -950,6 +951,7 @@ namespace proxy {
 	void dns_server::close() noexcept
 	{
 		m_abort = true;
+		m_doh_idle_conns_.clear();
 		stop_listen();
 	}
 
@@ -964,6 +966,11 @@ namespace proxy {
 		bool was_listening = m_udp_socket != nullptr;
 		int old_port = m_option.dns_udp_port_;
 		int new_port = opt.dns_udp_port_;
+
+		// DoH 上游或校验相关配置变化时, 池中连接已失效, 全部释放.
+		if (opt.dns_upstream_ != m_option.dns_upstream_ ||
+			opt.disable_check_cert_ != m_option.disable_check_cert_)
+			m_doh_idle_conns_.clear();
 
 		m_option = opt;
 		if (cache_changed)
@@ -1544,7 +1551,79 @@ namespace proxy {
 		co_return true;
 	}
 
+	// make_doh_conn 建立一条到 DoH 服务器的连接: 先完成 TCP 连接(必要时绑定
+	// 源地址), 明文上游直接返回, https 上游再完成 TLS 握手.
+	net::awaitable<std::optional<dns_server::doh_conn>> dns_server::make_doh_conn(
+		const doh_url_info& info,
+		const tcp::resolver::results_type& targets)
+	{
+		// 连接到 DoH 服务器.
+		tcp::socket doh_socket(m_executor);
+		if (!co_await connect_doh_target(doh_socket, targets))
+			co_return std::nullopt;
+
+		// 明文 http 上游：直接使用已连接的 socket，不做 TLS.
+		if (info.scheme == "http")
+		{
+			doh_conn conn{ doh_stream_type(std::move(doh_socket)) };
+			co_return std::optional<doh_conn>(std::move(conn));
+		}
+
+		// 获取进程内共享的 SSL context (按主机名缓存), 避免每个 DoH 请求都重新创建
+		// context 并加载 CA 根证书, 该操作开销很大, 会成为 CPU 热点.
+		auto doh_ssl_ctx = get_shared_ssl_client_ctx(
+			m_option.disable_check_cert_, info.tls_host);
+		if (doh_ssl_ctx.has_error())
+		{
+			XLOG_WARN << "configure ssl context for doh: " << info.tls_host
+				<< " error: " << doh_ssl_ctx.error().message();
+			co_return std::nullopt;
+		}
+
+		net::ssl::stream<tcp::socket> ssl_stream(
+			std::move(doh_socket), *doh_ssl_ctx.value());
+		if (!co_await doh_tls_handshake(ssl_stream, info))
+			co_return std::nullopt;
+
+		doh_conn conn{ doh_stream_type(std::move(ssl_stream)) };
+		co_return std::optional<doh_conn>(std::move(conn));
+	}
+
+	// acquire_doh_conn 从空闲连接池取出一条可用连接, 并顺带丢弃空闲超时的连接.
+	std::optional<dns_server::doh_conn> dns_server::acquire_doh_conn()
+	{
+		const auto now = std::chrono::steady_clock::now();
+
+		while (!m_doh_idle_conns_.empty())
+		{
+			auto conn = std::move(m_doh_idle_conns_.front());
+			m_doh_idle_conns_.pop_front();
+
+			// 空闲超时的连接可能已被对端关闭, 丢弃以免复用到失效连接.
+			if (now - conn.idle_at_ > k_doh_idle_timeout)
+				continue;
+
+			return conn;
+		}
+
+		return std::nullopt;
+	}
+
+	// release_doh_conn 将一条成功完成交互的连接放回空闲连接池.
+	void dns_server::release_doh_conn(doh_conn&& conn)
+	{
+		// 超出缓存上限时直接丢弃(关闭连接).
+		if (m_doh_idle_conns_.size() >= k_doh_max_idle_conns)
+			return;
+
+		conn.idle_at_ = std::chrono::steady_clock::now();
+		m_doh_idle_conns_.push_back(std::move(conn));
+	}
+
 	// doh_query_raw 通过 DoH (DNS over HTTPS) 上游转发 DNS 查询.
+	//
+	// 优先复用连接池中的空闲连接(keep-alive), 避免每个查询都重新进行
+	// TCP/TLS 握手; 池中无可用连接时新建, 因此不限制并发查询数.
 	net::awaitable<bool> dns_server::doh_query_raw(
 		const std::string& dns_query, std::string& output)
 	{
@@ -1554,79 +1633,86 @@ namespace proxy {
 			co_return false;
 
 		// DoH 交互总超时: 黑洞网络下 connect/TLS/HTTP 任一步都可能无限
-		// 挂起且 socket 为查询局部对象, 连接关闭(会话/服务停止)无法中止;
-		// 超时后关闭当前底层连接使在途操作立即失败.
+		// 挂起, 超时后关闭当前底层连接使在途操作立即失败.
 		net::steady_timer query_timer(m_executor);
 		query_timer.expires_after(std::chrono::seconds(15));
-		std::function<void()> abort_conn;
+
+		// 当前正在使用的连接; 用 shared_ptr 间接持有, 使超时回调在协程
+		// 退出(回调已入队)后仍能安全访问, 避免悬垂引用.
+		auto cur = std::make_shared<std::shared_ptr<doh_conn>>();
 		query_timer.async_wait(
-			[&abort_conn](const boost::system::error_code& tec)
+			[cur](const boost::system::error_code& tec)
 			{
-				if (tec)
+				if (tec || !*cur)
 					return;
-				if (abort_conn)
-					abort_conn();
+
+				boost::system::error_code sec;
+				boost::variant2::visit([&sec](auto& s)
+					{
+						boost::beast::get_lowest_layer(s).close(sec);
+					}, (*cur)->stream_);
 			});
 
-		// 解析 DoH 服务器地址.
-		auto targets = co_await resolve_doh_target(*info);
-		if (targets.empty())
-		{
-			query_timer.cancel();
-			co_return false;
-		}
+		// DoH 服务器地址按需解析(复用池中已有连接时无需解析).
+		tcp::resolver::results_type targets;
+		bool resolved = false;
 
-		// 连接到 DoH 服务器.
-		tcp::socket doh_socket(m_executor);
-		abort_conn = [&doh_socket]()
+		// 最多两次: 优先复用空闲连接; 复用失败(连接可能已被对端空闲关闭)或
+		// 新建连接失败时, 新建连接重试一次.
+		for (int attempt = 0; attempt < 2; ++attempt)
+		{
+			std::optional<doh_conn> conn;
+			if (attempt == 0)
+				conn = acquire_doh_conn();
+
+			if (!conn)
 			{
-				boost::system::error_code sec;
-				doh_socket.close(sec);
-			};
-		if (!co_await connect_doh_target(doh_socket, targets))
-		{
-			query_timer.cancel();
-			co_return false;
-		}
+				if (!resolved)
+				{
+					targets = co_await resolve_doh_target(*info);
+					resolved = true;
+				}
 
-		// 明文 http 上游：直接在已连接 socket 上完成 POST 交互，不做 TLS.
-		if (info->scheme == "http")
-		{
-			auto ok = co_await doh_http_post(
-				doh_socket, *info, dns_query, output);
-			query_timer.cancel();
-			co_return ok;
-		}
+				if (targets.empty())
+					break;
 
-		// 获取进程内共享的 SSL context (按主机名缓存), 避免每个 DoH 请求都重新创建
-		// context 并加载 CA 根证书, 该操作开销很大, 会成为 CPU 热点.
-		auto doh_ssl_ctx = get_shared_ssl_client_ctx(
-			m_option.disable_check_cert_, info->tls_host);
-		if (doh_ssl_ctx.has_error())
-		{
-			XLOG_WARN << "configure ssl context for doh: " << info->tls_host
-				<< " error: " << doh_ssl_ctx.error().message();
-			query_timer.cancel();
-			co_return false;
-		}
+				conn = co_await make_doh_conn(*info, targets);
+			}
 
-		// 建立 TLS 连接并完成 DoH POST 查询交互.
-		net::ssl::stream<tcp::socket> ssl_stream(
-			std::move(doh_socket), *doh_ssl_ctx.value());
-		abort_conn = [&ssl_stream]()
+			if (!conn)
+				break;
+
+			*cur = std::make_shared<doh_conn>(std::move(*conn));
+
+			bool ok = false;
+			if (auto* plain = boost::variant2::get_if<tcp::socket>(
+				&(*cur)->stream_))
 			{
-				boost::system::error_code sec;
-				ssl_stream.next_layer().close(sec);
-			};
-		if (!co_await doh_tls_handshake(ssl_stream, *info))
-		{
-			query_timer.cancel();
-			co_return false;
+				ok = co_await doh_http_post(
+					*plain, *info, dns_query, output);
+			}
+			else if (auto* tls = boost::variant2::get_if<
+				net::ssl::stream<tcp::socket>>(&(*cur)->stream_))
+			{
+				ok = co_await doh_http_post(
+					*tls, *info, dns_query, output);
+			}
+
+			if (ok)
+			{
+				auto done = std::move(*cur);
+				*cur = nullptr;
+				release_doh_conn(std::move(*done));
+				query_timer.cancel();
+				co_return true;
+			}
+
+			// 连接不可用, 丢弃后重试.
+			*cur = nullptr;
 		}
 
-		auto ok = co_await doh_http_post(ssl_stream, *info, dns_query, output);
 		query_timer.cancel();
-		co_return ok;
+		co_return false;
 	}
 
 	// append_address_answers 从系统解析结果中按 qtype 提取 A/AAAA 记录.
