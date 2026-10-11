@@ -52,7 +52,9 @@
 #include <cstring>
 #include <ctime>
 #include <limits>
+#include <mutex>
 #include <optional>
+#include <unordered_map>
 #include <utility>
 
 #if defined(__linux__) || defined(__APPLE__)
@@ -611,6 +613,47 @@ namespace proxy {
 			net::ssl::host_name_verification(hostname), ec);
 
 		return ec;
+	}
+
+	// 返回进程内共享的 SSL 客户端 context, 按 (是否校验证书, 主机名, 自定义 CA 路径)
+	// 缓存并复用. 由于主机名校验回调与 context 绑定, 这里以主机名作为缓存键.
+	//
+	// 创建 SSL context 并加载内置 CA 根证书 bundle(含数百张证书) 开销很大, 而 DoH
+	// 等场景会为每个请求创建 context 并重复加载, 成为 CPU 热点. 复用 context 可避免
+	// 该开销. 共享的 SSL_CTX 可被多个连接/线程安全地并发使用.
+	inline boost::system::result<std::shared_ptr<net::ssl::context>>
+	get_shared_ssl_client_ctx(bool disable_check_cert,
+		const std::string& hostname, const std::string& cacert_path = {}) noexcept
+	{
+		static std::mutex mutex;
+		static std::unordered_map<std::string,
+			std::shared_ptr<net::ssl::context>> cache;
+
+		std::string key;
+		key.reserve(hostname.size() + cacert_path.size() + 2);
+		key += disable_check_cert ? '1' : '0';
+		key += '\n';
+		key += hostname;
+		key += '\n';
+		key += cacert_path;
+
+		std::lock_guard<std::mutex> lock(mutex);
+
+		auto it = cache.find(key);
+		if (it != cache.end())
+			return it->second;
+
+		auto ctx = std::make_shared<net::ssl::context>(
+			net::ssl::context::sslv23_client);
+
+		auto ec = configure_ssl_client_ctx(
+			*ctx, disable_check_cert, hostname, cacert_path);
+		if (ec)
+			return ec;
+
+		cache.emplace(key, ctx);
+
+		return ctx;
 	}
 
 	// 将路径转换为 UNC 路径 (Windows 下处理长路径).

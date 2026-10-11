@@ -6324,20 +6324,19 @@ R"x*x*x(<html>
 		if (ec)
 			co_return false;
 
-		// 创建 per-request SSL context, 确保每个 DoH 服务器使用正确的主机名校验.
-		net::ssl::context doh_ssl_ctx(net::ssl::context::sslv23_client);
-		ec = configure_ssl_client_ctx(doh_ssl_ctx,
-			m_option.disable_check_cert_,
-			std::string(doh_host));
-		if (ec)
+		// 获取进程内共享的 SSL context (按主机名缓存), 避免每个 DoH 请求都重新创建
+		// context 并加载 CA 根证书, 该操作开销很大, 会成为 CPU 热点.
+		auto doh_ssl_ctx = get_shared_ssl_client_ctx(
+			m_option.disable_check_cert_, std::string(doh_host));
+		if (doh_ssl_ctx.has_error())
 		{
 			log_conn_warning()
 				<< ", configure ssl context for doh: "
-				<< doh_host << " error: " << ec.message();
+				<< doh_host << " error: " << doh_ssl_ctx.error().message();
 			co_return false;
 		}
 
-		ssl_tcp_stream ssl_stream(std::move(doh_socket), doh_ssl_ctx);
+		ssl_tcp_stream ssl_stream(std::move(doh_socket), *doh_ssl_ctx.value());
 
 		if (!SSL_set_tlsext_host_name(
 			ssl_stream.native_handle(), std::string(doh_host).c_str()))
@@ -6444,24 +6443,22 @@ R"x*x*x(<html>
 			co_return;
 		}
 
-		// 创建 per-request SSL context, 确保每个 DoH 服务器使用正确的主机名校验.
-		net::ssl::context doh_ssl_ctx(net::ssl::context::sslv23_client);
-
-		ec = configure_ssl_client_ctx(doh_ssl_ctx,
-			m_option.disable_check_cert_,
-			std::string(doh_host));
-		if (ec)
+		// 获取进程内共享的 SSL context (按主机名缓存), 避免每个 DoH 请求都重新创建
+		// context 并加载 CA 根证书, 该操作开销很大, 会成为 CPU 热点.
+		auto doh_ssl_ctx = get_shared_ssl_client_ctx(
+			m_option.disable_check_cert_, std::string(doh_host));
+		if (doh_ssl_ctx.has_error())
 		{
 			log_conn_warning()
 				<< ", configure ssl context for doh: "
-				<< doh_host << " error: " << ec.message();
+				<< doh_host << " error: " << doh_ssl_ctx.error().message();
 
 			co_await default_http_route(
 				request, fake_500_content_fmt, http::status::internal_server_error);
 			co_return;
 		}
 
-		ssl_tcp_stream ssl_stream(std::move(doh_socket), doh_ssl_ctx);
+		ssl_tcp_stream ssl_stream(std::move(doh_socket), *doh_ssl_ctx.value());
 
 		if (!SSL_set_tlsext_host_name(
 			ssl_stream.native_handle(), std::string(doh_host).c_str()))
