@@ -4111,8 +4111,7 @@ net::awaitable<void> proxy_server::start_udp_tproxy_listen(udp::socket& udp_sock
 	XLOG_DBG << "udp tproxy listener stopped";
 }
 
-// UDP 透传 connect-udp 转发: 将客户端数据封装成 capsule 并推入发送队列, 由串行发送协程处理.
-// UDP 透传 connect-udp 转发: 将客户端数据封装成 capsule 后推入发送队列,
+// UDP 透传 connect-udp 转发: 将客户端数据封装成 DATAGRAM capsule 后推入发送队列,
 // 并通知发送协程处理. 发送队列确保对 udp_http_sock_ 的 TCP 写入是串行的.
 void proxy_server::udp_tproxy_forward_packet_http(
 	udp_tproxy_flow_ptr flow, const char* data, std::size_t len)
@@ -4121,29 +4120,15 @@ void proxy_server::udp_tproxy_forward_packet_http(
 	if (!flow || flow->closing_)
 		return;
 
-	// 构建 DATAGRAM capsule (RFC 9297):
-	//   capsule type (varint) = 0x00
-	//   capsule length (varint) = len + 1  # 这里 + 1 是因为 context ID 为 0 占用一字节
-	//   HTTP Datagram Payload (RFC 9298):
-	//     context ID (varint) = 0
-	//     UDP payload
-
 	uint8_t buf[65536];
-	size_t pos = 0;
 
-	pos += varint_int_encode(udp_proxy_capsule_type, buf + pos); // capsule type
-	pos += varint_int_encode(1 + len, buf + pos);				 // capsule length
-	pos += varint_int_encode(0, buf + pos);						 // context ID
-
-	if (pos + len > sizeof(buf))
+	auto pos = encode_datagram_capsule(data, len, buf, sizeof(buf));
+	if (pos == 0)
 	{
 		XLOG_WARN << "tproxy flow: " << flow->flow_key_
-			<< ", capsule too large: " << (pos + len);
+			<< ", capsule too large: " << len;
 		return;
 	}
-
-	std::memcpy(buf + pos, data, len);							 // UDP payload
-	pos += len;
 
 	// 推入发送队列并通知发送协程.
 	{
@@ -4362,7 +4347,7 @@ net::awaitable<void> proxy_server::udp_tproxy_http_udp_loop(udp_tproxy_flow_ptr 
 		if (ec)
 			break;
 
-		if (capsule_length > 65535)
+		if (capsule_length > datagram_capsule_max_length)
 		{
 			XLOG_WARN << "tproxy flow: " << flow->flow_key_
 				<< ", capsule too large: " << capsule_length;
@@ -4388,31 +4373,20 @@ net::awaitable<void> proxy_server::udp_tproxy_http_udp_loop(udp_tproxy_flow_ptr 
 			continue;
 		}
 
-		// 解析 context ID.
-		auto val_data = reinterpret_cast<const uint8_t*>(capsule_value.data());
-		size_t val_len = capsule_value.size();
-
-		if (val_len == 0)
-			continue;
-
-		auto [ctx_id_len, ctx_id] = varint_int_decode_bounded(
-			val_data, val_len);
-		if (ctx_id_len == 0 || ctx_id != 0)
+		// 解析 DATAGRAM capsule, 取出 UDP payload.
+		auto payload = decode_datagram_capsule(capsule_value);
+		if (payload.empty())
 		{
 			XLOG_DBG << "tproxy flow: " << flow->flow_key_
-				<< ", unknown context ID: " << ctx_id;
+				<< ", invalid datagram capsule";
 			continue;
 		}
-
-		// UDP payload.
-		size_t udp_len = val_len - ctx_id_len;
-		if (udp_len == 0) continue;
 
 		flow->expire_ = 0;
 
 		auto& relay_sock = *flow->relay_sock_;
 		relay_sock.send_to(
-			net::buffer(val_data + ctx_id_len, udp_len), flow->client_endp_, 0, ec);
+			net::buffer(payload.data(), payload.size()), flow->client_endp_, 0, ec);
 		if (ec)
 		{
 			XLOG_WARN << "tproxy flow: " << flow->flow_key_

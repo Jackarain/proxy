@@ -1639,23 +1639,16 @@ namespace proxy {
 	void tun_udp_flow::push_capsule(const char* data, size_t len)
 	{
 		uint8_t buf[65536];
-		size_t pos = 0;
 
 		AXLOG_DBG << "tun udp tx capsule to " << m_target.address().to_string()
 			<< ":" << m_target.port() << " len=" << len;
 
-		pos += varint_int_encode(udp_proxy_capsule_type, buf + pos);
-		pos += varint_int_encode(1 + len, buf + pos);
-		pos += varint_int_encode(0, buf + pos);
-
-		if (pos + len > sizeof(buf))
+		auto pos = encode_datagram_capsule(data, len, buf, sizeof(buf));
+		if (pos == 0)
 		{
 			close();
 			return;
 		}
-
-		std::memcpy(buf + pos, data, len);
-		pos += len;
 
 		{
 			std::lock_guard<std::mutex> lk(m_tx_mutex);
@@ -1717,24 +1710,17 @@ namespace proxy {
 				<< " len=" << capsule_value.size();
 
 			// 仅处理 DATAGRAM capsule（RFC 9297）.
-			if (capsule_type != udp_proxy_capsule_type ||
-				capsule_value.empty())
+			if (capsule_type != udp_proxy_capsule_type)
 				continue;
 
-			// 解析 context ID（本项目固定使用 0）.
-			// 使用带边界的解码, 防止畸形 capsule 导致越界读取.
-			auto val_data = reinterpret_cast<const uint8_t*>(capsule_value.data());
-			auto [ctx_id_len, ctx_id] = varint_int_decode_bounded(
-				val_data, capsule_value.size());
-			if (ctx_id_len == 0 || ctx_id != 0)
-				continue;
-
-			size_t udp_len = capsule_value.size() - ctx_id_len;
-			if (udp_len == 0)
+			// 解析 DATAGRAM capsule, 取出 UDP payload.
+			auto payload = decode_datagram_capsule(
+				std::string_view(capsule_value.data(), capsule_value.size()));
+			if (payload.empty())
 				continue;
 
 			touch();
-			co_await reply(capsule_value.data() + ctx_id_len, udp_len);
+			co_await reply(payload.data(), payload.size());
 		}
 
 		close();
@@ -1752,7 +1738,7 @@ namespace proxy {
 		if (ec)
 			co_return std::pair<uint64_t, std::vector<char>>{};
 
-		if (capsule_length > 65535)
+		if (capsule_length > datagram_capsule_max_length)
 		{
 			XLOG_WARN << "tun udp capsule too large: " << capsule_length;
 			ec = net::error::invalid_argument;

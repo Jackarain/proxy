@@ -21,6 +21,8 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
+#include <string_view>
 #include <utility>
 
 
@@ -158,6 +160,61 @@ namespace proxy {
 		(void)consumed;
 
 		co_return value;
+	}
+
+	//////////////////////////////////////////////////////////////////////////
+	// RFC 9297/9298 DATAGRAM capsule 封装与解析
+
+	// capsule 长度上限, 与 UDP 报文最大长度一致.
+	inline constexpr size_t datagram_capsule_max_length = 65535;
+
+	// 计算 DATAGRAM capsule 头部字节数. 头部由三个 varint 组成:
+	//   capsule type, capsule length (1 + payload), context ID (固定为 0).
+	constexpr size_t datagram_capsule_header_size(size_t payload_len) noexcept
+	{
+		return varint_encoded_length(udp_proxy_capsule_type) +
+			varint_encoded_length(1 + payload_len) +
+			varint_encoded_length(0);
+	}
+
+	// 将 DATAGRAM capsule 头部编码写入 out, 返回写入字节数.
+	inline size_t
+	encode_datagram_capsule_header(size_t payload_len, uint8_t* out) noexcept
+	{
+		size_t pos = 0;
+		pos += varint_int_encode(udp_proxy_capsule_type, out + pos);
+		pos += varint_int_encode(1 + payload_len, out + pos);
+		pos += varint_int_encode(0, out + pos);
+		return pos;
+	}
+
+	// 将 UDP payload 完整封装为 DATAGRAM capsule 写入 out.
+	// 返回写入的总字节数; out 空间不足时返回 0.
+	inline size_t encode_datagram_capsule(const void* data, size_t len,
+		uint8_t* out, size_t out_size) noexcept
+	{
+		auto header = datagram_capsule_header_size(len);
+		if (len > out_size || header > out_size - len)
+			return 0;
+
+		encode_datagram_capsule_header(len, out);
+		std::memcpy(out + header, data, len);
+		return header + len;
+	}
+
+	// 解析 DATAGRAM capsule 的 value, 返回其中的 UDP payload 视图.
+	// context ID 非 0、长度不足或 payload 为空时返回空视图.
+	inline std::string_view
+	decode_datagram_capsule(std::string_view value) noexcept
+	{
+		auto data = reinterpret_cast<const uint8_t*>(value.data());
+		auto [ctx_id_len, ctx_id] = varint_int_decode_bounded(
+			data, value.size());
+
+		if (ctx_id_len == 0 || ctx_id != 0 || ctx_id_len >= value.size())
+			return {};
+
+		return value.substr(ctx_id_len);
 	}
 
 }

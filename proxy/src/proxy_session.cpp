@@ -3697,7 +3697,7 @@ R"x*x*x(<html>
 				}
 
 				// 限制最大 capsule 大小.
-				if (capsule_length > 65535)
+				if (capsule_length > datagram_capsule_max_length)
 				{
 					log_conn_warning()
 						<< ", connect-udp: capsule too large: "
@@ -3733,38 +3733,24 @@ R"x*x*x(<html>
 					continue;
 				}
 
-				// 解析 context ID (应该为 0).
-				auto data = reinterpret_cast<const uint8_t*>(capsule_value.data());
-				size_t data_len = capsule_value.size();
-
-				if (data_len == 0)
-					continue;
-
-				auto [ctx_id_len, ctx_id] = varint_int_decode_bounded(
-					data, data_len);
-				if (ctx_id_len == 0 || ctx_id != 0)
+				// 解析 DATAGRAM capsule, 取出 UDP payload.
+				auto payload = decode_datagram_capsule(capsule_value);
+				if (payload.empty())
 				{
 					log_conn_debug()
-						<< ", connect-udp: unknown context ID: "
-						<< ctx_id
-						<< ", skipping";
+						<< ", connect-udp: invalid datagram capsule, skipping";
 					continue;
 				}
 
-				// 剩余字节为 UDP payload.
-				size_t udp_payload_len = data_len - ctx_id_len;
-				if (udp_payload_len > 0)
+				co_await udp_socket.async_send(
+					net::buffer(payload.data(), payload.size()),
+					net_awaitable[ec]);
+				if (ec)
 				{
-					co_await udp_socket.async_send(
-						net::buffer(data + ctx_id_len, udp_payload_len),
-						net_awaitable[ec]);
-					if (ec)
-					{
-						log_conn_warning()
-							<< ", connect-udp: UDP send error: "
-							<< ec.message();
-						break;
-					}
+					log_conn_warning()
+						<< ", connect-udp: UDP send error: "
+						<< ec.message();
+					break;
 				}
 			}
 
@@ -3793,27 +3779,10 @@ R"x*x*x(<html>
 					net_awaitable[ec]);
 				if (ec) break;
 
-				// 构建 DATAGRAM capsule (RFC 9297).
-				// Capsule type: DATAGRAM (0x00)
-				// Capsule length: 1 + bytes (1 byte for context ID + UDP payload)
-				// HTTP Datagram Payload (RFC 9298):
-				//   Context ID: 0 (1 byte as varint)
-				//   UDP payload
-
-				// 计算 capsule header 部分和长度.
-				auto capsule_length =
-					varint_encoded_length(udp_proxy_capsule_type) +
-					varint_encoded_length(1 + bytes) +
-					varint_encoded_length(0);
-
-				// 计算 capsule 起始位置.
+				// capsule 头部紧邻数据写入 buf, 便于 header 与 payload 一次写出.
+				auto capsule_length = datagram_capsule_header_size(bytes);
 				auto capsule_start = buf + 32 - capsule_length;
-				size_t pos = 0;
-
-				// 开始直接编码到 buf 中.
-				pos += varint_int_encode(udp_proxy_capsule_type, capsule_start + pos);
-				pos += varint_int_encode(1 + bytes, capsule_start + pos);
-				pos += varint_int_encode(0, capsule_start + pos);
+				encode_datagram_capsule_header(bytes, capsule_start);
 
 				co_await net::async_write(
 					m_local_socket,
@@ -4154,7 +4123,7 @@ R"x*x*x(<html>
 					if (ec) break;
 
 					// 限制最大 capsule 大小.
-					if (capsule_length > 65535)
+					if (capsule_length > datagram_capsule_max_length)
 						break;
 
 					// 读取 capsule value.
@@ -4173,31 +4142,21 @@ R"x*x*x(<html>
 					if (capsule_type != udp_proxy_capsule_type)
 						continue;
 
-					// 解析 context ID (应为 0).
-					auto data = reinterpret_cast<const uint8_t*>(
-						capsule_value.data());
-					size_t data_len = capsule_value.size();
-
-					if (data_len == 0) continue;
-
-					auto [ctx_id_len, ctx_id] = varint_int_decode_bounded(
-						data, data_len);
-					if (ctx_id_len == 0 || ctx_id != 0) continue;
-
-					// UDP payload.
-					size_t udp_payload_len = data_len - ctx_id_len;
-					if (udp_payload_len == 0) continue;
+					// 解析 DATAGRAM capsule, 取出 UDP payload.
+					auto payload = decode_datagram_capsule(capsule_value);
+					if (payload.empty())
+						continue;
 
 					// 构建完整 SOCKS5 UDP 数据报并发送到中继.
 					std::vector<uint8_t> send_buf(
-						socks5_udp_header_size + udp_payload_len);
+						socks5_udp_header_size + payload.size());
 					std::memcpy(send_buf.data(),
 						socks5_udp_header.data(),
 						socks5_udp_header_size);
 					std::memcpy(
 						send_buf.data() + socks5_udp_header_size,
-						data + ctx_id_len,
-						udp_payload_len);
+						payload.data(),
+						payload.size());
 
 					co_await udp_socket.async_send_to(
 						net::buffer(send_buf),
@@ -4279,20 +4238,10 @@ R"x*x*x(<html>
 
 					if (data_size == 0) continue;
 
-					// 构建 DATAGRAM capsule (RFC 9297).
-					// Capsule type: 0x00 (DATAGRAM)
-					// Capsule length: 1 + data_size
-					// Context ID: 0 (1 byte)
-					// UDP payload
-					auto capsule_length = 1 + data_size;
-
+					// 构建 DATAGRAM capsule 头部, payload 随后单独写出.
 					uint8_t header_buf[32];
-					size_t pos = 0;
-					pos += varint_int_encode(
-						udp_proxy_capsule_type, header_buf + pos);
-					pos += varint_int_encode(
-						capsule_length, header_buf + pos);
-					pos += varint_int_encode(0, header_buf + pos);
+					auto pos = encode_datagram_capsule_header(
+						data_size, header_buf);
 
 					co_await net::async_write(
 						m_local_socket,
