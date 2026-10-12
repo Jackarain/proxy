@@ -776,129 +776,9 @@ namespace proxy {
 		const string_request& request, const std::string& dns_query,
 		std::string* output) noexcept
 	{
-		boost::system::error_code ec;
-
-		auto parsed = parse_urlinfo(*m_option.dns_upstream_);
-		if (parsed.has_error())
+		std::string wire_response;
+		if (!co_await doh_query_raw(dns_query, wire_response))
 		{
-			co_await default_http_route(
-				request, fake_500_content_fmt, http::status::internal_server_error);
-			co_return;
-		}
-
-		auto [scheme, user, passwd, doh_host, doh_port, doh_path] = *parsed;
-		if (doh_path.empty() || doh_path == "/")
-			doh_path = "/dns-query";
-
-		// 解析 DoH 服务器地址.
-		tcp::resolver::results_type targets;
-		if (!is_hostname(doh_host))
-		{
-			tcp::endpoint endp(
-				net::ip::make_address(doh_host), doh_port);
-			targets = tcp::resolver::results_type::create(
-				endp, std::string(doh_host), "");
-		}
-		else
-		{
-			targets = co_await resolve_targets(
-				std::string(doh_host), doh_port);
-		}
-
-		if (targets.empty())
-		{
-			co_await default_http_route(
-				request, fake_500_content_fmt, http::status::internal_server_error);
-			co_return;
-		}
-
-		// 连接到 DoH 服务器.
-		tcp::socket doh_socket(m_executor);
-		ec = co_await async_connect_targets(doh_socket, targets);
-		if (ec)
-		{
-			co_await default_http_route(
-				request, fake_500_content_fmt, http::status::internal_server_error);
-			co_return;
-		}
-
-		// 获取进程内共享的 SSL context (按主机名缓存), 避免每个 DoH 请求都重新创建
-		// context 并加载 CA 根证书, 该操作开销很大, 会成为 CPU 热点.
-		auto doh_ssl_ctx = get_shared_ssl_client_ctx(
-			m_option.disable_check_cert_, std::string(doh_host));
-		if (doh_ssl_ctx.has_error())
-		{
-			log_conn_warning()
-				<< ", configure ssl context for doh: "
-				<< doh_host << " error: " << doh_ssl_ctx.error().message();
-
-			co_await default_http_route(
-				request, fake_500_content_fmt, http::status::internal_server_error);
-			co_return;
-		}
-
-		ssl_tcp_stream ssl_stream(std::move(doh_socket), *doh_ssl_ctx.value());
-
-		if (!SSL_set_tlsext_host_name(
-			ssl_stream.native_handle(), std::string(doh_host).c_str()))
-		{
-			log_conn_debug()
-				<< ", doh set sni name: "
-				<< doh_host
-				<< " failed";
-		}
-
-		co_await ssl_stream.async_handshake(
-			net::ssl::stream_base::client, net_awaitable[ec]);
-		if (ec)
-		{
-			log_conn_warning()
-				<< ", doh tls handshake with "
-				<< doh_host
-				<< " failed: "
-				<< ec.message();
-			co_await default_http_route(
-				request, fake_500_content_fmt, http::status::internal_server_error);
-			co_return;
-		}
-
-		http::request<http::string_body> doh_req{
-			http::verb::post, doh_path, 11 };
-		doh_req.set(http::field::host, doh_host);
-		doh_req.set(http::field::content_type, "application/dns-message");
-		doh_req.set(http::field::accept, "application/dns-message");
-		doh_req.body() = dns_query;
-		doh_req.prepare_payload();
-
-		co_await http::async_write(ssl_stream, doh_req, net_awaitable[ec]);
-		if (ec)
-		{
-			log_conn_warning()
-				<< ", doh http write error: "
-				<< ec.message();
-			co_await default_http_route(
-				request, fake_500_content_fmt, http::status::internal_server_error);
-			co_return;
-		}
-
-		beast::flat_buffer buf;
-		http::response<http::string_body> doh_res;
-		co_await http::async_read(ssl_stream, buf, doh_res, net_awaitable[ec]);
-		if (ec)
-		{
-			log_conn_warning()
-				<< ", doh http read error: "
-				<< ec.message();
-			co_await default_http_route(
-				request, fake_500_content_fmt, http::status::internal_server_error);
-			co_return;
-		}
-
-		if (doh_res.result() != http::status::ok)
-		{
-			log_conn_warning()
-				<< ", doh response status: "
-				<< doh_res.result_int();
 			co_await default_http_route(
 				request, fake_500_content_fmt, http::status::internal_server_error);
 			co_return;
@@ -906,10 +786,10 @@ namespace proxy {
 
 		co_await send_http_string_response(
 			request, http::status::ok, "application/dns-message",
-			doh_res.body(), true);
+			wire_response, true);
 		if (output)
-			*output = doh_res.body();
-		log_dns_result(dns_query, doh_res.body());
+			*output = wire_response;
+		log_dns_result(dns_query, wire_response);
 
 		co_return;
 	}
