@@ -43,10 +43,6 @@ namespace proxy {
 
 	// 配置 SSL 客户端 context 的通用设置.
 	// 包括设置验证模式、加载 CA 根证书、以及配置主机名验证回调.
-	// 使用模板以避免在 proxy_util.hpp 中引入 SSL 相关头文件依赖，
-	// 函数体在实例化时需保证以下符号可用:
-	//   net::ssl::context, net::ssl::verify_peer, net::ssl::verify_none,
-	//   net::ssl::host_name_verification, net::buffer, default_root_certificates()
 	// 参数:
 	//   ctx - SSL context 引用
 	//   disable_check_cert - 是否禁用证书验证
