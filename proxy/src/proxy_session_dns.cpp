@@ -10,6 +10,7 @@
 
 #include "proxy/proxy_session.hpp"
 #include "proxy/async_connect.hpp"
+#include "proxy/doh_http.hpp"
 #include "proxy/dns_server.hpp"
 #include "proxy/http_error_body.hpp"
 #include "proxy/proxy_util.hpp"
@@ -736,39 +737,22 @@ namespace proxy {
 			co_return false;
 		}
 
-		// 构造 HTTP POST 请求.
-		http::request<http::string_body> doh_req{
-			http::verb::post, doh_path, 11 };
-		doh_req.set(http::field::host, doh_host);
-		doh_req.set(http::field::content_type, "application/dns-message");
-		doh_req.set(http::field::accept, "application/dns-message");
-		doh_req.body() = dns_query;
-		doh_req.prepare_payload();
-
-		co_await http::async_write(ssl_stream, doh_req, net_awaitable[ec]);
-		if (ec)
-			co_return false;
-
-		beast::flat_buffer buf;
-		http::response<http::string_body> doh_res;
-		co_await http::async_read(ssl_stream, buf, doh_res, net_awaitable[ec]);
-		if (ec)
-			co_return false;
-
-		if (doh_res.result() != http::status::ok)
+		int doh_status = 0;
+		if (!co_await doh_http_post(
+			ssl_stream, doh_host, doh_path, dns_query, output, &doh_status))
 		{
-			log_conn_warning()
-				<< ", doh query raw response status: "
-				<< doh_res.result_int();
+			if (doh_status != 0)
+				log_conn_warning()
+					<< ", doh query raw response status: "
+					<< doh_status;
 			co_return false;
 		}
 
 		log_conn_debug()
 			<< ", doh query raw response received"
-			<< ", status: " << doh_res.result_int()
-			<< ", content-length: " << doh_res.payload_size().value_or(0);
+			<< ", status: " << doh_status
+			<< ", content-length: " << output.size();
 
-		output = std::move(doh_res.body());
 		co_return true;
 	}
 

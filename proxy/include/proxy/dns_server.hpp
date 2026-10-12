@@ -14,6 +14,7 @@
 
 #include "proxy/proxy_session.hpp"
 #include "proxy/dns_response_cache.hpp"
+#include "proxy/doh_http.hpp"
 
 #include <boost/variant2/variant.hpp>
 
@@ -245,14 +246,6 @@ namespace proxy {
 
 		// 将一条成功完成交互的连接放回空闲连接池（超出上限则丢弃）.
 		void release_doh_conn(doh_conn&& conn);
-
-		// 经已建立的连接发送 DoH POST 请求并读取响应（Stream 为 TLS 流或
-		// 明文 socket），成功返回 true.
-		template <typename Stream>
-		net::awaitable<bool> doh_http_post(
-			Stream& stream,
-			const doh_url_info& info,
-			const std::string& dns_query, std::string& output);
 
 		// 解析 DoH 上游主机地址.
 		net::awaitable<tcp::resolver::results_type>

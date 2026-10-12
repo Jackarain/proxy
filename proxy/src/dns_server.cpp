@@ -1511,46 +1511,6 @@ namespace proxy {
 		co_return true;
 	}
 
-	// doh_http_post 经已建立的连接发送 DoH POST 请求并读取响应（Stream
-	// 为 TLS 流或明文 socket），成功返回 true.
-	template <typename Stream>
-	net::awaitable<bool> dns_server::doh_http_post(
-		Stream& stream,
-		const doh_url_info& info,
-		const std::string& dns_query, std::string& output)
-	{
-		boost::system::error_code ec;
-
-		// 构造 HTTP POST 请求.
-		http::request<http::string_body> doh_req{
-			http::verb::post, info.path, 11 };
-		doh_req.set(http::field::host, info.tls_host);
-		doh_req.set(http::field::content_type, "application/dns-message");
-		doh_req.set(http::field::accept, "application/dns-message");
-		doh_req.body() = dns_query;
-		doh_req.prepare_payload();
-
-		co_await http::async_write(stream, doh_req, net_awaitable[ec]);
-		if (ec)
-			co_return false;
-
-		beast::flat_buffer buf;
-		http::response<http::string_body> doh_res;
-		co_await http::async_read(stream, buf, doh_res, net_awaitable[ec]);
-		if (ec)
-			co_return false;
-
-		if (doh_res.result() != http::status::ok)
-		{
-			XLOG_WARN << "doh query raw response status: "
-				<< doh_res.result_int();
-			co_return false;
-		}
-
-		output = std::move(doh_res.body());
-		co_return true;
-	}
-
 	// make_doh_conn 建立一条到 DoH 服务器的连接: 先完成 TCP 连接(必要时绑定
 	// 源地址), 明文上游直接返回, https 上游再完成 TLS 握手.
 	net::awaitable<std::optional<dns_server::doh_conn>> dns_server::make_doh_conn(
@@ -1685,17 +1645,20 @@ namespace proxy {
 			*cur = std::make_shared<doh_conn>(std::move(*conn));
 
 			bool ok = false;
+			int doh_status = 0;
 			if (auto* plain = boost::variant2::get_if<tcp::socket>(
 				&(*cur)->stream))
 			{
 				ok = co_await doh_http_post(
-					*plain, *info, dns_query, output);
+					*plain, info->tls_host, info->path, dns_query, output,
+					&doh_status);
 			}
 			else if (auto* tls = boost::variant2::get_if<
 				net::ssl::stream<tcp::socket>>(&(*cur)->stream))
 			{
 				ok = co_await doh_http_post(
-					*tls, *info, dns_query, output);
+					*tls, info->tls_host, info->path, dns_query, output,
+					&doh_status);
 			}
 
 			if (ok)
@@ -1706,6 +1669,9 @@ namespace proxy {
 				query_timer.cancel();
 				co_return true;
 			}
+
+			if (!ok && doh_status != 0)
+				XLOG_WARN << "doh query raw response status: " << doh_status;
 
 			// 连接不可用, 丢弃后重试.
 			*cur = nullptr;
@@ -1815,14 +1781,6 @@ namespace proxy {
 			co_return;
 		}
 	}
-
-	template net::awaitable<bool> dns_server::doh_http_post<tcp::socket>(
-		tcp::socket&, const dns_server::doh_url_info&,
-		const std::string&, std::string&);
-	template net::awaitable<bool> dns_server::doh_http_post<
-		net::ssl::stream<tcp::socket>>(
-		net::ssl::stream<tcp::socket>&, const dns_server::doh_url_info&,
-		const std::string&, std::string&);
 
 }
 

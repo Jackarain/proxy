@@ -45,6 +45,7 @@ target_sources(libproxy
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/uds_socket.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/tun_server.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/doh_client.hpp
+	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/doh_http.hpp
 	$<$<PLATFORM_ID:Windows>:${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/wintun_install.hpp>
 
 	${CMAKE_CURRENT_SOURCE_DIR}/src/lib_asio_beast.cpp
