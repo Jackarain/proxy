@@ -4337,33 +4337,11 @@ net::awaitable<void> proxy_server::udp_tproxy_http_udp_loop(udp_tproxy_flow_ptr 
 	// 通过 relay_sock_ 发送回客户端.
 	while (!m_abort)
 	{
-		// 读取 capsule type.
-		auto capsule_type = co_await read_varint_from_stream(http_sock, ec);
+		// 读取一个完整 capsule (type + value).
+		auto [capsule_type, capsule_value] =
+			co_await read_capsule_from_stream(http_sock, ec);
 		if (ec)
 			break;
-
-		// 读取 capsule length.
-		auto capsule_length = co_await read_varint_from_stream(http_sock, ec);
-		if (ec)
-			break;
-
-		if (capsule_length > datagram_capsule_max_length)
-		{
-			XLOG_WARN << "tproxy flow: " << flow->flow_key_
-				<< ", capsule too large: " << capsule_length;
-			break;
-		}
-
-		// 读取 capsule value.
-		std::string capsule_value(
-			static_cast<size_t>(capsule_length), '\0');
-		if (capsule_length > 0)
-		{
-			co_await net::async_read(
-				http_sock, net::buffer(capsule_value),
-				net_awaitable[ec]);
-			if (ec) break;
-		}
 
 		// 仅处理 DATAGRAM capsule (RFC 9297).
 		if (capsule_type != udp_proxy_capsule_type)

@@ -16,6 +16,7 @@
 
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/buffer.hpp>
+#include <boost/asio/error.hpp>
 #include <boost/asio/read.hpp>
 #include <boost/system/error_code.hpp>
 
@@ -24,6 +25,7 @@
 #include <cstring>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 
 namespace proxy {
@@ -215,6 +217,48 @@ namespace proxy {
 			return {};
 
 		return value.substr(ctx_id_len);
+	}
+
+	// 解析 DATAGRAM capsule 的 value, 返回其中的 UDP payload 视图.
+	inline std::string_view
+	decode_datagram_capsule(const std::vector<char>& value) noexcept
+	{
+		return decode_datagram_capsule(
+			std::string_view(value.data(), value.size()));
+	}
+
+	// 从流中读取一个完整 capsule, 返回 {capsule type, capsule value}.
+	// capsule 长度超过上限时置 ec 为 invalid_argument.
+	template <typename Stream>
+	inline net::awaitable<std::pair<uint64_t, std::vector<char>>>
+	read_capsule_from_stream(Stream& stream, boost::system::error_code& ec)
+	{
+		using capsule_pair = std::pair<uint64_t, std::vector<char>>;
+
+		auto capsule_type = co_await read_varint_from_stream(stream, ec);
+		if (ec)
+			co_return capsule_pair{};
+
+		auto capsule_length = co_await read_varint_from_stream(stream, ec);
+		if (ec)
+			co_return capsule_pair{};
+
+		if (capsule_length > datagram_capsule_max_length)
+		{
+			ec = net::error::invalid_argument;
+			co_return capsule_pair{};
+		}
+
+		std::vector<char> value(static_cast<size_t>(capsule_length));
+		if (capsule_length > 0)
+		{
+			co_await net::async_read(
+				stream, net::buffer(value), net_awaitable[ec]);
+			if (ec)
+				co_return capsule_pair{};
+		}
+
+		co_return capsule_pair{ capsule_type, std::move(value) };
 	}
 
 }

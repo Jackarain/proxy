@@ -1702,7 +1702,8 @@ namespace proxy {
 		for (; !m_closed;)
 		{
 			boost::system::error_code ec;
-			auto [capsule_type, capsule_value] = co_await read_capsule(ec);
+			auto [capsule_type, capsule_value] = co_await
+				read_capsule_from_stream(*m_control, ec);
 			if (ec)
 				break;
 
@@ -1726,37 +1727,6 @@ namespace proxy {
 		close();
 	}
 
-	net::awaitable<std::pair<uint64_t, std::vector<char>>>
-	tun_udp_flow::read_capsule(boost::system::error_code& ec)
-	{
-		// 读取 capsule type 与 length（varint）.
-		auto capsule_type = co_await read_varint_from_stream(*m_control, ec);
-		if (ec)
-			co_return std::pair<uint64_t, std::vector<char>>{};
-
-		auto capsule_length = co_await read_varint_from_stream(*m_control, ec);
-		if (ec)
-			co_return std::pair<uint64_t, std::vector<char>>{};
-
-		if (capsule_length > datagram_capsule_max_length)
-		{
-			XLOG_WARN << "tun udp capsule too large: " << capsule_length;
-			ec = net::error::invalid_argument;
-			co_return std::pair<uint64_t, std::vector<char>>{};
-		}
-
-		std::vector<char> capsule_value(
-			static_cast<size_t>(capsule_length), '\0');
-		if (capsule_length > 0)
-		{
-			co_await net::async_read(
-				*m_control, net::buffer(capsule_value), net_awaitable[ec]);
-			if (ec)
-				co_return std::pair<uint64_t, std::vector<char>>{};
-		}
-
-		co_return std::make_pair(capsule_type, std::move(capsule_value));
-	}
 
 	net::awaitable<void> tun_udp_flow::control_loop()
 	{

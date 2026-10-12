@@ -264,10 +264,6 @@ namespace proxy {
 		// 将客户端 UDP 数据封装为 DATAGRAM capsule 并入队.
 		void push_capsule(const char* data, size_t len);
 
-		// 从控制流读取一个完整 capsule（type + value）.
-		net::awaitable<std::pair<uint64_t, std::vector<char>>>
-		read_capsule(boost::system::error_code& ec);
-
 		// 保持 SOCKS5 ASSOCIATE 控制连接存活（读取直到断开）.
 		net::awaitable<void> control_loop();
 

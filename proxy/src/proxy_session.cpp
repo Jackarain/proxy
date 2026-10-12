@@ -3676,50 +3676,15 @@ R"x*x*x(<html>
 
 			while (!m_abort)
 			{
-				// 读取 capsule type.
-				auto capsule_type = co_await read_varint_from_stream(m_local_socket, ec);
+				// 读取一个完整 capsule (type + value).
+				auto [capsule_type, capsule_value] = co_await
+					read_capsule_from_stream(m_local_socket, ec);
 				if (ec)
 				{
 					log_conn_warning()
-						<< ", connect-udp: read capsule type error: "
+						<< ", connect-udp: read capsule error: "
 						<< ec.message();
 					break;
-				}
-
-				// 读取 capsule length.
-				auto capsule_length = co_await read_varint_from_stream(m_local_socket, ec);
-				if (ec)
-				{
-					log_conn_warning()
-						<< ", connect-udp: read capsule length error: "
-						<< ec.message();
-					break;
-				}
-
-				// 限制最大 capsule 大小.
-				if (capsule_length > datagram_capsule_max_length)
-				{
-					log_conn_warning()
-						<< ", connect-udp: capsule too large: "
-						<< capsule_length;
-					break;
-				}
-
-				// 读取 capsule value.
-				std::string capsule_value(static_cast<size_t>(capsule_length), '\0');
-				if (capsule_length > 0)
-				{
-					co_await net::async_read(
-						m_local_socket,
-						net::buffer(capsule_value),
-						net_awaitable[ec]);
-					if (ec)
-					{
-						log_conn_warning()
-							<< ", connect-udp: read capsule value error: "
-							<< ec.message();
-						break;
-					}
 				}
 
 				// 仅处理 DATAGRAM capsule 类型 (RFC 9297).
@@ -3729,7 +3694,7 @@ R"x*x*x(<html>
 						<< ", connect-udp: unknown capsule type: "
 						<< capsule_type
 						<< ", skipping "
-						<< capsule_length << " bytes";
+						<< capsule_value.size() << " bytes";
 					continue;
 				}
 
@@ -4110,33 +4075,10 @@ R"x*x*x(<html>
 
 				while (!m_abort)
 				{
-					// 读取 capsule type.
-					auto capsule_type =
-						co_await read_varint_from_stream(
-							m_local_socket, ec);
+					// 读取一个完整 capsule (type + value).
+					auto [capsule_type, capsule_value] = co_await
+						read_capsule_from_stream(m_local_socket, ec);
 					if (ec) break;
-
-					// 读取 capsule length.
-					auto capsule_length =
-						co_await read_varint_from_stream(
-							m_local_socket, ec);
-					if (ec) break;
-
-					// 限制最大 capsule 大小.
-					if (capsule_length > datagram_capsule_max_length)
-						break;
-
-					// 读取 capsule value.
-					std::string capsule_value(
-						static_cast<size_t>(capsule_length), '\0');
-					if (capsule_length > 0)
-					{
-						co_await net::async_read(
-							m_local_socket,
-							net::buffer(capsule_value),
-							net_awaitable[ec]);
-						if (ec) break;
-					}
 
 					// 仅处理 DATAGRAM capsule.
 					if (capsule_type != udp_proxy_capsule_type)
