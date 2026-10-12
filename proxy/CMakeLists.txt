@@ -56,6 +56,7 @@ target_sources(libproxy
 	${CMAKE_CURRENT_SOURCE_DIR}/src/proxy_session_dns.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/proxy_session_http.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/proxy_session_http_proxy.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/proxy_session_socks.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/proxy_server.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/dns_server.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/default_cert.cpp
