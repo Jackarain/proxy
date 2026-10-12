@@ -20,6 +20,7 @@ target_sources(libproxy
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/ssl_stream.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/stdio_stream.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/proxy_server.hpp
+	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/udp_tproxy_flow.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/proxy_session.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/proxy.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/use_awaitable.hpp
