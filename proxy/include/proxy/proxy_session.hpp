@@ -419,6 +419,14 @@ namespace proxy {
 
 	private:
 
+		// http 认证结果代码.
+		enum {
+			PROXY_AUTH_SUCCESS = 0,
+			PROXY_AUTH_FAILED,
+			PROXY_AUTH_NONE,
+			PROXY_AUTH_ILLEGAL,
+		};
+
 		//////////////////////////////////////////////////////////////////////////
 		// 专用代理模式
 
