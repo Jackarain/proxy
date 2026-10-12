@@ -12,33 +12,25 @@
 #define INCLUDE__2026_06_08__PROXY_UTIL_HPP
 
 
-#include "proxy/default_cert.hpp"
+#include "proxy/http_date.hpp"
+#include "proxy/net_socket_option.hpp"
+#include "proxy/path_util.hpp"
+#include "proxy/rfc9298_capsule.hpp"
+#include "proxy/ssl_client.hpp"
 #include "proxy/use_awaitable.hpp"
 
 #include <boost/system/error_code.hpp>
 #include <boost/asio/ip/address.hpp>
 #include <boost/asio/ip/network_v4.hpp>
 #include <boost/asio/ip/network_v6.hpp>
-#include <boost/asio/error.hpp>
-#include <boost/asio/socket_base.hpp>
+#include <boost/asio/any_io_executor.hpp>
 #include <boost/asio/awaitable.hpp>
-#include <boost/asio/read.hpp>
-#include <boost/asio/ssl.hpp>
+#include <boost/asio/bind_executor.hpp>
+#include <boost/asio/io_context.hpp>
 #include <boost/asio/ip/udp.hpp>
-
-#include <boost/system/error_code.hpp>
+#include <boost/asio/post.hpp>
 #include <boost/system/result.hpp>
 #include <boost/config.hpp>
-
-#ifdef USE_BOOST_FILESYSTEM
-// 为避免低版本(gcc-12.3 以下)的 libstdc++ 中 filesystem 的
-// bug( https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95048 )
-// 可以使用 boost.filesystem 来规避这个 bug
-# include <boost/filesystem.hpp>
-#else
-# include <filesystem>
-#endif // USE_BOOST_FILESYSTEM
-
 #include <boost/nowide/convert.hpp>
 #include <boost/url.hpp>
 
@@ -48,14 +40,16 @@
 #include <cctype>
 #include <cstddef>
 #include <cstdint>
-#include <cstdio>
 #include <cstring>
-#include <ctime>
 #include <limits>
-#include <mutex>
 #include <optional>
-#include <unordered_map>
 #include <utility>
+
+#ifdef USE_BOOST_FILESYSTEM
+# include <boost/filesystem.hpp>
+#else
+# include <filesystem>
+#endif
 
 #if defined(__linux__) || defined(__APPLE__)
 # include <sys/socket.h>
@@ -66,6 +60,15 @@
 # include <mstcpip.h>
 #endif
 
+
+// 通用工具头文件.
+//
+// 具体领域工具已拆分到独立头文件, 这里聚合以便既有调用方继续包含:
+//   net_socket_option.hpp  socket 选项
+//   rfc9298_capsule.hpp    RFC 9298 connect-udp capsule 与 QUIC varint
+//   ssl_client.hpp         SSL 客户端 context 配置与共享缓存
+//   http_date.hpp          HTTP 日期与 ETag 校验
+//   path_util.hpp          路径与文件时间工具
 
 namespace proxy {
 
@@ -80,46 +83,7 @@ namespace proxy {
 	namespace fs = std::filesystem;
 #endif
 
-
-#if defined(__linux__)
-#  if !defined(IP_TRANSPARENT)
-#    define IP_TRANSPARENT 19
-#  endif
-#  if !defined(IPV6_TRANSPARENT)
-#    define IPV6_TRANSPARENT 75
-#  endif
-#  if !defined(IP_RECVORIGDSTADDR)
-#    define IP_RECVORIGDSTADDR 20
-#  endif
-#  if !defined(IP_ORIGDSTADDR)
-#    define IP_ORIGDSTADDR 20
-#  endif
-#  if !defined(IPV6_RECVORIGDSTADDR)
-#    define IPV6_RECVORIGDSTADDR 74
-#  endif
-#  if !defined(IPV6_ORIGDSTADDR)
-#    define IPV6_ORIGDSTADDR 74
-#  endif
-
-	// 设置 IP_TRANSPARENT 和 IPV6_TRANSPARENT 选项.
-	using transparent_opt = net::detail::socket_option::boolean<
-		IPPROTO_IP, IP_TRANSPARENT>;
-	using transparent6_opt = net::detail::socket_option::boolean<
-		IPPROTO_IPV6, IPV6_TRANSPARENT>;
-
-#  ifdef ENABLE_REUSEPORT
-#    if !defined(SO_REUSEPORT)
-#      define SO_REUSEPORT 15
-#    endif
-	// 设置 SO_REUSEPORT 选项.
-	using reuse_port = net::detail::socket_option::boolean<
-		SOL_SOCKET, SO_REUSEPORT>;
-#endif
-
-#endif // defined(__linux__)
-
-
-	static constexpr uint64_t udp_proxy_capsule_type = 0x00; // RFC 9297 DATAGRAM
+	//////////////////////////////////////////////////////////////////////////
 
 	// cidr_rule 保存一条预解析后的 IP/CIDR 规则.
 	//
@@ -164,23 +128,7 @@ namespace proxy {
 		return rule;
 	}
 
-
-	// 将错误代码设置为系统错误.
-	inline void make_error_code(boost::system::error_code& ec, bool err) noexcept
-	{
-		if (!err)
-		{
-			ec = {};
-		}
-		else
-		{
-	#if defined(BOOST_WINDOWS)
-			ec = boost::system::error_code(WSAGetLastError(), net::error::get_system_category());
-	#else
-			ec = boost::system::error_code(errno, net::error::get_system_category());
-	#endif
-		}
-	}
+	//////////////////////////////////////////////////////////////////////////
 
 	// 检测 host 是否是域名或主机名, 如果是域名则返回 true, 否则返回 false.
 	inline bool is_hostname(std::string_view host) noexcept
@@ -241,308 +189,6 @@ namespace proxy {
 		return rd;
 	}
 
-#if defined(BOOST_WINDOWS)
-	// 启用 TCP Keep-Alive 选项.
-	inline boost::system::result<bool> set_tcp_keepalive(SOCKET fd) noexcept
-	{
-		boost::system::error_code ec;
-		int ret = 0;
-
-		struct tcp_keepalive alive;
-		alive.onoff = 1;
-		alive.keepalivetime = 30000;  		// 30 seconds
-		alive.keepaliveinterval = 15000; 	// 15 seconds
-		ret = ::WSAIoctl(fd, SIO_KEEPALIVE_VALS, &alive, sizeof(alive), NULL, 0, NULL, NULL, NULL);
-		make_error_code(ec, ret != 0);
-		if (ret != 0)
-			return ec;
-		return true;
-	}
-#elif defined(__APPLE__)
-	// macOS 使用 TCP_KEEPALIVE 替代 TCP_KEEPIDLE.
-	inline boost::system::result<bool> set_tcp_keepalive(int fd) noexcept
-	{
-		boost::system::error_code ec;
-		int ret = 0;
-		int keepalive = 1;
-
-		ret = ::setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &keepalive, sizeof(keepalive));
-		make_error_code(ec, ret != 0);
-		if (ret != 0)
-			return ec;
-
-		int idle_time = 30;     // 30 seconds
-		ret = ::setsockopt(fd, IPPROTO_TCP, TCP_KEEPALIVE, &idle_time, sizeof(idle_time));
-		make_error_code(ec, ret != 0);
-		if (ret != 0)
-			return ec;
-
-		int interval = 15;      // 15 seconds
-		ret = ::setsockopt(fd, IPPROTO_TCP, TCP_KEEPINTVL, &interval, sizeof(interval));
-		make_error_code(ec, ret != 0);
-		if (ret != 0)
-			return ec;
-
-		int maxpkt = 3;         // 3 probes
-		ret = ::setsockopt(fd, IPPROTO_TCP, TCP_KEEPCNT, &maxpkt, sizeof(maxpkt));
-		make_error_code(ec, ret != 0);
-		if (ret != 0)
-			return ec;
-
-		return true;
-	}
-#else
-	// 启用 TCP Keep-Alive 选项.
-	inline boost::system::result<bool> set_tcp_keepalive(int fd) noexcept
-	{
-		boost::system::error_code ec;
-		int ret = 0;
-		int keepalive = 1;
-
-		ret = ::setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &keepalive, sizeof(keepalive));
-		make_error_code(ec, ret != 0);
-		if (ret != 0)
-			return ec;
-
-		int idle_time = 30;     // 30 seconds
-		ret = ::setsockopt(fd, IPPROTO_TCP, TCP_KEEPIDLE, &idle_time, sizeof(idle_time));
-		make_error_code(ec, ret != 0);
-		if (ret != 0)
-			return ec;
-
-		int interval = 15;      // 15 seconds
-		ret = ::setsockopt(fd, IPPROTO_TCP, TCP_KEEPINTVL, &interval, sizeof(interval));
-		make_error_code(ec, ret != 0);
-		if (ret != 0)
-			return ec;
-
-		int maxpkt = 3;         // 3 probes
-		ret = ::setsockopt(fd, IPPROTO_TCP, TCP_KEEPCNT, &maxpkt, sizeof(maxpkt));
-		make_error_code(ec, ret != 0);
-		if (ret != 0)
-			return ec;
-
-		return true;
-	}
-#endif
-
-	// 设置 socket 的 mark 标志.
-	inline boost::system::result<bool> set_socket_mark(int fd, uint32_t mark) noexcept
-	{
-		boost::system::error_code ec;
-#if defined(__linux__)
-		int ret = ::setsockopt(fd, SOL_SOCKET, SO_MARK, &mark, sizeof(uint32_t));
-		make_error_code(ec, ret != 0);
-		if (ret != 0)
-			return ec;
-#endif
-		return true;
-	}
-
-	// 在配置了 SO_MARK 时, 对指定 fd 应用 mark 标记.
-	// 返回设置结果, 调用方负责记录日志.
-	inline boost::system::result<void>
-	apply_so_mark(int fd, const std::optional<uint32_t>& so_mark) noexcept
-	{
-#if defined(__linux__)
-		if (so_mark)
-		{
-			auto r = set_socket_mark(fd, so_mark.value());
-			if (r.has_error())
-				return r.error();
-		}
-#endif
-		return {};
-	}
-
-	// 禁用 Nagle 算法 (TCP_NODELAY), 使小数据包立即发送, 降低延迟.
-	inline boost::system::result<bool> set_tcp_nodelay(int fd, bool on = true) noexcept
-	{
-		boost::system::error_code ec;
-		int opt = on ? 1 : 0;
-		int ret = ::setsockopt(fd, IPPROTO_TCP, TCP_NODELAY,
-			reinterpret_cast<const char*>(&opt), sizeof(opt));
-		make_error_code(ec, ret != 0);
-		if (ret != 0)
-			return ec;
-		return true;
-	}
-
-#if defined(__linux__)
-	// 启用 TCP_QUICKACK, 立即发送 ACK 确认收到的数据, 减少延迟.
-	// 注意: TCP_QUICKACK 是瞬态选项, Linux 内核在收到数据后可能重置.
-	// 适合代理类场景, 因为双向转发会频繁交互.
-	inline boost::system::result<bool> set_tcp_quickack(int fd, bool on = true) noexcept
-	{
-		boost::system::error_code ec;
-		int opt = on ? 1 : 0;
-		int ret = ::setsockopt(fd, IPPROTO_TCP, TCP_QUICKACK,
-			reinterpret_cast<const char*>(&opt), sizeof(opt));
-		make_error_code(ec, ret != 0);
-		if (ret != 0)
-			return ec;
-		return true;
-	}
-#endif // defined(__linux__)
-
-	// 增大 TCP 收发缓冲区以提升吞吐量.
-	// 注意: 系统全局限制 (/proc/sys/net/core/rmem_max, wmem_max) 有上限.
-	inline boost::system::result<bool> set_tcp_buffer_sizes(
-		int fd, int recv_size, int send_size) noexcept
-	{
-		boost::system::error_code ec;
-		int ret = 0;
-
-		if (recv_size > 0)
-		{
-			ret = ::setsockopt(fd, SOL_SOCKET, SO_RCVBUF,
-				reinterpret_cast<const char*>(&recv_size), sizeof(recv_size));
-			make_error_code(ec, ret != 0);
-			if (ret != 0)
-				return ec;
-		}
-
-		if (send_size > 0)
-		{
-			ret = ::setsockopt(fd, SOL_SOCKET, SO_SNDBUF,
-				reinterpret_cast<const char*>(&send_size), sizeof(send_size));
-			make_error_code(ec, ret != 0);
-			if (ret != 0)
-				return ec;
-		}
-
-		return true;
-	}
-
-	//////////////////////////////////////////////////////////////////////////
-	// QUIC 可变长度整数编码/解码 (RFC 9298 capsule 协议)
-
-	// 获取 QUIC 变长整数编码后的实际字节数
-	constexpr size_t varint_encoded_length(uint64_t val)
-	{
-		if (val <= 0x3F)       return 1;
-		if (val <= 0x3FFF)     return 2;
-		if (val <= 0x3FFFFFFF) return 4;
-		return 8;
-	}
-
-	// 将 value 编码为 QUIC 变长整数, 写入 buf, 返回写入的字节数.
-	inline size_t varint_int_encode(uint64_t value, uint8_t* buf) noexcept
-	{
-		if (value < 0x40)
-		{
-			buf[0] = static_cast<uint8_t>(value);
-			return 1;
-		}
-		else if (value < 0x4000)
-		{
-			value |= 0x4000;
-			buf[0] = static_cast<uint8_t>(value >> 8);
-			buf[1] = static_cast<uint8_t>(value);
-			return 2;
-		}
-		else if (value < 0x40000000)
-		{
-			value |= 0x80000000;
-			buf[0] = static_cast<uint8_t>(value >> 24);
-			buf[1] = static_cast<uint8_t>(value >> 16);
-			buf[2] = static_cast<uint8_t>(value >> 8);
-			buf[3] = static_cast<uint8_t>(value);
-			return 4;
-		}
-		else
-		{
-			value |= 0xC000000000000000ULL;
-			buf[0] = static_cast<uint8_t>(value >> 56);
-			buf[1] = static_cast<uint8_t>(value >> 48);
-			buf[2] = static_cast<uint8_t>(value >> 40);
-			buf[3] = static_cast<uint8_t>(value >> 32);
-			buf[4] = static_cast<uint8_t>(value >> 24);
-			buf[5] = static_cast<uint8_t>(value >> 16);
-			buf[6] = static_cast<uint8_t>(value >> 8);
-			buf[7] = static_cast<uint8_t>(value);
-			return 8;
-		}
-	}
-
-	// 从 buf 解码一个 QUIC 变长整数, 返回 {字节数, 值}.
-	inline std::pair<size_t, uint64_t> varint_int_decode(const uint8_t* buf) noexcept
-	{
-		uint8_t prefix = buf[0] >> 6;
-		if (prefix == 0)
-			return { 1, buf[0] };
-		else if (prefix == 1)
-		{
-			uint64_t v = (static_cast<uint64_t>(buf[0]) << 8) | buf[1];
-			return { 2, v & 0x3FFF };
-		}
-		else if (prefix == 2)
-		{
-			uint64_t v = (static_cast<uint64_t>(buf[0]) << 24) |
-				(static_cast<uint64_t>(buf[1]) << 16) |
-				(static_cast<uint64_t>(buf[2]) << 8) |
-				buf[3];
-			return { 4, v & 0x3FFFFFFF };
-		}
-		else
-		{
-			uint64_t v = (static_cast<uint64_t>(buf[0]) << 56) |
-				(static_cast<uint64_t>(buf[1]) << 48) |
-				(static_cast<uint64_t>(buf[2]) << 40) |
-				(static_cast<uint64_t>(buf[3]) << 32) |
-				(static_cast<uint64_t>(buf[4]) << 24) |
-				(static_cast<uint64_t>(buf[5]) << 16) |
-				(static_cast<uint64_t>(buf[6]) << 8) |
-				buf[7];
-			return { 8, v & 0x3FFFFFFFFFFFFFFF };
-		}
-	}
-
-	// 从 buf 解码一个 QUIC 变长整数并做边界检查, 返回 {字节数, 值}.
-	// 输入长度不足以容纳该变长整数时返回 {0, 0}, 调用方需处理该情况.
-	inline std::pair<size_t, uint64_t> varint_int_decode_bounded(
-		const uint8_t* buf, size_t len) noexcept
-	{
-		if (len == 0)
-			return { 0, 0 };
-
-		size_t need = static_cast<size_t>(1) << (buf[0] >> 6);
-		if (len < need)
-			return { 0, 0 };
-
-		return varint_int_decode(buf);
-	}
-
-	// 从流中读取一个 QUIC 变长整数 (varint), 用于 RFC 9298 capsule 协议解析.
-	// 注意: 需要调用方已包含 proxy_stream.hpp 和 use_awaitable.hpp.
-	// 返回读取到的值, ec 非零表示读取失败.
-	template <typename Stream>
-	inline net::awaitable<uint64_t>
-	read_varint_from_stream(Stream& stream, boost::system::error_code& ec)
-	{
-		uint8_t buf[8];
-
-		co_await net::async_read(stream, net::buffer(buf, 1), net_awaitable[ec]);
-		if (ec)
-			co_return 0;
-
-		uint8_t prefix = buf[0] >> 6;
-		size_t len = 1 << prefix;
-
-		if (len > 1)
-		{
-			co_await net::async_read(stream, net::buffer(buf + 1, len - 1),
-				net_awaitable[ec]);
-			if (ec)
-				co_return 0;
-		}
-
-		auto [consumed, value] = varint_int_decode(buf);
-		(void)consumed;
-
-		co_return value;
-	}
-
 	//////////////////////////////////////////////////////////////////////////
 
 	// 将 sockaddr_storage 转换为 udp::endpoint.
@@ -569,438 +215,6 @@ namespace proxy {
 	}
 
 	//////////////////////////////////////////////////////////////////////////
-	// SSL 客户端通用工具函数
-	// 将 proxy_server 和 proxy_session 中重复的 SSL 客户端连接代码抽象到此.
-
-	// 配置 SSL 客户端 context 的通用设置.
-	// 包括设置验证模式、加载 CA 根证书、以及配置主机名验证回调.
-	// 使用模板以避免在 proxy_util.hpp 中引入 SSL 相关头文件依赖，
-	// 函数体在实例化时需保证以下符号可用:
-	//   net::ssl::context, net::ssl::verify_peer, net::ssl::verify_none,
-	//   net::ssl::host_name_verification, net::buffer, default_root_certificates()
-	// 参数:
-	//   ctx - SSL context 引用
-	//   disable_check_cert - 是否禁用证书验证
-	//   hostname - 用于证书验证的主机名
-	//   cacert_path - 可选的自定义 CA 证书目录路径
-	inline boost::system::error_code
-	configure_ssl_client_ctx(net::ssl::context& ctx,
-		bool disable_check_cert,
-		const std::string& hostname,
-		const std::string& cacert_path = {}) noexcept
-	{
-		boost::system::error_code ec;
-
-		if (!cacert_path.empty() && fs::exists(cacert_path, ec))
-		{
-			ctx.add_verify_path(cacert_path, ec);
-			if (ec)
-				return ec;
-		}
-
-		auto verify = net::ssl::verify_peer;
-		if (disable_check_cert)
-			verify = net::ssl::verify_none;
-
-		ctx.set_verify_mode(verify);
-
-		auto certs = default_root_certificates();
-		ctx.add_certificate_authority(
-			net::buffer(certs.data(), certs.size()), ec);
-		if (ec) return ec;
-
-		ctx.set_verify_callback(
-			net::ssl::host_name_verification(hostname), ec);
-
-		return ec;
-	}
-
-	// 进程内共享的 SSL 客户端 context 缓存.
-	//
-	// 创建 SSL context 并加载内置 CA 根证书 bundle(含数百张证书) 开销很大, 若为每个
-	// 连接/请求都创建 context 并重复加载, 会成为 CPU 热点. 这里按 tag 缓存并复用:
-	// tag 相同的调用共享同一个 context, setup 仅在首次创建时执行.
-	// setup 接收 context 引用并返回错误码, 返回错误时不缓存该 context.
-	// tag 必须唯一标识一组相同的 setup 与配置参数. 共享的 SSL_CTX 可被多个连接和
-	// 线程安全地并发使用.
-	//
-	// 缓存的存储与互斥锁提取到下面的非模板函数中, 保证不同 setup(不同 lambda)的
-	// 调用方共享同一份缓存; 若直接写在模板函数内, 每个 setup 类型都会生成各自独立
-	// 的静态缓存, 相同 tag 会缓存出多份 context.
-	inline std::unordered_map<std::string,
-		std::shared_ptr<net::ssl::context>>&
-	ssl_client_ctx_cache() noexcept
-	{
-		static std::unordered_map<std::string,
-			std::shared_ptr<net::ssl::context>> cache;
-		return cache;
-	}
-
-	inline std::mutex& ssl_client_ctx_cache_mutex() noexcept
-	{
-		static std::mutex mutex;
-		return mutex;
-	}
-
-	template <typename Setup>
-	inline boost::system::result<std::shared_ptr<net::ssl::context>>
-	get_cached_ssl_client_ctx(const std::string& tag, Setup&& setup) noexcept
-	{
-		auto& cache = ssl_client_ctx_cache();
-
-		std::lock_guard<std::mutex> lock(ssl_client_ctx_cache_mutex());
-
-		auto it = cache.find(tag);
-		if (it != cache.end())
-			return it->second;
-
-		auto ctx = std::make_shared<net::ssl::context>(
-			net::ssl::context::sslv23_client);
-
-		auto ec = setup(*ctx);
-		if (ec)
-			return ec;
-
-		cache.emplace(tag, ctx);
-
-		return ctx;
-	}
-
-	// 返回进程内共享的 SSL 客户端 context, 按 (是否校验证书, 主机名, 自定义 CA 路径)
-	// 缓存并复用. 由于主机名校验回调与 context 绑定, 这里以主机名作为缓存键.
-	inline boost::system::result<std::shared_ptr<net::ssl::context>>
-	get_shared_ssl_client_ctx(bool disable_check_cert,
-		const std::string& hostname, const std::string& cacert_path = {}) noexcept
-	{
-		std::string key;
-		key.reserve(hostname.size() + cacert_path.size() + 3);
-		key += "client\n";
-		key += disable_check_cert ? '1' : '0';
-		key += '\n';
-		key += hostname;
-		key += '\n';
-		key += cacert_path;
-
-		return get_cached_ssl_client_ctx(key,
-			[&](net::ssl::context& ctx) noexcept
-			{
-				return configure_ssl_client_ctx(
-					ctx, disable_check_cert, hostname, cacert_path);
-			});
-	}
-
-	// 将路径转换为 UNC 路径 (Windows 下处理长路径).
-	template<typename Path>
-	static fs::path make_unc_path(const Path& path) noexcept
-	{
-#ifndef WIN32
-		return path;
-#else
-		auto ret = path.string();
-		if (ret.size() > MAX_PATH)
-		{
-			boost::replace_all(ret, "/", "\\");
-			return "\\\\?\\" + ret;
-		}
-		return ret;
-#endif
-	}
-
-	// 获取文件的最后修改时间(Unix 时间戳, 秒)及 UNC 路径.
-	// success 表示是否成功获取; returned_path 仅在 Windows 长路径处理时使用.
-	inline std::tuple<std::time_t, bool, fs::path>
-		file_last_write_time_raw(const fs::path& file) noexcept
-	{
-		fs::path returned_path; // 仅在 Windows 长路径处理时使用
-		std::time_t time_c = 0;
-		bool success = false;
-
-#ifdef WIN32
-		WIN32_FILE_ATTRIBUTE_DATA file_attr;
-		std::wstring wpath = file.wstring();
-
-		// 如果路径超长且没有 UNC 前缀，尝试转换
-		if (wpath.size() > MAX_PATH && wpath.compare(0, 4, L"\\\\?\\") != 0)
-		{
-			returned_path = make_unc_path(file);
-			wpath = returned_path.wstring();
-		}
-
-		if (GetFileAttributesExW(wpath.c_str(), GetFileExInfoStandard, &file_attr))
-		{
-			// 将 Windows 的 FILETIME (100纳秒为单位) 转换为 Unix 的 time_t (秒为单位)
-			ULARGE_INTEGER ull;
-			ull.LowPart = file_attr.ftLastWriteTime.dwLowDateTime;
-			ull.HighPart = file_attr.ftLastWriteTime.dwHighDateTime;
-
-			// Windows Epoch 是 1601年1月1日，Unix Epoch 是 1970年1月1日，相差 11644473600 秒
-			time_c = static_cast<std::time_t>((ull.QuadPart / 10000000ULL) - 11644473600ULL);
-			success = true;
-		}
-#else
-		struct stat file_stat;
-		if (::stat(file.c_str(), &file_stat) == 0)
-		{
-#if defined(__APPLE__)
-			time_c = file_stat.st_mtimespec.tv_sec;
-#else
-			time_c = file_stat.st_mtim.tv_sec; // 现代 Linux 的纳秒级结构体中的秒部分
-#endif
-			success = true;
-		}
-#endif
-
-		return { time_c, success, returned_path };
-	}
-
-	// 获取文件的最后修改时间和 UNC 路径(本地时间字符串).
-	inline std::tuple<std::string, fs::path> file_last_write_time(const fs::path& file) noexcept
-	{
-		auto [time_c, success, returned_path] = file_last_write_time_raw(file);
-
-		std::string time_string;
-		if (success)
-		{
-			struct tm tm_buf{};
-#ifdef WIN32
-			localtime_s(&tm_buf, &time_c);
-#else
-			localtime_r(&time_c, &tm_buf);
-#endif
-
-			char tmbuf[64] = { 0 };
-			std::strftime(tmbuf, sizeof(tmbuf), "%m-%d-%Y %H:%M", &tm_buf);
-			time_string = tmbuf;
-		}
-
-		return { time_string, returned_path };
-	}
-
-	//////////////////////////////////////////////////////////////////////////
-	// HTTP 缓存校验工具 (Last-Modified / ETag)
-
-	// 将 Unix 时间戳格式化为 HTTP-date (IMF-fixdate), 例如:
-	// "Sun, 06 Nov 1994 08:49:37 GMT".
-	inline std::string http_date_string(std::time_t time_c) noexcept
-	{
-		struct tm tm_buf{};
-#ifdef WIN32
-		gmtime_s(&tm_buf, &time_c);
-#else
-		gmtime_r(&time_c, &tm_buf);
-#endif
-
-		char tmbuf[64] = { 0 };
-		std::strftime(tmbuf, sizeof(tmbuf), "%a, %d %b %Y %H:%M:%S GMT", &tm_buf);
-		return tmbuf;
-	}
-
-	// 根据 RFC 7231 的月名字符串(3 字母)返回月份(1-12), 无法识别返回 0.
-	inline int http_month_from_name(const char* name) noexcept
-	{
-		static constexpr char months[] = "JANFEBMARAPRMAYJUNJULAUGSEPOCTNOVDEC";
-
-		for (int i = 0; i < 12; i++)
-		{
-			if (std::toupper(static_cast<unsigned char>(name[0])) == months[i * 3] &&
-				std::toupper(static_cast<unsigned char>(name[1])) == months[i * 3 + 1] &&
-				std::toupper(static_cast<unsigned char>(name[2])) == months[i * 3 + 2])
-				return i + 1;
-		}
-
-		return 0;
-	}
-
-	// 以 UTC 时间构造 Unix 时间戳, 字段非法时返回 std::nullopt.
-	inline std::optional<std::time_t> make_utc_time(int year, int month, int day,
-		int hour, int minute, int second) noexcept
-	{
-		if (year < 1970 || month < 1 || month > 12 || day < 1 || day > 31 ||
-			hour < 0 || hour > 23 || minute < 0 || minute > 59 ||
-			second < 0 || second > 60)
-			return std::nullopt;
-
-		struct tm tm_buf{};
-		tm_buf.tm_year = year - 1900;
-		tm_buf.tm_mon = month - 1;
-		tm_buf.tm_mday = day;
-		tm_buf.tm_hour = hour;
-		tm_buf.tm_min = minute;
-		tm_buf.tm_sec = second;
-
-#ifdef WIN32
-		std::time_t time_c = ::_mkgmtime(&tm_buf);
-#else
-		std::time_t time_c = ::timegm(&tm_buf);
-#endif
-		if (time_c == static_cast<std::time_t>(-1))
-			return std::nullopt;
-
-		return time_c;
-	}
-
-	// 解析 HTTP-date 为 Unix 时间戳. 兼容 RFC 1123 (IMF-fixdate),
-	// RFC 850 与 asctime 三种历史格式, 解析失败返回 std::nullopt.
-	inline std::optional<std::time_t> parse_http_date(std::string_view value)
-	{
-		while (!value.empty() && (value.front() == ' ' || value.front() == '\t'))
-			value.remove_prefix(1);
-		while (!value.empty() && (value.back() == ' ' || value.back() == '\t'))
-			value.remove_suffix(1);
-
-		if (value.empty())
-			return std::nullopt;
-
-		std::string text(value);
-		char month_name[4] = { 0 };
-		int year = 0, month = 0, day = 0, hour = 0, minute = 0, second = 0;
-
-		// IMF-fixdate: "Sun, 06 Nov 1994 08:49:37 GMT".
-		if (std::sscanf(text.c_str(), "%*3s, %d %3s %d %d:%d:%d",
-			&day, month_name, &year, &hour, &minute, &second) == 6)
-		{
-			if ((month = http_month_from_name(month_name)) != 0)
-				if (auto time_c = make_utc_time(year, month, day, hour, minute, second))
-					return time_c;
-		}
-
-		// RFC 850: "Sunday, 06-Nov-94 08:49:37 GMT".
-		std::memset(month_name, 0, sizeof(month_name));
-		if (std::sscanf(text.c_str(), "%*[^,], %d-%3s-%d %d:%d:%d",
-			&day, month_name, &year, &hour, &minute, &second) == 6)
-		{
-			if (year < 100)
-				year += (year < 70) ? 2000 : 1900;
-			if ((month = http_month_from_name(month_name)) != 0)
-				if (auto time_c = make_utc_time(year, month, day, hour, minute, second))
-					return time_c;
-		}
-
-		// asctime: "Sun Nov  6 08:49:37 1994".
-		{
-			char weekday[4] = { 0 };
-			std::memset(month_name, 0, sizeof(month_name));
-			if (std::sscanf(text.c_str(), "%3s %3s %d %d:%d:%d %d",
-				weekday, month_name, &day, &hour, &minute, &second, &year) == 7)
-			{
-				if ((month = http_month_from_name(month_name)) != 0)
-					if (auto time_c = make_utc_time(year, month, day, hour, minute, second))
-						return time_c;
-			}
-		}
-
-		return std::nullopt;
-	}
-
-	// 根据文件最后修改时间和大小生成强 ETag, 形如 "<mtime十六进制>-<大小十六进制>".
-	inline std::string make_file_etag(std::time_t mtime, std::uintmax_t size)
-	{
-		char buf[64] = { 0 };
-		std::snprintf(buf, sizeof(buf), "\"%llx-%llx\"",
-			static_cast<unsigned long long>(mtime),
-			static_cast<unsigned long long>(size));
-		return buf;
-	}
-
-	// 判断 If-None-Match 请求头是否命中给定 ETag. 支持 "*" 通配以及逗号
-	// 分隔的列表, 按 RFC 7232 使用弱比较(忽略 W/ 前缀).
-	inline bool http_etag_match(std::string_view header, std::string_view etag) noexcept
-	{
-		size_t pos = 0;
-		while (pos < header.size())
-		{
-			size_t comma = header.find(',', pos);
-			std::string_view token = header.substr(pos,
-				comma == std::string_view::npos ? std::string_view::npos : comma - pos);
-
-			while (!token.empty() && (token.front() == ' ' || token.front() == '\t'))
-				token.remove_prefix(1);
-			while (!token.empty() && (token.back() == ' ' || token.back() == '\t'))
-				token.remove_suffix(1);
-
-			if (token == "*")
-				return true;
-
-			if (token.size() > 2 && token[0] == 'W' && token[1] == '/')
-				token.remove_prefix(2);
-
-			if (!token.empty() && token == etag)
-				return true;
-
-			if (comma == std::string_view::npos)
-				break;
-			pos = comma + 1;
-		}
-
-		return false;
-	}
-
-	//////////////////////////////////////////////////////////////////////////
-	// HTTP 路径工具
-
-	// 拼接文档目录和目标路径.
-	inline fs::path path_cat(
-		const std::wstring& doc, const std::wstring& target) noexcept
-	{
-		size_t start_pos = 0;
-		for (auto& c : target)
-		{
-			if (!(c == L'/' || c == '\\'))
-				break;
-
-			start_pos++;
-		}
-
-		std::wstring_view sv;
-		std::wstring slash = L"/";
-
-		if (start_pos < target.size())
-			sv = std::wstring_view(target.c_str() + start_pos);
-#ifdef WIN32
-		slash = L"\\";
-		if (doc.back() == L'/' ||
-			doc.back() == L'\\')
-			slash = L"";
-		return fs::path(doc + slash + std::wstring(sv));
-#else
-		if (doc.back() == L'/')
-			slash = L"";
-		return fs::path(
-			boost::nowide::narrow(doc + slash + std::wstring(sv)));
-#endif // WIN32
-	}
-
-	// 从 HTTP 请求目标路径生成文件系统路径字符串.
-	inline std::wstring make_target_path(const std::string& target) noexcept
-	{
-		try
-		{
-			auto result = urls::url(
-				target.starts_with("/") ? target : "/" + target);
-
-			return boost::nowide::widen(result.path());
-		}
-		catch (const std::exception&)
-		{}
-
-		return boost::nowide::widen(target);
-	}
-
-	// 从文档根目录和请求目标生成实际文件系统路径.
-	inline fs::path make_real_target_path(const std::string& doc_directory,
-		const std::string& target) noexcept
-	{
-		auto target_path = make_target_path(target);
-		auto doc_path = boost::nowide::widen(doc_directory);
-
-#ifdef WIN32
-		auto ret = make_unc_path(path_cat(doc_path, target_path));
-#else
-		auto ret = path_cat(doc_path, target_path).string();
-#endif
-
-		return ret;
-	}
 
 	//////////////////////////////////////////////////////////////////////////
 	// 执行上下文切换工具
@@ -1030,8 +244,8 @@ namespace proxy {
 			co_await net::post(
 				net::bind_executor(executor, net::use_awaitable));
 	}
-}
 
+}
 
 constexpr std::size_t custom_default_transfer_size = 1024 * 1024;
 
@@ -1042,3 +256,4 @@ inline std::size_t custom_write_all(const boost::system::error_code& ec, std::si
 }
 
 #endif // INCLUDE__2026_06_08__PROXY_UTIL_HPP
+
