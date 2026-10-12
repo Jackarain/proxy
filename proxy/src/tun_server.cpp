@@ -15,6 +15,7 @@
 #include "proxy/logging.hpp"
 #include "proxy/proxy_util.hpp"
 #include "proxy/socks_client.hpp"
+#include "proxy/ssl_connect.hpp"
 #include "proxy/socks_io.hpp"
 #include "proxy/wintun_install.hpp"
 
@@ -1903,51 +1904,10 @@ namespace proxy {
 	tun_server::make_ssl_socket(tcp::socket& remote_socket,
 		std::string_view sni, std::optional<variant_stream_type>& ssl_sock)
 	{
-		boost::system::error_code ec;
-
-		if (!m_ssl_client_context)
-		{
-			m_ssl_client_context.emplace(net::ssl::context::sslv23_client);
-
-			// 使用通用函数配置 SSL context（验证模式、CA 证书、主机名验证）.
-			ec = configure_ssl_client_ctx(*m_ssl_client_context,
-				m_option.disable_check_cert_,
-				std::string(sni),
-				m_option.ssl_cacert_path_);
-			if (ec)
-			{
-				// 配置失败，重置 context，使下次调用重新初始化.
-				m_ssl_client_context.reset();
-				co_return ec;
-			}
-		}
-
-		// 初始化为 SSL 加密的 TCP 流.
-		ssl_sock.emplace(init_proxy_stream(std::move(remote_socket), *m_ssl_client_context));
-		auto& ssl_socket = boost::variant2::get<ssl_tcp_stream>(*ssl_sock);
-
-		// 设置 SNI 主机名以兼容需要 SNI 的服务器.
-		SSL_set_tlsext_host_name(ssl_socket.native_handle(), sni.data());
-
-		// TLS 握手超时: 服务器无响应时挂起 (建连期 socket 尚在局部
-		// ssl_sock 中, flow 关闭无法中止), 超时关闭底层连接使其失败.
-		net::steady_timer tls_timer(m_executor);
-		tls_timer.expires_after(std::chrono::seconds(15));
-		tls_timer.async_wait(
-			[&ssl_sock](const boost::system::error_code& tec)
-			{
-				if (tec)
-					return;
-				if (!ssl_sock)
-					return;
-				boost::system::error_code sec;
-				net_tcp_socket(*ssl_sock).close(sec);
-			});
-
-		// 进行 SSL 握手.
-		co_await ssl_socket.async_handshake(
-			net::ssl::stream_base::client, net_awaitable[ec]);
-		tls_timer.cancel();
+		// 复用进程内共享的 SSL 客户端 context 完成 TLS 握手.
+		auto ec = co_await ssl_upgrade_client_stream(
+			remote_socket, ssl_sock, sni,
+			m_option.disable_check_cert_, m_option.ssl_cacert_path_);
 		if (ec)
 			co_return ec;
 
@@ -2134,25 +2094,6 @@ namespace proxy {
 	{
 		if (m_abort)
 			return;
-
-		// 预初始化上游代理 SSL context: 多协程（TCP/UDP 流）并发建连时
-		// 若各自惰性初始化会产生数据竞争, 导致部分 SSL 握手挂起.
-		if (!m_ssl_client_context && m_option.proxy_pass_ &&
-			proxy_use_ssl(*m_option.proxy_pass_, m_option))
-		{
-			boost::system::error_code ec;
-			std::string proxy_host((*m_option.proxy_pass_).encoded_host());
-			auto sni = m_option.proxy_ssl_name_.empty() ?
-				proxy_host : m_option.proxy_ssl_name_;
-			m_ssl_client_context.emplace(net::ssl::context::sslv23_client);
-			ec = configure_ssl_client_ctx(*m_ssl_client_context,
-				m_option.disable_check_cert_, sni, m_option.ssl_cacert_path_);
-			if (ec)
-			{
-				XLOG_WARN << "tun init ssl client context: " << ec.message();
-				m_ssl_client_context.reset();
-			}
-		}
 
 		// 等待外部注入 TUN fd 模式（Android VpnService）：不创建设备,
 		// 由 launcher 控制通道 set_tun_fd 注入后启动 accept 循环.

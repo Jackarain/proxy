@@ -619,9 +619,6 @@ namespace proxy {
 			std::chrono::steady_clock::time_point expire;
 		};
 
-		// m_ssl_client_context 保存与上游代理建立 SSL 连接使用的客户端 context.
-		std::optional<net::ssl::context> m_ssl_client_context;
-
 		// m_domain_ips 保存命中 proxy_domains_ 的域名解析结果（域名 -> IP 列表）.
 		// 声明为 mutable 以便 ip_match_proxy 等 const 方法惰性清理过期条目.
 		mutable std::unordered_map<std::string, std::vector<dns_ip_entry>> m_domain_ips;

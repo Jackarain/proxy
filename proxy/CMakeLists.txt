@@ -29,6 +29,7 @@ target_sources(libproxy
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/net_socket_option.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/rfc9298_capsule.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/ssl_client.hpp
+	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/ssl_connect.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/http_date.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/path_util.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/proxy_stream.hpp
