@@ -10,28 +10,14 @@
 
 #include "proxy/proxy_session.hpp"
 #include "proxy/http_error_body.hpp"
-#include "proxy/dns_server.hpp"
 #include "proxy/async_connect.hpp"
 #include "proxy/proxy_util.hpp"
 #include "proxy/fileop.hpp"
 
-#include <charconv>
 #include <limits>
 #include <vector>
 
 namespace proxy {
-
-	using io_util::read;
-	using io_util::write;
-
-	//////////////////////////////////////////////////////////////////////////
-
-	// ====================================================================
-	// DNS wire-format 编码/解码辅助函数 (用于 application/dns-json 支持)
-	// ====================================================================
-
-	// DNS 记录类型常量与 wire 工具函数已移至 dns_server.hpp/dns_server.cpp
-	// （命名空间级自由函数），本文件通过 dns_server.hpp 直接使用.
 
 	//////////////////////////////////////////////////////////////////////////
 	// proxy_session 辅助函数
