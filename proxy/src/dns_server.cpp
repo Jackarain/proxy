@@ -475,12 +475,13 @@ namespace proxy {
 		case DNS_TYPE_CAA:
 		{
 			if (rdlength < 2) return {};
+			const char* const rd_start = rdata;
 			auto flags = read<uint8_t>(rdata);
 			uint8_t tag_len = read<uint8_t>(rdata);
-			if (rdata + tag_len > rdata + rdlength) return {};
+			if (rdata + tag_len > rd_start + rdlength) return {};
 			std::string tag(rdata, tag_len);
 			rdata += tag_len;
-			std::string value(rdata, (rdata + rdlength) - rdata);
+			std::string value(rdata, (rd_start + rdlength) - rdata);
 			return std::to_string(flags) + " " + tag + " \"" + value + "\"";
 		}
 		default:
