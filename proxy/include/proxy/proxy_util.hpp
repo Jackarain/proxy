@@ -19,6 +19,7 @@
 #include "proxy/ssl_client.hpp"
 #include "proxy/use_awaitable.hpp"
 
+#include <boost/algorithm/string/case_conv.hpp>
 #include <boost/system/error_code.hpp>
 #include <boost/asio/ip/address.hpp>
 #include <boost/asio/ip/network_v4.hpp>
