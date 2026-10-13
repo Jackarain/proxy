@@ -13,6 +13,7 @@
 
 
 #include <boost/asio/ip/basic_resolver.hpp>
+#include <boost/asio/ip/tcp.hpp>
 
 #include <string>
 #include <tuple>

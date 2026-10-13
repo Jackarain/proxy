@@ -16,6 +16,7 @@
 
 #include <boost/assert.hpp>
 
+#include <climits>
 #include <random>
 #include <cstdint>
 #include <sstream>

@@ -11,15 +11,25 @@
 
 #include <boost/filesystem.hpp>
 #include <boost/nowide/fstream.hpp>
+#include <boost/asio/associated_cancellation_slot.hpp>
+#include <boost/asio/associated_executor.hpp>
 #include <boost/asio/async_result.hpp>
+#include <boost/asio/cancellation_type.hpp>
+#include <boost/asio/error.hpp>
+#include <boost/asio/post.hpp>
 #include <boost/system.hpp>
 
+#include <atomic>
 #include <cstdint>
+#include <cstdlib>
+#include <iomanip>
+#include <memory>
 #include <span>
+#include <sstream>
 #include <streambuf>
 #include <string>
 #include <string_view>
-#include <sstream>
+#include <thread>
 #include <type_traits>
 
 #include <openssl/evp.h>

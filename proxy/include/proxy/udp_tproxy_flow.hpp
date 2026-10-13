@@ -30,6 +30,8 @@ namespace proxy {
 	using udp = net::ip::udp;               // from <boost/asio/ip/udp.hpp>
 
 #ifdef __linux__
+	using util::variant_stream_type;
+
 	// udp_tproxy_flow 结构体保存每个 UDP TPROXY flow 的状态信息, 包括客户端地址、原始目标地址和 relay socket 等等.
 	struct udp_tproxy_flow
 	{

@@ -13,6 +13,7 @@
 
 
 #include <boost/algorithm/string/replace.hpp>
+#include <boost/asio/ip/tcp.hpp>
 #include <boost/nowide/convert.hpp>
 #include <boost/url.hpp>
 
@@ -30,6 +31,8 @@
 
 #if defined(BOOST_WINDOWS)
 # include <windows.h>
+#else
+# include <sys/stat.h>
 #endif
 
 
