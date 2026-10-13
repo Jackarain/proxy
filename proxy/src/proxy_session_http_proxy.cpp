@@ -11,6 +11,8 @@
 #include "proxy/proxy_session.hpp"
 #include "proxy/http_error_body.hpp"
 
+#include <charconv>
+
 namespace proxy {
 
 	//////////////////////////////////////////////////////////////////////////
