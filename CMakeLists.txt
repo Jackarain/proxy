@@ -87,6 +87,7 @@ option(ENABLE_MIMALLOC_STATIC		"Build with mimalloc support" OFF)
 option(ENABLE_SNMALLOC_STATIC		"Build with snmalloc support" OFF)
 
 option(ENABLE_BUILD_EXAMPLES		"Build proxy examples" OFF)
+option(ENABLE_BUILD_TESTS			"Build unit tests" OFF)
 option(ENABLE_LINKE_TO_LIBATOMIC	"Link to libatomic.so - some platform requires it" OFF)
 
 ################################################################################
@@ -406,10 +407,6 @@ endif()
 ################################################################################
 # 使用 boost asio 和 boost beast
 
-if (ENABLE_BUILD_TESTS)
-	set(USE_BOOST_TEST ON)
-endif()
-
 if (ENABLE_ASIO_HANDLER_TRACKING)
 	add_definitions(-DBOOST_ASIO_ENABLE_HANDLER_TRACKING)
 endif()
@@ -499,11 +496,15 @@ else()
 	    #"regex"                  # 正则表达式
 	    "serialization"          # 序列化库
 	    "stacktrace"             # 堆栈回溯
-	    "test"                   # 单元测试框架
 	    "type_erasure"           # 类型擦除
 	    #"url"                    # URL 解析库
 	    "wave"                   # C++ 预处理器解析器
 	)
+
+	# 单元测试依赖 Boost.Test, 仅在启用测试时构建该库.
+	if (NOT ENABLE_BUILD_TESTS)
+		list(APPEND BOOST_EXCLUDE_LIBRARIES "test")
+	endif()
 
 	add_subdirectory(third_party/boost EXCLUDE_FROM_ALL)
 
@@ -712,6 +713,14 @@ add_subdirectory(apps)
 
 if (ENABLE_BUILD_EXAMPLES)
 	add_subdirectory(example)
+endif()
+
+################################################################################
+# 添加单元测试
+
+if (ENABLE_BUILD_TESTS)
+	enable_testing()
+	add_subdirectory(tests)
 endif()
 
 ################################################################################
