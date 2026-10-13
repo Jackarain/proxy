@@ -167,8 +167,8 @@ namespace proxy {
 			write<uint8_t>(0, op);              // NAME: root (1 byte)
 			write<uint16_t>(41, op);             // TYPE: OPT
 			write<uint16_t>(1280, op);           // CLASS: UDP payload size
-			write<uint16_t>(0x8000, op);         // TTL high: DO=1
-			write<uint16_t>(0, op);              // TTL low
+			write<uint16_t>(0, op);              // TTL high: EXTENDED-RCODE + VERSION
+			write<uint16_t>(0x8000, op);         // TTL low: DO=1
 			write<uint16_t>(0, op);              // RDLEN = 0
 			query.append(opt, 11);
 		}
@@ -789,12 +789,15 @@ namespace proxy {
 			p = np;
 			if (p + 10 > end)
 				return;
-			auto rtype = io_util::read<uint16_t>(p);
+			// 用临时指针读取 TYPE, 保持 p 指向记录起始位置, 便于按
+			// NAME/TYPE/CLASS/TTL/RDLEN 的固定偏移计算后续字段.
+			const char* type_p = p;
+			auto rtype = io_util::read<uint16_t>(type_p);
 			const char* rd_p = p + 8;
 			auto rdlength = io_util::read<uint16_t>(rd_p);
-			if (rtype == 41 && p + 8 <= end)
+			if (rtype == 41)
 			{
-				// OPT 记录：NAME(1) TYPE(2) CLASS(2) TTL(4) RDLEN(2)。
+				// OPT 记录：TYPE(2) CLASS(2) TTL(4) RDLEN(2)。
 				// TTL 低 16 位为 flags，DO 是 flags 的 bit15，即 TTL 第 3
 				// 字节（p+6）的 bit7.
 				if (static_cast<uint8_t>(p[6]) & 0x80)
