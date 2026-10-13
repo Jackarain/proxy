@@ -7,10 +7,22 @@ add_executable(proxy_unit_tests
 	main.cpp
 	test_rfc9298_capsule.cpp
 	test_http_date.cpp
+	test_http_error_body.cpp
 	test_proxy_util.cpp
 	test_strutil.cpp
+	test_strutil_extra.cpp
 	test_url_info.cpp
 	test_dns_wire.cpp
+	test_dns_rdata.cpp
+	test_dns_cache.cpp
+	test_scramble.cpp
+	test_fileop.cpp
+	test_path_util.cpp
+	test_net_socket_option.cpp
+	test_socks_error_code.cpp
+	test_ssl_client.cpp
+	test_udp_tproxy_flow.cpp
+	test_doh_http.cpp
 )
 
 target_link_libraries(proxy_unit_tests
