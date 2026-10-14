@@ -15,7 +15,6 @@
 
 #ifdef USE_SNMALLOC
 # ifdef NDEBUG
-#  define SNMALLOC_STATIC_LIBRARY_PREFIX sn_
 #  include "src/snmalloc/override/malloc.cc"
 #  include "src/snmalloc/override/new.cc"
 # endif
