@@ -85,6 +85,7 @@ option(ENABLE_TCMALLOC_STATIC		"Build with Tcmalloc support" OFF)
 option(ENABLE_JEMALLOC_STATIC		"Build with Jemalloc support" OFF)
 option(ENABLE_MIMALLOC_STATIC		"Build with mimalloc support" OFF)
 option(ENABLE_SNMALLOC_STATIC		"Build with snmalloc support" OFF)
+option(ENABLE_SNMALLOC_MADV_FREE	"Let snmalloc use MADV_FREE to decommit pages" OFF)
 
 option(ENABLE_BUILD_EXAMPLES		"Build proxy examples" OFF)
 option(ENABLE_BUILD_TESTS			"Build unit tests" OFF)
@@ -606,6 +607,11 @@ if (ENABLE_SNMALLOC_STATIC)
 
 	add_definitions(-DUSE_SNMALLOC)
 	add_definitions(-DSNMALLOC_USE_WAIT_ON_ADDRESS=1)
+
+	if (NOT ENABLE_SNMALLOC_MADV_FREE)
+		add_definitions(-DSNMALLOC_DISABLE_MADV_FREE)
+	endif ()
+
 	add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/third_party/snmalloc EXCLUDE_FROM_ALL)
 
 	link_libraries(snmalloc)

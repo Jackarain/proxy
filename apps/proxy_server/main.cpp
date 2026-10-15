@@ -15,6 +15,10 @@
 
 #ifdef USE_SNMALLOC
 # ifdef NDEBUG
+#  if defined(SNMALLOC_DISABLE_MADV_FREE) && defined(__linux__)
+#   include <sys/mman.h>
+#   undef MADV_FREE
+#  endif
 #  include "src/snmalloc/override/malloc.cc"
 #  include "src/snmalloc/override/new.cc"
 # endif
