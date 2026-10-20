@@ -1,9 +1,11 @@
 ﻿# proxy server
 
+set(APPS_COMMON_DIR ${CMAKE_SOURCE_DIR}/apps/common)
+
 add_executable(proxy_server
     main.cpp
-    ../common/main.hpp
-    ../common/version.cpp
+    ${APPS_COMMON_DIR}/main.hpp
+    ${APPS_COMMON_DIR}/version.cpp
 )
 
 target_link_libraries(proxy_server
@@ -13,7 +15,7 @@ target_link_libraries(proxy_server
 
 target_include_directories(proxy_server
     PRIVATE
-    ../common
+    ${APPS_COMMON_DIR}
 )
 
 if (WIN32)
@@ -35,7 +37,7 @@ if (TARGET IOUring::IOUring)
     target_link_libraries(proxy_server IOUring::IOUring)
 endif()
 
-set_property(SOURCE ../common/version.cpp PROPERTY COMPILE_DEFINITIONS "VERSION_GIT=\"${PVERSION}\"")
+set_property(SOURCE ${APPS_COMMON_DIR}/version.cpp PROPERTY COMPILE_DEFINITIONS "VERSION_GIT=\"${PVERSION}\"")
 set_property(TARGET proxy_server PROPERTY FOLDER "apps/proxy_server")
 
 if (MSVC AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 19.29.30129 AND CMAKE_VERSION VERSION_GREATER 3.20.3)
