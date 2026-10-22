@@ -153,9 +153,7 @@ X509_STORE *X509_STORE_dup_ref(const X509_STORE *store) {
   if (store == nullptr) {
     return nullptr;
   }
-  auto *ptr = const_cast<X509_STORE *>(store);
-  X509_STORE_up_ref(ptr);
-  return ptr;
+  return FromOpaque(store)->DupRefInternal();
 }
 
 void X509_STORE_free(X509_STORE *vfy) {
@@ -213,7 +211,7 @@ int X509_STORE_CTX_get_by_subject(X509_STORE_CTX *vs, int type,
   return 1;
 }
 
-static int x509_store_add(X509Store *ctx, void *x, int is_crl) {
+static int x509_store_add(X509Store *ctx, const void *x, int is_crl) {
   if (x == nullptr) {
     return 0;
   }
@@ -225,12 +223,11 @@ static int x509_store_add(X509Store *ctx, void *x, int is_crl) {
 
   if (is_crl) {
     obj->type = X509_LU_CRL;
-    obj->data.crl = (X509_CRL *)x;
+    obj->data.crl = X509_CRL_dup_ref(static_cast<const X509_CRL *>(x));
   } else {
     obj->type = X509_LU_X509;
-    obj->data.x509 = (X509 *)x;
+    obj->data.x509 = X509_dup_ref(static_cast<const X509 *>(x));
   }
-  X509_OBJECT_up_ref_count(obj);
 
   ctx->objs_lock.LockWrite();
 
@@ -250,11 +247,11 @@ static int x509_store_add(X509Store *ctx, void *x, int is_crl) {
   return ret;
 }
 
-int X509_STORE_add_cert(X509_STORE *ctx, X509 *x) {
+int X509_STORE_add_cert(X509_STORE *ctx, const X509 *x) {
   return x509_store_add(FromOpaque(ctx), x, /*is_crl=*/0);
 }
 
-int X509_STORE_add_crl(X509_STORE *ctx, X509_CRL *x) {
+int X509_STORE_add_crl(X509_STORE *ctx, const X509_CRL *x) {
   return x509_store_add(FromOpaque(ctx), x, /*is_crl=*/1);
 }
 

@@ -1029,9 +1029,7 @@ SSL_ECH_KEYS *SSL_ECH_KEYS_dup_ref(const SSL_ECH_KEYS *keys) {
   if (keys == nullptr) {
     return nullptr;
   }
-  auto *ptr = const_cast<SSL_ECH_KEYS *>(keys);
-  SSL_ECH_KEYS_up_ref(ptr);
-  return ptr;
+  return FromOpaque(keys)->DupRefInternal();
 }
 
 void SSL_ECH_KEYS_free(SSL_ECH_KEYS *keys) {
@@ -1087,7 +1085,7 @@ int SSL_ECH_KEYS_marshal_retry_configs(const SSL_ECH_KEYS *keys, uint8_t **out,
   return CBB_finish(cbb.get(), out, out_len);
 }
 
-int SSL_CTX_set1_ech_keys(SSL_CTX *ctx, SSL_ECH_KEYS *keys) {
+int SSL_CTX_set1_ech_keys(SSL_CTX *ctx, const SSL_ECH_KEYS *keys) {
   auto *ctx_impl = FromOpaque(ctx);
   bool has_retry_config = false;
   for (const auto &config : FromOpaque(keys)->configs) {

@@ -118,7 +118,7 @@ IMPLEMENT_EXTERN_ASN1_PARSE_INTO(X509_PUBKEY, X509_PUBKEY_new, X509_PUBKEY_free,
 
 BSSL_NAMESPACE_END
 
-int bssl::x509_pubkey_set1(X509_PUBKEY *key, EVP_PKEY *pkey) {
+int bssl::x509_pubkey_set1(X509_PUBKEY *key, const EVP_PKEY *pkey) {
   ScopedCBB cbb;
   if (!CBB_init(cbb.get(), 64) || !EVP_marshal_public_key(cbb.get(), pkey)) {
     OPENSSL_PUT_ERROR(X509, X509_R_PUBLIC_KEY_ENCODE_ERROR);
@@ -133,7 +133,7 @@ int bssl::x509_pubkey_set1(X509_PUBKEY *key, EVP_PKEY *pkey) {
   return x509_parse_public_key(&cbs, key, GetDefaultEVPAlgorithms());
 }
 
-int X509_PUBKEY_set(X509_PUBKEY **x, EVP_PKEY *pkey) {
+int X509_PUBKEY_set(X509_PUBKEY **x, const EVP_PKEY *pkey) {
   UniquePtr<X509_PUBKEY> new_key(X509_PUBKEY_new());
   if (new_key == nullptr ||
       !x509_pubkey_set1(FromOpaque(new_key.get()), pkey)) {

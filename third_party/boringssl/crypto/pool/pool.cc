@@ -99,9 +99,7 @@ CRYPTO_BUFFER_POOL *CRYPTO_BUFFER_POOL_dup_ref(const CRYPTO_BUFFER_POOL *pool) {
   if (pool == nullptr) {
     return nullptr;
   }
-  auto *ptr = const_cast<CRYPTO_BUFFER_POOL *>(pool);
-  CRYPTO_BUFFER_POOL_up_ref(ptr);
-  return ptr;
+  return FromOpaque(pool)->DupRefInternal();
 }
 
 void CryptoBuffer::UpRefInternal() const {
@@ -273,6 +271,9 @@ int CRYPTO_BUFFER_up_ref(CRYPTO_BUFFER *buf) {
 }
 
 CRYPTO_BUFFER *CRYPTO_BUFFER_dup_ref(const CRYPTO_BUFFER *buf) {
+  if (buf == nullptr) {
+    return nullptr;
+  }
   auto *buf_ = const_cast<CRYPTO_BUFFER *>(buf);
   FromOpaque(buf_)->UpRefInternal();
   return buf_;

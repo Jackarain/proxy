@@ -18,6 +18,7 @@
 #include <openssl/digest.h>
 #include <openssl/err.h>
 #include <openssl/mem.h>
+#include <openssl/nid.h>
 #include <openssl/obj.h>
 #include <openssl/stack.h>
 #include <openssl/x509.h>
@@ -86,7 +87,7 @@ static const X509_PURPOSE xstandard[] = {
      "timestampsign"},
 };
 
-int X509_check_purpose(X509 *x, int id, int ca) {
+int X509_check_purpose(const X509 *x, int id, int ca) {
   // This differs from OpenSSL, which uses -1 to indicate a fatal error and 0 to
   // indicate an invalid certificate. BoringSSL uses 0 for both.
   if (!x509v3_cache_extensions(x)) {
@@ -142,11 +143,11 @@ int X509_supported_extension(const X509_EXTENSION *ex) {
          nid == NID_policy_constraints ||    //
          nid == NID_name_constraints ||      //
          nid == NID_policy_mappings ||       //
-         nid == NID_inhibit_any_policy ||
-         nid == NID_pe_mtcCertificationAuthority_draft;
+         nid == NID_inhibit_any_policy ||    //
+         nid == NID_pe_mtcCertificationAuthority_SHA256;
 }
 
-static int setup_crldp(X509 *x) {
+static int setup_crldp(const X509 *x) {
   int j;
   auto *impl = FromOpaque(x);
   impl->crldp.reset(reinterpret_cast<STACK_OF(DIST_POINT) *>(
@@ -157,7 +158,7 @@ static int setup_crldp(X509 *x) {
   return 1;
 }
 
-int bssl::x509v3_cache_extensions(X509 *x) {
+int bssl::x509v3_cache_extensions(const X509 *x) {
   BASIC_CONSTRAINTS *bs;
   ASN1_BIT_STRING *usage;
   EXTENDED_KEY_USAGE *extusage;
@@ -341,7 +342,7 @@ static int check_ca(const X509 *x) {
 }
 
 int X509_check_ca(const X509 *x) {
-  if (!x509v3_cache_extensions(const_cast<X509*>(x))) {
+  if (!x509v3_cache_extensions(x)) {
     return 0;
   }
   return check_ca(x);
@@ -450,8 +451,8 @@ int X509_check_issued(const X509 *issuer, const X509 *subject) {
                     X509_get_issuer_name(subject))) {
     return X509_V_ERR_SUBJECT_ISSUER_MISMATCH;
   }
-  if (!x509v3_cache_extensions(const_cast<X509 *>(issuer)) ||
-      !x509v3_cache_extensions(const_cast<X509 *>(subject))) {
+  if (!x509v3_cache_extensions(issuer) ||
+      !x509v3_cache_extensions(subject)) {
     return X509_V_ERR_UNSPECIFIED;
   }
 
@@ -504,7 +505,7 @@ int bssl::X509_check_akid(const X509 *issuer, const AUTHORITY_KEYID *akid) {
   return X509_V_OK;
 }
 
-uint32_t X509_get_extension_flags(X509 *x) {
+uint32_t X509_get_extension_flags(const X509 *x) {
   // Ignore the return value. On failure, `impl->ex_flags` will include
   // `EXFLAG_INVALID`.
   x509v3_cache_extensions(x);
@@ -512,7 +513,7 @@ uint32_t X509_get_extension_flags(X509 *x) {
   return impl->ex_flags;
 }
 
-uint32_t X509_get_key_usage(X509 *x) {
+uint32_t X509_get_key_usage(const X509 *x) {
   if (!x509v3_cache_extensions(x)) {
     return 0;
   }
@@ -526,7 +527,7 @@ uint32_t X509_get_key_usage(X509 *x) {
   return UINT32_MAX;
 }
 
-uint32_t X509_get_extended_key_usage(X509 *x) {
+uint32_t X509_get_extended_key_usage(const X509 *x) {
   if (!x509v3_cache_extensions(x)) {
     return 0;
   }
@@ -539,7 +540,7 @@ uint32_t X509_get_extended_key_usage(X509 *x) {
   return UINT32_MAX;
 }
 
-const ASN1_OCTET_STRING *X509_get0_subject_key_id(X509 *x509) {
+const ASN1_OCTET_STRING *X509_get0_subject_key_id(const X509 *x509) {
   if (!x509v3_cache_extensions(x509)) {
     return nullptr;
   }
@@ -547,7 +548,7 @@ const ASN1_OCTET_STRING *X509_get0_subject_key_id(X509 *x509) {
   return impl->skid.get();
 }
 
-const ASN1_OCTET_STRING *X509_get0_authority_key_id(X509 *x509) {
+const ASN1_OCTET_STRING *X509_get0_authority_key_id(const X509 *x509) {
   if (!x509v3_cache_extensions(x509)) {
     return nullptr;
   }
@@ -555,7 +556,7 @@ const ASN1_OCTET_STRING *X509_get0_authority_key_id(X509 *x509) {
   return impl->akid != nullptr ? impl->akid->keyid : nullptr;
 }
 
-const GENERAL_NAMES *X509_get0_authority_issuer(X509 *x509) {
+const GENERAL_NAMES *X509_get0_authority_issuer(const X509 *x509) {
   if (!x509v3_cache_extensions(x509)) {
     return nullptr;
   }
@@ -563,7 +564,7 @@ const GENERAL_NAMES *X509_get0_authority_issuer(X509 *x509) {
   return impl->akid != nullptr ? impl->akid->issuer : nullptr;
 }
 
-const ASN1_INTEGER *X509_get0_authority_serial(X509 *x509) {
+const ASN1_INTEGER *X509_get0_authority_serial(const X509 *x509) {
   auto *impl = FromOpaque(x509);
   if (!x509v3_cache_extensions(impl)) {
     return nullptr;
@@ -571,7 +572,7 @@ const ASN1_INTEGER *X509_get0_authority_serial(X509 *x509) {
   return impl->akid != nullptr ? impl->akid->serial : nullptr;
 }
 
-long X509_get_pathlen(X509 *x509) {
+long X509_get_pathlen(const X509 *x509) {
   auto *impl = FromOpaque(x509);
   if (!x509v3_cache_extensions(x509) || (impl->ex_flags & EXFLAG_BCONS) == 0) {
     return -1;

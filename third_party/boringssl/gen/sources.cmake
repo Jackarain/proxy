@@ -411,6 +411,7 @@ set(
   crypto/evp/p_ec.cc
   crypto/evp/p_ed25519.cc
   crypto/evp/p_hkdf.cc
+  crypto/evp/p_keccak.cc
   crypto/evp/p_mldsa.cc
   crypto/evp/p_mlkem.cc
   crypto/evp/p_rsa.cc
@@ -906,6 +907,7 @@ set(
   crypto/curve25519/ed25519ph_tests.txt
   crypto/ecdh/ecdh_tests.txt
   crypto/evp/test/dh_tests.txt
+  crypto/evp/test/dhkem_tests.txt
   crypto/evp/test/ec_tests.txt
   crypto/evp/test/ed25519_tests.txt
   crypto/evp/test/evp_tests.txt
@@ -1038,6 +1040,14 @@ set(
   crypto/x509/test/many_names2.pem
   crypto/x509/test/many_names3.pem
   crypto/x509/test/mtc/ca_cert.pem
+  crypto/x509/test/mtc/ca_ext_oid_wrong/ca_cert.pem
+  crypto/x509/test/mtc/ca_ext_oid_wrong/cert_1_0.pem
+  crypto/x509/test/mtc/ca_ext_trailing_data/ca_cert.pem
+  crypto/x509/test/mtc/ca_ext_trailing_data/cert_1_0.pem
+  crypto/x509/test/mtc/ca_id_too_long/ca_cert.pem
+  crypto/x509/test/mtc/ca_id_too_long/cert_1_0.pem
+  crypto/x509/test/mtc/ca_min_serial_too_low/ca_cert.pem
+  crypto/x509/test/mtc/ca_min_serial_too_low/cert_1_0.pem
   crypto/x509/test/mtc/cert_10_0.pem
   crypto/x509/test/mtc/cert_10_1.pem
   crypto/x509/test/mtc/cert_2034_0.pem
@@ -1046,6 +1056,8 @@ set(
   crypto/x509/test/mtc/cert_32_0.pem
   crypto/x509/test/mtc/cert_33_0.pem
   crypto/x509/test/mtc/cert_33_1.pem
+  crypto/x509/test/mtc/cert_33_10.pem
+  crypto/x509/test/mtc/cert_33_11.pem
   crypto/x509/test/mtc/cert_33_2.pem
   crypto/x509/test/mtc/cert_33_3.pem
   crypto/x509/test/mtc/cert_33_4.pem
@@ -1057,6 +1069,8 @@ set(
   crypto/x509/test/mtc/cert_5036_0.pem
   crypto/x509/test/mtc/large_merkle_tree_consistency_proof_tests.txt
   crypto/x509/test/mtc/large_merkle_tree_inclusion_proof_tests.txt
+  crypto/x509/test/mtc/old_draft_version/ca_cert.pem
+  crypto/x509/test/mtc/old_draft_version/cert_1_0.pem
   crypto/x509/test/policy_intermediate.pem
   crypto/x509/test/policy_intermediate_any.pem
   crypto/x509/test/policy_intermediate_duplicate.pem
@@ -1480,6 +1494,7 @@ set(
 set(
   PKI_TEST_DATA
 
+  crypto/x509/test/mtc/README.txt
   crypto/x509/test/mtc/large_merkle_tree_consistency_proof_tests.txt
   crypto/x509/test/mtc/large_merkle_tree_inclusion_proof_tests.txt
   pki/testdata/cert_issuer_source_static_unittest/c1.pem
@@ -2977,6 +2992,7 @@ set(
   rust/bssl-crypto/src/cipher/aes_cbc.rs
   rust/bssl-crypto/src/cipher/aes_ctr.rs
   rust/bssl-crypto/src/cipher/mod.rs
+  rust/bssl-crypto/src/cpace.rs
   rust/bssl-crypto/src/digest.rs
   rust/bssl-crypto/src/ec.rs
   rust/bssl-crypto/src/ecdh.rs

@@ -883,13 +883,13 @@ UniquePtr<EVP_PKEY> ssl_parse_peer_subject_public_key_info(
 
 // ssl_pkey_supports_algorithm returns whether `pkey` may be used to sign
 // `sigalg`.
-bool ssl_pkey_supports_algorithm(const SSLImpl *ssl, EVP_PKEY *pkey,
+bool ssl_pkey_supports_algorithm(const SSLImpl *ssl, const EVP_PKEY *pkey,
                                  uint16_t sigalg, bool is_verify);
 
 // ssl_public_key_verify verifies that the `signature` is valid for the public
 // key `pkey` and input `in`, using the signature algorithm `sigalg`.
 bool ssl_public_key_verify(SSLImpl *ssl, Span<const uint8_t> signature,
-                           uint16_t sigalg, EVP_PKEY *pkey,
+                           uint16_t sigalg, const EVP_PKEY *pkey,
                            Span<const uint8_t> in);
 
 
@@ -2511,7 +2511,7 @@ bool tls12_add_verify_sigalgs(const SSL_HANDSHAKE *hs, CBB *out);
 // signature from `pkey`. It returns true on success and false on error, setting
 // `*out_alert` to an alert to send.
 bool tls12_check_peer_sigalg(const SSL_HANDSHAKE *hs, uint8_t *out_alert,
-                             uint16_t sigalg, EVP_PKEY *pkey);
+                             uint16_t sigalg, const EVP_PKEY *pkey);
 
 
 // Underdocumented functions.
@@ -3669,7 +3669,7 @@ const EVP_MD *ssl_session_get_digest(const SSLSession *session);
 // on the peer's certificate type) or a valid SHA-256 hash thereof.
 bool ssl_session_has_peer_cred(const SSLSession *session);
 
-void ssl_set_session(SSLImpl *ssl, SSLSession *session);
+void ssl_set_session(SSLImpl *ssl, const SSLSession *session);
 
 // ssl_get_session implements `SSL_get_session`.
 SSLSession *ssl_get_session(const SSLImpl *ssl);
@@ -4188,11 +4188,6 @@ class SSLContext : public ssl_ctx_st, public RefCounted<SSLContext> {
 
   // grease_enabled is whether GREASE (RFC 8701) is enabled.
   bool grease_enabled : 1;
-
-  // grease_sigalgs_enabled controls whether GREASE signature algorithms may be
-  // sent.
-  // TODO(crbug.com/526597789): Fold into `grease_enabled` once deployed safely.
-  bool grease_sigalgs_enabled : 1;
 
   // permute_extensions is whether to permute extensions when sending messages.
   bool permute_extensions : 1;
