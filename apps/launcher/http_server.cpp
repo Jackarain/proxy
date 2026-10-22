@@ -38,6 +38,8 @@
 #include <openssl/pem.h>
 #include <openssl/x509v3.h>
 
+#include "proxy/ssl_client.hpp"
+
 #include <tinyrpc/jsonrpc.hpp>
 
 #include "datetime.hpp"
@@ -262,9 +264,9 @@ void extract_cert_names(X509* cert, std::string& cn, std::vector<std::string>& s
 	if (idx >= 0) {
 		auto* entry = X509_NAME_get_entry(subj, idx);
 		auto* data = entry ? X509_NAME_ENTRY_get_data(entry) : nullptr;
-		if (data && ASN1_STRING_length(data) > 0)
+		if (data && ASN1_STRING_get_length(data) > 0)
 			cn.assign(reinterpret_cast<const char*>(ASN1_STRING_get0_data(data)),
-				static_cast<std::size_t>(ASN1_STRING_length(data)));
+				static_cast<std::size_t>(ASN1_STRING_get_length(data)));
 	}
 
 	// SAN（subjectAltName）。
@@ -280,9 +282,9 @@ void extract_cert_names(X509* cert, std::string& cn, std::vector<std::string>& s
 				auto* s = gn->d.dNSName;
 				if (ASN1_STRING_type(s) == V_ASN1_IA5STRING) {
 					const unsigned char* data = ASN1_STRING_get0_data(s);
-					int len = ASN1_STRING_length(s);
+					std::size_t len = ASN1_STRING_get_length(s);
 					if (data && len > 0)
-						sans.emplace_back(reinterpret_cast<const char*>(data), static_cast<std::size_t>(len));
+						sans.emplace_back(reinterpret_cast<const char*>(data), len);
 				}
 			}
 		}

@@ -602,11 +602,11 @@ void proxy_server::walk_certificate(
 
 					if (ASN1_STRING_type(non_const_domain) == V_ASN1_IA5STRING &&
 						ASN1_STRING_get0_data(non_const_domain) &&
-						ASN1_STRING_length(non_const_domain))
+						ASN1_STRING_get_length(non_const_domain))
 					{
 						file.subject_alt_name_.emplace_back(
 							(const char*)(ASN1_STRING_get0_data(non_const_domain)),
-							ASN1_STRING_length(non_const_domain)
+							ASN1_STRING_get_length(non_const_domain)
 						);
 					}
 				}
@@ -627,9 +627,11 @@ void proxy_server::walk_certificate(
 				if (entry)
 				{
 					auto* data = X509_NAME_ENTRY_get_data(entry);
-					if (data && ASN1_STRING_length(data) > 0)
+					if (data && ASN1_STRING_get_length(data) > 0)
 					{
-						int copy_len = (std::min)(ASN1_STRING_length(data), (int)(sizeof(cert_cname) - 1));
+						std::size_t copy_len = (std::min)(
+							static_cast<std::size_t>(ASN1_STRING_get_length(data)),
+							sizeof(cert_cname) - 1);
 						memcpy(cert_cname, ASN1_STRING_get0_data(data), copy_len);
 						cert_cname[copy_len] = '\0';
 					}

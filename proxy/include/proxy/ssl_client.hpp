@@ -22,6 +22,15 @@
 #include <string>
 #include <unordered_map>
 
+// ASN1_STRING_get_length() 仅在 OpenSSL 4.1+ 和 BoringSSL 中提供.
+#if !defined(ASN1_STRING_get_length) && \
+	(defined(BOOST_ASIO_USE_WOLFSSL) || \
+	(defined(OPENSSL_VERSION_MAJOR) && \
+		(OPENSSL_VERSION_MAJOR < 4 || \
+		(OPENSSL_VERSION_MAJOR == 4 && OPENSSL_VERSION_MINOR < 1))))
+# define ASN1_STRING_get_length(x) ASN1_STRING_length(x)
+#endif
+
 #ifdef USE_BOOST_FILESYSTEM
 # include <boost/filesystem.hpp>
 #else
