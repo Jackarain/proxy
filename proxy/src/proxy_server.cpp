@@ -9,6 +9,7 @@
 //
 
 #include "proxy/proxy_server.hpp"
+#include "proxy/proxy_websocket_client.hpp"
 #include "proxy/proxy_util.hpp"
 #include "proxy/ssl_connect.hpp"
 #include "proxy/strutil.hpp"
@@ -737,7 +738,8 @@ void proxy_server::init_acceptor() noexcept
 			(void)v6only;
 
 			if (!m_option.proxy_pass_->scheme().starts_with("socks5") &&
-				!m_option.proxy_pass_->scheme().starts_with("http"))
+				!m_option.proxy_pass_->scheme().starts_with("http") &&
+				!proxy_scheme_is_websocket(m_option.proxy_pass_->scheme()))
 				continue;
 
 			net::ip::udp::socket udp_sock(m_executor);
@@ -3389,12 +3391,6 @@ net::awaitable<void> proxy_server::start_udp_tproxy() noexcept
 
 	auto scheme = boost::to_lower_copy(
 		std::string(m_option.proxy_pass_->scheme()));
-	if (proxy_scheme_is_websocket(scheme))
-	{
-		XLOG_ERR << "udp tproxy does not support websocket proxy_pass";
-		co_return;
-	}
-
 	// 启动 UDP TPROXY 监听协程.
 	for (auto& udp_sock : m_udp_tproxy_listeners)
 	{
@@ -3402,12 +3398,11 @@ net::awaitable<void> proxy_server::start_udp_tproxy() noexcept
 			start_udp_tproxy_listen(udp_sock), net::detached);
 	}
 
-	// 如果是 HTTP proxy_pass, 不需要 SOCKS5 UDP ASSOCIATE.
-	// connect-udp 隧道将在每个 flow 创建时按需建立, 所以这里直
-	// 接退出协程即可.
-	if (scheme.starts_with("http"))
+	// HTTP/WebSocket proxy_pass 的 capsule 隧道按 flow 建立, 不需要
+	// SOCKS5 UDP ASSOCIATE.
+	if (scheme.starts_with("http") || proxy_scheme_is_websocket(scheme))
 	{
-		XLOG_DBG << "udp tproxy using RFC 9298 connect-udp via HTTP proxy: "
+		XLOG_DBG << "udp tproxy using capsule tunnel via proxy: "
 			<< m_option.proxy_pass_->c_str();
 		co_return;
 	}
@@ -3992,14 +3987,9 @@ net::awaitable<void> proxy_server::start_udp_tproxy_listen(udp::socket& udp_sock
 	auto scheme = boost::to_lower_copy(
 	std::string(m_option.proxy_pass_->scheme()));
 
-	if (proxy_scheme_is_websocket(scheme))
-	{
-		XLOG_WARN << "udp tproxy does not support websocket proxy_pass";
-		co_return;
-	}
-
-	// 如果上游代理是 HTTP 代理, 则通过 connect-udp 协议进行 udp 代理.
+	// HTTP 走 RFC 9298, WebSocket 走私有 capsule 隧道; 两者都按 flow 建立.
 	bool using_connect_udp = scheme.starts_with("http");
+	bool using_websocket_udp = proxy_scheme_is_websocket(scheme);
 
 	while (!m_abort)
 	{
@@ -4064,12 +4054,20 @@ net::awaitable<void> proxy_server::start_udp_tproxy_listen(udp::socket& udp_sock
 		{
 			BOOST_ASSERT(flow && "flow pointer is null");
 
-			if (using_connect_udp)
+			if (using_connect_udp || using_websocket_udp)
 			{
 				flow->using_connect_udp_ = true;
 
-				net::co_spawn(m_executor,
-					udp_tproxy_http_udp_loop(flow), net::detached);
+				if (using_websocket_udp)
+				{
+					net::co_spawn(m_executor,
+						udp_tproxy_websocket_udp_loop(flow), net::detached);
+				}
+				else
+				{
+					net::co_spawn(m_executor,
+						udp_tproxy_http_udp_loop(flow), net::detached);
+				}
 			}
 			else
 			{
@@ -4083,13 +4081,14 @@ net::awaitable<void> proxy_server::start_udp_tproxy_listen(udp::socket& udp_sock
 				<< ", client: " << client_ep
 				<< ", original dest: " << original_dest
 				<< ", flow key: " << flow_key
-				<< ", mode: " << (using_connect_udp ? "connect-udp" : "socks5");
+				<< ", mode: " << (using_websocket_udp ? "websocket-udp" :
+					(using_connect_udp ? "connect-udp" : "socks5"));
 		}
 
 		BOOST_ASSERT(flow && "udp tproxy flow is null");
 		flow->expire_ = 0; // 收到数据包重置过期计数.
 
-		if (using_connect_udp)
+		if (using_connect_udp || using_websocket_udp)
 			udp_tproxy_forward_packet_http(flow, data, static_cast<size_t>(ret));
 		else
 			udp_tproxy_forward_packet(flow, data, static_cast<size_t>(ret));
@@ -4339,8 +4338,8 @@ net::awaitable<void> proxy_server::udp_tproxy_http_udp_loop(udp_tproxy_flow_ptr 
 		}
 
 		// 解析 DATAGRAM capsule, 取出 UDP payload.
-		auto payload = decode_datagram_capsule(capsule_value);
-		if (payload.empty())
+		std::string_view payload;
+		if (!decode_datagram_capsule(capsule_value, payload))
 		{
 			XLOG_DBG << "tproxy flow: " << flow->flow_key_
 				<< ", invalid datagram capsule";
@@ -4366,6 +4365,151 @@ net::awaitable<void> proxy_server::udp_tproxy_http_udp_loop(udp_tproxy_flow_ptr 
 	co_return;
 }
 
+	// UDP TPROXY WebSocket capsule 循环: 每个 flow 建立独立 ws/wss
+	// CONNECT-UDP 隧道, capsule 消息与 UDP 数据报一一对应.
+	net::awaitable<void> proxy_server::udp_tproxy_websocket_udp_loop(
+		udp_tproxy_flow_ptr flow)
+	{
+		boost::scope::scope_exit flows_guard([this, flow]()
+		{
+			if (!flow)
+				return;
+
+			abort_udp_tproxy_flow(flow);
+			erase_udp_tproxy_flow(flow);
+		});
+
+		if (!init_relay_socket(flow))
+		{
+			XLOG_WARN << "tproxy flow: " << flow->flow_key_
+				<< ", init_relay_socket failed";
+			co_return;
+		}
+
+		auto proxy_pass = *m_option.proxy_pass_;
+		auto proxy_host = std::string(proxy_pass.host());
+		auto targets = co_await resolve_proxy_pass(proxy_pass);
+		if (!targets || targets->empty())
+			co_return;
+
+		tcp::socket remote_socket(m_executor);
+		boost::system::error_code ec;
+		ec = co_await connect_to_proxy(remote_socket, *targets);
+		if (ec)
+		{
+			XLOG_WARN << "tproxy flow: " << flow->flow_key_
+				<< ", connect websocket proxy failed: " << ec.message();
+			co_return;
+		}
+
+		auto& proxy_sock = flow->udp_http_sock_;
+		bool use_ssl = m_option.proxy_pass_use_ssl_ ||
+			proxy_scheme_use_ssl(proxy_pass.scheme());
+		if (use_ssl)
+		{
+			auto sni = m_option.proxy_ssl_name_.empty() ?
+				proxy_host : m_option.proxy_ssl_name_;
+			auto result = co_await make_ssl_socket(
+				remote_socket, sni, proxy_sock);
+			if (result.has_error())
+			{
+				XLOG_WARN << "tproxy flow: " << flow->flow_key_
+					<< ", make_ssl_socket failed: "
+					<< result.error().message();
+				co_return;
+			}
+		}
+		else
+		{
+			proxy_sock.emplace(init_proxy_stream(std::move(remote_socket)));
+		}
+
+		auto& original_dest = flow->original_endp_;
+		auto options = make_websocket_handshake_options(proxy_pass,
+			original_dest.address().to_string(), original_dest.port(), true);
+		ec = co_await async_websocket_proxy_handshake(
+			*proxy_sock, std::move(options));
+		if (ec)
+		{
+			XLOG_WARN << "tproxy flow: " << flow->flow_key_
+				<< ", websocket handshake failed: " << ec.message();
+			co_return;
+		}
+
+		flow->notify_timer_.emplace(m_executor);
+		auto self = shared_from_this();
+		net::co_spawn(m_executor, [this, self, flow]()
+			-> net::awaitable<void>
+		{
+			co_await self->udp_tproxy_websocket_send_loop(flow);
+		}, net::detached);
+
+		beast::flat_buffer message;
+		while (!m_abort && !flow->closing_)
+		{
+			ec = co_await async_websocket_read_binary(*proxy_sock, message);
+			if (ec)
+				break;
+
+			auto data = message.data();
+			std::string_view payload;
+			if (!decode_datagram_message(std::string_view(
+				static_cast<const char*>(data.data()), data.size()),
+				payload))
+				continue;
+
+			flow->expire_ = 0;
+			auto& relay_sock = *flow->relay_sock_;
+			relay_sock.send_to(net::buffer(payload.data(), payload.size()),
+				flow->client_endp_, 0, ec);
+			if (ec)
+			{
+				XLOG_WARN << "tproxy flow: " << flow->flow_key_
+					<< ", relay_sock send_to error: " << ec.message();
+				break;
+			}
+		}
+
+		XLOG_DBG << "tproxy flow: " << flow->flow_key_
+			<< ", websocket udp loop ended";
+		co_return;
+	}
+
+	net::awaitable<void> proxy_server::udp_tproxy_websocket_send_loop(
+		udp_tproxy_flow_ptr flow)
+	{
+		boost::system::error_code ec;
+		while (!m_abort && !flow->closing_)
+		{
+			std::vector<char> item;
+			if (!flow->send_queue_.empty())
+			{
+				item = std::move(flow->send_queue_.front());
+				flow->send_queue_.pop_front();
+			}
+
+			if (flow->closing_ || !flow->udp_http_sock_ ||
+				!flow->notify_timer_)
+				break;
+
+			if (item.empty())
+			{
+				flow->notify_timer_->expires_after(std::chrono::seconds(1));
+				co_await flow->notify_timer_->async_wait(
+					net_awaitable[ec]);
+				continue;
+			}
+
+			ec = co_await async_websocket_write_binary(
+				*flow->udp_http_sock_, net::buffer(item));
+			if (ec)
+			{
+				XLOG_WARN << "tproxy flow: " << flow->flow_key_
+					<< ", websocket forward error: " << ec.message();
+				break;
+			}
+		}
+	}
 
 #endif // defined(__linux__)
 

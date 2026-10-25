@@ -998,7 +998,8 @@ namespace proxy {
 		if (!m_doh_mode && !m_doh_via_proxy)
 		{
 			// 直连或 SOCKS5 需要本地 UDP 后端 socket.
-			if (!m_connect_udp && !co_await open_backend())
+			if (!m_connect_udp && !m_websocket_udp &&
+				!co_await open_backend())
 			{
 				close();
 				co_return;
@@ -1010,10 +1011,10 @@ namespace proxy {
 				co_return;
 			}
 
-			if (!m_connect_udp)
+			if (!m_connect_udp && !m_websocket_udp)
 			{
 				// 直连/SOCKS5：启动后端应答接收循环.
-				// CONNECT-UDP 的收发协程由 do_connect_udp 启动.
+				// capsule 隧道的收发协程由对应 do_connect_* 启动.
 				net::co_spawn(m_executor,
 					[this, self]() -> net::awaitable<void>
 					{
@@ -1028,7 +1029,7 @@ namespace proxy {
 		for (auto& p : m_pending)
 		{
 			bool ok = false;
-			if (m_connect_udp)
+			if (m_connect_udp || m_websocket_udp)
 			{
 				push_capsule(p.data(), p.size());
 				ok = true;
@@ -1180,9 +1181,9 @@ namespace proxy {
 		}
 
 		bool ok = false;
-		if (m_connect_udp)
+		if (m_connect_udp || m_websocket_udp)
 		{
-			// HTTP CONNECT-UDP：封装 DATAGRAM capsule 写入隧道.
+			// HTTP/WebSocket CONNECT-UDP：封装 DATAGRAM capsule 写入隧道.
 			push_capsule(data, len);
 			ok = true;
 		}
@@ -1378,16 +1379,28 @@ namespace proxy {
 	}
 
 	// resolve_udp_transport 判定 UDP 传输模式：http(s) 代理走 RFC 9298
-	// CONNECT-UDP 隧道，socks 代理走 UDP ASSOCIATE，其余 scheme 不支持.
+	// CONNECT-UDP，ws/wss 走私有 WebSocket capsule 隧道，socks 代理走
+	// UDP ASSOCIATE，其余 scheme 不支持.
 	bool tun_udp_flow::resolve_udp_transport()
 	{
-		// HTTP 代理通过 RFC 9298 CONNECT-UDP 隧道转发，无需本地 UDP 后端 socket.
 		auto scheme = boost::to_lower_copy(
 			std::string((*m_option.proxy_pass_).scheme()));
 		m_connect_udp = scheme.starts_with("http");
-		m_proto.store(static_cast<uint8_t>(m_connect_udp ?
-			tun_conn_proto::connect_udp : tun_conn_proto::socks5));
-		if (!scheme.starts_with("http") && !scheme.starts_with("socks"))
+		m_websocket_udp = proxy_scheme_is_websocket(scheme);
+		if (m_websocket_udp)
+		{
+			m_proto.store(static_cast<uint8_t>(
+				proxy_scheme_use_ssl(scheme) ?
+					tun_conn_proto::wss_udp : tun_conn_proto::ws_udp));
+		}
+		else
+		{
+			m_proto.store(static_cast<uint8_t>(m_connect_udp ?
+				tun_conn_proto::connect_udp : tun_conn_proto::socks5));
+		}
+
+		if (!m_connect_udp && !m_websocket_udp &&
+			!scheme.starts_with("socks"))
 		{
 			XLOG_WARN << "tun udp unsupported proxy_pass scheme: " << scheme;
 			return false;
@@ -1436,10 +1449,13 @@ namespace proxy {
 		if (!sock.is_open())
 			co_return false;
 
-		// HTTP 代理：RFC 9298 CONNECT-UDP 隧道；SOCKS5：UDP ASSOCIATE.
-		co_return m_connect_udp ?
-			co_await do_connect_udp(std::move(sock)) :
-			co_await do_socks5_associate(std::move(sock));
+		// HTTP：RFC 9298 CONNECT-UDP；WebSocket：私有 capsule 隧道；
+		// SOCKS5：UDP ASSOCIATE.
+		if (m_websocket_udp)
+			co_return co_await do_connect_websocket_udp(std::move(sock));
+		if (m_connect_udp)
+			co_return co_await do_connect_udp(std::move(sock));
+		co_return co_await do_socks5_associate(std::move(sock));
 	}
 
 	net::awaitable<bool> tun_udp_flow::open_backend()
@@ -1583,6 +1599,48 @@ namespace proxy {
 		co_return true;
 	}
 
+	net::awaitable<bool> tun_udp_flow::do_connect_websocket_udp(tcp::socket sock)
+	{
+		boost::system::error_code ec;
+		const auto& proxy_url = *m_option.proxy_pass_;
+
+		if (proxy_use_ssl(proxy_url, m_option))
+		{
+			if (!m_owner)
+				co_return false;
+
+			auto proxy_host = std::string(proxy_url.encoded_host());
+			auto sni = m_option.proxy_ssl_name_.empty() ?
+				proxy_host : m_option.proxy_ssl_name_;
+			auto res = co_await m_owner->make_ssl_socket(sock, sni, m_control);
+			if (res.has_error())
+			{
+				XLOG_WARN << "tun websocket udp make_ssl_socket: "
+					<< res.error().message();
+				co_return false;
+			}
+		}
+		else
+		{
+			m_control.emplace(init_proxy_stream(std::move(sock)));
+		}
+
+		auto options = make_websocket_handshake_options(proxy_url,
+			m_target.address().to_string(), m_target.port(), true);
+		ec = co_await async_websocket_proxy_handshake(
+			*m_control, std::move(options));
+		if (ec)
+		{
+			XLOG_WARN << "tun websocket udp handshake: " << ec.message();
+			close_stream(*m_control);
+			co_return false;
+		}
+
+		XLOG_DBG << "tun websocket udp established to target: " << m_target;
+		start_data_loops();
+		co_return true;
+	}
+
 	// send_connect_udp_request 发送 RFC 9298 CONNECT-UDP 请求（absolute-form URI）.
 	net::awaitable<bool> tun_udp_flow::send_connect_udp_request()
 	{
@@ -1708,7 +1766,16 @@ namespace proxy {
 			}
 
 			boost::system::error_code ec;
-			co_await net::async_write(*m_control, net::buffer(item), net_awaitable[ec]);
+			if (m_websocket_udp)
+			{
+				ec = co_await async_websocket_write_binary(
+					*m_control, net::buffer(item));
+			}
+			else
+			{
+				co_await net::async_write(
+					*m_control, net::buffer(item), net_awaitable[ec]);
+			}
 			if (ec)
 				break;
 		}
@@ -1721,29 +1788,49 @@ namespace proxy {
 		if (!m_control)
 			co_return;
 
+		beast::flat_buffer ws_message;
 		for (; !m_closed;)
 		{
 			boost::system::error_code ec;
-			auto [capsule_type, capsule_value] = co_await
-				read_capsule_from_stream(*m_control, ec);
-			if (ec)
-				break;
+			if (m_websocket_udp)
+			{
+				ec = co_await async_websocket_read_binary(
+					*m_control, ws_message);
+				if (ec)
+					break;
 
-			AXLOG_DBG << "tun udp rx capsule type=" << capsule_type
-				<< " len=" << capsule_value.size();
+				auto data = ws_message.data();
+				std::string_view payload;
+				if (!decode_datagram_message(std::string_view(
+					static_cast<const char*>(data.data()), data.size()),
+					payload))
+					continue;
 
-			// 仅处理 DATAGRAM capsule（RFC 9297）.
-			if (capsule_type != udp_proxy_capsule_type)
-				continue;
+				touch();
+				co_await reply(payload.data(), payload.size());
+			}
+			else
+			{
+				auto [capsule_type, capsule_value] = co_await
+					read_capsule_from_stream(*m_control, ec);
+				if (ec)
+					break;
 
-			// 解析 DATAGRAM capsule, 取出 UDP payload.
-			auto payload = decode_datagram_capsule(
-				std::string_view(capsule_value.data(), capsule_value.size()));
-			if (payload.empty())
-				continue;
+				AXLOG_DBG << "tun udp rx capsule type=" << capsule_type
+					<< " len=" << capsule_value.size();
 
-			touch();
-			co_await reply(payload.data(), payload.size());
+				// 仅处理 DATAGRAM capsule（RFC 9297）.
+				if (capsule_type != udp_proxy_capsule_type)
+					continue;
+
+				// 解析 DATAGRAM capsule, 取出 UDP payload.
+				std::string_view payload;
+				if (!decode_datagram_capsule(capsule_value, payload))
+					continue;
+
+				touch();
+				co_await reply(payload.data(), payload.size());
+			}
 		}
 
 		close();
@@ -2333,6 +2420,12 @@ namespace proxy {
 				break;
 			case tun_conn_proto::wss:
 				c.proto = "wss";
+				break;
+			case tun_conn_proto::ws_udp:
+				c.proto = "ws-udp";
+				break;
+			case tun_conn_proto::wss_udp:
+				c.proto = "wss-udp";
 				break;
 			case tun_conn_proto::connect_udp:
 				c.proto = "connect-udp";

@@ -43,11 +43,18 @@ namespace ws_tunnel {
 	namespace http = beast::http;
 	namespace websocket = beast::websocket;
 
-	// WebSocket CONNECT 隧道协议. 所有数据帧均为 binary, 第一个字节为操作码.
+	// WebSocket CONNECT 隧道协议. TCP 数据帧为 binary, 第一个字节为操作码.
 	inline constexpr std::string_view proxy_connect_header = "Proxy-Connect";
 	inline constexpr std::string_view proxy_connect_header_legacy = "PROXY_CONNECT";
 	inline constexpr std::string_view proxy_connect_subprotocol = "proxy-connect.v1";
 	inline constexpr std::string_view proxy_connect_path = "/.well-known/proxy/connect";
+
+	// WebSocket CONNECT-UDP 扩展. 每条 binary 消息承载一个 RFC 9297
+	// DATAGRAM capsule, 从而保留 UDP 数据报边界.
+	inline constexpr std::string_view proxy_connect_udp_header = "Proxy-Connect-UDP";
+	inline constexpr std::string_view proxy_connect_udp_header_legacy = "PROXY_CONNECT_UDP";
+	inline constexpr std::string_view proxy_connect_udp_subprotocol = "proxy-connect-udp.v1";
+	inline constexpr std::string_view proxy_connect_udp_path = "/.well-known/proxy/connect-udp";
 
 	inline constexpr uint8_t opcode_data = 0x00;
 	inline constexpr uint8_t opcode_fin_write = 0x01;
@@ -184,6 +191,7 @@ namespace ws_tunnel {
 		std::string authority;
 		std::string username;
 		std::string password;
+		bool datagram{ false };
 		http::fields extra_headers;
 	};
 
@@ -312,11 +320,12 @@ namespace ws_tunnel {
 		}
 
 		net::awaitable<boost::system::error_code> async_accept(
-			const http::request<http::string_body>& req)
+			const http::request<http::string_body>& req,
+			std::string_view subprotocol = proxy_connect_subprotocol)
 		{
 			boost::system::error_code ec;
 			configure();
-			set_accept_decorator();
+			set_accept_decorator(std::string(subprotocol));
 			co_await ws_->async_accept(req, net_awaitable[ec]);
 			co_return ec;
 		}
@@ -326,7 +335,8 @@ namespace ws_tunnel {
 		template <typename ConstBufferSequence>
 		net::awaitable<boost::system::error_code> async_accept(
 			const http::request<http::string_body>& req,
-			const ConstBufferSequence& prefix)
+			const ConstBufferSequence& prefix,
+			std::string_view subprotocol = proxy_connect_subprotocol)
 		{
 			boost::system::error_code ec;
 			beast::flat_buffer buffer;
@@ -358,7 +368,7 @@ namespace ws_tunnel {
 			}
 
 			configure();
-			set_accept_decorator();
+			set_accept_decorator(std::string(subprotocol));
 			co_await ws_->async_accept(buffer.data(), net_awaitable[ec]);
 			co_return ec;
 		}
@@ -369,14 +379,25 @@ namespace ws_tunnel {
 			boost::system::error_code ec;
 			auto host = std::move(options.host);
 			auto target = std::move(options.target);
+			const bool datagram = options.datagram;
 
 			configure();
 			ws_->set_option(websocket::stream_base::decorator(
-				[options = std::move(options)](websocket::request_type& req)
+				[options = std::move(options), datagram](
+					websocket::request_type& req)
 				{
-					req.set(proxy_connect_header, options.authority);
-					req.set(http::field::sec_websocket_protocol,
-						proxy_connect_subprotocol);
+					if (datagram)
+					{
+						req.set(proxy_connect_udp_header, options.authority);
+						req.set(http::field::sec_websocket_protocol,
+							proxy_connect_udp_subprotocol);
+					}
+					else
+					{
+						req.set(proxy_connect_header, options.authority);
+						req.set(http::field::sec_websocket_protocol,
+							proxy_connect_subprotocol);
+					}
 
 					if (!options.username.empty())
 					{
@@ -396,12 +417,46 @@ namespace ws_tunnel {
 				co_return ec;
 
 			auto protocol = response[http::field::sec_websocket_protocol];
-			if (!header_has_token(protocol, proxy_connect_subprotocol))
+			auto expected = datagram ?
+				proxy_connect_udp_subprotocol : proxy_connect_subprotocol;
+			if (!header_has_token(protocol, expected))
 			{
 				co_return make_error_code(
 					boost::system::errc::protocol_error);
 			}
 
+			co_return ec;
+		}
+
+		// 读取一条完整的 binary WebSocket 消息. UDP 隧道用消息边界表示数据报边界.
+		net::awaitable<boost::system::error_code> async_read_binary(
+			beast::flat_buffer& buffer)
+		{
+			boost::system::error_code ec;
+			buffer.consume(buffer.size());
+			co_await ws_->async_read(buffer, net_awaitable[ec]);
+			if (ec)
+			{
+				if (ec == websocket::error::closed)
+					ec = net::error::eof;
+				co_return ec;
+			}
+
+			if (!ws_->got_binary())
+			{
+				co_return make_error_code(
+					boost::system::errc::protocol_error);
+			}
+
+			co_return ec;
+		}
+
+		// 将一条完整消息作为 binary 消息发送; Beast 可按写缓冲自动分片.
+		net::awaitable<boost::system::error_code> async_write_binary(
+			const net::const_buffer& buffer)
+		{
+			boost::system::error_code ec;
+			co_await ws_->async_write(buffer, net_awaitable[ec]);
 			co_return ec;
 		}
 
@@ -443,13 +498,14 @@ namespace ws_tunnel {
 			ws_->read_message_max(max_message_size);
 		}
 
-		void set_accept_decorator()
+		void set_accept_decorator(std::string subprotocol)
 		{
 			ws_->set_option(websocket::stream_base::decorator(
-				[](websocket::response_type& res)
+				[subprotocol = std::move(subprotocol)](
+					websocket::response_type& res)
 				{
 					res.set(http::field::sec_websocket_protocol,
-						proxy_connect_subprotocol);
+						subprotocol);
 				}));
 		}
 
@@ -487,15 +543,15 @@ namespace ws_tunnel {
 				auto size = read_buffer_.size();
 				if (size == 0)
 					continue;
-					if (size > max_message_size)
+				if (size > max_message_size)
 				{
 					co_return io_result{ make_error_code(
 						boost::system::errc::message_size), 0 };
 				}
 
-					ensure_buffers();
+				ensure_buffers();
 				net::buffer_copy(
-						net::buffer(read_data_.get(), size),
+					net::buffer(read_data_.get(), size),
 					read_buffer_.data());
 
 				auto opcode = static_cast<uint8_t>(read_data_[0]);

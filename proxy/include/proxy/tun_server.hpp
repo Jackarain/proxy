@@ -44,6 +44,8 @@ namespace proxy {
 		socks5,         // SOCKS5（TCP 或 UDP ASSOCIATE）
 		ws,             // WebSocket CONNECT 隧道
 		wss,            // TLS + WebSocket CONNECT 隧道
+		ws_udp,         // WebSocket CONNECT-UDP 隧道
+		wss_udp,        // TLS + WebSocket CONNECT-UDP 隧道
 		udp,            // UDP 直连
 		connect_udp,    // RFC 9298 CONNECT-UDP 隧道
 		doh_dns,        // DNS 查询经 DoH 转发到 proxy_pass
@@ -248,6 +250,9 @@ namespace proxy {
 		// 建立 HTTP CONNECT-UDP 隧道（proxy_pass 为 http/https 时替代 SOCKS5 ASSOCIATE）.
 		net::awaitable<bool> do_connect_udp(tcp::socket sock);
 
+		// 建立 WebSocket CONNECT-UDP 隧道（proxy_pass 为 ws/wss 时）.
+		net::awaitable<bool> do_connect_websocket_udp(tcp::socket sock);
+
 		// 发送 RFC 9298 CONNECT-UDP 请求，成功返回 true.
 		net::awaitable<bool> send_connect_udp_request();
 
@@ -323,6 +328,9 @@ namespace proxy {
 
 		// m_connect_udp 标记 HTTP CONNECT-UDP 模式（proxy_pass 为 http 时）.
 		bool m_connect_udp { false };
+
+		// m_websocket_udp 标记 WebSocket CONNECT-UDP 模式.
+		bool m_websocket_udp { false };
 
 		// m_doh_mode 标记 DNS 查询以 DoH 直连 proxy_pass（同服务）的模式.
 		bool m_doh_mode { false };

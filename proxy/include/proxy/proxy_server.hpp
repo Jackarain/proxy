@@ -360,6 +360,14 @@ namespace proxy {
 		// UDP TPROXY 使用 RFC 9298 connect-udp 转发循环.
 		net::awaitable<void> udp_tproxy_http_udp_loop(udp_tproxy_flow_ptr flow);
 
+		// UDP TPROXY 使用 WebSocket CONNECT-UDP 转发循环.
+		net::awaitable<void> udp_tproxy_websocket_udp_loop(
+			udp_tproxy_flow_ptr flow);
+
+		// 串行发送 UDP TPROXY WebSocket 隧道队列中的数据.
+		net::awaitable<void> udp_tproxy_websocket_send_loop(
+			udp_tproxy_flow_ptr flow);
+
 		// 中止一个 UDP TPROXY flow: 关闭其底层连接以使在途的异步 I/O 尽快失败返回,
 		// 但不销毁 socket/流对象. 对象的销毁由持有它的协程在操作完成后负责, 避免在
 		// 异步操作未完成时销毁对象导致的 use-after-free.

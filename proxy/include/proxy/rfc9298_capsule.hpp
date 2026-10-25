@@ -204,19 +204,38 @@ namespace proxy {
 		return header + len;
 	}
 
-	// 解析 DATAGRAM capsule 的 value, 返回其中的 UDP payload 视图.
-	// context ID 非 0、长度不足或 payload 为空时返回空视图.
-	inline std::string_view
-	decode_datagram_capsule(std::string_view value) noexcept
+	// 解析 DATAGRAM capsule 的 value, 输出其中的 UDP payload 视图.
+	// context ID 非 0 或长度不足时返回 false.
+	inline bool decode_datagram_capsule(std::string_view value,
+		std::string_view& payload) noexcept
 	{
 		auto data = reinterpret_cast<const uint8_t*>(value.data());
 		auto [ctx_id_len, ctx_id] = varint_int_decode_bounded(
 			data, value.size());
 
-		if (ctx_id_len == 0 || ctx_id != 0 || ctx_id_len >= value.size())
-			return {};
+		if (ctx_id_len == 0 || ctx_id != 0 || ctx_id_len > value.size())
+			return false;
 
-		return value.substr(ctx_id_len);
+		payload = value.substr(ctx_id_len);
+		return true;
+	}
+
+	// 解析 DATAGRAM capsule 的 value, 返回其中的 UDP payload 视图.
+	// context ID 非 0 或长度不足时返回空视图.
+	inline std::string_view
+	decode_datagram_capsule(std::string_view value) noexcept
+	{
+		std::string_view payload;
+		return decode_datagram_capsule(value, payload) ? payload :
+			std::string_view{};
+	}
+
+	// 解析 DATAGRAM capsule 的 value, 输出其中的 UDP payload 视图.
+	inline bool decode_datagram_capsule(const std::vector<char>& value,
+		std::string_view& payload) noexcept
+	{
+		return decode_datagram_capsule(
+			std::string_view(value.data(), value.size()), payload);
 	}
 
 	// 解析 DATAGRAM capsule 的 value, 返回其中的 UDP payload 视图.
@@ -225,6 +244,31 @@ namespace proxy {
 	{
 		return decode_datagram_capsule(
 			std::string_view(value.data(), value.size()));
+	}
+
+	// 解析一条完整的 WebSocket binary 消息, 其中必须恰好包含一个
+	// DATAGRAM capsule. 返回其中的 UDP payload 视图.
+	inline bool decode_datagram_message(std::string_view message,
+		std::string_view& payload) noexcept
+	{
+		auto data = reinterpret_cast<const uint8_t*>(message.data());
+		auto [type_len, type] = varint_int_decode_bounded(
+			data, message.size());
+		if (type_len == 0 || type != udp_proxy_capsule_type ||
+			type_len >= message.size())
+			return false;
+
+		auto [length_len, capsule_length] = varint_int_decode_bounded(
+			data + type_len, message.size() - type_len);
+		if (length_len == 0)
+			return false;
+
+		auto value_offset = type_len + length_len;
+		if (capsule_length != message.size() - value_offset)
+			return false;
+
+		return decode_datagram_capsule(
+			message.substr(value_offset, capsule_length), payload);
 	}
 
 	// 从流中读取一个完整 capsule, 返回 {capsule type, capsule value}.

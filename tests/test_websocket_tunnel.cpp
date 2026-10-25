@@ -23,6 +23,7 @@
 #include <chrono>
 #include <exception>
 #include <string>
+#include <vector>
 
 
 namespace {
@@ -522,6 +523,211 @@ namespace {
 		BOOST_TEST(!state.server_exception);
 		BOOST_TEST(state.server_ec == net::error::connection_aborted);
 		BOOST_TEST(state.stream_closed);
+	}
+
+	BOOST_AUTO_TEST_CASE(websocket_udp_handshake_options)
+	{
+		urls::url url = urls::parse_uri(
+			"ws://user:pass@example.com:8080").value();
+		auto options = make_websocket_handshake_options(
+			url, "127.0.0.1", 53, true);
+
+		BOOST_TEST(options.datagram);
+		BOOST_TEST(options.target == ws_tunnel::proxy_connect_udp_path);
+		BOOST_TEST(options.authority == "127.0.0.1:53");
+		BOOST_TEST(options.username == "user");
+		BOOST_TEST(options.password == "pass");
+	}
+
+	struct udp_loopback_state
+	{
+		boost::system::error_code client_ec;
+		boost::system::error_code server_ec;
+		std::exception_ptr client_exception;
+		std::exception_ptr server_exception;
+		std::string request_header;
+		std::string request_protocol;
+		std::string server_payload;
+		std::string client_payload;
+		bool client_done { false };
+		bool server_done { false };
+		bool timed_out { false };
+	};
+
+	net::awaitable<void> run_udp_server(tcp::acceptor& acceptor,
+		udp_loopback_state& state)
+	{
+		boost::system::error_code ec;
+		tcp::socket socket = co_await acceptor.async_accept(
+			net_awaitable[ec]);
+		if (ec)
+		{
+			state.server_ec = ec;
+			co_return;
+		}
+
+		ws_tunnel::stream<util::proxy_tcp_socket> ws(
+			util::proxy_tcp_socket(std::move(socket)));
+		beast::flat_buffer http_buffer;
+		http::request<http::string_body> req;
+		co_await http::async_read(ws.next_layer(), http_buffer, req,
+			net_awaitable[ec]);
+		if (ec)
+		{
+			state.server_ec = ec;
+			co_return;
+		}
+
+		auto target = req.find(ws_tunnel::proxy_connect_udp_header);
+		if (target != req.end())
+			state.request_header = std::string(target->value());
+		state.request_protocol =
+			std::string(req[http::field::sec_websocket_protocol]);
+
+		ec = co_await ws.async_accept(req, http_buffer.data(),
+			ws_tunnel::proxy_connect_udp_subprotocol);
+		if (ec)
+		{
+			state.server_ec = ec;
+			co_return;
+		}
+
+		beast::flat_buffer message;
+		ec = co_await ws.async_read_binary(message);
+		if (ec)
+		{
+			state.server_ec = ec;
+			co_return;
+		}
+
+		auto data = message.data();
+		std::string_view payload;
+		BOOST_REQUIRE(decode_datagram_message(std::string_view(
+			static_cast<const char*>(data.data()), data.size()), payload));
+		state.server_payload.assign(payload);
+
+		const std::string reply = "udp-reply";
+		std::vector<uint8_t> capsule(
+			datagram_capsule_header_size(reply.size()) + reply.size());
+		auto size = encode_datagram_capsule(reply.data(), reply.size(),
+			capsule.data(), capsule.size());
+		ec = co_await ws.async_write_binary(
+			net::buffer(capsule.data(), size));
+		if (ec)
+			state.server_ec = ec;
+	}
+
+	net::awaitable<void> run_udp_client(tcp::endpoint endpoint,
+		udp_loopback_state& state)
+	{
+		boost::system::error_code ec;
+		tcp::socket socket(co_await net::this_coro::executor, tcp::v4());
+		co_await socket.async_connect(endpoint, net_awaitable[ec]);
+		if (ec)
+		{
+			state.client_ec = ec;
+			co_return;
+		}
+
+		ws_tunnel::stream<util::proxy_tcp_socket> ws(
+			util::proxy_tcp_socket(std::move(socket)));
+		ws_tunnel::client_handshake_options options;
+		options.host = "127.0.0.1";
+		options.target = std::string(ws_tunnel::proxy_connect_udp_path);
+		options.authority = "127.0.0.1:53";
+		options.datagram = true;
+		ec = co_await ws.async_handshake(std::move(options));
+		if (ec)
+		{
+			state.client_ec = ec;
+			co_return;
+		}
+
+		std::string payload(65000, 'x');
+		std::vector<uint8_t> capsule(
+			datagram_capsule_header_size(payload.size()) + payload.size());
+		auto size = encode_datagram_capsule(payload.data(), payload.size(),
+			capsule.data(), capsule.size());
+		ec = co_await ws.async_write_binary(
+			net::buffer(capsule.data(), size));
+		if (ec)
+		{
+			state.client_ec = ec;
+			co_return;
+		}
+
+		beast::flat_buffer message;
+		ec = co_await ws.async_read_binary(message);
+		if (ec)
+		{
+			state.client_ec = ec;
+			co_return;
+		}
+
+		auto data = message.data();
+		std::string_view reply;
+		BOOST_REQUIRE(decode_datagram_message(std::string_view(
+			static_cast<const char*>(data.data()), data.size()), reply));
+		state.client_payload.assign(reply);
+	}
+
+	BOOST_AUTO_TEST_CASE(websocket_udp_datagram_round_trip)
+	{
+		net::io_context ioc;
+		tcp::acceptor acceptor(ioc,
+			tcp::endpoint(net::ip::make_address("127.0.0.1"), 0));
+		udp_loopback_state state;
+
+		auto finish = [&ioc, &state]
+		{
+			if (state.client_done && state.server_done)
+				ioc.stop();
+		};
+
+		net::co_spawn(ioc, run_udp_server(acceptor, state),
+			[&](std::exception_ptr ep)
+			{
+				state.server_exception = ep;
+				state.server_done = true;
+				if (ep || state.server_ec)
+					ioc.stop();
+				finish();
+			});
+		net::co_spawn(ioc,
+			run_udp_client(acceptor.local_endpoint(), state),
+			[&](std::exception_ptr ep)
+			{
+				state.client_exception = ep;
+				state.client_done = true;
+				if (ep || state.client_ec)
+					ioc.stop();
+				finish();
+			});
+
+		net::steady_timer timeout(ioc);
+		timeout.expires_after(std::chrono::seconds(5));
+		timeout.async_wait(
+			[&](const boost::system::error_code& ec)
+			{
+				if (!ec)
+				{
+					state.timed_out = true;
+					ioc.stop();
+				}
+			});
+
+		ioc.run();
+
+		BOOST_TEST(!state.timed_out);
+		BOOST_TEST(!state.client_exception);
+		BOOST_TEST(!state.server_exception);
+		BOOST_TEST(!state.client_ec);
+		BOOST_TEST(!state.server_ec);
+		BOOST_TEST(state.request_header == "127.0.0.1:53");
+		BOOST_TEST(state.request_protocol ==
+			ws_tunnel::proxy_connect_udp_subprotocol);
+		BOOST_TEST(state.server_payload.size() == 65000u);
+		BOOST_TEST(state.client_payload == "udp-reply");
 	}
 
 	BOOST_AUTO_TEST_SUITE_END()

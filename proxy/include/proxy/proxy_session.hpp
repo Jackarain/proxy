@@ -476,6 +476,34 @@ namespace proxy {
 		net::awaitable<bool> http_proxy_websocket_connect(
 			const string_request& req) noexcept;
 
+		// WebSocket CONNECT-UDP (私有 capsule 隧道) 代理请求处理.
+		net::awaitable<void> http_proxy_websocket_connect_udp(
+			const string_request& req,
+			const std::string& target_host,
+			uint16_t target_port) noexcept;
+
+		// 建立到上游 ws/wss 代理的 UDP 隧道, 结果保存在 m_remote_socket.
+		net::awaitable<bool> connect_websocket_udp_proxy_pass(
+			const std::string& target_host, uint16_t target_port) noexcept;
+
+		// 完成入站 WebSocket CONNECT-UDP 握手, 返回握手错误码.
+		net::awaitable<boost::system::error_code> accept_websocket_udp(
+			const string_request& req) noexcept;
+
+		// 在入站 WebSocket 与上游 WebSocket UDP 隧道之间转发 capsule.
+		net::awaitable<void> run_websocket_udp_bridge() noexcept;
+
+		// 在入站 WebSocket 与目标 UDP socket 之间转发 capsule.
+		net::awaitable<void> run_websocket_udp_target(
+			udp::socket& socket) noexcept;
+
+		// 将明文 HTTP CONNECT-UDP 的 capsule 流桥接到上游 ws/wss 隧道.
+		net::awaitable<void> http_capsules_to_websocket_proxy() noexcept;
+
+		// 解析目标并打开已 connect 的 UDP socket.
+		net::awaitable<std::optional<udp::socket>> open_udp_target(
+			const std::string& target_host, uint16_t target_port) noexcept;
+
 		// HTTP CONNECT-UDP (RFC 9298) 代理请求处理.
 		net::awaitable<void> http_proxy_connect_udp(
 			const http::request<http::string_body>& req,

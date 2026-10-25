@@ -10,7 +10,9 @@
 
 #include "proxy/proxy_session.hpp"
 #include "proxy/http_error_body.hpp"
+#include "proxy/proxy_websocket_client.hpp"
 
+#include <array>
 #include <charconv>
 
 namespace proxy {
@@ -120,7 +122,9 @@ namespace proxy {
 			if (m_option.websocket_proxy_ &&
 				beast::websocket::is_upgrade(req) &&
 				(req.find(ws_tunnel::proxy_connect_header) != req.end() ||
-				 req.find(ws_tunnel::proxy_connect_header_legacy) != req.end()))
+				 req.find(ws_tunnel::proxy_connect_header_legacy) != req.end() ||
+				 req.find(ws_tunnel::proxy_connect_udp_header) != req.end() ||
+				 req.find(ws_tunnel::proxy_connect_udp_header_legacy) != req.end()))
 			{
 				co_await http_proxy_websocket_connect(req);
 				co_return true;
@@ -643,25 +647,36 @@ namespace proxy {
 			co_return true;
 		}
 
+		auto tcp_count = req.count(ws_tunnel::proxy_connect_header) +
+			req.count(ws_tunnel::proxy_connect_header_legacy);
+		auto udp_count = req.count(ws_tunnel::proxy_connect_udp_header) +
+			req.count(ws_tunnel::proxy_connect_udp_header_legacy);
+		if (tcp_count + udp_count != 1)
+		{
+			co_await send_error(http::status::bad_request);
+			co_return true;
+		}
+
+		const bool datagram = udp_count == 1;
 		auto protocol = req[http::field::sec_websocket_protocol];
-		if (!ws_tunnel::header_has_token(
-			protocol, ws_tunnel::proxy_connect_subprotocol))
+		auto expected_protocol = datagram ?
+			ws_tunnel::proxy_connect_udp_subprotocol :
+			ws_tunnel::proxy_connect_subprotocol;
+		if (!ws_tunnel::header_has_token(protocol, expected_protocol))
 		{
 			co_await send_error(http::status::bad_request);
 			co_return true;
 		}
 
-		auto modern_count = req.count(ws_tunnel::proxy_connect_header);
-		auto legacy_count = req.count(ws_tunnel::proxy_connect_header_legacy);
-		if (modern_count + legacy_count != 1)
-		{
-			co_await send_error(http::status::bad_request);
-			co_return true;
-		}
-
-		auto target_it = req.find(ws_tunnel::proxy_connect_header);
+		auto target_it = datagram ?
+			req.find(ws_tunnel::proxy_connect_udp_header) :
+			req.find(ws_tunnel::proxy_connect_header);
 		if (target_it == req.end())
-			target_it = req.find(ws_tunnel::proxy_connect_header_legacy);
+		{
+			target_it = req.find(datagram ?
+				ws_tunnel::proxy_connect_udp_header_legacy :
+				ws_tunnel::proxy_connect_header_legacy);
+		}
 
 		std::string target_host;
 		uint16_t target_port = 0;
@@ -684,6 +699,13 @@ namespace proxy {
 			<< target_host << ":" << target_port;
 
 		set_target(target_host + ":" + std::to_string(target_port));
+		if (datagram)
+		{
+			co_await http_proxy_websocket_connect_udp(
+				req, target_host, target_port);
+			co_return true;
+		}
+
 		ec = co_await start_connect_host(target_host, target_port, false);
 		if (ec)
 		{
@@ -724,6 +746,449 @@ namespace proxy {
 		stream_expires_never(m_local_socket);
 		co_await concurrent_transfer();
 		co_return true;
+	}
+
+	net::awaitable<std::optional<udp::socket>> proxy_session::open_udp_target(
+		const std::string& target_host, uint16_t target_port) noexcept
+	{
+		boost::system::error_code ec;
+		net::ip::address target_addr;
+		udp protocol = udp::v4();
+
+		target_addr = net::ip::make_address(target_host, ec);
+		if (ec)
+		{
+			co_await switch_to_backend_executor();
+
+			udp::resolver resolver(m_backend_context);
+			auto results = co_await resolver.async_resolve(
+				target_host, std::to_string(target_port), net_awaitable[ec]);
+
+			co_await switch_from_backend_executor();
+
+			if (ec || results.empty())
+			{
+				log_conn_warning()
+					<< ", websocket udp: DNS resolve failed for "
+					<< target_host << ": " << ec.message();
+				co_return std::nullopt;
+			}
+
+			target_addr = results.begin()->endpoint().address();
+		}
+
+		protocol = target_addr.is_v4() ? udp::v4() : udp::v6();
+		udp::socket socket(m_executor);
+		socket.open(protocol, ec);
+		if (ec)
+		{
+			log_conn_warning()
+				<< ", websocket udp: open socket: " << ec.message();
+			co_return std::nullopt;
+		}
+
+		if (m_bind_interface)
+		{
+			socket.bind(udp::endpoint(*m_bind_interface, 0), ec);
+			if (ec)
+			{
+				log_conn_warning()
+					<< ", websocket udp: bind socket: " << ec.message();
+				co_return std::nullopt;
+			}
+		}
+
+		if (m_option.so_mark_)
+		{
+			auto ret = apply_so_mark(socket.native_handle(), m_option.so_mark_);
+			if (ret.has_error())
+			{
+				log_conn_warning()
+					<< ", websocket udp: set socket mark: "
+					<< ret.error().message();
+			}
+		}
+
+		socket.connect(udp::endpoint(target_addr, target_port), ec);
+		if (ec)
+		{
+			log_conn_warning()
+				<< ", websocket udp: connect "
+				<< target_host << ":" << target_port
+				<< ": " << ec.message();
+			co_return std::nullopt;
+		}
+
+		co_return std::optional<udp::socket>(std::move(socket));
+	}
+
+	net::awaitable<bool> proxy_session::connect_websocket_udp_proxy_pass(
+		const std::string& target_host, uint16_t target_port) noexcept
+	{
+		boost::system::error_code ec;
+		tcp::socket remote_socket(m_executor);
+		auto targets = co_await resolve_proxy_pass_targets();
+		ec = co_await connect_proxy_pass(remote_socket, targets);
+		if (ec)
+		{
+			log_conn_warning()
+				<< ", websocket udp: connect proxy_pass: " << ec.message();
+			co_return false;
+		}
+
+		bool use_ssl = m_option.proxy_pass_use_ssl_ ||
+			proxy_scheme_use_ssl(m_proxy_pass->scheme());
+		m_remote_socket = co_await instantiate_proxy_pass(
+			std::move(remote_socket), use_ssl);
+
+		auto options = make_websocket_handshake_options(
+			*m_proxy_pass, target_host, target_port, true);
+		ec = co_await async_websocket_proxy_handshake(
+			m_remote_socket, std::move(options));
+		if (ec)
+		{
+			log_conn_warning()
+				<< ", websocket udp: upstream handshake: " << ec.message();
+			stream_cancel(m_remote_socket);
+			co_return false;
+		}
+
+		stream_expires_never(m_remote_socket);
+		co_return true;
+	}
+
+	net::awaitable<boost::system::error_code>
+	proxy_session::accept_websocket_udp(const string_request& req) noexcept
+	{
+		if (boost::variant2::holds_alternative<proxy_tcp_socket>(
+			m_local_socket))
+		{
+			websocket_plain_stream websocket(std::move(
+				boost::variant2::get<proxy_tcp_socket>(m_local_socket)));
+			m_local_socket = init_proxy_stream(std::move(websocket));
+			co_return co_await boost::variant2::get<websocket_plain_stream>(
+				m_local_socket).async_accept(req, m_local_buffer.data(),
+					ws_tunnel::proxy_connect_udp_subprotocol);
+		}
+
+		if (boost::variant2::holds_alternative<ssl_tcp_stream>(m_local_socket))
+		{
+			websocket_tls_stream websocket(std::move(
+				boost::variant2::get<ssl_tcp_stream>(m_local_socket)));
+			m_local_socket = init_proxy_stream(std::move(websocket));
+			co_return co_await boost::variant2::get<websocket_tls_stream>(
+				m_local_socket).async_accept(req, m_local_buffer.data(),
+					ws_tunnel::proxy_connect_udp_subprotocol);
+		}
+
+		co_return make_error_code(boost::system::errc::operation_not_supported);
+	}
+
+	net::awaitable<void> proxy_session::run_websocket_udp_bridge() noexcept
+	{
+		auto self = shared_from_this();
+		auto local_to_remote = [this, self]() -> net::awaitable<void>
+		{
+			beast::flat_buffer message;
+			while (!m_abort)
+			{
+				auto ec = co_await async_websocket_read_binary(
+					m_local_socket, message);
+				if (ec)
+					break;
+
+				auto data = message.data();
+				std::string_view payload;
+				if (!decode_datagram_message(std::string_view(
+					static_cast<const char*>(data.data()), data.size()),
+					payload))
+					continue;
+
+				ec = co_await async_websocket_write_binary(
+					m_remote_socket, data);
+				if (ec)
+					break;
+
+				m_total_rx += static_cast<uint64_t>(payload.size());
+				m_last_activity.store(0, std::memory_order_relaxed);
+			}
+
+			m_abort = true;
+			stream_cancel(m_local_socket);
+			stream_cancel(m_remote_socket);
+		};
+
+		auto remote_to_local = [this, self]() -> net::awaitable<void>
+		{
+			beast::flat_buffer message;
+			while (!m_abort)
+			{
+				auto ec = co_await async_websocket_read_binary(
+					m_remote_socket, message);
+				if (ec)
+					break;
+
+				auto data = message.data();
+				std::string_view payload;
+				if (!decode_datagram_message(std::string_view(
+					static_cast<const char*>(data.data()), data.size()),
+					payload))
+					continue;
+
+				ec = co_await async_websocket_write_binary(
+					m_local_socket, data);
+				if (ec)
+					break;
+
+				m_total_tx += static_cast<uint64_t>(payload.size());
+				m_last_activity.store(0, std::memory_order_relaxed);
+			}
+
+			m_abort = true;
+			stream_cancel(m_local_socket);
+			stream_cancel(m_remote_socket);
+		};
+
+		co_await(local_to_remote() && remote_to_local());
+	}
+
+	net::awaitable<void> proxy_session::run_websocket_udp_target(
+		udp::socket& socket) noexcept
+	{
+		auto self = shared_from_this();
+		auto websocket_to_udp = [this, self, &socket]()
+			-> net::awaitable<void>
+		{
+			beast::flat_buffer message;
+			boost::system::error_code ec;
+			while (!m_abort)
+			{
+				ec = co_await async_websocket_read_binary(
+					m_local_socket, message);
+				if (ec)
+					break;
+
+				auto data = message.data();
+				std::string_view payload;
+				if (!decode_datagram_message(std::string_view(
+					static_cast<const char*>(data.data()), data.size()),
+					payload))
+					continue;
+
+				co_await socket.async_send(
+					net::buffer(payload.data(), payload.size()),
+					net_awaitable[ec]);
+				if (ec)
+					break;
+
+				m_total_rx += static_cast<uint64_t>(payload.size());
+				m_last_activity.store(0, std::memory_order_relaxed);
+			}
+
+			m_abort = true;
+			stream_cancel(m_local_socket);
+			socket.close(ec);
+		};
+
+		auto udp_to_websocket = [this, self, &socket]()
+			-> net::awaitable<void>
+		{
+			std::array<char, 65535> payload{};
+			std::array<uint8_t, 65536> capsule{};
+			boost::system::error_code ec;
+			while (!m_abort)
+			{
+				auto bytes = co_await socket.async_receive(
+					net::buffer(payload), net_awaitable[ec]);
+				if (ec)
+					break;
+
+				auto size = encode_datagram_capsule(
+					payload.data(), bytes, capsule.data(), capsule.size());
+				if (size == 0)
+					continue;
+
+				ec = co_await async_websocket_write_binary(
+					m_local_socket, net::buffer(capsule.data(), size));
+				if (ec)
+					break;
+
+				m_total_tx += static_cast<uint64_t>(bytes);
+				m_last_activity.store(0, std::memory_order_relaxed);
+			}
+
+			m_abort = true;
+			stream_cancel(m_local_socket);
+			socket.close(ec);
+		};
+
+		co_await(websocket_to_udp() && udp_to_websocket());
+	}
+
+	net::awaitable<void> proxy_session::http_proxy_websocket_connect_udp(
+		const string_request& req,
+		const std::string& target_host,
+		uint16_t target_port) noexcept
+	{
+		auto send_error = [this, &req](http::status status,
+			std::string_view message) -> net::awaitable<void>
+		{
+			http::response<http::string_body> res{ status, req.version() };
+			res.set(http::field::server, version_string);
+			res.set(http::field::date, server_date_string());
+			res.set(http::field::content_type, "text/plain");
+			res.keep_alive(false);
+			res.body() = message;
+			res.prepare_payload();
+
+			boost::system::error_code ignore_ec;
+			co_await http::async_write(
+				m_local_socket, res, net_awaitable[ignore_ec]);
+		};
+
+		auto scheme = m_proxy_pass ?
+			boost::to_lower_copy(std::string(m_proxy_pass->scheme())) :
+			std::string();
+		const bool ws_upstream = m_proxy_pass &&
+			proxy_scheme_is_websocket(scheme);
+
+		if (m_option.disable_udp_ && !ws_upstream)
+		{
+			co_await send_error(http::status::forbidden,
+				"UDP proxy is disabled.\n");
+			co_return;
+		}
+
+		if (m_proxy_pass && !ws_upstream)
+		{
+			co_await send_error(http::status::not_implemented,
+				"WebSocket UDP requires a ws/wss proxy_pass.\n");
+			co_return;
+		}
+
+		if (ws_upstream)
+		{
+			if (!co_await connect_websocket_udp_proxy_pass(
+				target_host, target_port))
+			{
+				co_await send_error(http::status::bad_gateway,
+					"Failed to establish upstream WebSocket UDP tunnel.\n");
+				co_return;
+			}
+
+			auto ec = co_await accept_websocket_udp(req);
+			if (ec)
+			{
+				log_conn_warning()
+					<< ", websocket udp: downstream handshake: "
+					<< ec.message();
+				stream_cancel(m_remote_socket);
+				co_return;
+			}
+
+			stream_expires_never(m_local_socket);
+			set_proto("websocket-udp");
+			co_await run_websocket_udp_bridge();
+			co_return;
+		}
+
+		auto udp_socket = co_await open_udp_target(target_host, target_port);
+		if (!udp_socket)
+		{
+			co_await send_error(http::status::bad_gateway,
+				"Failed to open UDP target.\n");
+			co_return;
+		}
+
+		auto ec = co_await accept_websocket_udp(req);
+		if (ec)
+		{
+			log_conn_warning()
+				<< ", websocket udp: downstream handshake: "
+				<< ec.message();
+			udp_socket->close(ec);
+			co_return;
+		}
+
+		stream_expires_never(m_local_socket);
+		set_proto("websocket-udp");
+		co_await run_websocket_udp_target(*udp_socket);
+	}
+
+	net::awaitable<void> proxy_session::http_capsules_to_websocket_proxy() noexcept
+	{
+		auto self = shared_from_this();
+		auto http_to_websocket = [this, self]() -> net::awaitable<void>
+		{
+			std::array<uint8_t, 65536> capsule{};
+			boost::system::error_code ec;
+			while (!m_abort)
+			{
+				auto [type, value] = co_await read_capsule_from_stream(
+					m_local_socket, ec);
+				if (ec)
+					break;
+
+				if (type != udp_proxy_capsule_type)
+					continue;
+
+				std::string_view payload;
+				if (!decode_datagram_capsule(value, payload))
+					continue;
+
+				auto size = encode_datagram_capsule(payload.data(),
+					payload.size(), capsule.data(), capsule.size());
+				if (size == 0)
+					continue;
+
+				ec = co_await async_websocket_write_binary(
+					m_remote_socket, net::buffer(capsule.data(), size));
+				if (ec)
+					break;
+
+				m_total_rx += static_cast<uint64_t>(payload.size());
+				m_last_activity.store(0, std::memory_order_relaxed);
+			}
+
+			m_abort = true;
+			stream_cancel(m_local_socket);
+			stream_cancel(m_remote_socket);
+		};
+
+		auto websocket_to_http = [this, self]() -> net::awaitable<void>
+		{
+			beast::flat_buffer message;
+			boost::system::error_code ec;
+			while (!m_abort)
+			{
+				ec = co_await async_websocket_read_binary(
+					m_remote_socket, message);
+				if (ec)
+					break;
+
+				auto data = message.data();
+				std::string_view payload;
+				if (!decode_datagram_message(std::string_view(
+					static_cast<const char*>(data.data()), data.size()),
+					payload))
+					continue;
+
+				co_await net::async_write(
+					m_local_socket, data, net_awaitable[ec]);
+				if (ec)
+					break;
+
+				m_total_tx += static_cast<uint64_t>(payload.size());
+				m_last_activity.store(0, std::memory_order_relaxed);
+			}
+
+			m_abort = true;
+			stream_cancel(m_local_socket);
+			stream_cancel(m_remote_socket);
+		};
+
+		co_await(http_to_websocket() && websocket_to_http());
+		co_return;
 	}
 
 	net::awaitable<void> proxy_session::http_proxy_connect_udp(
@@ -924,8 +1389,8 @@ namespace proxy {
 				}
 
 				// 解析 DATAGRAM capsule, 取出 UDP payload.
-				auto payload = decode_datagram_capsule(capsule_value);
-				if (payload.empty())
+				std::string_view payload;
+				if (!decode_datagram_capsule(capsule_value, payload))
 				{
 					log_conn_debug()
 						<< ", connect-udp: invalid datagram capsule, skipping";
@@ -1019,15 +1484,38 @@ namespace proxy {
 
 		auto scheme = boost::to_lower_copy(std::string(m_proxy_pass->scheme()));
 
-		if (scheme == "ws" || scheme == "wss")
+		if (proxy_scheme_is_websocket(scheme))
 		{
-			http::response<http::string_body> res{
-				http::status::not_implemented, req.version() };
-			res.set(http::field::content_type, "text/plain");
-			res.body() = "WebSocket proxy_pass does not support UDP.\n";
-			res.prepare_payload();
+			if (!co_await connect_websocket_udp_proxy_pass(
+				target_host, target_port))
+			{
+				http::response<http::string_body> res{
+					http::status::bad_gateway, req.version() };
+				res.set(http::field::content_type, "text/plain");
+				res.body() = "Failed to establish upstream WebSocket UDP tunnel.\n";
+				res.prepare_payload();
+				co_await http::async_write(
+					m_local_socket, res, net_awaitable[ec]);
+				co_return;
+			}
+
+			http::response<http::empty_body> res;
+			res.version(11);
+			res.result(http::status::switching_protocols);
+			res.set(http::field::connection, "Upgrade");
+			res.set(http::field::upgrade, "connect-udp");
+			res.set("Capsule-Protocol", "?1");
+
 			co_await http::async_write(
 				m_local_socket, res, net_awaitable[ec]);
+			if (ec)
+			{
+				stream_cancel(m_remote_socket);
+				co_return;
+			}
+
+			stream_expires_never(m_local_socket);
+			co_await http_capsules_to_websocket_proxy();
 			co_return;
 		}
 
@@ -1322,8 +1810,8 @@ namespace proxy {
 						continue;
 
 					// 解析 DATAGRAM capsule, 取出 UDP payload.
-					auto payload = decode_datagram_capsule(capsule_value);
-					if (payload.empty())
+					std::string_view payload;
+					if (!decode_datagram_capsule(capsule_value, payload))
 						continue;
 
 					// 构建完整 SOCKS5 UDP 数据报并发送到中继.

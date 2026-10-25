@@ -131,7 +131,7 @@ docker build . -t proxy:v1
 | disable_http | 禁用 HTTP 代理协议 |
 | disable_socks | 禁用 SOCKS5/SOCKS4 代理协议 |
 | disable_udp | 禁用 UDP 代理功能 |
-| websocket_proxy | 启用 WebSocket CONNECT 私有隧道入口（默认关闭）。入口仅接受 binary 消息，不支持 UDP |
+| websocket_proxy | 启用 WebSocket CONNECT 私有隧道入口（默认关闭）。支持 TCP 与 CONNECT-UDP capsule 消息 |
 | disable_insecure | 禁止非安全连接（即只允许 SSL/TLS 加密连接） |
 | disable_check_cert | 禁用 TLS 证书校验（不安全的选项，通常仅用于测试环境） |
 | scramble | 启用数据噪声加扰（通过随机噪声混淆数据传输），此选项需要两端同时开启 |
@@ -196,12 +196,39 @@ Proxy-Authorization: Basic <base64(user:password)>
 - 服务端只有在目标 TCP 连接成功后才返回 `101 Switching Protocols`；认证失败返回 `407`，目标连接失败返回 `502`。
 - 所有 WebSocket 消息必须为 binary，首字节为操作码：`0x00` 表示 TCP DATA，后续字节为载荷；`0x01` 表示 `FIN_WRITE`（不再发送 DATA，但仍接收）；`0x02` 表示 `ABORT`。
 - 单条消息上限为 64 KiB，因此单条 DATA 载荷上限为 64 KiB - 1。客户端应等待 `101` 后再发送首帧。
-- 该隧道只承载 TCP，不支持 SOCKS5 UDP ASSOCIATE、RFC 9298 CONNECT-UDP 或 TUN UDP。
+- TCP 隧道使用 `proxy-connect.v1`；UDP 使用独立的 `proxy-connect-udp.v1` 扩展。
 
 将本服务作为中间级联代理时，可使用 `proxy_pass=ws://...` 或 `wss://...` 连接启用了
 `websocket_proxy` 的上游。URL 的认证信息作为 `Proxy-Authorization` 发送；`wss` 表示先与
-上游建立 TLS，再执行 WebSocket 握手。TUN、stdio、透明代理、HTTP CONNECT 与 DoH 的 TCP
-路径均支持该上游；UDP 路径会明确拒绝 `ws/wss`。
+上游建立 TLS，再执行 WebSocket 握手。TUN、stdio、透明代理、HTTP CONNECT、DoH、HTTP
+CONNECT-UDP 与 UDP TPROXY 均支持该上游。
+
+### WebSocket CONNECT-UDP
+
+UDP 隧道沿用 WebSocket Upgrade 流程，通过独立头和子协议声明数据报模式：
+
+``` http
+GET /.well-known/proxy/connect-udp HTTP/1.1
+Host: proxy.example.com
+Connection: Upgrade
+Upgrade: websocket
+Sec-WebSocket-Version: 13
+Sec-WebSocket-Key: <RFC 6455 key>
+Sec-WebSocket-Protocol: proxy-connect-udp.v1
+Proxy-Connect-UDP: target.example.com:53
+Proxy-Authorization: Basic <base64(user:password)>
+```
+
+- 必须协商 `proxy-connect-udp.v1` 子协议；旧头名 `PROXY_CONNECT_UDP` 也兼容。TCP 头
+  `Proxy-Connect` 与 UDP 头 `Proxy-Connect-UDP` 不能同时出现。
+- 每条 binary WebSocket 消息承载一个 RFC 9297 DATAGRAM capsule（type `0x00`），
+  capsule 的 context ID 必须为 `0`，payload 可为空。消息边界即 UDP 数据报边界，
+  禁止跨消息拼接。
+- 单条消息上限为 64 KiB，足以容纳常规 UDP 最大载荷和 capsule 头；超限或畸形消息被丢弃。
+- 服务端直接代理时在目标 UDP socket 就绪后返回 `101`；级联到 `ws/wss` 上游时，在
+  上游鉴权和 WebSocket 握手成功后才会向客户端返回 `101`。
+- 入站 WebSocket UDP、HTTP CONNECT-UDP 经 `ws/wss` 上游、TUN UDP 与 UDP TPROXY
+  均使用相同 capsule 消息格式；未启用 `websocket_proxy` 时 HTTP 入口不会接受该请求。
 
 ## 代理隧道功能
 

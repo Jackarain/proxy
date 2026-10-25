@@ -168,7 +168,7 @@ namespace {
 			payload.data(), 0, no_space.data(), no_space.size()) == 0u);
 	}
 
-	BOOST_AUTO_TEST_CASE(datagram_capsule_rejects_bad_value)
+	BOOST_AUTO_TEST_CASE(datagram_capsule_value_edge_cases)
 	{
 		// 空 value.
 		BOOST_TEST(decode_datagram_capsule(std::string_view{}).empty());
@@ -178,10 +178,46 @@ namespace {
 		BOOST_TEST(decode_datagram_capsule(
 			std::string_view(nonzero_ctx, sizeof(nonzero_ctx))).empty());
 
-		// 只有 context id, 没有 payload.
+		// 只有 context id, 没有 payload 仍是合法空数据报.
 		const char ctx_only[] = { 0x00 };
+		std::string_view empty_payload;
 		BOOST_TEST(decode_datagram_capsule(
-			std::string_view(ctx_only, sizeof(ctx_only))).empty());
+			std::string_view(ctx_only, sizeof(ctx_only)), empty_payload));
+		BOOST_TEST(empty_payload.empty());
+
+		std::array<uint8_t, 8> empty_capsule{};
+		auto empty_size = encode_datagram_capsule(
+			"", 0, empty_capsule.data(), empty_capsule.size());
+		BOOST_TEST(empty_size == datagram_capsule_header_size(0));
+		BOOST_TEST(decode_datagram_message(std::string_view(
+			reinterpret_cast<const char*>(empty_capsule.data()), empty_size),
+			empty_payload));
+		BOOST_TEST(empty_payload.empty());
+	}
+
+	BOOST_AUTO_TEST_CASE(datagram_message_round_trip)
+	{
+		const std::string payload(300, 'z');
+		std::vector<uint8_t> encoded(
+			datagram_capsule_header_size(payload.size()) + payload.size());
+		auto encoded_len = encode_datagram_capsule(payload.data(),
+			payload.size(), encoded.data(), encoded.size());
+
+		std::string_view message(
+			reinterpret_cast<const char*>(encoded.data()), encoded_len);
+		std::string_view decoded;
+		BOOST_TEST(decode_datagram_message(message, decoded));
+		BOOST_TEST(decoded == payload);
+
+		auto trailing = message;
+		trailing = message.substr(0, message.size() - 1);
+		BOOST_TEST(!decode_datagram_message(trailing, decoded));
+
+		std::vector<uint8_t> wrong_type = encoded;
+		wrong_type[0] = 1;
+		BOOST_TEST(!decode_datagram_message(std::string_view(
+			reinterpret_cast<const char*>(wrong_type.data()),
+			wrong_type.size()), decoded));
 	}
 
 	BOOST_AUTO_TEST_CASE(read_capsule_from_stream_valid)
