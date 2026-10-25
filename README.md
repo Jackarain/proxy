@@ -323,7 +323,7 @@ curl -X POST -H "Content-Type: application/dns-json" \
 --so_mark <mark>        出站连接打 SO_MARK 标记（仅 Linux），配合策略路由排除代理自身流量防止环路
 ```
 
-`proxy_pass` 支持 `socks5`、`http(s)`、`ws` 与 `wss` 协议，`--tun true` 时必须指定；其中 `ws/wss` 仅支持 TCP 分流，UDP 分流不会启动。
+`proxy_pass` 支持 `socks5`、`http(s)`、`ws` 与 `wss` 协议，`--tun true` 时必须指定；其中 `ws/wss` 的 TCP 分流使用 WebSocket CONNECT 隧道，UDP 分流使用 WebSocket CONNECT-UDP capsule 隧道。
 
 ### 分流规则
 
