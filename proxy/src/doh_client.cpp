@@ -845,7 +845,10 @@ namespace proxy {
 			co_return true;
 
 		if (!co_await setup_tls(m_doh_host))
+		{
+			m_stream.reset();
 			co_return false;
+		}
 		if (!websocket_stream_to_tls(*m_stream, *m_ssl_ctx))
 		{
 			m_stream.reset();
