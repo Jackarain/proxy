@@ -116,6 +116,16 @@ namespace proxy {
 				<< (pa.empty() ? std::string()
 					: ", proxy_authorization: " + pa);
 
+			// WebSocket CONNECT 隧道优先于普通 HTTP 静态站点/URL 代理处理.
+			if (m_option.websocket_proxy_ &&
+				beast::websocket::is_upgrade(req) &&
+				(req.find(ws_tunnel::proxy_connect_header) != req.end() ||
+				 req.find(ws_tunnel::proxy_connect_header_legacy) != req.end()))
+			{
+				co_await http_proxy_websocket_connect(req);
+				co_return true;
+			}
+
 			// 判定是否为 GET url 代理模式.
 			bool get_url_proxy = false;
 			boost::system::result<url_info> expect_url;
@@ -591,6 +601,131 @@ namespace proxy {
 		co_return true;
 	}
 
+	net::awaitable<bool> proxy_session::http_proxy_websocket_connect(
+		const string_request& req) noexcept
+	{
+		boost::system::error_code ec;
+
+		auto send_error = [this, &req](http::status status,
+			std::string_view authenticate = {}) -> net::awaitable<void>
+		{
+			http::response<http::string_body> res{ status, req.version() };
+			res.set(http::field::server, version_string);
+			res.set(http::field::date, server_date_string());
+			res.keep_alive(false);
+			if (!authenticate.empty())
+				res.set(http::field::proxy_authenticate, authenticate);
+			res.prepare_payload();
+
+			boost::system::error_code ignore_ec;
+			co_await http::async_write(
+				m_local_socket, res, net_awaitable[ignore_ec]);
+		};
+
+		auto pa = std::string(req[http::field::proxy_authorization]);
+		auto auth = co_await http_authorization(pa);
+		if (auth != PROXY_AUTH_SUCCESS)
+		{
+			log_conn_warning()
+				<< ", websocket proxy auth error: "
+				<< pauth_error_message(auth);
+			co_await send_error(
+				http::status::proxy_authentication_required,
+				"Basic realm=\"proxy\"");
+			co_return true;
+		}
+
+		if (req.method() != http::verb::get || req.version() != 11 ||
+			!beast::websocket::is_upgrade(req) ||
+			req.find(http::field::host) == req.end())
+		{
+			co_await send_error(http::status::bad_request);
+			co_return true;
+		}
+
+		auto protocol = req[http::field::sec_websocket_protocol];
+		if (!ws_tunnel::header_has_token(
+			protocol, ws_tunnel::proxy_connect_subprotocol))
+		{
+			co_await send_error(http::status::bad_request);
+			co_return true;
+		}
+
+		auto modern_count = req.count(ws_tunnel::proxy_connect_header);
+		auto legacy_count = req.count(ws_tunnel::proxy_connect_header_legacy);
+		if (modern_count + legacy_count != 1)
+		{
+			co_await send_error(http::status::bad_request);
+			co_return true;
+		}
+
+		auto target_it = req.find(ws_tunnel::proxy_connect_header);
+		if (target_it == req.end())
+			target_it = req.find(ws_tunnel::proxy_connect_header_legacy);
+
+		std::string target_host;
+		uint16_t target_port = 0;
+		if (!ws_tunnel::parse_authority(
+			target_it->value(), target_host, target_port))
+		{
+			co_await send_error(http::status::bad_request);
+			co_return true;
+		}
+
+		if (!boost::variant2::holds_alternative<proxy_tcp_socket>(m_local_socket) &&
+			!boost::variant2::holds_alternative<ssl_tcp_stream>(m_local_socket))
+		{
+			co_await send_error(http::status::not_implemented);
+			co_return true;
+		}
+
+		log_conn_debug()
+			<< ", websocket proxy target: "
+			<< target_host << ":" << target_port;
+
+		set_target(target_host + ":" + std::to_string(target_port));
+		ec = co_await start_connect_host(target_host, target_port, false);
+		if (ec)
+		{
+			log_conn_warning()
+				<< ", websocket proxy connect target "
+				<< target_host << ":" << target_port
+				<< " error: " << ec.message();
+			co_await send_error(http::status::bad_gateway);
+			co_return true;
+		}
+
+		set_proto("websocket");
+
+		if (boost::variant2::holds_alternative<proxy_tcp_socket>(m_local_socket))
+		{
+			websocket_plain_stream websocket(
+				std::move(boost::variant2::get<proxy_tcp_socket>(m_local_socket)));
+			m_local_socket = init_proxy_stream(std::move(websocket));
+			ec = co_await boost::variant2::get<websocket_plain_stream>(
+				m_local_socket).async_accept(req, m_local_buffer.data());
+		}
+		else
+		{
+			websocket_tls_stream websocket(
+				std::move(boost::variant2::get<ssl_tcp_stream>(m_local_socket)));
+			m_local_socket = init_proxy_stream(std::move(websocket));
+			ec = co_await boost::variant2::get<websocket_tls_stream>(
+				m_local_socket).async_accept(req, m_local_buffer.data());
+		}
+
+		if (ec)
+		{
+			log_conn_warning()
+				<< ", websocket proxy handshake error: " << ec.message();
+			co_return true;
+		}
+
+		stream_expires_never(m_local_socket);
+		co_await concurrent_transfer();
+		co_return true;
+	}
+
 	net::awaitable<void> proxy_session::http_proxy_connect_udp(
 		const http::request<http::string_body>& req,
 		const std::string& target_host,
@@ -884,6 +1019,18 @@ namespace proxy {
 
 		auto scheme = boost::to_lower_copy(std::string(m_proxy_pass->scheme()));
 
+		if (scheme == "ws" || scheme == "wss")
+		{
+			http::response<http::string_body> res{
+				http::status::not_implemented, req.version() };
+			res.set(http::field::content_type, "text/plain");
+			res.body() = "WebSocket proxy_pass does not support UDP.\n";
+			res.prepare_payload();
+			co_await http::async_write(
+				m_local_socket, res, net_awaitable[ec]);
+			co_return;
+		}
+
 		if (scheme.starts_with("socks5"))
 		{
 			// SOCKS proxy_pass: 通过 SOCKS5 UDP ASSOCIATE 转发 UDP 数据.
@@ -915,7 +1062,7 @@ namespace proxy {
 
 			// 2. 判断是否使用 SSL 加密.
 			bool use_ssl = m_option.proxy_pass_use_ssl_;
-			if (scheme.ends_with("s"))
+			if (proxy_scheme_use_ssl(scheme))
 				use_ssl = true;
 
 			// 3. 执行 SOCKS5 UDP ASSOCIATE 握手.

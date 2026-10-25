@@ -15,6 +15,7 @@
 #include "proxy/uds_socket.hpp"
 #include "proxy/ssl_stream.hpp"
 #include "proxy/stdio_stream.hpp"
+#include "proxy/websocket_tunnel.hpp"
 
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/ssl/stream.hpp>
@@ -56,6 +57,13 @@ namespace util {
 	using ssl_tcp_stream = ssl_stream<proxy_tcp_socket>;
 	using ssl_uds_stream = ssl_stream<proxy_uds_socket>;
 
+	// WebSocket CONNECT 隧道流. ws 为明文 WebSocket, wss 为外层 TLS + WebSocket;
+	// ssl_ws_* 用于在 WebSocket 隧道内再建立目标 TLS 会话.
+	using websocket_plain_stream = proxy::ws_tunnel::stream<proxy_tcp_socket>;
+	using websocket_tls_stream = proxy::ws_tunnel::stream<ssl_tcp_stream>;
+	using ssl_websocket_plain_stream = ssl_stream<websocket_plain_stream>;
+	using ssl_websocket_tls_stream = ssl_stream<websocket_tls_stream>;
+
 	// variant_stream_type 支持 proxy_tcp_socket, proxy_uds_socket, ssl_tcp_stream, ssl_uds_stream
 	using variant_stream_type = variant_stream
 		<
@@ -63,7 +71,11 @@ namespace util {
 			proxy_uds_socket,
 			stdio_stream,
 			ssl_tcp_stream,
-			ssl_uds_stream
+			ssl_uds_stream,
+			websocket_plain_stream,
+			websocket_tls_stream,
+			ssl_websocket_plain_stream,
+			ssl_websocket_tls_stream
 		>;
 
 	// tcp_acceptor 和 unix_acceptor 类型声明.
@@ -74,7 +86,7 @@ namespace util {
 
 
 	template <typename Stream>
-	class proxy_stream final
+	class proxy_stream
 	{
 		proxy_stream(const proxy_stream&) = delete;
 		proxy_stream& operator=(proxy_stream const&) = delete;
@@ -576,6 +588,18 @@ namespace util {
 						net::local::stream_protocol::endpoint endp = lowest_layer.remote_endpoint();
 						return endp.path();
 					}
+					else if constexpr (std::same_as<S, websocket_plain_stream> ||
+						std::same_as<S, websocket_tls_stream> ||
+						std::same_as<S, ssl_websocket_plain_stream> ||
+						std::same_as<S, ssl_websocket_tls_stream>)
+					{
+						auto& lowest_layer = beast::get_lowest_layer(sock);
+						tcp::endpoint endp = lowest_layer.remote_endpoint();
+
+						std::string endpoint_str = endp.address().to_string();
+						endpoint_str += ":" + std::to_string(endp.port());
+						return endpoint_str;
+					}
 					else if constexpr (std::same_as<S, stdio_stream>)
 					{
 						return "stdio";
@@ -629,6 +653,18 @@ namespace util {
 						net::local::stream_protocol::endpoint endp = lowest_layer.local_endpoint();
 						return endp.path();
 					}
+					else if constexpr (std::same_as<S, websocket_plain_stream> ||
+						std::same_as<S, websocket_tls_stream> ||
+						std::same_as<S, ssl_websocket_plain_stream> ||
+						std::same_as<S, ssl_websocket_tls_stream>)
+					{
+						auto& lowest_layer = beast::get_lowest_layer(sock);
+						tcp::endpoint endp = lowest_layer.local_endpoint();
+
+						std::string endpoint_str = endp.address().to_string();
+						endpoint_str += ":" + std::to_string(endp.port());
+						return endpoint_str;
+					}
 					else if constexpr (std::same_as<S, stdio_stream>)
 					{
 						return "stdio";
@@ -660,9 +696,29 @@ namespace util {
 			{
 				return static_cast<tcp::socket&>(boost::variant2::get<ssl_tcp_stream>(socket).lowest_layer());
 			}
+			else if (boost::variant2::holds_alternative<websocket_plain_stream>(socket))
+			{
+				return static_cast<tcp::socket&>(boost::variant2::get<websocket_plain_stream>(socket).lowest_layer());
+			}
+			else if (boost::variant2::holds_alternative<websocket_tls_stream>(socket))
+			{
+				return static_cast<tcp::socket&>(boost::variant2::get<websocket_tls_stream>(socket).lowest_layer());
+			}
+			else if (boost::variant2::holds_alternative<ssl_websocket_plain_stream>(socket))
+			{
+				return static_cast<tcp::socket&>(boost::variant2::get<ssl_websocket_plain_stream>(socket).lowest_layer());
+			}
+			else if (boost::variant2::holds_alternative<ssl_websocket_tls_stream>(socket))
+			{
+				return static_cast<tcp::socket&>(boost::variant2::get<ssl_websocket_tls_stream>(socket).lowest_layer());
+			}
 		}
 		else if constexpr (std::same_as<StreamType, proxy_tcp_socket>
-			|| std::same_as<StreamType, ssl_tcp_stream>)
+			|| std::same_as<StreamType, ssl_tcp_stream>
+			|| std::same_as<StreamType, websocket_plain_stream>
+			|| std::same_as<StreamType, websocket_tls_stream>
+			|| std::same_as<StreamType, ssl_websocket_plain_stream>
+			|| std::same_as<StreamType, ssl_websocket_tls_stream>)
 		{
 			return static_cast<tcp::socket&>(socket.lowest_layer());
 		}
@@ -805,6 +861,44 @@ namespace util {
 		return;
 	}
 
+	// ssl websocket 流先发送 TLS close_notify, 再发送 WebSocket FIN_WRITE.
+	template <typename StreamType, typename Handler>
+	void ssl_websocket_layer_shutdown(StreamType& sock, Handler&& handler) noexcept
+	{
+		auto& websocket = sock.next_layer();
+		if (!websocket.lowest_layer().is_open())
+		{
+			websocket.async_shutdown_send(std::move(handler));
+			return;
+		}
+
+		::ERR_clear_error();
+
+		auto native_handle = sock.native_handle();
+		int result = ::SSL_shutdown(native_handle);
+		if (result == 0)
+			result = ::SSL_shutdown(native_handle);
+
+		auto bufs = sock.get_output(sock.get_output_buffer());
+		if (net::buffer_size(bufs) == 0)
+		{
+			websocket.async_shutdown_send(std::move(handler));
+			return;
+		}
+
+		net::async_write(websocket, bufs,
+			[&websocket, handler = std::move(handler)]
+			(boost::system::error_code ec, auto) mutable
+			{
+				if (ec)
+				{
+					handler(ec);
+					return;
+				}
+				websocket.async_shutdown_send(std::move(handler));
+			});
+	}
+
 	template <typename CompletionToken>
 	auto async_shutdown(variant_stream_type& socket, CompletionToken&& token)
 	{
@@ -825,6 +919,16 @@ namespace util {
 								std::same_as<StreamType, ssl_uds_stream>)
 							{
 								ssl_layer_shutdown(sock, std::move(handler));
+							}
+							else if constexpr (std::same_as<StreamType, websocket_plain_stream> ||
+								std::same_as<StreamType, websocket_tls_stream>)
+							{
+								sock.async_shutdown_send(std::move(handler));
+							}
+							else if constexpr (std::same_as<StreamType, ssl_websocket_plain_stream> ||
+								std::same_as<StreamType, ssl_websocket_tls_stream>)
+							{
+								ssl_websocket_layer_shutdown(sock, std::move(handler));
 							}
 						}, socket);
 				}, token);
@@ -859,6 +963,14 @@ namespace util {
 			return variant_stream_type(std::move(s));
 		else if constexpr (std::same_as<StreamType, ssl_uds_stream>)
 			return variant_stream_type(std::move(s));
+		else if constexpr (std::same_as<StreamType, websocket_plain_stream>)
+			return variant_stream_type(std::move(s));
+		else if constexpr (std::same_as<StreamType, websocket_tls_stream>)
+			return variant_stream_type(std::move(s));
+		else if constexpr (std::same_as<StreamType, ssl_websocket_plain_stream>)
+			return variant_stream_type(std::move(s));
+		else if constexpr (std::same_as<StreamType, ssl_websocket_tls_stream>)
+			return variant_stream_type(std::move(s));
 		else if constexpr (std::same_as<StreamType, stdio_stream>)
 			return variant_stream_type(std::move(s));
 		else {
@@ -887,9 +999,67 @@ namespace util {
 		{
 			return variant_stream_type(ssl_uds_stream(proxy_uds_socket(std::move(s)), sslctx));
 		}
+		else if constexpr (std::same_as<StreamType, websocket_plain_stream>)
+		{
+			return variant_stream_type(ssl_websocket_plain_stream(std::move(s), sslctx));
+		}
+		else if constexpr (std::same_as<StreamType, websocket_tls_stream>)
+		{
+			return variant_stream_type(ssl_websocket_tls_stream(std::move(s), sslctx));
+		}
 		else {
 			static_assert(!std::same_as<StreamType, StreamType>, "unknown socket type!");
 		}
+	}
+
+	inline void teardown(boost::beast::role_type,
+		proxy_tcp_socket& sock, boost::system::error_code& ec) noexcept
+	{
+		sock.lowest_layer().shutdown(net::socket_base::shutdown_both, ec);
+		boost::system::error_code ignore_ec;
+		sock.close(ignore_ec);
+	}
+
+	inline void teardown(boost::beast::role_type,
+		ssl_tcp_stream& sock, boost::system::error_code& ec) noexcept
+	{
+		sock.lowest_layer().shutdown(net::socket_base::shutdown_both, ec);
+		boost::system::error_code ignore_ec;
+		sock.lowest_layer().close(ignore_ec);
+	}
+
+	template <typename Handler>
+	void async_teardown(boost::beast::role_type role,
+		proxy_tcp_socket& sock, Handler&& handler)
+	{
+		boost::system::error_code ec;
+		teardown(role, sock, ec);
+		net::post(sock.get_executor(),
+			[handler = std::forward<Handler>(handler), ec]() mutable
+			{
+				handler(ec);
+			});
+	}
+
+	template <typename Handler>
+	void async_teardown(boost::beast::role_type role,
+		ssl_tcp_stream& sock, Handler&& handler)
+	{
+		boost::system::error_code ec;
+		teardown(role, sock, ec);
+		net::post(sock.get_executor(),
+			[handler = std::forward<Handler>(handler), ec]() mutable
+			{
+				handler(ec);
+			});
+	}
+
+	inline bool is_websocket_tunnel(const variant_stream_type& stream) noexcept
+	{
+		return boost::variant2::holds_alternative<websocket_plain_stream>(stream) ||
+			boost::variant2::holds_alternative<websocket_tls_stream>(stream) ||
+			boost::variant2::holds_alternative<ssl_websocket_plain_stream>(stream) ||
+			boost::variant2::holds_alternative<ssl_websocket_tls_stream>(stream);
 	}
 
 }

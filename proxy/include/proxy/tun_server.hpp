@@ -42,6 +42,8 @@ namespace proxy {
 		http,           // HTTP CONNECT 代理隧道
 		https,          // HTTPS CONNECT 代理隧道
 		socks5,         // SOCKS5（TCP 或 UDP ASSOCIATE）
+		ws,             // WebSocket CONNECT 隧道
+		wss,            // TLS + WebSocket CONNECT 隧道
 		udp,            // UDP 直连
 		connect_udp,    // RFC 9298 CONNECT-UDP 隧道
 		doh_dns,        // DNS 查询经 DoH 转发到 proxy_pass
@@ -129,7 +131,7 @@ namespace proxy {
 		net::awaitable<void> rx_loop();
 
 		// 处理客户端 FIN：半关闭上游写方向，等待上游 EOF 后整体关闭.
-		void handle_client_fin();
+		net::awaitable<void> handle_client_fin();
 
 		// 处理上游读取结束：EOF 向客户端发 FIN，异常发送 RST 并关闭.
 		void handle_upstream_eof(boost::system::error_code ec, size_t n);

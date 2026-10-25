@@ -1,0 +1,412 @@
+﻿//
+// test_websocket_tunnel.cpp
+// ~~~~~~~~~~~~~~~~~~~~~~~~~
+//
+// Copyright (c) 2026 Jack (jack dot wgm at gmail dot com)
+//
+// Distributed under the Boost Software License, Version 1.0. (See accompanying
+// file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+//
+
+#include "proxy/proxy_stream.hpp"
+#include "proxy/proxy_util.hpp"
+#include "proxy/websocket_tunnel.hpp"
+
+#include <boost/test/unit_test.hpp>
+
+#include <boost/asio/connect.hpp>
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/ip/tcp.hpp>
+#include <boost/asio/steady_timer.hpp>
+
+#include <chrono>
+#include <exception>
+#include <string>
+
+
+namespace {
+
+	namespace net = boost::asio;
+	namespace beast = boost::beast;
+	namespace http = boost::beast::http;
+	namespace websocket = boost::beast::websocket;
+	using tcp = net::ip::tcp;
+	using namespace proxy;
+
+	BOOST_AUTO_TEST_SUITE(websocket_tunnel_suite)
+
+	BOOST_AUTO_TEST_CASE(parse_authority)
+	{
+		std::string host;
+		uint16_t port = 0;
+
+		BOOST_TEST(ws_tunnel::parse_authority(
+			" target.example.com:443 ", host, port));
+		BOOST_TEST(host == "target.example.com");
+		BOOST_TEST(port == 443);
+
+		BOOST_TEST(ws_tunnel::parse_authority("127.0.0.1:1", host, port));
+		BOOST_TEST(host == "127.0.0.1");
+		BOOST_TEST(port == 1);
+
+		BOOST_TEST(ws_tunnel::parse_authority("[2001:db8::1]:65535", host, port));
+		BOOST_TEST(host == "2001:db8::1");
+		BOOST_TEST(port == 65535);
+
+		BOOST_TEST(!ws_tunnel::parse_authority("example.com", host, port));
+		BOOST_TEST(!ws_tunnel::parse_authority("example.com:0", host, port));
+		BOOST_TEST(!ws_tunnel::parse_authority("example.com:65536", host, port));
+		BOOST_TEST(!ws_tunnel::parse_authority(":443", host, port));
+		BOOST_TEST(!ws_tunnel::parse_authority("2001:db8::1:443", host, port));
+		BOOST_TEST(ws_tunnel::parse_authority("[::1]:443", host, port));
+		BOOST_TEST(host == "::1");
+		BOOST_TEST(port == 443);
+	}
+
+	BOOST_AUTO_TEST_CASE(format_authority)
+	{
+		BOOST_TEST(ws_tunnel::format_authority("example.com", 443) ==
+			"example.com:443");
+		BOOST_TEST(ws_tunnel::format_authority("2001:db8::1", 443) ==
+			"[2001:db8::1]:443");
+	}
+
+	BOOST_AUTO_TEST_CASE(header_token)
+	{
+		BOOST_TEST(ws_tunnel::header_has_token(
+			"gzip, proxy-connect.v1", "proxy-connect.v1"));
+		BOOST_TEST(ws_tunnel::header_has_token(
+			"PROXY-CONNECT.V1", "proxy-connect.v1"));
+		BOOST_TEST(ws_tunnel::header_has_token(
+			" proxy-connect.v1 ", "proxy-connect.v1"));
+		BOOST_TEST(!ws_tunnel::header_has_token(
+			"proxy-connect.v2", "proxy-connect.v1"));
+		BOOST_TEST(!ws_tunnel::header_has_token("", "proxy-connect.v1"));
+	}
+
+	BOOST_AUTO_TEST_CASE(proxy_scheme)
+	{
+		BOOST_TEST(!proxy_scheme_use_ssl("ws"));
+		BOOST_TEST(proxy_scheme_use_ssl("wss"));
+		BOOST_TEST(proxy_scheme_use_ssl("https"));
+		BOOST_TEST(proxy_scheme_use_ssl("socks5s"));
+		BOOST_TEST(!proxy_scheme_use_ssl("http"));
+
+		BOOST_TEST(proxy_scheme_is_websocket("ws"));
+		BOOST_TEST(proxy_scheme_is_websocket("WSS"));
+		BOOST_TEST(!proxy_scheme_is_websocket("http"));
+	}
+
+	struct loopback_state
+	{
+		boost::system::error_code client_ec;
+		boost::system::error_code server_ec;
+		std::exception_ptr client_exception;
+		std::exception_ptr server_exception;
+		std::string client_received;
+		std::string server_received;
+		bool client_eof { false };
+		bool server_eof { false };
+		bool client_done { false };
+		bool server_done { false };
+		bool timed_out { false };
+	};
+
+	net::awaitable<void> run_server(tcp::acceptor& acceptor,
+		loopback_state& state)
+	{
+		boost::system::error_code ec;
+		tcp::socket socket = co_await acceptor.async_accept(
+			net_awaitable[ec]);
+		if (ec)
+		{
+			state.server_ec = ec;
+			co_return;
+		}
+
+		ws_tunnel::stream<util::proxy_tcp_socket> ws(
+			util::proxy_tcp_socket(std::move(socket)));
+		beast::flat_buffer http_buffer;
+		http::request<http::string_body> req;
+		co_await http::async_read(ws.next_layer(), http_buffer, req,
+			net_awaitable[ec]);
+		if (ec)
+		{
+			state.server_ec = ec;
+			co_return;
+		}
+
+		ec = co_await ws.async_accept(req, http_buffer.data());
+		if (ec)
+		{
+			state.server_ec = ec;
+			co_return;
+		}
+
+		char buffer[64]{};
+		auto bytes = co_await ws.async_read_some(
+			net::buffer(buffer), net_awaitable[ec]);
+		if (ec)
+		{
+			state.server_ec = ec;
+			co_return;
+		}
+		state.server_received.assign(buffer, bytes);
+
+		bytes = co_await ws.async_read_some(
+			net::buffer(buffer), net_awaitable[ec]);
+		state.server_eof = ec == net::error::eof;
+		state.server_ec = state.server_eof ? boost::system::error_code() : ec;
+		if (!state.server_eof)
+			co_return;
+
+		co_await net::async_write(ws, net::buffer("world", 5),
+			net_awaitable[ec]);
+		if (ec)
+		{
+			state.server_ec = ec;
+			co_return;
+		}
+
+		boost::system::error_code ignore_ec;
+		co_await ws.async_shutdown_send(net_awaitable[ignore_ec]);
+		state.server_ec = ignore_ec;
+	}
+
+	net::awaitable<void> run_client(tcp::endpoint endpoint,
+		loopback_state& state)
+	{
+		boost::system::error_code ec;
+		tcp::socket socket(co_await net::this_coro::executor, tcp::v4());
+		co_await socket.async_connect(endpoint, net_awaitable[ec]);
+		if (ec)
+		{
+			state.client_ec = ec;
+			co_return;
+		}
+
+		ws_tunnel::stream<util::proxy_tcp_socket> ws(
+			util::proxy_tcp_socket(std::move(socket)));
+		ws_tunnel::client_handshake_options options;
+		options.host = "127.0.0.1";
+		options.target = std::string(ws_tunnel::proxy_connect_path);
+		options.authority = "target.example.com:80";
+		ec = co_await ws.async_handshake(std::move(options));
+		if (ec)
+		{
+			state.client_ec = ec;
+			co_return;
+		}
+
+		co_await net::async_write(ws, net::buffer("hello", 5),
+			net_awaitable[ec]);
+		if (ec)
+		{
+			state.client_ec = ec;
+			co_return;
+		}
+
+		boost::system::error_code shutdown_ec;
+		co_await ws.async_shutdown_send(net_awaitable[shutdown_ec]);
+		if (shutdown_ec)
+		{
+			state.client_ec = shutdown_ec;
+			co_return;
+		}
+
+		char buffer[64]{};
+		auto bytes = co_await ws.async_read_some(
+			net::buffer(buffer), net_awaitable[ec]);
+		if (ec)
+		{
+			state.client_ec = ec;
+			co_return;
+		}
+		state.client_received.assign(buffer, bytes);
+
+		bytes = co_await ws.async_read_some(
+			net::buffer(buffer), net_awaitable[ec]);
+		state.client_eof = ec == net::error::eof;
+		state.client_ec = state.client_eof ? boost::system::error_code() : ec;
+	}
+
+	BOOST_AUTO_TEST_CASE(loopback_data_and_fin)
+	{
+		net::io_context ioc;
+		tcp::acceptor acceptor(ioc,
+			tcp::endpoint(net::ip::make_address("127.0.0.1"), 0));
+		loopback_state state;
+
+		auto finish = [&ioc, &state]
+		{
+			if (state.client_done && state.server_done)
+				ioc.stop();
+		};
+
+		net::co_spawn(ioc, run_server(acceptor, state),
+			[&](std::exception_ptr ep)
+			{
+				state.server_exception = ep;
+				state.server_done = true;
+				if (ep || state.server_ec)
+					ioc.stop();
+				finish();
+			});
+		net::co_spawn(ioc, run_client(acceptor.local_endpoint(), state),
+			[&](std::exception_ptr ep)
+			{
+				state.client_exception = ep;
+				state.client_done = true;
+				if (ep || state.client_ec)
+					ioc.stop();
+				finish();
+			});
+
+		net::steady_timer timeout(ioc);
+		timeout.expires_after(std::chrono::seconds(5));
+		timeout.async_wait(
+			[&](const boost::system::error_code& ec)
+			{
+				if (!ec)
+				{
+					state.timed_out = true;
+					ioc.stop();
+				}
+			});
+
+		ioc.run();
+
+		BOOST_TEST(!state.timed_out);
+		BOOST_TEST(!state.client_exception);
+		BOOST_TEST(!state.server_exception);
+		BOOST_TEST(!state.client_ec);
+		BOOST_TEST(!state.server_ec);
+		BOOST_TEST(state.server_received == "hello");
+		BOOST_TEST(state.client_received == "world");
+		BOOST_TEST(state.client_eof);
+		BOOST_TEST(state.server_eof);
+	}
+
+	struct prefix_state
+	{
+		boost::system::error_code server_ec;
+		std::exception_ptr server_exception;
+		std::string received;
+		bool server_done { false };
+		bool timed_out { false };
+	};
+
+	net::awaitable<void> run_prefix_server(tcp::acceptor& acceptor,
+		prefix_state& state)
+	{
+		boost::system::error_code ec;
+		tcp::socket socket = co_await acceptor.async_accept(
+			net_awaitable[ec]);
+		if (ec)
+		{
+			state.server_ec = ec;
+			co_return;
+		}
+
+		ws_tunnel::stream<util::proxy_tcp_socket> ws(
+			util::proxy_tcp_socket(std::move(socket)));
+		beast::flat_buffer http_buffer;
+		http::request<http::string_body> req;
+		co_await http::async_read(ws.next_layer(), http_buffer, req,
+			net_awaitable[ec]);
+		if (ec)
+		{
+			state.server_ec = ec;
+			co_return;
+		}
+
+		ec = co_await ws.async_accept(req, http_buffer.data());
+		if (ec)
+		{
+			state.server_ec = ec;
+			co_return;
+		}
+
+		char buffer[64]{};
+		auto bytes = co_await ws.async_read_some(
+			net::buffer(buffer), net_awaitable[ec]);
+		state.server_ec = ec;
+		if (!ec)
+			state.received.assign(buffer, bytes);
+	}
+
+	net::awaitable<void> run_prefix_client(tcp::endpoint endpoint)
+	{
+		boost::system::error_code ec;
+		tcp::socket socket(co_await net::this_coro::executor, tcp::v4());
+		co_await socket.async_connect(endpoint, net_awaitable[ec]);
+		if (ec)
+			co_return;
+
+		std::string wire;
+		wire.append("GET /.well-known/proxy/connect HTTP/1.1\r\n");
+		wire.append("Host: 127.0.0.1\r\n");
+		wire.append("Connection: Upgrade\r\n");
+		wire.append("Upgrade: websocket\r\n");
+		wire.append("Sec-WebSocket-Version: 13\r\n");
+		wire.append("Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n");
+		wire.append("Sec-WebSocket-Protocol: proxy-connect.v1\r\n");
+		wire.append("Proxy-Connect: target.example.com:80\r\n\r\n");
+
+		const std::array<unsigned char, 4> mask{ 1, 2, 3, 4 };
+		const std::string payload("\0hello", 6);
+		wire.push_back(static_cast<char>(0x82));
+		wire.push_back(static_cast<char>(0x80 | payload.size()));
+		for (auto byte : mask)
+			wire.push_back(static_cast<char>(byte));
+		for (std::size_t i = 0; i < payload.size(); ++i)
+		{
+			wire.push_back(static_cast<char>(
+				static_cast<unsigned char>(payload[i]) ^ mask[i % mask.size()]));
+		}
+
+		co_await net::async_write(socket, net::buffer(wire),
+			net_awaitable[ec]);
+	}
+
+	BOOST_AUTO_TEST_CASE(prefix_preserved_before_upgrade_response)
+	{
+		net::io_context ioc;
+		tcp::acceptor acceptor(ioc,
+			tcp::endpoint(net::ip::make_address("127.0.0.1"), 0));
+		prefix_state state;
+
+		net::co_spawn(ioc, run_prefix_server(acceptor, state),
+			[&](std::exception_ptr ep)
+			{
+				state.server_exception = ep;
+				state.server_done = true;
+				ioc.stop();
+			});
+		net::co_spawn(ioc,
+			run_prefix_client(acceptor.local_endpoint()), net::detached);
+
+		net::steady_timer timeout(ioc);
+		timeout.expires_after(std::chrono::seconds(5));
+		timeout.async_wait(
+			[&](const boost::system::error_code& ec)
+			{
+				if (!ec)
+				{
+					state.timed_out = true;
+					ioc.stop();
+				}
+			});
+
+		ioc.run();
+
+		BOOST_TEST(!state.timed_out);
+		BOOST_TEST(state.server_done);
+		BOOST_TEST(!state.server_exception);
+		BOOST_TEST(!state.server_ec);
+		BOOST_TEST(state.received == "hello");
+	}
+
+	BOOST_AUTO_TEST_SUITE_END()
+
+} // namespace

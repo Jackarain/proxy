@@ -91,6 +91,8 @@ const option k_options[] = {
 	{ "disable_http", option_kind::boolean, "禁用 HTTP 代理协议。", false, false, 0, "", {}, false, false, false, "", "协议" },
 	{ "disable_socks", option_kind::boolean, "禁用 SOCKS 代理协议。", false, false, 0, "", {}, false, false, false, "", "协议" },
 	{ "disable_udp", option_kind::boolean, "禁用 UDP 代理功能。", false, false, 0, "", {}, false, false, false, "", "协议" },
+	{ "websocket_proxy", option_kind::boolean, "启用 WebSocket CONNECT 隧道入口（默认关闭）。", false, false, 0, "", {}, false, false, false,
+	  "启用 GET + Upgrade: websocket 的私有 CONNECT 隧道入口。握手成功后可承载单个目标 TCP 连接；不支持 UDP。", "协议" },
 	{ "disable_insecure", option_kind::boolean, "禁止非加密（非 SSL）代理连接。", false, false, 0, "", {}, false, false, false, "", "协议" },
 	{ "disable_check_cert", option_kind::boolean, "禁用 TLS 证书校验。", false, false, 0, "", {}, false, false, false, "", "SSL" },
 	{ "scramble", option_kind::boolean, "启用噪声数据加扰以增强安全性。", false, false, 0, "", {}, false, false, false, "", "加密" },

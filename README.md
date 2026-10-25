@@ -108,7 +108,7 @@ docker build . -t proxy:v1
 | auth_users | 认证信息列表，客户端必须满足其中一对用户/密码才能握手通过。默认用户密码为 `jack:1111`（默认需要认证以避免被误用作跳板）。若需设为无认证模式，须将 `auth_users` 置为 "" |
 | users_rate_limit | 指定认证用户的 TCP 连接 I/O 速率，单位为字节/秒，默认不限速。格式如：`user1:102400 user2:204800` |
 | users_conn_limit | 指定认证用户的最大同时连接数，默认不限制；达到上限后拒绝该用户的新连接。格式如：`user1:10 user2:50` |
-| proxy_pass | 当前服务作为中间级联服务时，指定上游代理服务地址，格式为 URL。如有认证信息须包含在内，如：`https://jack:1111@example.com:1080/` |
+| proxy_pass | 当前服务作为中间级联服务时，指定上游代理服务地址，格式为 URL。支持 `http(s)://`、`socks4(a)://`、`socks5(s)://`、`ws://` 与 `wss://`。如有认证信息须包含在内，如：`https://jack:1111@example.com:1080/` |
 | proxy_pass_ssl | 向 `proxy_pass` 指定的上游代理发起连接时，是否通过 SSL 加密传输。注意上游代理服务必须启用 SSL 相关证书 |
 | proxy_pass_pool_size | TUN 模式下预连接到 `proxy_pass` 的连接池大小（默认 20）。启动后每 5 秒建立 1 条到上游的 TCP(+TLS) 连接，直到池满该数量；TCP flow 走代理时优先从池中获取，避免重复握手；连接被取走或断开后立即异步补充。`0` 表示禁用 |
 | proxy_ssl_name | 指定 SNI 用于在单一 IP 上支持多个 SSL 证书的域名匹配，取代已废弃的 `ssl_sni` 选项 |
@@ -131,6 +131,7 @@ docker build . -t proxy:v1
 | disable_http | 禁用 HTTP 代理协议 |
 | disable_socks | 禁用 SOCKS5/SOCKS4 代理协议 |
 | disable_udp | 禁用 UDP 代理功能 |
+| websocket_proxy | 启用 WebSocket CONNECT 私有隧道入口（默认关闭）。入口仅接受 binary 消息，不支持 UDP |
 | disable_insecure | 禁止非安全连接（即只允许 SSL/TLS 加密连接） |
 | disable_check_cert | 禁用 TLS 证书校验（不安全的选项，通常仅用于测试环境） |
 | scramble | 启用数据噪声加扰（通过随机噪声混淆数据传输），此选项需要两端同时开启 |
@@ -172,6 +173,35 @@ docker build . -t proxy:v1
 ```
 
 上面示例中，`proxy_server` 监听在 `0.0.0.0:1080` 端口， 通过在路由器上配置 TPROXY 到 `0.0.0.0:1080` 端口，将需要代理的 IP 通过 TPROXY 的方式连接到 `proxy_server`，`proxy_server` 会将客户端请求通过 `https://jack:1111@example.com:1080/` 进行代理，客户端无需做任何配置。
+
+## WebSocket CONNECT 隧道
+
+启用 `websocket_proxy` 后，HTTP 入口会识别同时带有 WebSocket Upgrade 与
+`Proxy-Connect` 头的 GET 请求，并在握手完成后把它作为单个目标 TCP 连接的双向隧道：
+
+``` http
+GET /.well-known/proxy/connect HTTP/1.1
+Host: proxy.example.com
+Connection: Upgrade
+Upgrade: websocket
+Sec-WebSocket-Version: 13
+Sec-WebSocket-Key: <RFC 6455 key>
+Sec-WebSocket-Protocol: proxy-connect.v1
+Proxy-Connect: target.example.com:443
+Proxy-Authorization: Basic <base64(user:password)>
+```
+
+- 目标格式为 `host:port`，IPv6 使用 `[addr]:port`；端口必须为 1-65535。
+- 必须协商 `proxy-connect.v1` 子协议；旧头名 `PROXY_CONNECT` 也兼容，但二者只能出现一个。
+- 服务端只有在目标 TCP 连接成功后才返回 `101 Switching Protocols`；认证失败返回 `407`，目标连接失败返回 `502`。
+- 所有 WebSocket 消息必须为 binary，首字节为操作码：`0x00` 表示 TCP DATA，后续字节为载荷；`0x01` 表示 `FIN_WRITE`（不再发送 DATA，但仍接收）；`0x02` 表示 `ABORT`。
+- 单条消息上限为 64 KiB，因此单条 DATA 载荷上限为 64 KiB - 1。客户端应等待 `101` 后再发送首帧。
+- 该隧道只承载 TCP，不支持 SOCKS5 UDP ASSOCIATE、RFC 9298 CONNECT-UDP 或 TUN UDP。
+
+将本服务作为中间级联代理时，可使用 `proxy_pass=ws://...` 或 `wss://...` 连接启用了
+`websocket_proxy` 的上游。URL 的认证信息作为 `Proxy-Authorization` 发送；`wss` 表示先与
+上游建立 TLS，再执行 WebSocket 握手。TUN、stdio、透明代理、HTTP CONNECT 与 DoH 的 TCP
+路径均支持该上游；UDP 路径会明确拒绝 `ws/wss`。
 
 ## 代理隧道功能
 
@@ -266,7 +296,7 @@ curl -X POST -H "Content-Type: application/dns-json" \
 --so_mark <mark>        出站连接打 SO_MARK 标记（仅 Linux），配合策略路由排除代理自身流量防止环路
 ```
 
-`proxy_pass` 支持 `socks5` 与 `http` 协议，`--tun true` 时必须指定。
+`proxy_pass` 支持 `socks5`、`http(s)`、`ws` 与 `wss` 协议，`--tun true` 时必须指定；其中 `ws/wss` 仅支持 TCP 分流，UDP 分流不会启动。
 
 ### 分流规则
 
@@ -321,7 +351,7 @@ TUN 模式直接运行在手机上：通过 Android `VpnService` 建立虚拟网
 主要功能：
 
 - **多配置管理**：多条配置以 JSON 形式保存在本地，支持添加、编辑、切换与快速启动。
-- **上游代理**：`proxy_pass` 支持 `http(s)://`、`socks4`/`socks5`/`socks5s://` 等
+- **上游代理**：`proxy_pass` 支持 `http(s)://`、`socks4`/`socks5`/`socks5s://`、`ws(s)://` 等
   协议，可配置 SNI、关闭证书校验（自签证书场景）、预连接池大小等参数。
 - **分流规则**：支持代理域名（后缀匹配）与代理 CIDR 分流，列表可手工编辑或从 URL
   拉取；开启全局代理后所有流量均走上游；也可开启"绕过中国大陆"使国内网段直连。

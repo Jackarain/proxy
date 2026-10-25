@@ -9,6 +9,7 @@
 //
 
 #include "proxy/doh_client.hpp"
+#include "proxy/proxy_websocket_client.hpp"
 
 #include <boost/algorithm/string/case_conv.hpp>
 #include <boost/algorithm/string/predicate.hpp>
@@ -726,6 +727,11 @@ namespace proxy {
 		// 经代理 CONNECT 隧道转发到 DoH 服务.
 		const std::string authority =
 			m_doh_host + ":" + std::to_string(m_doh_port);
+		if (proxy_scheme_is_websocket(proxy_url.scheme()))
+		{
+			co_return co_await connect_websocket_tunnel(
+				authority, proxy_url);
+		}
 		if (!co_await http_connect_tunnel(
 			*m_stream, authority, proxy_url))
 		{
@@ -787,6 +793,12 @@ namespace proxy {
 		}
 
 		// 建立 CONNECT 隧道.
+		if (proxy_scheme_is_websocket(proxy_url.scheme()))
+		{
+			co_return co_await connect_websocket_tunnel(
+				authority, proxy_url);
+		}
+
 		if (!co_await http_connect_tunnel(
 			*m_stream, authority, proxy_url))
 		{
@@ -807,6 +819,35 @@ namespace proxy {
 		if (!co_await setup_tls(m_doh_host))
 			co_return false;
 		m_stream.emplace(init_proxy_stream(std::move(tunnel), *m_ssl_ctx));
+		co_return co_await tls_handshake(m_doh_host);
+	}
+
+	// connect_websocket_tunnel 在已完成的 TCP/TLS 外层连接上执行
+	// WebSocket CONNECT 握手，并按需在隧道内与 DoH 服务建立 TLS.
+	net::awaitable<bool> doh_connection::connect_websocket_tunnel(
+		const std::string& authority, const urls::url& proxy_url)
+	{
+		auto options = make_websocket_handshake_options(
+			proxy_url, authority);
+		auto ec = co_await async_websocket_proxy_handshake(
+			*m_stream, std::move(options));
+		if (ec)
+		{
+			XLOG_WARN << "tun doh websocket tunnel: " << ec.message();
+			m_stream.reset();
+			co_return false;
+		}
+
+		if (!m_doh_https)
+			co_return true;
+
+		if (!co_await setup_tls(m_doh_host))
+			co_return false;
+		if (!websocket_stream_to_tls(*m_stream, *m_ssl_ctx))
+		{
+			m_stream.reset();
+			co_return false;
+		}
 		co_return co_await tls_handshake(m_doh_host);
 	}
 
@@ -865,10 +906,28 @@ namespace proxy {
 		const std::string& host)
 	{
 		boost::system::error_code ec;
-		auto& ssl = boost::variant2::get<ssl_tcp_stream>(*m_stream);
-		SSL_set_tlsext_host_name(ssl.native_handle(), host.c_str());
-		co_await ssl.async_handshake(
-			net::ssl::stream_base::client, net_awaitable[ec]);
+		ec = co_await boost::variant2::visit(
+			[&host](auto& ssl) -> net::awaitable<boost::system::error_code>
+			{
+				using StreamType = std::decay_t<decltype(ssl)>;
+				if constexpr (std::same_as<StreamType, ssl_tcp_stream> ||
+					std::same_as<StreamType, ssl_websocket_plain_stream> ||
+					std::same_as<StreamType, ssl_websocket_tls_stream>)
+				{
+					boost::system::error_code ec;
+					SSL_set_tlsext_host_name(
+						ssl.native_handle(), host.c_str());
+					co_await ssl.async_handshake(
+						net::ssl::stream_base::client,
+						net_awaitable[ec]);
+					co_return ec;
+				}
+				else
+				{
+					co_return make_error_code(
+						boost::system::errc::operation_not_supported);
+				}
+			}, *m_stream);
 		if (ec)
 		{
 			m_stream.reset();

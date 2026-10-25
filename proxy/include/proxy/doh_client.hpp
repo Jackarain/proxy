@@ -39,8 +39,7 @@ namespace proxy {
 	{
 		if (opt.proxy_pass_use_ssl_)
 			return true;
-		auto scheme = boost::to_lower_copy(std::string(url.scheme()));
-		return scheme.ends_with("s");
+		return proxy_scheme_use_ssl(url.scheme());
 	}
 
 	// 配置了 SO_MARK 时对 socket 应用标记（配合策略路由防止环路）.
@@ -215,6 +214,10 @@ namespace proxy {
 		// 经代理 CONNECT 隧道转发到 DoH 服务（https 代理先建外层 TLS，
 		// 再建 CONNECT 隧道，内层按需 TLS），成功返回 true.
 		net::awaitable<bool> connect_via_proxy();
+
+		// 经 WebSocket CONNECT 隧道转发到 DoH 服务，内层按需 TLS.
+		net::awaitable<bool> connect_websocket_tunnel(
+			const std::string& authority, const urls::url& proxy_url);
 
 		// 直连 DoH 服务（与 proxy_pass 同服务，或把 proxy_pass 当作 DoH
 		// 服务器），成功返回 true.

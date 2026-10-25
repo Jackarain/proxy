@@ -375,6 +375,13 @@ namespace proxy {
 		// - false：提供 SOCKS 服务。
 		bool disable_socks_{ false };
 
+		// 是否启用 WebSocket CONNECT 隧道入口。
+		//
+		// - true ：接受 GET + Upgrade: websocket + Proxy-Connect 请求，
+		//   在完成握手后按 CONNECT 隧道转发目标 TCP 流量。
+		// - false：不启用该私有扩展（默认）。
+		bool websocket_proxy_{ false };
+
 		// 是否禁止不安全（明文）连接。
 		//
 		// - true ：禁止所有非加密连接。

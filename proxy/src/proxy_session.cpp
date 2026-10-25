@@ -428,6 +428,22 @@ namespace proxy {
 					auto& next_layer = s.next_layer().next_layer();
 					next_layer.expires_never();
 				}
+				else if constexpr (std::same_as<util::websocket_plain_stream, ValueType>)
+				{
+					s.next_layer().next_layer().expires_never();
+				}
+				else if constexpr (std::same_as<util::websocket_tls_stream, ValueType>)
+				{
+					s.next_layer().next_layer().next_layer().expires_never();
+				}
+				else if constexpr (std::same_as<util::ssl_websocket_plain_stream, ValueType>)
+				{
+					s.next_layer().next_layer().next_layer().expires_never();
+				}
+				else if constexpr (std::same_as<util::ssl_websocket_tls_stream, ValueType>)
+				{
+					s.next_layer().next_layer().next_layer().next_layer().expires_never();
+				}
 			}
 		}, stream);
 	}
@@ -458,6 +474,22 @@ namespace proxy {
 					auto& next_layer = s.next_layer().next_layer();
 					next_layer.expires_after(expiry_time);
 				}
+				else if constexpr (std::same_as<util::websocket_plain_stream, ValueType>)
+				{
+					s.next_layer().next_layer().expires_after(expiry_time);
+				}
+				else if constexpr (std::same_as<util::websocket_tls_stream, ValueType>)
+				{
+					s.next_layer().next_layer().next_layer().expires_after(expiry_time);
+				}
+				else if constexpr (std::same_as<util::ssl_websocket_plain_stream, ValueType>)
+				{
+					s.next_layer().next_layer().next_layer().expires_after(expiry_time);
+				}
+				else if constexpr (std::same_as<util::ssl_websocket_tls_stream, ValueType>)
+				{
+					s.next_layer().next_layer().next_layer().next_layer().expires_after(expiry_time);
+				}
 			}
 		}, stream);
 	}
@@ -485,6 +517,22 @@ namespace proxy {
 					{
 						auto& next_layer = s.next_layer().next_layer();
 						next_layer.rate_limit(rate);
+					}
+					else if constexpr (std::same_as<websocket_plain_stream, ValueType>)
+					{
+						s.next_layer().next_layer().rate_limit(rate);
+					}
+					else if constexpr (std::same_as<websocket_tls_stream, ValueType>)
+					{
+						s.next_layer().next_layer().next_layer().rate_limit(rate);
+					}
+					else if constexpr (std::same_as<ssl_websocket_plain_stream, ValueType>)
+					{
+						s.next_layer().next_layer().next_layer().rate_limit(rate);
+					}
+					else if constexpr (std::same_as<ssl_websocket_tls_stream, ValueType>)
+					{
+						s.next_layer().next_layer().next_layer().next_layer().rate_limit(rate);
 					}
 				}
 			}, stream);

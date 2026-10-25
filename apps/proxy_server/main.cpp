@@ -98,6 +98,7 @@ bool disable_logs;
 bool disable_socks = false;
 bool disable_udp = false;
 bool disable_check_cert = false;
+bool websocket_proxy = false;
 
 bool happyeyeballs = true;
 bool connect_v6only = false;
@@ -310,6 +311,7 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 	opt.disable_http_ = disable_http;
 	opt.disable_socks_ = disable_socks;
 	opt.disable_udp_ = disable_udp;
+	opt.websocket_proxy_ = websocket_proxy;
 	opt.disable_insecure_ = disable_insecure;
 	opt.disable_check_cert_ = disable_check_cert;
 	opt.scramble_ = scramble;
@@ -568,6 +570,7 @@ int main(int argc, char** argv)
 		("disable_http", po::value<bool>(&disable_http)->value_name("")->default_value(false, "false"), "Disable the HTTP proxy protocol.")
 		("disable_socks", po::value<bool>(&disable_socks)->value_name("")->default_value(false, "false"), "Disable the SOCKS proxy protocol.")
 		("disable_udp", po::value<bool>(&disable_udp)->value_name("")->default_value(false, "false"), "Disable the UDP proxy protocol.")
+		("websocket_proxy", po::value<bool>(&websocket_proxy)->value_name("")->default_value(false, "false"), "Enable the WebSocket CONNECT tunnel endpoint.")
 		("disable_insecure", po::value<bool>(&disable_insecure)->value_name("")->default_value(false, "false"), "Disable insecure (non-SSL) proxy protocols.")
 		("disable_check_cert", po::value<bool>(&disable_check_cert)->value_name("")->default_value(false, "false"), "Disable TLS certificate verification.")
 

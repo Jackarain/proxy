@@ -141,6 +141,22 @@ namespace proxy {
 		return false;
 	}
 
+	// proxy_pass scheme 是否表示外层 TLS. 注意不能仅按结尾 's' 判断,
+	// 否则明文 ws 会被误判为加密协议.
+	inline bool proxy_scheme_use_ssl(std::string_view scheme) noexcept
+	{
+		auto lower = boost::to_lower_copy(std::string(scheme));
+		// 保持历史行为: 除明文 ws 外, scheme 以 s 结尾视为外层 TLS.
+		return lower != "ws" && lower.ends_with("s");
+	}
+
+	// proxy_pass scheme 是否使用 WebSocket CONNECT 私有隧道.
+	inline bool proxy_scheme_is_websocket(std::string_view scheme) noexcept
+	{
+		auto lower = boost::to_lower_copy(std::string(scheme));
+		return lower == "ws" || lower == "wss";
+	}
+
 	// 计算 proxy_pass 未显式指定端口时的默认端口: 已知 scheme (http/https/ws/wss)
 	// 使用标准默认端口; 未定义默认端口的 scheme 中, 以 's' 结尾(ssl 加密)默认 443,
 	// 其余 (socks4/socks5 等) 默认 1080.

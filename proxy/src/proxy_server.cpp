@@ -2458,6 +2458,7 @@ boost::json::object proxy_server::apply_options(const boost::json::object& optio
 		else if (name == "disable_http") { m_option.disable_http_ = detail::to_bool(val); ok = true; }
 		else if (name == "disable_socks") { m_option.disable_socks_ = detail::to_bool(val); ok = true; }
 		else if (name == "disable_udp") { m_option.disable_udp_ = detail::to_bool(val); ok = true; }
+		else if (name == "websocket_proxy") { m_option.websocket_proxy_ = detail::to_bool(val); ok = true; }
 		else if (name == "disable_insecure") { m_option.disable_insecure_ = detail::to_bool(val); ok = true; }
 		else if (name == "disable_check_cert") { m_option.disable_check_cert_ = detail::to_bool(val); ok = true; }
 		else if (name == "scramble") { m_option.scramble_ = detail::to_bool(val); ok = true; }
@@ -3386,15 +3387,20 @@ net::awaitable<void> proxy_server::start_udp_tproxy() noexcept
 		co_return;
 	}
 
+	auto scheme = boost::to_lower_copy(
+		std::string(m_option.proxy_pass_->scheme()));
+	if (proxy_scheme_is_websocket(scheme))
+	{
+		XLOG_ERR << "udp tproxy does not support websocket proxy_pass";
+		co_return;
+	}
+
 	// 启动 UDP TPROXY 监听协程.
 	for (auto& udp_sock : m_udp_tproxy_listeners)
 	{
 		net::co_spawn(m_executor,
 			start_udp_tproxy_listen(udp_sock), net::detached);
 	}
-
-	auto scheme = boost::to_lower_copy(
-		std::string(m_option.proxy_pass_->scheme()));
 
 	// 如果是 HTTP proxy_pass, 不需要 SOCKS5 UDP ASSOCIATE.
 	// connect-udp 隧道将在每个 flow 创建时按需建立, 所以这里直
@@ -3647,7 +3653,7 @@ net::awaitable<bool> proxy_server::do_socks5_associate()
 		opt.version = socks4_version;
 
 	bool use_ssl = m_option.proxy_pass_use_ssl_;
-	if (scheme.ends_with("s"))
+	if (proxy_scheme_use_ssl(scheme))
 		use_ssl = true;
 
 	endpoint_opt backend_endpoint;
@@ -3986,6 +3992,12 @@ net::awaitable<void> proxy_server::start_udp_tproxy_listen(udp::socket& udp_sock
 	auto scheme = boost::to_lower_copy(
 	std::string(m_option.proxy_pass_->scheme()));
 
+	if (proxy_scheme_is_websocket(scheme))
+	{
+		XLOG_WARN << "udp tproxy does not support websocket proxy_pass";
+		co_return;
+	}
+
 	// 如果上游代理是 HTTP 代理, 则通过 connect-udp 协议进行 udp 代理.
 	bool using_connect_udp = scheme.starts_with("http");
 
@@ -4169,7 +4181,7 @@ net::awaitable<void> proxy_server::udp_tproxy_http_udp_loop(udp_tproxy_flow_ptr 
 
 	// 检查是否使用 SSL.
 	bool use_ssl = m_option.proxy_pass_use_ssl_;
-	if (proxy_pass.scheme().ends_with("s"))
+	if (proxy_scheme_use_ssl(proxy_pass.scheme()))
 		use_ssl = true;
 
 	// 保存 HTTP socket 的对象引用.

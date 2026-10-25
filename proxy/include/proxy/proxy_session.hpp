@@ -472,6 +472,10 @@ namespace proxy {
 		// HTTP CONNECT 隧道代理请求处理.
 		net::awaitable<bool> http_proxy_connect() noexcept;
 
+		// WebSocket CONNECT 隧道代理请求处理.
+		net::awaitable<bool> http_proxy_websocket_connect(
+			const string_request& req) noexcept;
+
 		// HTTP CONNECT-UDP (RFC 9298) 代理请求处理.
 		net::awaitable<void> http_proxy_connect_udp(
 			const http::request<http::string_body>& req,

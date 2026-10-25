@@ -181,6 +181,13 @@ namespace util {
 	private:
 		std::unique_ptr<next_layer_type> impl_;
 	};
+
+	// Beast 在超时/关闭路径会通过 get_lowest_layer 直接关闭该包装类型.
+	inline void beast_close_socket(tcp_socket& sock)
+	{
+		boost::system::error_code ec;
+		sock.close(ec);
+	}
 }
 
 #endif // INCLUDE__2024_09_03__TCP_STREAM_HPP

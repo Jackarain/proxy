@@ -9,6 +9,7 @@
 //
 
 #include "proxy/tun_server.hpp"
+#include "proxy/proxy_websocket_client.hpp"
 
 #include "proxy/dns_server.hpp"
 #include "proxy/http_proxy_client.hpp"
@@ -492,6 +493,10 @@ namespace proxy {
 			std::string(proxy_url.scheme()));
 		if (scheme.starts_with("socks"))
 			m_proto.store(static_cast<uint8_t>(tun_conn_proto::socks5));
+		else if (scheme == "wss")
+			m_proto.store(static_cast<uint8_t>(tun_conn_proto::wss));
+		else if (scheme == "ws")
+			m_proto.store(static_cast<uint8_t>(tun_conn_proto::ws));
 		else if (proxy_use_ssl(proxy_url, m_option))
 			m_proto.store(static_cast<uint8_t>(tun_conn_proto::https));
 		else
@@ -613,6 +618,13 @@ namespace proxy {
 
 			co_await async_http_proxy_handshake(m_upstream, opt, net_awaitable[ec]);
 		}
+		else if (scheme == "ws" || scheme == "wss")
+		{
+			auto options = make_websocket_handshake_options(
+				proxy_url, target_host, target_port);
+			ec = co_await async_websocket_proxy_handshake(
+				m_upstream, std::move(options));
+		}
 		else
 		{
 			XLOG_WARN << "tun unsupported proxy_pass scheme: " << scheme;
@@ -662,7 +674,7 @@ namespace proxy {
 		if (bytes == 0)
 		{
 			// 客户端 FIN：半关闭上游写方向，等待上游 EOF 后整体关闭.
-			handle_client_fin();
+			co_await handle_client_fin();
 			co_return;
 		}
 
@@ -704,7 +716,7 @@ namespace proxy {
 			// 客户端 FIN：半关闭上游写方向，等待上游 EOF 后整体关闭.
 			if (bytes == 0)
 			{
-				handle_client_fin();
+				co_await handle_client_fin();
 				co_return;
 			}
 
@@ -807,17 +819,25 @@ namespace proxy {
 
 	// handle_client_fin 处理客户端 FIN：半关闭上游写方向，等待上游 EOF
 	// 后整体关闭.
-	void tun_tcp_flow::handle_client_fin()
+	net::awaitable<void> tun_tcp_flow::handle_client_fin()
 	{
 		m_client_fin = true;
 		if (m_upstream_eof)
 		{
 			close();
-			return;
+			co_return;
 		}
 
 		boost::system::error_code ec;
-		net_tcp_socket(m_upstream).shutdown(tcp::socket::shutdown_send, ec);
+		if (is_websocket_tunnel(m_upstream))
+		{
+			co_await async_shutdown(m_upstream, net_awaitable[ec]);
+		}
+		else
+		{
+			net_tcp_socket(m_upstream).shutdown(tcp::socket::shutdown_send, ec);
+		}
+		co_return;
 	}
 
 	// handle_upstream_eof 处理上游读取结束：EOF 向客户端发 FIN，
@@ -2306,6 +2326,12 @@ namespace proxy {
 				break;
 			case tun_conn_proto::socks5:
 				c.proto = "socks5";
+				break;
+			case tun_conn_proto::ws:
+				c.proto = "ws";
+				break;
+			case tun_conn_proto::wss:
+				c.proto = "wss";
 				break;
 			case tun_conn_proto::connect_udp:
 				c.proto = "connect-udp";

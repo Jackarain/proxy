@@ -10,6 +10,7 @@
 
 #include "proxy/proxy_session.hpp"
 #include "proxy/http_error_body.hpp"
+#include "proxy/proxy_websocket_client.hpp"
 
 namespace proxy {
 
@@ -70,7 +71,7 @@ namespace proxy {
 		// 判断是否使用 ssl 加密与下一级代理通信.
 		// 这里仅当 scheme 为 socks协议后辍是 s 时启用 ssl 加密.
 		// 其它 scheme 仍按 scheme 含义中是否包括 ssl 加密来处理.
-		if (scheme.ends_with("s"))
+		if (proxy_scheme_use_ssl(scheme))
 			proxy_pass_use_ssl = true;
 
 		// 初始化 m_remote_socket 为 variant_stream_type 类型, 若是 ssl/tls 加
@@ -156,6 +157,20 @@ namespace proxy {
 					m_remote_socket,
 					opt,
 					net_awaitable[ec]);
+			}
+		}
+		else if (scheme == "ws" || scheme == "wss")
+		{
+			if (command == SOCKS5_CMD_UDP)
+			{
+				ec = net::error::operation_not_supported;
+			}
+			else
+			{
+				auto options = make_websocket_handshake_options(
+					proxy_url, target_host, target_port);
+				ec = co_await async_websocket_proxy_handshake(
+					m_remote_socket, std::move(options));
 			}
 		}
 

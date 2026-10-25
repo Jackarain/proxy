@@ -12,6 +12,7 @@ add_executable(proxy_unit_tests
 	test_strutil.cpp
 	test_strutil_extra.cpp
 	test_url_info.cpp
+	test_websocket_tunnel.cpp
 	test_dns_wire.cpp
 	test_dns_rdata.cpp
 	test_dns_cache.cpp
@@ -27,6 +28,7 @@ add_executable(proxy_unit_tests
 
 target_link_libraries(proxy_unit_tests
 	${PROXY_LIBRARIES}
+	${ZLIB_LIBRARIES}
 	Boost::unit_test_framework
 )
 

@@ -36,6 +36,8 @@ target_sources(libproxy
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/http_date.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/path_util.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/proxy_stream.hpp
+	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/proxy_websocket_client.hpp
+	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/websocket_tunnel.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/tcp_socket.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/ip_database.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/url_info.hpp
