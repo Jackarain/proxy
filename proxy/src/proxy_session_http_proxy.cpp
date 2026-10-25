@@ -1052,7 +1052,7 @@ namespace proxy {
 		const bool ws_upstream = m_proxy_pass &&
 			proxy_scheme_is_websocket(scheme);
 
-		if (m_option.disable_udp_ && !ws_upstream)
+		if (m_option.disable_udp_)
 		{
 			co_await send_error(http::status::forbidden,
 				"UDP proxy is disabled.\n");
@@ -1201,24 +1201,18 @@ namespace proxy {
 		// 如果禁用了 UDP 代理服务, 则拒绝 connect-udp 请求.
 		if (m_option.disable_udp_)
 		{
-			// 无 proxy_pass 时无法向外发出 UDP 请求, 直接拒绝.
-			// 有 proxy_pass 且为 SOCKS5 时依赖 UDP ASSOCIATE, 也应拒绝.
-			if (!m_proxy_pass ||
-				m_proxy_pass->scheme().starts_with("socks5"))
-			{
-				log_conn_warning()
-					<< ", connect-udp: udp protocol disabled";
+			log_conn_warning()
+				<< ", connect-udp: udp protocol disabled";
 
-				http::response<http::string_body> res{
-					http::status::forbidden, req.version()};
-				res.set(http::field::content_type, "text/html");
-				res.body() = fake_403_forbidden_content;
-				res.prepare_payload();
+			http::response<http::string_body> res{
+				http::status::forbidden, req.version()};
+			res.set(http::field::content_type, "text/html");
+			res.body() = fake_403_forbidden_content;
+			res.prepare_payload();
 
-				co_await http::async_write(
-					m_local_socket, res, net_awaitable[ec]);
-				co_return;
-			}
+			co_await http::async_write(
+				m_local_socket, res, net_awaitable[ec]);
+			co_return;
 		}
 
 		// 如果指定了 proxy_pass（有下级代理服务器）.

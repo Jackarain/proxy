@@ -130,7 +130,7 @@ docker build . -t proxy:v1
 | disable_logs | 禁止在终端输出日志，默认为 Release 版启用、Debug 版禁用 |
 | disable_http | 禁用 HTTP 代理协议 |
 | disable_socks | 禁用 SOCKS5/SOCKS4 代理协议 |
-| disable_udp | 禁用 UDP 代理功能 |
+| disable_udp | 禁用所有 UDP 代理入口，包括 HTTP CONNECT-UDP 与 WebSocket UDP 隧道 |
 | websocket_proxy | 启用 WebSocket CONNECT 私有隧道入口（默认关闭）。支持 TCP 与 CONNECT-UDP capsule 消息 |
 | disable_insecure | 禁止非安全连接（即只允许 SSL/TLS 加密连接） |
 | disable_check_cert | 禁用 TLS 证书校验（不安全的选项，通常仅用于测试环境） |
