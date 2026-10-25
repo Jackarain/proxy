@@ -8,6 +8,7 @@
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 
+#include "proxy/proxy_websocket_client.hpp"
 #include "proxy/proxy_stream.hpp"
 #include "proxy/proxy_util.hpp"
 #include "proxy/websocket_tunnel.hpp"

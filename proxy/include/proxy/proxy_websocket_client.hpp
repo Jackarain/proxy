@@ -9,6 +9,7 @@
 #ifndef INCLUDE__2026_10_25__PROXY_WEBSOCKET_CLIENT_HPP
 #define INCLUDE__2026_10_25__PROXY_WEBSOCKET_CLIENT_HPP
 
+#include "proxy/proxy_util.hpp"
 #include "proxy/proxy_stream.hpp"
 
 #include <boost/url.hpp>
@@ -43,53 +44,59 @@ namespace proxy {
 
 	// 将已连接的 TCP/TLS 上游流升级为 WebSocket CONNECT 隧道.
 	inline net::awaitable<boost::system::error_code>
-		async_websocket_proxy_handshake(variant_stream_type& stream,
+		async_websocket_proxy_handshake(util::variant_stream_type& stream,
 			ws_tunnel::client_handshake_options options)
 	{
-		if (boost::variant2::holds_alternative<websocket_plain_stream>(stream) ||
-			boost::variant2::holds_alternative<websocket_tls_stream>(stream))
+		if (boost::variant2::holds_alternative<
+				util::websocket_plain_stream>(stream) ||
+			boost::variant2::holds_alternative<
+				util::websocket_tls_stream>(stream))
 		{
 			co_return make_error_code(
 				boost::system::errc::operation_not_supported);
 		}
 
-		if (boost::variant2::holds_alternative<proxy_tcp_socket>(stream))
+		if (boost::variant2::holds_alternative<util::proxy_tcp_socket>(stream))
 		{
-			websocket_plain_stream websocket(
-				std::move(boost::variant2::get<proxy_tcp_socket>(stream)));
-			stream = init_proxy_stream(std::move(websocket));
-			co_return co_await boost::variant2::get<websocket_plain_stream>(
-				stream).async_handshake(std::move(options));
+			util::websocket_plain_stream websocket(std::move(
+				boost::variant2::get<util::proxy_tcp_socket>(stream)));
+			stream = util::init_proxy_stream(std::move(websocket));
+			co_return co_await boost::variant2::get<
+				util::websocket_plain_stream>(stream).async_handshake(
+					std::move(options));
 		}
 
-		if (boost::variant2::holds_alternative<ssl_tcp_stream>(stream))
+		if (boost::variant2::holds_alternative<util::ssl_tcp_stream>(stream))
 		{
-			websocket_tls_stream websocket(
-				std::move(boost::variant2::get<ssl_tcp_stream>(stream)));
-			stream = init_proxy_stream(std::move(websocket));
-			co_return co_await boost::variant2::get<websocket_tls_stream>(
-				stream).async_handshake(std::move(options));
+			util::websocket_tls_stream websocket(std::move(
+				boost::variant2::get<util::ssl_tcp_stream>(stream)));
+			stream = util::init_proxy_stream(std::move(websocket));
+			co_return co_await boost::variant2::get<
+				util::websocket_tls_stream>(stream).async_handshake(
+					std::move(options));
 		}
 
 		co_return make_error_code(boost::system::errc::operation_not_supported);
 	}
 
 	// 在已建立的 WebSocket 隧道内叠加目标 TLS 层.
-	inline bool websocket_stream_to_tls(variant_stream_type& stream,
+	inline bool websocket_stream_to_tls(util::variant_stream_type& stream,
 		net::ssl::context& sslctx)
 	{
-		if (boost::variant2::holds_alternative<websocket_plain_stream>(stream))
+		if (boost::variant2::holds_alternative<
+			util::websocket_plain_stream>(stream))
 		{
 			auto next = std::move(
-				boost::variant2::get<websocket_plain_stream>(stream));
-			stream = init_proxy_stream(std::move(next), sslctx);
+				boost::variant2::get<util::websocket_plain_stream>(stream));
+			stream = util::init_proxy_stream(std::move(next), sslctx);
 			return true;
 		}
-		if (boost::variant2::holds_alternative<websocket_tls_stream>(stream))
+		if (boost::variant2::holds_alternative<
+			util::websocket_tls_stream>(stream))
 		{
 			auto next = std::move(
-				boost::variant2::get<websocket_tls_stream>(stream));
-			stream = init_proxy_stream(std::move(next), sslctx);
+				boost::variant2::get<util::websocket_tls_stream>(stream));
+			stream = util::init_proxy_stream(std::move(next), sslctx);
 			return true;
 		}
 		return false;
