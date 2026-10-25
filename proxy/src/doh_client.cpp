@@ -749,7 +749,10 @@ namespace proxy {
 			co_return true;
 		}
 		if (!co_await setup_tls(m_doh_host))
+		{
+			m_stream.reset();
 			co_return false;
+		}
 		m_stream.emplace(init_proxy_stream(std::move(tunnel), *m_ssl_ctx));
 		co_return co_await tls_handshake(m_doh_host);
 	}
