@@ -4116,6 +4116,10 @@ void proxy_server::udp_tproxy_forward_packet_http(
 		return;
 	}
 
+	// 发送协程消费速度跟不上时丢弃新包, 防止队列无界增长.
+	if (flow->send_queue_.size() >= udp_tproxy_flow::k_max_udp_pending)
+		return;
+
 	// 推入发送队列并通知发送协程.
 	{
 		flow->send_queue_.emplace_back(buf, buf + pos);
@@ -4314,6 +4318,7 @@ net::awaitable<void> proxy_server::udp_tproxy_http_udp_loop(udp_tproxy_flow_ptr 
 					<< ", connect-udp forward error: " << ec.message()
 					<< ", client: " << flow->client_endp_
 					<< ", dest: " << flow->original_endp_;
+				self->abort_udp_tproxy_flow(flow);
 				break;
 			}
 		}
@@ -4506,6 +4511,7 @@ net::awaitable<void> proxy_server::udp_tproxy_http_udp_loop(udp_tproxy_flow_ptr 
 			{
 				XLOG_WARN << "tproxy flow: " << flow->flow_key_
 					<< ", websocket forward error: " << ec.message();
+				abort_udp_tproxy_flow(flow);
 				break;
 			}
 		}

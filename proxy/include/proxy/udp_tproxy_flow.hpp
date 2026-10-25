@@ -71,6 +71,9 @@ namespace proxy {
 		// udp_http_sock_ 导致 capsule 数据在 TCP 流上交错损坏.
 		std::deque<std::vector<char>> send_queue_;
 
+		// 待发送数据包上限, 防止上游握手中或发送阻塞时队列无界增长.
+		static constexpr size_t k_max_udp_pending = 1024;
+
 		// closing_ 置位表示该 flow 正在关闭. 读取协程退出时置位并唤醒发送协程,
 		// 使最后一个释放 flow 的协程在没有任何在途 I/O 时才销毁 flow 内的流对象.
 		bool closing_{ false };
