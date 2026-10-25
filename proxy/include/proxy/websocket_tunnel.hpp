@@ -501,7 +501,11 @@ namespace ws_tunnel {
 				auto opcode = static_cast<uint8_t>(read_data_[0]);
 
 				if (opcode == opcode_abort)
+				{
+					boost::system::error_code ignore_ec;
+					close(ignore_ec);
 					co_return io_result{ net::error::connection_aborted, 0 };
+				}
 
 				if (opcode == opcode_fin_write)
 				{

@@ -416,6 +416,113 @@ namespace {
 		BOOST_TEST(state.received == "hello");
 	}
 
+	struct abort_state
+	{
+		boost::system::error_code server_ec;
+		std::exception_ptr server_exception;
+		bool stream_closed { false };
+		bool timed_out { false };
+	};
+
+	net::awaitable<void> run_abort_server(tcp::acceptor& acceptor,
+		abort_state& state)
+	{
+		boost::system::error_code ec;
+		tcp::socket socket = co_await acceptor.async_accept(
+			net_awaitable[ec]);
+		if (ec)
+		{
+			state.server_ec = ec;
+			co_return;
+		}
+
+		ws_tunnel::stream<util::proxy_tcp_socket> ws(
+			util::proxy_tcp_socket(std::move(socket)));
+		beast::flat_buffer http_buffer;
+		http::request<http::string_body> req;
+		co_await http::async_read(ws.next_layer(), http_buffer, req,
+			net_awaitable[ec]);
+		if (ec)
+		{
+			state.server_ec = ec;
+			co_return;
+		}
+
+		ec = co_await ws.async_accept(req, http_buffer.data());
+		if (ec)
+		{
+			state.server_ec = ec;
+			co_return;
+		}
+
+		char buffer[64]{};
+		co_await ws.async_read_some(net::buffer(buffer), net_awaitable[ec]);
+		state.server_ec = ec;
+		state.stream_closed = !ws.is_open();
+	}
+
+	net::awaitable<void> run_abort_client(tcp::endpoint endpoint)
+	{
+		boost::system::error_code ec;
+		tcp::socket socket(co_await net::this_coro::executor, tcp::v4());
+		co_await socket.async_connect(endpoint, net_awaitable[ec]);
+		if (ec)
+			co_return;
+
+		std::string wire;
+		wire.append("GET /.well-known/proxy/connect HTTP/1.1\r\n");
+		wire.append("Host: 127.0.0.1\r\n");
+		wire.append("Connection: Upgrade\r\n");
+		wire.append("Upgrade: websocket\r\n");
+		wire.append("Sec-WebSocket-Version: 13\r\n");
+		wire.append("Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n");
+		wire.append("Sec-WebSocket-Protocol: proxy-connect.v1\r\n");
+		wire.append("Proxy-Connect: target.example.com:80\r\n\r\n");
+		wire.push_back(static_cast<char>(0x82));
+		wire.push_back(static_cast<char>(0x80 | 1));
+		wire.append("\x01\x02\x03\x04", 4);
+		wire.push_back(static_cast<char>(ws_tunnel::opcode_abort ^ 0x01));
+
+		co_await net::async_write(socket, net::buffer(wire),
+			net_awaitable[ec]);
+	}
+
+	BOOST_AUTO_TEST_CASE(abort_closes_stream_immediately)
+	{
+		net::io_context ioc;
+		tcp::acceptor acceptor(ioc,
+			tcp::endpoint(net::ip::make_address("127.0.0.1"), 0));
+		abort_state state;
+
+		net::co_spawn(ioc, run_abort_server(acceptor, state),
+			[&](std::exception_ptr ep)
+			{
+				state.server_exception = ep;
+				ioc.stop();
+			});
+		net::co_spawn(ioc,
+			run_abort_client(acceptor.local_endpoint()), net::detached);
+
+		net::steady_timer timeout(ioc);
+		timeout.expires_after(std::chrono::seconds(5));
+		timeout.async_wait(
+			[&](const boost::system::error_code& ec)
+			{
+				if (!ec)
+				{
+					state.timed_out = true;
+					ioc.stop();
+				}
+			});
+
+		ioc.run();
+
+		BOOST_TEST(!state.timed_out);
+		BOOST_TEST(!state.server_exception);
+		BOOST_TEST(state.server_ec == net::error::connection_aborted);
+		BOOST_TEST(state.stream_closed);
+	}
+
 	BOOST_AUTO_TEST_SUITE_END()
 
 } // namespace

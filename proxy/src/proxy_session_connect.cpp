@@ -784,6 +784,14 @@ namespace proxy {
 		auto bytes = co_await from.async_read_some(net::buffer(primary_buf, buf_size), net_awaitable[from_ec]);
 		if (from_ec || m_abort)
 		{
+			// WebSocket ABORT 或会话已中止时必须立即关闭双向传输, 不能向目标
+			// 发送 FIN 半关闭, 否则另一方向仍可能继续转发数据.
+			if (from_ec == net::error::connection_aborted || m_abort)
+			{
+				close();
+				co_return;
+			}
+
 			if (from_ec != net::error::eof)
 			{
 				log_conn_warning()
@@ -867,6 +875,12 @@ namespace proxy {
 			// 也无数据可用于写, 所以无论哪一种情况都可以直接退出.
 			if (from_ec || to_ec)
 			{
+				if (from_ec == net::error::connection_aborted)
+				{
+					close();
+					co_return;
+				}
+
 				if (from_ec && from_ec != net::error::eof)
 				{
 					log_conn_warning()
