@@ -99,6 +99,14 @@ namespace {
 		BOOST_TEST(!proxy_scheme_is_websocket("http"));
 	}
 
+	BOOST_AUTO_TEST_CASE(websocket_proto_name)
+	{
+		BOOST_TEST(ws_tunnel::websocket_proto_name(false) == "ws");
+		BOOST_TEST(ws_tunnel::websocket_proto_name(true) == "wss");
+		BOOST_TEST(ws_tunnel::websocket_proto_name(false, true) == "ws-udp");
+		BOOST_TEST(ws_tunnel::websocket_proto_name(true, true) == "wss-udp");
+	}
+
 	BOOST_AUTO_TEST_CASE(stream_type_size)
 	{
 		BOOST_TEST(sizeof(util::websocket_plain_stream) < 4096);

@@ -401,7 +401,8 @@ namespace proxy {
 		// 返回当前会话的地区信息（GeoIP），若无法获取则返回空字符串。
 		std::string geoip() const noexcept;
 
-		// 返回当前会话的协议类型（socks4/socks5/http/https/tproxy/stdio），未识别为空串。
+		// 返回当前会话的协议类型（socks4/socks5/http/https/ws/wss/
+		// ws-udp/wss-udp/tproxy/stdio），未识别为空串。
 		std::string proto() const noexcept;
 
 		// 返回当前会话连接已持续秒数（连接建立于启动时，之后只读）。
@@ -834,8 +835,8 @@ namespace proxy {
 		// m_target 当前会话的代理目标（host:port），由各协议处理路径设置.
 		std::string m_target;
 
-		// m_proto 协议类型（socks4/socks5/http/https/tproxy/stdio），
-		// 由协议分发路径设置.
+		// m_proto 协议类型（socks4/socks5/http/https/ws/wss/ws-udp/
+		// wss-udp/tproxy/stdio），由协议分发路径设置.
 		std::string m_proto;
 
 		// m_client_addr 客户端地址（host:port），连接建立时由 proxy_server

@@ -65,6 +65,16 @@ namespace ws_tunnel {
 	inline constexpr std::size_t max_data_size = max_message_size - 1;
 	inline constexpr std::size_t max_authority_size = 1024;
 
+	// WebSocket 隧道在连接明细中的协议名. TLS 外层连接使用 wss,
+	// 明文连接使用 ws; 数据报隧道对应增加 -udp 后缀.
+	inline constexpr std::string_view websocket_proto_name(
+		bool tls, bool datagram = false) noexcept
+	{
+		if (datagram)
+			return tls ? "wss-udp" : "ws-udp";
+		return tls ? "wss" : "ws";
+	}
+
 	inline char ascii_lower(char c) noexcept
 	{
 		return c >= 'A' && c <= 'Z' ? static_cast<char>(c - 'A' + 'a') : c;

@@ -698,6 +698,8 @@ namespace proxy {
 			<< ", websocket proxy target: "
 			<< target_host << ":" << target_port;
 
+		const bool downstream_tls =
+			boost::variant2::holds_alternative<ssl_tcp_stream>(m_local_socket);
 		set_target(target_host + ":" + std::to_string(target_port));
 		if (datagram)
 		{
@@ -716,8 +718,6 @@ namespace proxy {
 			co_await send_error(http::status::bad_gateway);
 			co_return true;
 		}
-
-		set_proto("websocket");
 
 		if (boost::variant2::holds_alternative<proxy_tcp_socket>(m_local_socket))
 		{
@@ -743,6 +743,7 @@ namespace proxy {
 			co_return true;
 		}
 
+		set_proto(std::string(ws_tunnel::websocket_proto_name(downstream_tls)));
 		stream_expires_never(m_local_socket);
 		co_await concurrent_transfer();
 		co_return true;
@@ -1063,6 +1064,8 @@ namespace proxy {
 			std::string();
 		const bool ws_upstream = m_proxy_pass &&
 			proxy_scheme_is_websocket(scheme);
+		const bool downstream_tls =
+			boost::variant2::holds_alternative<ssl_tcp_stream>(m_local_socket);
 
 		if (m_option.disable_udp_)
 		{
@@ -1099,7 +1102,8 @@ namespace proxy {
 			}
 
 			stream_expires_never(m_local_socket);
-			set_proto("websocket-udp");
+			set_proto(std::string(ws_tunnel::websocket_proto_name(
+				downstream_tls, true)));
 			co_await run_websocket_udp_bridge();
 			co_return;
 		}
@@ -1123,7 +1127,8 @@ namespace proxy {
 		}
 
 		stream_expires_never(m_local_socket);
-		set_proto("websocket-udp");
+		set_proto(std::string(ws_tunnel::websocket_proto_name(
+			downstream_tls, true)));
 		co_await run_websocket_udp_target(*udp_socket);
 	}
 
