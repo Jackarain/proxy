@@ -887,6 +887,9 @@ namespace proxy {
 	net::awaitable<void> proxy_session::run_websocket_udp_bridge() noexcept
 	{
 		auto self = shared_from_this();
+		m_last_activity.store(0, std::memory_order_relaxed);
+		m_transfer_timeout.store(m_option.udp_timeout_, std::memory_order_relaxed);
+
 		auto local_to_remote = [this, self]() -> net::awaitable<void>
 		{
 			beast::flat_buffer message;
@@ -949,13 +952,19 @@ namespace proxy {
 			stream_cancel(m_remote_socket);
 		};
 
-		co_await(local_to_remote() && remote_to_local());
+		co_await(
+			(local_to_remote() && remote_to_local()) ||
+			idle_timeout(m_local_socket, m_remote_socket)
+		);
 	}
 
 	net::awaitable<void> proxy_session::run_websocket_udp_target(
 		udp::socket& socket) noexcept
 	{
 		auto self = shared_from_this();
+		m_last_activity.store(0, std::memory_order_relaxed);
+		m_transfer_timeout.store(m_option.udp_timeout_, std::memory_order_relaxed);
+
 		auto websocket_to_udp = [this, self, &socket]()
 			-> net::awaitable<void>
 		{
@@ -1022,7 +1031,10 @@ namespace proxy {
 			socket.close(ec);
 		};
 
-		co_await(websocket_to_udp() && udp_to_websocket());
+		co_await(
+			(websocket_to_udp() && udp_to_websocket()) ||
+			idle_timeout(m_local_socket, m_remote_socket)
+		);
 	}
 
 	net::awaitable<void> proxy_session::http_proxy_websocket_connect_udp(
@@ -1118,6 +1130,9 @@ namespace proxy {
 	net::awaitable<void> proxy_session::http_capsules_to_websocket_proxy() noexcept
 	{
 		auto self = shared_from_this();
+		m_last_activity.store(0, std::memory_order_relaxed);
+		m_transfer_timeout.store(m_option.udp_timeout_, std::memory_order_relaxed);
+
 		auto http_to_websocket = [this, self]() -> net::awaitable<void>
 		{
 			std::array<uint8_t, 65536> capsule{};
@@ -1187,7 +1202,10 @@ namespace proxy {
 			stream_cancel(m_remote_socket);
 		};
 
-		co_await(http_to_websocket() && websocket_to_http());
+		co_await(
+			(http_to_websocket() && websocket_to_http()) ||
+			idle_timeout(m_local_socket, m_remote_socket)
+		);
 		co_return;
 	}
 
