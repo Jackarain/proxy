@@ -487,14 +487,15 @@ namespace ws_tunnel {
 				auto size = read_buffer_.size();
 				if (size == 0)
 					continue;
-				if (size > read_data_.size())
+					if (size > max_message_size)
 				{
 					co_return io_result{ make_error_code(
 						boost::system::errc::message_size), 0 };
 				}
 
+					ensure_buffers();
 				net::buffer_copy(
-					net::buffer(read_data_.data(), size),
+						net::buffer(read_data_.get(), size),
 					read_buffer_.data());
 
 				auto opcode = static_cast<uint8_t>(read_data_[0]);
@@ -541,14 +542,15 @@ namespace ws_tunnel {
 			if (size == 0)
 				co_return io_result{ ec, 0 };
 
+			ensure_buffers();
 			write_opcode_ = opcode_data;
 			net::buffer_copy(
-				net::buffer(write_data_.data(), size),
+				net::buffer(write_data_.get(), size),
 				beast::buffers_prefix(size, buffers));
 
 			std::array<net::const_buffer, 2> message{
 				net::buffer(&write_opcode_, 1),
-				net::buffer(write_data_.data(), size) };
+				net::buffer(write_data_.get(), size) };
 			co_await ws_->async_write(message, net_awaitable[ec]);
 			if (ec)
 				co_return io_result{ ec, 0 };
@@ -574,18 +576,32 @@ namespace ws_tunnel {
 		{
 			auto available = read_size_ - read_pos_;
 			auto bytes = net::buffer_copy(buffers,
-				net::buffer(read_data_.data() + read_pos_, available));
+				net::buffer(read_data_.get() + read_pos_, available));
 			read_pos_ += bytes;
 			return bytes;
+		}
+
+		void ensure_buffers()
+		{
+			if (!read_data_)
+			{
+				read_data_ = std::make_unique_for_overwrite<
+					char[]>(max_message_size);
+			}
+			if (!write_data_)
+			{
+				write_data_ = std::make_unique_for_overwrite<
+					char[]>(max_message_size);
+			}
 		}
 
 	private:
 		std::unique_ptr<ws_type> ws_;
 		beast::flat_buffer read_buffer_;
-		std::array<char, max_message_size> read_data_{};
+		std::unique_ptr<char[]> read_data_;
 		std::size_t read_size_{ 0 };
 		std::size_t read_pos_{ 0 };
-		std::array<char, max_message_size> write_data_{};
+		std::unique_ptr<char[]> write_data_;
 		char write_opcode_{ 0 };
 		bool read_eof_{ false };
 		bool write_closed_{ false };

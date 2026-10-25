@@ -97,6 +97,15 @@ namespace {
 		BOOST_TEST(!proxy_scheme_is_websocket("http"));
 	}
 
+	BOOST_AUTO_TEST_CASE(stream_type_size)
+	{
+		BOOST_TEST(sizeof(util::websocket_plain_stream) < 4096);
+		BOOST_TEST(sizeof(util::websocket_tls_stream) < 4096);
+		BOOST_TEST(sizeof(util::ssl_websocket_plain_stream) < 16384);
+		BOOST_TEST(sizeof(util::ssl_websocket_tls_stream) < 16384);
+		BOOST_TEST(sizeof(util::variant_stream_type) < 65536);
+	}
+
 	struct loopback_state
 	{
 		boost::system::error_code client_ec;
