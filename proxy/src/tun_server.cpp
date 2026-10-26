@@ -220,15 +220,11 @@ namespace proxy {
 			if (proxy_port == 0)
 				proxy_port = proxy_pass_default_port(proxy_url);
 
-			std::string target_host = target.address().to_string();
-			if (target.address().is_v6())
-				boost::replace_all(target_host, ":", "%3A");
-
 			std::string uri =
 				std::string(use_ssl ? "https://" : "http://") +
 				proxy_host + ":" + std::to_string(proxy_port) +
-				"/.well-known/masque/udp/" + target_host + "/" +
-				std::to_string(target.port()) + "/";
+				format_connect_udp_path(
+					target.address().to_string(), target.port());
 
 			http::request<http::empty_body> req{ http::verb::get, uri, 11 };
 			req.set(http::field::host, proxy_host + ":" + std::to_string(proxy_port));

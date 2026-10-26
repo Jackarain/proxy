@@ -4282,19 +4282,14 @@ net::awaitable<void> proxy_server::udp_tproxy_http_udp_loop(udp_tproxy_flow_ptr 
 
 	// 构建 RFC 9298 connect-udp 请求, 使用 absolute-form URI.
 	auto& original_dest = flow->original_endp_;
-	std::string target_host = original_dest.address().to_string();
 	uint16_t target_port = original_dest.port();
-
-	// 对 IPv6 地址中的冒号进行百分号编码.
-	if (original_dest.address().is_v6())
-		boost::replace_all(target_host, ":", "%3A");
 
 	// 使用 boost.beast 构建 HTTP 请求.
 	std::string target =
 		std::string(use_ssl ? "https://" : "http://") +
 		proxy_host + ":" + std::to_string(proxy_port) +
-		"/.well-known/masque/udp/" + target_host + "/" +
-		std::to_string(target_port) + "/";
+		format_connect_udp_path(
+			original_dest.address().to_string(), target_port);
 
 	http::request<http::empty_body> req{http::verb::get, target, 11};
 	req.set(http::field::host, proxy_host + ":" + std::to_string(proxy_port));

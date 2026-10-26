@@ -54,6 +54,16 @@ namespace {
 		BOOST_TEST(varint_encoded_length(0x3FFFFFFFFFFFFFFFULL) == 8u);
 	}
 
+	BOOST_AUTO_TEST_CASE(connect_udp_target_path_encoding)
+	{
+		BOOST_TEST(format_connect_udp_path("192.0.2.1", 53) ==
+			"/.well-known/masque/udp/192.0.2.1/53/");
+		BOOST_TEST(format_connect_udp_path("2001:db8::1", 443) ==
+			"/.well-known/masque/udp/2001%3Adb8%3A%3A1/443/");
+		BOOST_TEST(format_connect_udp_path("fe80::1%eth0", 53) ==
+			"/.well-known/masque/udp/fe80%3A%3A1%25eth0/53/");
+	}
+
 	BOOST_AUTO_TEST_CASE(varint_round_trip_all_widths)
 	{
 		const uint64_t values[] = {

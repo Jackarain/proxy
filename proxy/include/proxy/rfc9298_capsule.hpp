@@ -26,6 +26,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
@@ -36,6 +37,42 @@ namespace proxy {
 	namespace net = boost::asio;
 
 	static constexpr uint64_t udp_proxy_capsule_type = 0x00; // RFC 9297 DATAGRAM
+
+	inline constexpr std::string_view connect_udp_path_prefix =
+		"/.well-known/masque/udp/";
+
+	inline std::string encode_connect_udp_host(std::string_view host)
+	{
+		static constexpr char hex[] = "0123456789ABCDEF";
+
+		std::string encoded;
+		encoded.reserve(host.size());
+		for (unsigned char ch : host)
+		{
+			if (ch == ':' || ch == '%')
+			{
+				encoded.push_back('%');
+				encoded.push_back(hex[ch >> 4]);
+				encoded.push_back(hex[ch & 0x0F]);
+			}
+			else
+			{
+				encoded.push_back(static_cast<char>(ch));
+			}
+		}
+		return encoded;
+	}
+
+	inline std::string format_connect_udp_path(
+		std::string_view host, uint16_t port)
+	{
+		std::string path(connect_udp_path_prefix);
+		path += encode_connect_udp_host(host);
+		path.push_back('/');
+		path += std::to_string(port);
+		path.push_back('/');
+		return path;
+	}
 
 	namespace detail {
 
