@@ -1271,20 +1271,10 @@ namespace proxy {
 		boost::system::error_code ec;
 
 		auto& upstream = *m_option.dns_upstream_;
-		auto colon_pos = upstream.find(':');
-		if (colon_pos == std::string::npos)
+		std::string dns_host;
+		uint16_t dns_port = 0;
+		if (!authority::parse_authority(upstream, dns_host, dns_port))
 			co_return false;
-
-		auto dns_host = upstream.substr(0, colon_pos);
-		int dns_port = 0;
-		try
-		{
-			dns_port = std::stoi(upstream.substr(colon_pos + 1));
-		}
-		catch (const std::exception&)
-		{
-			co_return false;
-		}
 
 		// 解析上游地址：IP 直接构造 endpoint，域名（如 dns.google:53）
 		// 经 resolve_host 解析后取首个地址，与 DoH 上游支持域名保持一致.
@@ -1301,7 +1291,7 @@ namespace proxy {
 			if (ec)
 				co_return false;
 			targets = tcp::resolver::results_type::create(
-				tcp::endpoint(addr, static_cast<uint16_t>(dns_port)),
+				tcp::endpoint(addr, dns_port),
 				dns_host, "");
 		}
 

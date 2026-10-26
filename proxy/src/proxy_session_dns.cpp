@@ -299,15 +299,14 @@ namespace proxy {
 		boost::system::error_code ec;
 
 		auto& upstream = *m_option.dns_upstream_;
-		auto colon_pos = upstream.find(':');
-		if (colon_pos == std::string::npos)
+		std::string dns_host;
+		uint16_t dns_port = 0;
+		if (!authority::parse_authority(upstream, dns_host, dns_port))
 		{
 			co_await default_http_route(
 				request, fake_500_content_fmt, http::status::internal_server_error);
 			co_return;
 		}
-		auto dns_host = upstream.substr(0, colon_pos);
-		auto dns_port = (uint16_t)std::stoi(upstream.substr(colon_pos + 1));
 
 		// 通过 UDP 转发 DNS 查询到上游服务器.
 		udp::socket dns_socket(co_await net::this_coro::executor);
@@ -633,12 +632,10 @@ namespace proxy {
 		boost::system::error_code ec;
 
 		auto& upstream = *m_option.dns_upstream_;
-		auto colon_pos = upstream.find(':');
-		if (colon_pos == std::string::npos)
+		std::string dns_host;
+		uint16_t dns_port = 0;
+		if (!authority::parse_authority(upstream, dns_host, dns_port))
 			co_return false;
-
-		auto dns_host = upstream.substr(0, colon_pos);
-		auto dns_port = (uint16_t)std::stoi(upstream.substr(colon_pos + 1));
 
 		udp::socket dns_socket(co_await net::this_coro::executor);
 		udp::endpoint dns_endpoint(
