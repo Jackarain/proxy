@@ -1452,13 +1452,13 @@ namespace proxy {
 		{
 			boost::system::error_code ec;
 			// 最大 UDP payload + capsule header (type + length + ctx_id).
-			uint8_t buf[65536];
+			uint8_t buf[32 + 65535];
 
 			while (!m_abort)
 			{
 				// 从 UDP socket 接收数据.
 				auto bytes = co_await udp_socket.async_receive(
-					net::buffer(buf + 32, 65527),
+					net::buffer(buf + 32, sizeof(buf) - 32),
 					net_awaitable[ec]);
 				if (ec) break;
 
