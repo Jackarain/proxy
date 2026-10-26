@@ -177,13 +177,36 @@ namespace proxy {
 		{
 			auto result = urls::url(
 				target.starts_with("/") ? target : "/" + target);
+			auto path = result.path();
 
-			return boost::nowide::widen(result.path());
+			// HTTP 路径允许携带百分号编码, path() 返回解码后的结果. 含 NUL
+			// 的路径会在文件系统接口中被截断, 不能用于文档目录映射.
+			if (path.find('\0') != std::string::npos)
+				return {};
+
+			auto wide_path = boost::nowide::widen(path);
+
+			// 同时按 '/' 与 '\\' 切分, 防止 Windows 下编码后的反斜杠绕过点段检查.
+			std::size_t begin = 0;
+			while (begin <= wide_path.size())
+			{
+				auto end = wide_path.find_first_of(L"/\\", begin);
+				auto segment = std::wstring_view(wide_path).substr(begin,
+					end == std::wstring::npos ? end : end - begin);
+				if (segment == L"..")
+					return {};
+
+				if (end == std::wstring::npos)
+					break;
+				begin = end + 1;
+			}
+
+			return wide_path;
 		}
 		catch (const std::exception&)
 		{}
 
-		return boost::nowide::widen(target);
+		return {};
 	}
 
 	// 从文档根目录和请求目标生成实际文件系统路径.
@@ -191,6 +214,9 @@ namespace proxy {
 		const std::string& target) noexcept
 	{
 		auto target_path = make_target_path(target);
+		if (target_path.empty())
+			return {};
+
 		auto doc_path = boost::nowide::widen(doc_directory);
 
 #ifdef WIN32

@@ -47,12 +47,25 @@ namespace {
 			"/search");
 	}
 
+	BOOST_AUTO_TEST_CASE(make_target_path_rejects_parent_segments)
+	{
+		BOOST_TEST(make_target_path("/../../etc/passwd").empty());
+		BOOST_TEST(make_target_path("/%2e%2e/%2e%2e/etc/passwd").empty());
+		BOOST_TEST(make_target_path("/a%2f..%2fetc/passwd").empty());
+		BOOST_TEST(make_target_path("/a%5c..%5cetc/passwd").empty());
+		BOOST_TEST(make_target_path("/a%00/../../etc/passwd").empty());
+	}
+
 	BOOST_AUTO_TEST_CASE(make_real_target_path_combines_doc_and_target)
 	{
 		BOOST_TEST(make_real_target_path("/srv/www", "/index.html") ==
 			fs::path("/srv/www/index.html"));
 		BOOST_TEST(make_real_target_path("/srv/www/", "/a/b.css") ==
 			fs::path("/srv/www/a/b.css"));
+		BOOST_TEST(make_real_target_path(
+			"/srv/www", "/../../etc/passwd").empty());
+		BOOST_TEST(make_real_target_path(
+			"/srv/www", "/%2e%2e/%2e%2e/etc/passwd").empty());
 	}
 
 	BOOST_AUTO_TEST_CASE(file_last_write_time_raw_on_missing_file)

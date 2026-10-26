@@ -361,11 +361,20 @@ namespace proxy {
 
 			std::string target = req.target();
 			boost::smatch what;
+			auto target_path = make_real_target_path(
+				m_option.doc_directory_, req.target());
+			if (target_path.empty())
+			{
+				log_conn_warning()
+					<< ", reject unsafe http target: "
+					<< std::string(req.target());
+				co_await default_http_route(
+					req, fake_400_content, http::status::bad_request);
+				co_return;
+			}
+
 			http_context http_ctx{
-				{},
-				req,
-				req.target(),
-				make_real_target_path(m_option.doc_directory_,req.target()) };
+				{}, req, req.target(), target_path };
 
 #define BEGIN_HTTP_ROUTE() if (false) {}
 #define ON_HTTP_ROUTE(skip, exp, func) \
