@@ -2116,17 +2116,10 @@ void proxy_server::close() noexcept
 		net::post(m_executor,
 			[this, self = shared_from_this()]()
 			{
-				udp_tproxy_flow_map tmp_flows;
-				tmp_flows.swap(m_udp_tproxy_flows);
-
-				for (auto& [_, flow] : tmp_flows)
-				{
-					// 只中止底层连接使在途的异步 I/O 尽快失败返回, 不在异步
-					// 操作未完成时销毁 socket/流对象; 实际销毁由持有该 flow
-					// 的协程在其操作完成后负责.
-					if (flow)
-						abort_udp_tproxy_flow(flow);
-				}
+				// 只中止底层连接使在途的异步 I/O 尽快失败返回, 不在异步
+				// 操作未完成时销毁 socket/流对象; 实际销毁由持有该 flow
+				// 的协程在其操作完成后负责.
+				abort_all_udp_tproxy_flows();
 			});
 	}
 
@@ -3363,6 +3356,18 @@ void proxy_server::abort_udp_tproxy_flow(const udp_tproxy_flow_ptr& flow) noexce
 		flow->notify_timer_->cancel();
 }
 
+void proxy_server::abort_all_udp_tproxy_flows() noexcept
+{
+	udp_tproxy_flow_map flows;
+	flows.swap(m_udp_tproxy_flows);
+
+	for (auto& [_, flow] : flows)
+	{
+		if (flow)
+			abort_udp_tproxy_flow(flow);
+	}
+}
+
 void proxy_server::erase_udp_tproxy_flow(const udp_tproxy_flow_ptr& flow) noexcept
 {
 	if (!flow)
@@ -3447,8 +3452,14 @@ net::awaitable<void> proxy_server::start_udp_tproxy() noexcept
 net::awaitable<void> proxy_server::udp_tproxy_socks5_connect() noexcept
 {
 	m_retry_tproxy_socks5_connect = false;
+	m_udp_tproxy_associate_ready_ = false;
 
 	co_await do_socks5_associate();
+	m_udp_tproxy_associate_ready_ = false;
+
+	// RFC 1928 规定 UDP association 随控制 TCP 连接终止而失效. 重连前必须
+	// 丢弃旧 flow, 否则现有 UDP socket 会继续向旧关联端点发送数据.
+	abort_all_udp_tproxy_flows();
 
 	// 解析、连接、TLS/SOCKS5 握手或控制连接任一阶段失败/断开都需要重试;
 	// 只有服务关闭时不再重连.
@@ -3746,6 +3757,14 @@ net::awaitable<void> proxy_server::do_socks5_associate()
 			m_backend_endp.address(remote_addr);
 	}
 
+	if (m_backend_endp.address().is_unspecified())
+	{
+		XLOG_WARN << "udp tproxy backend endpoint has no address";
+		co_return;
+	}
+
+	m_udp_tproxy_associate_ready_ = true;
+
 	// 在这里循环等待，保持与 proxy_pass 的连接以维持 UDP ASSOCIATE 会话, 直到服务器关闭或发生错误.
 	while (!m_abort)
 	{
@@ -4029,6 +4048,7 @@ net::awaitable<void> proxy_server::start_udp_tproxy_listen(udp::socket& udp_sock
 	// HTTP 走 RFC 9298, WebSocket 走私有 capsule 隧道; 两者都按 flow 建立.
 	bool using_connect_udp = scheme.starts_with("http");
 	bool using_websocket_udp = proxy_scheme_is_websocket(scheme);
+	bool using_socks5_udp = !using_connect_udp && !using_websocket_udp;
 
 	while (!m_abort)
 	{
@@ -4064,6 +4084,11 @@ net::awaitable<void> proxy_server::start_udp_tproxy_listen(udp::socket& udp_sock
 		// 解析 UDP TPROXY 数据包，提取客户端地址和原始目标地址.
 		udp::endpoint client_ep, original_dest;
 		if (!parse_udp_tproxy_packet(msg, client_ep, original_dest))
+			continue;
+
+		// UDP ASSOCIATE 尚未建立或正在重连时, 不能创建无可用上游的 flow.
+		if (using_socks5_udp &&
+			!m_udp_tproxy_associate_ready_.load(std::memory_order_acquire))
 			continue;
 
 		// 计算 flow 表的 key.

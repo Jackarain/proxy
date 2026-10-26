@@ -375,6 +375,9 @@ namespace proxy {
 		// 异步操作未完成时销毁对象导致的 use-after-free.
 		void abort_udp_tproxy_flow(const udp_tproxy_flow_ptr& flow) noexcept;
 
+		// 中止并移除全部 UDP TPROXY flow.
+		void abort_all_udp_tproxy_flows() noexcept;
+
 		// 仅在 flow 表中仍保存着该 flow 对象时将其移除, 避免旧协程误删已被新
 		// flow 占用的同名 key.
 		void erase_udp_tproxy_flow(const udp_tproxy_flow_ptr& flow) noexcept;
@@ -483,6 +486,9 @@ namespace proxy {
 		// proxy_pass 返回侦听的 UDP 端口地址信息, 所有 UDP TPROXY
 		// flow 共享这个地址信息将数据转发到 proxy_pass.
 		udp::endpoint m_backend_endp;
+
+		// SOCKS5 UDP ASSOCIATE 是否已建立. 控制连接或关联失效期间不能创建新 flow.
+		std::atomic_bool m_udp_tproxy_associate_ready_ = { false };
 
 		// 重试 UDP TPROXY socks5 连接.
 		std::atomic_bool m_retry_tproxy_socks5_connect = { false };
