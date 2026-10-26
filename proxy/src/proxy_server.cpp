@@ -41,6 +41,9 @@
 #ifndef SO_ORIGINAL_DST
 #  define SO_ORIGINAL_DST 80
 #endif
+#ifndef IP6T_SO_ORIGINAL_DST
+#  define IP6T_SO_ORIGINAL_DST 80
+#endif
 
 namespace proxy {
 
@@ -3049,11 +3052,17 @@ proxy_server::setup_tproxy(proxy_tcp_socket& socket, size_t connection_id) noexc
 	sockaddr_storage addr;
 	socklen_t addrlen = sizeof(addr);
 
-	if (::getsockopt(sockfd, IPPROTO_IP, SO_ORIGINAL_DST, (char*)&addr, &addrlen) < 0)
+	boost::system::error_code local_ec;
+	auto local_endp = socket.lowest_layer().local_endpoint(local_ec);
+	const bool ipv6 = !local_ec && local_endp.address().is_v6();
+	const int level = ipv6 ? IPPROTO_IPV6 : IPPROTO_IP;
+	const int option = ipv6 ? IP6T_SO_ORIGINAL_DST : SO_ORIGINAL_DST;
+
+	if (::getsockopt(sockfd, level, option, (char*)&addr, &addrlen) < 0)
 	{
 		XLOG_WARN << "connection id: " << connection_id
 			<< ", getsockopt: " << (int)sockfd
-			<< ", SO_ORIGINAL_DST: " << strerror(errno);
+			<< ", original dst: " << strerror(errno);
 		co_return remote_endp;
 	}
 
