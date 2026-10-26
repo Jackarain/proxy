@@ -725,7 +725,7 @@ namespace proxy {
 						m_remote_udp_endpoint,
 						net_awaitable[ec]);
 				}
-				else if (remote_endp.address() == m_remote_udp_endpoint.address())
+				else if (remote_endp == m_remote_udp_endpoint)
 				{
 					recv_total++;
 					co_await server.async_send_to(
