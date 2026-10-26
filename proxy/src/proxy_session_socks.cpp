@@ -621,8 +621,9 @@ namespace proxy {
 
 		// SOCKS5 UDP 最大头部长度: RSV(2) + FRAG(1) + ATYP(1) + 地址(最大255) + PORT(2)
 		static constexpr size_t udp_max_header_size = 261;
+		static constexpr size_t udp_max_datagram_size = 64 * 1024;
 
-		char read_buffer[4096];
+		char read_buffer[udp_max_header_size + udp_max_datagram_size];
 		size_t send_total = 0;
 		size_t recv_total = 0;
 
