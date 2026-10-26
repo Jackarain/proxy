@@ -1577,9 +1577,11 @@ namespace proxy {
 
 			// 3. 执行 SOCKS5 UDP ASSOCIATE 握手.
 			socks_client_option opt;
-			opt.target_host = target_host;
-			opt.target_port = target_port;
-			opt.proxy_hostname = is_hostname(target_host);
+			// UDP ASSOCIATE 的 DST.ADDR/DST.PORT 表示客户端发送数据报
+			// 所用的端点；此时尚未创建 UDP socket，使用全零占位.
+			opt.target_host = "0.0.0.0";
+			opt.target_port = 0;
+			opt.proxy_hostname = false;
 			opt.command = SOCKS5_CMD_UDP;
 			opt.username = std::string(m_proxy_pass->user());
 			opt.password = std::string(m_proxy_pass->password());

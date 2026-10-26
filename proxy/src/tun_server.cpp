@@ -1548,8 +1548,10 @@ namespace proxy {
 		}
 
 		socks_client_option opt;
+		// UDP ASSOCIATE 的 DST.ADDR/DST.PORT 表示客户端发送数据报
+		// 所用的端点；此时尚未创建 UDP socket，使用全零占位.
 		opt.target_host = "0.0.0.0";
-		opt.target_port = 21;
+		opt.target_port = 0;
 		opt.proxy_hostname = false;
 		opt.command = SOCKS5_CMD_UDP;
 		opt.username = std::string(proxy_url.user());
