@@ -3759,9 +3759,11 @@ net::awaitable<void> proxy_server::do_socks5_associate()
 			m_backend_endp.address(remote_addr);
 	}
 
-	if (m_backend_endp.address().is_unspecified())
+	if (m_backend_endp.address().is_unspecified() ||
+		m_backend_endp.port() == 0)
 	{
-		XLOG_WARN << "udp tproxy backend endpoint has no address";
+		XLOG_WARN << "udp tproxy invalid backend endpoint: "
+			<< m_backend_endp;
 		co_return;
 	}
 

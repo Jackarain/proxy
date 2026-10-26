@@ -1698,6 +1698,23 @@ namespace proxy {
 				}
 			}
 
+			if (m_remote_udp_endpoint.address().is_unspecified() ||
+				m_remote_udp_endpoint.port() == 0)
+			{
+				log_conn_warning()
+					<< ", connect-udp: invalid socks5 udp relay endpoint: "
+					<< m_remote_udp_endpoint;
+
+				http::response<http::string_body> res{
+					http::status::bad_gateway, req.version() };
+				res.set(http::field::content_type, "text/html");
+				res.body() = fake_502_socks_associate_content;
+				res.prepare_payload();
+				co_await http::async_write(
+					m_local_socket, res, net_awaitable[ec]);
+				co_return;
+			}
+
 			log_conn_debug()
 				<< ", connect-udp: socks5 udp relay endpoint: "
 				<< m_remote_udp_endpoint;

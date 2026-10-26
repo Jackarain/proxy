@@ -1572,6 +1572,13 @@ namespace proxy {
 		{
 			m_backend_endp.address(tcp_remote_endpoint(*m_control).address());
 		}
+		if (m_backend_endp.address().is_unspecified() ||
+			m_backend_endp.port() == 0)
+		{
+			XLOG_WARN << "tun udp invalid SOCKS5 relay endpoint: "
+				<< m_backend_endp;
+			co_return false;
+		}
 
 		// 保持控制连接存活，断开时关闭整个会话.
 		net::co_spawn(m_executor,
