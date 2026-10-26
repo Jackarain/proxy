@@ -1545,10 +1545,7 @@ namespace proxy {
 		// 某些代理只返回端口，地址为空，此时用控制连接的远端地址补全.
 		if (m_backend_endp.address().is_unspecified())
 		{
-			auto& tcp_sock = boost::variant2::get<proxy_tcp_socket>(*m_control);
-			auto remote = tcp_sock.lowest_layer().remote_endpoint(ec);
-			if (!ec)
-				m_backend_endp.address(remote.address());
+			m_backend_endp.address(tcp_remote_endpoint(*m_control).address());
 		}
 
 		// 保持控制连接存活，断开时关闭整个会话.
