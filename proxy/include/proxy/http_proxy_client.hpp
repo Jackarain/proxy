@@ -110,6 +110,10 @@ namespace proxy {
 					co_return ec;
 			} while (!p.is_header_done());
 
+			const auto status = p.get().result_int();
+			if (status < 200 || status >= 300)
+				co_return http::error::bad_status;
+
 			co_return ec;
 		}
 
