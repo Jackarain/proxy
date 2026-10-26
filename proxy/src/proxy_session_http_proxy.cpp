@@ -1893,6 +1893,15 @@ namespace proxy {
 						net::buffer(buf), relay_endp, net_awaitable[ec]);
 					if (ec) break;
 
+					// SOCKS5 UDP 中继的应答必须来自 UDP ASSOCIATE 返回的端点.
+					if (relay_endp != m_remote_udp_endpoint)
+					{
+						log_conn_debug()
+							<< ", connect-udp: ignore unexpected UDP source: "
+							<< relay_endp;
+						continue;
+					}
+
 					// 解析 SOCKS5 UDP 头部.
 					const uint8_t* rp = buf;
 					if (bytes < 4) continue;
