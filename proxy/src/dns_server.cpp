@@ -1346,18 +1346,23 @@ namespace proxy {
 		// （DNSSEC 常见）的响应截断.
 		std::array<char, 65535> recv_buf{};
 		udp::endpoint recv_endp;
-		auto recv_len = co_await dns_socket->async_receive_from(
-			net::buffer(recv_buf), recv_endp, net_awaitable[ec]);
+		std::size_t recv_len = 0;
+		for (;;)
+		{
+			recv_len = co_await dns_socket->async_receive_from(
+				net::buffer(recv_buf), recv_endp, net_awaitable[ec]);
+			if (ec)
+				break;
+			if (recv_endp == dns_endpoint)
+				break;
+
+			XLOG_DBG << "udp dns ignore unexpected response source: "
+				<< recv_endp << ", expected: " << dns_endpoint;
+		}
 		timer.cancel();
 
 		if (ec)
 			co_return false;
-		if (recv_endp != dns_endpoint)
-		{
-			XLOG_WARN << "udp dns ignore unexpected response source: "
-				<< recv_endp << ", expected: " << dns_endpoint;
-			co_return false;
-		}
 
 		dns_socket->close(ec);
 		output.assign(recv_buf.data(), recv_len);

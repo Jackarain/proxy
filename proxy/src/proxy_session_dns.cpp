@@ -361,8 +361,20 @@ namespace proxy {
 		// （如 DNSSEC）的响应.
 		std::array<char, 65535> recv_buf{};
 		udp::endpoint recv_endp;
-		auto recv_len = co_await dns_socket->async_receive_from(
-			net::buffer(recv_buf), recv_endp, net_awaitable[ec]);
+		std::size_t recv_len = 0;
+		for (;;)
+		{
+			recv_len = co_await dns_socket->async_receive_from(
+				net::buffer(recv_buf), recv_endp, net_awaitable[ec]);
+			if (ec)
+				break;
+			if (recv_endp == dns_endpoint)
+				break;
+
+			log_conn_debug()
+				<< ", ignore unexpected DNS response source: "
+				<< recv_endp << ", expected: " << dns_endpoint;
+		}
 		timer.cancel();
 		if (ec)
 		{
@@ -370,16 +382,6 @@ namespace proxy {
 				request, fake_500_content_fmt, http::status::internal_server_error);
 			co_return;
 		}
-		if (recv_endp != dns_endpoint)
-		{
-			log_conn_warning()
-				<< ", ignore unexpected DNS response source: "
-				<< recv_endp << ", expected: " << dns_endpoint;
-			co_await default_http_route(
-				request, fake_500_content_fmt, http::status::internal_server_error);
-			co_return;
-		}
-
 		dns_socket->close(ec);
 
 		auto body = std::string(recv_buf.data(), recv_len);
@@ -705,18 +707,23 @@ namespace proxy {
 		// （如 DNSSEC）的响应.
 		std::array<char, 65535> recv_buf{};
 		udp::endpoint recv_endp;
-		auto recv_len = co_await dns_socket->async_receive_from(
-			net::buffer(recv_buf), recv_endp, net_awaitable[ec]);
+		std::size_t recv_len = 0;
+		for (;;)
+		{
+			recv_len = co_await dns_socket->async_receive_from(
+				net::buffer(recv_buf), recv_endp, net_awaitable[ec]);
+			if (ec)
+				break;
+			if (recv_endp == dns_endpoint)
+				break;
+
+			log_conn_debug()
+				<< ", ignore unexpected DNS response source: "
+				<< recv_endp << ", expected: " << dns_endpoint;
+		}
 		timer.cancel();
 		if (ec)
 			co_return false;
-		if (recv_endp != dns_endpoint)
-		{
-			log_conn_warning()
-				<< ", ignore unexpected DNS response source: "
-				<< recv_endp << ", expected: " << dns_endpoint;
-			co_return false;
-		}
 
 		dns_socket->close(ec);
 
