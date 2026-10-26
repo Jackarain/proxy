@@ -13,6 +13,7 @@
 #define INCLUDE__2025_11_23__URL_INFO_HPP
 
 #include <boost/url.hpp>
+#include <algorithm>
 #include <charconv>
 #include <tuple>
 #include <string_view>
@@ -99,33 +100,69 @@ namespace proxy {
 				}
 			}
 
-			// 解析 host 和 port
-			char const* host_end = authority_end;
-			host = std::string_view(host_start, host_end - host_start);
-
-			found = host.find_first_of(":");
-			if (found != std::string_view::npos)
+			// 解析 host 和 port，IPv6 主机必须使用 [...] 形式.
+			auto parse_port = [&port, &port_num](std::string_view value) -> bool
 			{
-				char const* port_start = host_start + found + 1;
-				char const* port_end = host_end;
+				if (value.empty())
+					return true;
 
-				port = std::string_view(port_start, port_end - port_start);
-				if (!port.empty())
+				uint32_t port_value = 0;
+				auto [ptr, ec] = std::from_chars(
+					value.data(), value.data() + value.size(), port_value);
+				if (ec != std::errc{} ||
+					ptr != value.data() + value.size() ||
+					port_value == 0 || port_value > 65535)
+					return false;
+
+				port_num = static_cast<uint16_t>(port_value);
+				return true;
+			};
+
+			std::string_view host_port(host_start, authority_end - host_start);
+			if (!host_port.empty() && host_port.front() == '[')
+			{
+				auto close = std::find(host_start, authority_end, ']');
+				if (close == authority_end || close == host_start + 1)
+					return boost::urls::grammar::error::invalid;
+
+				host = std::string_view(
+					host_start + 1, static_cast<std::size_t>(close - host_start - 1));
+
+				auto after_host = close + 1;
+				if (after_host != authority_end)
 				{
-					uint32_t port_value = 0;
-					auto [ptr, ec] = std::from_chars(
-						port.data(), port.data() + port.size(), port_value);
-					if (ec != std::errc{} ||
-						ptr != port.data() + port.size() ||
-						port_value == 0 || port_value > 65535)
+					if (*after_host != ':')
 						return boost::urls::grammar::error::invalid;
 
-					port_num = static_cast<uint16_t>(port_value);
+					port = std::string_view(
+						after_host + 1,
+						static_cast<std::size_t>(authority_end - after_host - 1));
+					if (!parse_port(port))
+						return boost::urls::grammar::error::invalid;
 				}
-
-				host_end = host_start + found;
-				host = std::string_view(host_start, host_end - host_start);
 			}
+			else
+			{
+				found = host_port.find(':');
+				if (found != std::string_view::npos)
+				{
+					auto colon = host_start + found;
+					if (std::find(colon + 1, authority_end, ':') != authority_end)
+						return boost::urls::grammar::error::invalid;
+
+					host = host_port.substr(0, found);
+					port = host_port.substr(found + 1);
+					if (!parse_port(port))
+						return boost::urls::grammar::error::invalid;
+				}
+				else
+				{
+					host = host_port;
+				}
+			}
+
+			if (host.empty())
+				return boost::urls::grammar::error::invalid;
 
 			// 解析 resource 部分, 包括路径和查询参数, 除了 fragment.
 			char const* fragment_delim = std::find(authority_end, end, '#');

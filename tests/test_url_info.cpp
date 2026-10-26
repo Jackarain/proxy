@@ -78,6 +78,26 @@ namespace {
 		BOOST_TEST(resource == "/");
 	}
 
+	BOOST_AUTO_TEST_CASE(parses_ipv6_authority)
+	{
+		auto result = parse_urlinfo(
+			"http://user:pass@[2001:db8::1]:8080/path?q=1");
+		BOOST_TEST(result.has_value());
+
+		auto [scheme, user, passwd, host, port, resource] = *result;
+		BOOST_TEST(scheme == "http");
+		BOOST_TEST(user == "user");
+		BOOST_TEST(passwd == "pass");
+		BOOST_TEST(host == "2001:db8::1");
+		BOOST_TEST(port == 8080);
+		BOOST_TEST(resource == "/path?q=1");
+
+		auto default_port = parse_urlinfo("https://[::1]/");
+		BOOST_TEST(default_port.has_value());
+		BOOST_TEST(std::get<3>(*default_port) == "::1");
+		BOOST_TEST(std::get<4>(*default_port) == 443);
+	}
+
 	BOOST_AUTO_TEST_CASE(rejects_invalid_input)
 	{
 		BOOST_TEST(!parse_urlinfo("example.com").has_value());
@@ -85,6 +105,11 @@ namespace {
 		BOOST_TEST(!parse_urlinfo("http://example.com:abc/").has_value());
 		BOOST_TEST(!parse_urlinfo("http://example.com:0/").has_value());
 		BOOST_TEST(!parse_urlinfo("http://example.com:65536/").has_value());
+		BOOST_TEST(!parse_urlinfo("http://2001:db8::1/").has_value());
+		BOOST_TEST(!parse_urlinfo("http://[2001:db8::1/").has_value());
+		BOOST_TEST(!parse_urlinfo("http://[]:80/").has_value());
+		BOOST_TEST(!parse_urlinfo("http://[::1]x/").has_value());
+		BOOST_TEST(!parse_urlinfo("http://[::1]:abc/").has_value());
 		BOOST_TEST(!parse_urlinfo("").has_value());
 	}
 
