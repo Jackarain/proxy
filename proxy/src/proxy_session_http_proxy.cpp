@@ -62,6 +62,8 @@ namespace proxy {
 		bool keep_alive = false;
 		std::optional<request_parser> parser;
 		bool first = true;
+		std::string remote_host;
+		uint16_t remote_port = 0;
 
 		while (!m_abort)
 		{
@@ -210,6 +212,7 @@ namespace proxy {
 
 			// 解构 url 中的信息.
 			auto [scheme, user, passwd, host, port, resource] = *expect_url;
+			std::string request_host(host);
 
 			bool http_connect_udp = false;
 
@@ -264,10 +267,19 @@ namespace proxy {
 				co_return !first;
 			}
 
+			// 客户端 keep-alive 连接可能切换目标, 不能复用旧目标的上游连接.
+			if (m_remote_socket.is_open() &&
+				(remote_host != request_host || remote_port != port))
+			{
+				boost::system::error_code close_ec;
+				m_remote_socket.close(close_ec);
+				m_remote_socket = init_proxy_stream(m_executor);
+			}
+
 			if (!m_remote_socket.is_open())
 			{
 				// 连接到目标主机.
-				ec = co_await start_connect_host(std::string(host), port, false);
+				ec = co_await start_connect_host(request_host, port, false);
 				if (ec)
 				{
 					log_conn_warning()
@@ -280,6 +292,9 @@ namespace proxy {
 
 					co_return true;
 				}
+
+				remote_host = request_host;
+				remote_port = port;
 			}
 
 			// 处理代理请求头.
