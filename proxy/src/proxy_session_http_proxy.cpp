@@ -2034,9 +2034,22 @@ namespace proxy {
 				std::move(remote_socket),
 				m_option.proxy_pass_use_ssl_));
 
-		// 发送原始请求头到上游.
+		// 转发到上游前替换下游代理认证信息.
+		auto upstream_req = req;
+		upstream_req.erase(http::field::proxy_authorization);
+		upstream_req.erase(http::field::proxy_connection);
+		if (!m_proxy_pass->user().empty())
+		{
+			const auto userinfo =
+				std::string(m_proxy_pass->user()) + ":" +
+				std::string(m_proxy_pass->password());
+			upstream_req.set(http::field::proxy_authorization,
+				"Basic " + strutil::base64_encode(userinfo));
+		}
+
+		// 发送请求头到上游.
 		co_await http::async_write(
-			m_remote_socket, req, net_awaitable[ec]);
+			m_remote_socket, upstream_req, net_awaitable[ec]);
 		if (ec)
 		{
 			log_conn_warning()
