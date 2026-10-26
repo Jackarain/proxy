@@ -93,6 +93,13 @@ namespace proxy {
 				co_return endp;
 			}
 
+			if (opt.proxy_hostname && hostname.size() > 255)
+			{
+				ec = boost::system::errc::make_error_code(
+					boost::system::errc::message_size);
+				co_return endp;
+			}
+
 			std::size_t bytes_to_write = username.empty() ? 3 : 4;
 			net::streambuf request;
 			auto req = static_cast<char*>(
@@ -241,7 +248,6 @@ namespace proxy {
 				write<uint8_t>(SOCKS5_ATYP_DOMAINNAME, req);
 
 				// domain size.
-				BOOST_ASSERT(hostname.size() <= 255);
 				write<uint8_t>(static_cast<uint8_t>(
 					hostname.size()), req);
 
