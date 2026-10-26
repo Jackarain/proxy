@@ -347,6 +347,15 @@ namespace proxy {
 				request, fake_500_content_fmt, http::status::internal_server_error);
 			co_return;
 		}
+		if (recv_endp != dns_endpoint)
+		{
+			log_conn_warning()
+				<< ", ignore unexpected DNS response source: "
+				<< recv_endp << ", expected: " << dns_endpoint;
+			co_await default_http_route(
+				request, fake_500_content_fmt, http::status::internal_server_error);
+			co_return;
+		}
 
 		dns_socket.close(ec);
 
@@ -658,6 +667,13 @@ namespace proxy {
 			net::buffer(recv_buf), recv_endp, net_awaitable[ec]);
 		if (ec)
 			co_return false;
+		if (recv_endp != dns_endpoint)
+		{
+			log_conn_warning()
+				<< ", ignore unexpected DNS response source: "
+				<< recv_endp << ", expected: " << dns_endpoint;
+			co_return false;
+		}
 
 		dns_socket.close(ec);
 

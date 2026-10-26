@@ -1351,6 +1351,12 @@ namespace proxy {
 
 		if (ec)
 			co_return false;
+		if (recv_endp != dns_endpoint)
+		{
+			XLOG_WARN << "udp dns ignore unexpected response source: "
+				<< recv_endp << ", expected: " << dns_endpoint;
+			co_return false;
+		}
 
 		dns_socket->close(ec);
 		output.assign(recv_buf.data(), recv_len);
