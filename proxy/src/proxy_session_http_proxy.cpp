@@ -1827,6 +1827,16 @@ namespace proxy {
 					if (!decode_datagram_capsule(capsule_value, payload))
 						continue;
 
+					static constexpr size_t max_socks5_udp_datagram_size = 65535;
+					if (socks5_udp_header_size > max_socks5_udp_datagram_size ||
+						payload.size() > max_socks5_udp_datagram_size - socks5_udp_header_size)
+					{
+						log_conn_warning()
+							<< ", connect-udp: SOCKS5 UDP datagram too large: "
+							<< socks5_udp_header_size + payload.size();
+						continue;
+					}
+
 					// 构建完整 SOCKS5 UDP 数据报并发送到中继.
 					std::vector<uint8_t> send_buf(
 						socks5_udp_header_size + payload.size());
