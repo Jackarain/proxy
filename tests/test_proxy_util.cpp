@@ -195,11 +195,13 @@ namespace {
 		addr6.sin6_addr.s6_addr[0] = 0x20;
 		addr6.sin6_addr.s6_addr[1] = 0x01;
 		addr6.sin6_addr.s6_addr[15] = 1;
+		addr6.sin6_scope_id = 7;
 		addr6.sin6_port = htons(8443);
 
 		auto endpoint = sockaddr_to_udp_endpoint(
 			reinterpret_cast<const sockaddr*>(&addr6), sizeof(addr6));
-		BOOST_TEST(endpoint.address().to_string() == "2001::1");
+		BOOST_TEST(endpoint.address().to_string() == "2001::1%7");
+		BOOST_TEST(endpoint.address().to_v6().scope_id() == 7);
 		BOOST_TEST(endpoint.port() == 8443);
 
 		auto short_input = sockaddr_to_udp_endpoint(

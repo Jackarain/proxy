@@ -237,7 +237,7 @@ namespace proxy {
 			net::ip::address_v6::bytes_type bt;
 			std::memcpy(bt.data(), &addr6.sin6_addr, 16);
 			return udp::endpoint(
-				net::ip::make_address_v6(bt),
+				net::ip::make_address_v6(bt, addr6.sin6_scope_id),
 				ntohs(addr6.sin6_port));
 		}
 
