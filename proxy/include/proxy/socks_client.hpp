@@ -463,8 +463,23 @@ namespace proxy {
 					co_return endp;
 				}
 
-				auto it = *target_endpoints.begin();
-				address = it.endpoint().address().to_v4();
+				bool found_ipv4 = false;
+				for (const auto& target : target_endpoints)
+				{
+					auto candidate = target.endpoint().address();
+					if (!candidate.is_v4())
+						continue;
+
+					address = candidate.to_v4();
+					found_ipv4 = true;
+					break;
+				}
+
+				if (!found_ipv4)
+				{
+					ec = error;
+					co_return endp;
+				}
 			}
 
 			// Using socks4a...
