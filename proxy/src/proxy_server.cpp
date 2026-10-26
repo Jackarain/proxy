@@ -3448,12 +3448,10 @@ net::awaitable<void> proxy_server::udp_tproxy_socks5_connect() noexcept
 {
 	m_retry_tproxy_socks5_connect = false;
 
-	auto ret = co_await do_socks5_associate();
-	if (!ret)
-		co_return;
+	co_await do_socks5_associate();
 
-	// do_socks5_associate 返回 true 表示控制连接已建立, 并在循环中等待直到
-	// 连接断开或服务器关闭. 仅当连接因非关闭原因断开时, 才标记需要重试.
+	// 解析、连接、TLS/SOCKS5 握手或控制连接任一阶段失败/断开都需要重试;
+	// 只有服务关闭时不再重连.
 	if (!m_abort)
 		m_retry_tproxy_socks5_connect = true;
 
@@ -3619,7 +3617,7 @@ proxy_server::make_ssl_socket(tcp::socket& remote_socket,
 	co_return true;
 }
 
-net::awaitable<bool> proxy_server::do_socks5_associate()
+net::awaitable<void> proxy_server::do_socks5_associate()
 {
 	auto proxy_pass = *m_option.proxy_pass_;
 
@@ -3631,7 +3629,7 @@ net::awaitable<bool> proxy_server::do_socks5_associate()
 	if (!scheme.starts_with("socks"))
 	{
 		XLOG_WARN << "udp tproxy only supports socks protocol, got: " << scheme;
-		co_return false;
+		co_return;
 	}
 
 	XLOG_DBG << "udp tproxy connecting to proxy_pass: " << proxy_pass.c_str();
@@ -3643,7 +3641,7 @@ net::awaitable<bool> proxy_server::do_socks5_associate()
 
 	auto targets = co_await resolve_proxy_pass(proxy_pass);
 	if (!targets || targets->empty())
-		co_return false;
+		co_return;
 
 	// 连接到 proxy_pass 的 SOCKS5 服务器.
 	ec = co_await connect_to_proxy(remote_socket, *targets);
@@ -3651,7 +3649,7 @@ net::awaitable<bool> proxy_server::do_socks5_associate()
 	{
 		XLOG_WARN << "udp tproxy connect to proxy_pass failed: "
 			<< ec.message();
-		co_return true;
+		co_return;
 	}
 
 	// 设置 TCP Keep-Alive.
@@ -3690,7 +3688,7 @@ net::awaitable<bool> proxy_server::do_socks5_associate()
 		if (res.has_error())
 		{
 			XLOG_WARN << "udp tproxy make_ssl_socket error: " << res.error().message();
-			co_return false;
+			co_return;
 		}
 
 		XLOG_DBG << "udp tproxy SSL handshake with " << sni << " succeeded";
@@ -3700,7 +3698,7 @@ net::awaitable<bool> proxy_server::do_socks5_associate()
 		if (ec)
 		{
 			XLOG_WARN << "udp tproxy SOCKS5 handshake with ssl failed: " << ec.message();
-			co_return false;
+			co_return;
 		}
 	}
 	else
@@ -3712,14 +3710,14 @@ net::awaitable<bool> proxy_server::do_socks5_associate()
 		if (ec)
 		{
 			XLOG_WARN << "udp tproxy SOCKS5 handshake failed: " << ec.message();
-			co_return false;
+			co_return;
 		}
 	}
 
 	if (!backend_endpoint)
 	{
 		XLOG_WARN << "udp tproxy failed to get backend endpoint from proxy_pass";
-		co_return false;
+		co_return;
 	}
 
 	// 保存 backend endpoint, 后续将通过这个 endpoint 将 UDP 数据包转发到 proxy_pass 服务
@@ -3763,7 +3761,7 @@ net::awaitable<bool> proxy_server::do_socks5_associate()
 
 	XLOG_DBG << "udp tproxy control connection closed";
 
-	co_return true;
+	co_return;
 }
 
 net::awaitable<void> proxy_server::udp_tproxy_response_loop(udp_tproxy_flow_ptr flow)
