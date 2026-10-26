@@ -81,8 +81,8 @@ namespace proxy {
 
 		auto socks_version = read<int8_t>(p);
 		BOOST_ASSERT(socks_version == SOCKS_VERSION_5);
-		int nmethods = read<int8_t>(p);
-		if (nmethods <= 0 || nmethods > 255)
+		auto nmethods = read<uint8_t>(p);
+		if (nmethods == 0)
 		{
 			log_conn_error()
 				<< ", unsupported method : "
