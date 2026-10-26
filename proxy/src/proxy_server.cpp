@@ -3675,7 +3675,9 @@ net::awaitable<void> proxy_server::do_socks5_associate()
 	socks_client_option opt;
 
 	opt.target_host = "0.0.0.0";
-	opt.target_port = 21;
+	// RFC 1928: 客户端在 UDP ASSOCIATE 时尚不知道发送数据报所用的
+	// 地址和端口, DST.ADDR/DST.PORT 必须全零.
+	opt.target_port = 0;
 	opt.proxy_hostname = false;
 	opt.command = SOCKS5_CMD_UDP;
 	opt.username = std::string(proxy_pass.user());
