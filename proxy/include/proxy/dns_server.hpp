@@ -198,6 +198,7 @@ namespace proxy {
 			std::string host;      // 服务器主机名（IP 或域名）.
 			uint16_t port { 443 }; // 端口.
 			std::string path;      // 请求路径（不含 query）.
+			std::string host_header; // HTTP Host 头.
 			std::string tls_host;  // TLS 校验与 SNI 使用的主机名.
 		};
 

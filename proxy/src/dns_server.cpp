@@ -1426,6 +1426,7 @@ namespace proxy {
 
 		// TLS 校验与 SNI 使用的主机名：配置了 sni 参数时优先使用.
 		info.tls_host = doh_sni.empty() ? info.host : doh_sni;
+		info.host_header = info.host;
 
 		return info;
 	}
@@ -1654,14 +1655,14 @@ namespace proxy {
 				&(*cur)->stream))
 			{
 				ok = co_await doh_http_post(
-					*plain, info->tls_host, info->path, dns_query, output,
+					*plain, info->host_header, info->path, dns_query, output,
 					&doh_status);
 			}
 			else if (auto* tls = boost::variant2::get_if<
 				net::ssl::stream<tcp::socket>>(&(*cur)->stream))
 			{
 				ok = co_await doh_http_post(
-					*tls, info->tls_host, info->path, dns_query, output,
+					*tls, info->host_header, info->path, dns_query, output,
 					&doh_status);
 			}
 
