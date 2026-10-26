@@ -711,14 +711,22 @@ namespace proxy {
 	net::awaitable<void> proxy_session::idle_timeout(
 		variant_stream_type& s1, variant_stream_type& s2) noexcept
 	{
+		co_await idle_timeout([this, &s1, &s2]()
+		{
+			stream_cancel(s1);
+			stream_cancel(s2);
+		});
+	}
+
+	net::awaitable<void> proxy_session::idle_timeout(
+		std::function<void()> cancel) noexcept
+	{
 		auto executor = co_await net::this_coro::executor;
 		net::steady_timer timer(executor);
 		boost::system::error_code ec;
 
-		// tcp_timeout_ <= 0 表示禁用超时检查, 此时 idle_timeout 永不主动触发超时,
-		// 只等待两个方向的传输都完成(即本协程被并发传输中的或运算取消)或连接被
-		// 关闭后退出. 但若某个方向的 transfer 已因错误退出, 会把 m_transfer_timeout
-		// 重置为 5 秒兜底, 避免另一方向因对端忽略 FIN 而永久挂起.
+		// 超时值 <= 0 表示禁用超时检查, 此时 idle_timeout 永不主动触发超时,
+		// 只等待调用方取消或连接关闭后退出.
 
 		for (; !m_abort;)
 		{
@@ -733,8 +741,7 @@ namespace proxy {
 					// 没有任何方向有数据传输, 超时关闭连接.
 					log_conn_warning() << ", idle timeout: " << last_tick;
 					m_abort = true;
-					stream_cancel(s1);
-					stream_cancel(s2);
+					cancel();
 					co_return;
 				}
 
@@ -745,7 +752,7 @@ namespace proxy {
 			timer.expires_after(std::chrono::seconds(1));
 			co_await timer.async_wait(net_awaitable[ec]);
 
-			// 当两个方向的传输都已完成时, 本协程会被并发传输中的或运算取消,
+			// 当传输完成或连接关闭时, 本协程会被并发传输中的或运算取消,
 			// 此时 async_wait 会以 operation_aborted 返回, 直接退出, 避免连接
 			// 已断开后 session 仍一直存活到空闲超时.
 			if (ec)

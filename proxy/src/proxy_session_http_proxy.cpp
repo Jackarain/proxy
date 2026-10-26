@@ -1376,6 +1376,11 @@ namespace proxy {
 		log_conn_debug()
 			<< ", connect-udp: 101 sent, starting capsule/UDP forwarding";
 
+		stream_expires_never(m_local_socket);
+		m_last_activity.store(0, std::memory_order_relaxed);
+		m_transfer_timeout.store(
+			m_option.udp_timeout_, std::memory_order_relaxed);
+
 		// 开始 capsule ↔ UDP 双向转发.
 		auto self = shared_from_this();
 
@@ -1429,6 +1434,8 @@ namespace proxy {
 						<< ec.message();
 					break;
 				}
+
+				m_last_activity.store(0, std::memory_order_relaxed);
 			}
 
 			// 关闭连接.
@@ -1472,6 +1479,8 @@ namespace proxy {
 						<< ec.message();
 					break;
 				}
+
+				m_last_activity.store(0, std::memory_order_relaxed);
 			}
 
 			m_abort = true;
@@ -1482,11 +1491,17 @@ namespace proxy {
 			co_return;
 		};
 
+		auto cancel_idle = [this, &udp_socket]()
+		{
+			stream_cancel(m_local_socket);
+			boost::system::error_code ignore_ec;
+			udp_socket.close(ignore_ec);
+		};
+
 		// 并发运行 HTTP↔UDP 双向转发.
 		co_await(
-			http_to_udp()
-			&&
-			udp_to_http()
+			(http_to_udp() && udp_to_http()) ||
+			idle_timeout(std::move(cancel_idle))
 		);
 
 		log_conn_debug()
@@ -1776,6 +1791,11 @@ namespace proxy {
 				<< ", connect-udp: 101 sent, "
 				<< "starting capsule/SOCKS5 UDP forwarding";
 
+			stream_expires_never(m_local_socket);
+			m_last_activity.store(0, std::memory_order_relaxed);
+			m_transfer_timeout.store(
+				m_option.udp_timeout_, std::memory_order_relaxed);
+
 			// 7. 启动双向转发.
 			auto self = shared_from_this();
 
@@ -1834,7 +1854,8 @@ namespace proxy {
 			// HTTP → SOCKS5 UDP: 读取 capsule, 提取 UDP payload,
 			// 附加 SOCKS5 UDP 头部, 发送到中继.
 			auto http_to_udp =
-				[this, self, &udp_socket, &socks5_udp_header, socks5_udp_header_size]
+				[this, self, &udp_socket, &socks5_control,
+					&socks5_udp_header, socks5_udp_header_size]
 				() -> net::awaitable<void>
 			{
 				boost::system::error_code ec;
@@ -1888,18 +1909,22 @@ namespace proxy {
 							<< ec.message();
 						break;
 					}
+
+					m_last_activity.store(0, std::memory_order_relaxed);
 				}
 
 				m_abort = true;
 				udp_socket.close(ec);
 				m_local_socket.close(ec);
+				if (socks5_control)
+					stream_cancel(*socks5_control);
 				co_return;
 			};
 
 			// SOCKS5 UDP → HTTP: 从 UDP socket 接收数据,
 			// 解析 SOCKS5 头部, 封装成 capsule 发送到 HTTP 流.
 			auto udp_to_http =
-				[this, self, &udp_socket]()
+				[this, self, &udp_socket, &socks5_control]()
 				-> net::awaitable<void>
 			{
 				boost::system::error_code ec;
@@ -1982,18 +2007,21 @@ namespace proxy {
 						net::buffer(data_start, data_size),
 						net_awaitable[ec]);
 					if (ec) break;
+					m_last_activity.store(0, std::memory_order_relaxed);
 				}
 
 				m_abort = true;
 				udp_socket.close(ec);
 				m_local_socket.close(ec);
+				if (socks5_control)
+					stream_cancel(*socks5_control);
 				co_return;
 			};
 
 			// 保持 TCP 控制连接存活 (SOCKS5 UDP ASSOCIATE
 			// 需要在控制连接存活期间保持有效).
 			auto keep_control_alive =
-				[this, self, &socks5_control]()
+				[this, self, &udp_socket, &socks5_control]()
 				-> net::awaitable<void>
 			{
 				boost::system::error_code ec;
@@ -2013,16 +2041,24 @@ namespace proxy {
 				}
 
 				m_abort = true;
+				udp_socket.close(ec);
+				stream_cancel(m_local_socket);
 				co_return;
+			};
+
+			auto cancel_idle = [this, &udp_socket, &socks5_control]()
+			{
+				stream_cancel(m_local_socket);
+				boost::system::error_code ignore_ec;
+				udp_socket.close(ignore_ec);
+				if (socks5_control)
+					stream_cancel(*socks5_control);
 			};
 
 			// 并发运行三个协程.
 			co_await(
-				http_to_udp()
-				&&
-				udp_to_http()
-				&&
-				keep_control_alive()
+				(http_to_udp() && udp_to_http() && keep_control_alive()) ||
+				idle_timeout(std::move(cancel_idle))
 			);
 
 			log_conn_debug()

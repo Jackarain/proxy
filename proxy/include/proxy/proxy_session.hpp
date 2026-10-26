@@ -75,6 +75,8 @@
 #include <boost/beast/version.hpp>
 #include <boost/beast/core/detail/base64.hpp>
 
+#include <functional>
+
 #ifdef _MSC_VER
 # pragma warning(pop)
 #endif
@@ -748,6 +750,10 @@ namespace proxy {
 		// 当任何一个方向有数据传输时, 超时计时器会被重置.
 		net::awaitable<void> idle_timeout(
 			variant_stream_type& s1, variant_stream_type& s2) noexcept;
+
+		// 空闲超时检测协程, 超时时调用 cancel 关闭相关资源.
+		net::awaitable<void> idle_timeout(
+			std::function<void()> cancel) noexcept;
 
 	private:
 		// m_executor 保存当前 io_context 的 executor.
