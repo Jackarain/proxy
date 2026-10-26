@@ -10,6 +10,7 @@
 #define INCLUDE__2026_10_25__WEBSOCKET_TUNNEL_HPP
 
 #include "proxy/authority.hpp"
+#include "proxy/rfc9298_capsule.hpp"
 #include "proxy/use_awaitable.hpp"
 #include "proxy/strutil.hpp"
 
@@ -63,6 +64,8 @@ namespace ws_tunnel {
 	// 单个 WebSocket 消息的上限. 首字节为操作码, 因而有效载荷为 64 KiB - 1.
 	inline constexpr std::size_t max_message_size = 64 * 1024;
 	inline constexpr std::size_t max_data_size = max_message_size - 1;
+	inline constexpr std::size_t max_udp_message_size =
+		datagram_capsule_max_size;
 
 	using authority::format_authority;
 	using authority::max_authority_size;
@@ -260,7 +263,7 @@ namespace ws_tunnel {
 			std::string_view subprotocol = proxy_connect_subprotocol)
 		{
 			boost::system::error_code ec;
-			configure();
+			configure(subprotocol == proxy_connect_udp_subprotocol);
 			set_accept_decorator(std::string(subprotocol));
 			co_await ws_->async_accept(req, net_awaitable[ec]);
 			co_return ec;
@@ -303,7 +306,7 @@ namespace ws_tunnel {
 					buffer.prepare(prefix_size), prefix));
 			}
 
-			configure();
+			configure(subprotocol == proxy_connect_udp_subprotocol);
 			set_accept_decorator(std::string(subprotocol));
 			co_await ws_->async_accept(buffer.data(), net_awaitable[ec]);
 			co_return ec;
@@ -317,7 +320,7 @@ namespace ws_tunnel {
 			auto target = std::move(options.target);
 			const bool datagram = options.datagram;
 
-			configure();
+			configure(datagram);
 			ws_->set_option(websocket::stream_base::decorator(
 				[options = std::move(options), datagram](
 					websocket::request_type& req)
@@ -428,10 +431,11 @@ namespace ws_tunnel {
 		}
 
 	private:
-		void configure()
+		void configure(bool datagram)
 		{
 			ws_->binary(true);
-			ws_->read_message_max(max_message_size);
+			ws_->read_message_max(datagram ?
+				max_udp_message_size : max_message_size);
 		}
 
 		void set_accept_decorator(std::string subprotocol)

@@ -651,7 +651,7 @@ namespace {
 			co_return;
 		}
 
-		std::string payload(65000, 'x');
+		std::string payload(max_udp_payload_size, 'x');
 		std::vector<uint8_t> capsule(
 			datagram_capsule_header_size(payload.size()) + payload.size());
 		auto size = encode_datagram_capsule(payload.data(), payload.size(),
@@ -734,7 +734,7 @@ namespace {
 		BOOST_TEST(state.request_header == "127.0.0.1:53");
 		BOOST_TEST(state.request_protocol ==
 			ws_tunnel::proxy_connect_udp_subprotocol);
-		BOOST_TEST(state.server_payload.size() == 65000u);
+		BOOST_TEST(state.server_payload.size() == max_udp_payload_size);
 		BOOST_TEST(state.client_payload == "udp-reply");
 	}
 
