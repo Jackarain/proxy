@@ -618,6 +618,8 @@ namespace proxy {
 		udp::endpoint remote_endp;
 		udp::endpoint final_remote_endp;
 		std::string latest_domain;
+		uint16_t latest_port = 0;
+		bool has_latest_target = false;
 
 		// SOCKS5 UDP 最大头部长度: RSV(2) + FRAG(1) + ATYP(1) + 地址(最大255) + PORT(2)
 		static constexpr size_t udp_max_header_size = 261;
@@ -734,7 +736,8 @@ namespace proxy {
 						domain.push_back(read<int8_t>(rp));
 					auto port = read<uint16_t>(rp);
 
-					if (latest_domain != domain)
+					if (!has_latest_target ||
+						latest_domain != domain || latest_port != port)
 					{
 						auto executor = co_await switch_to_backend_executor();
 
@@ -756,6 +759,8 @@ namespace proxy {
 
 						final_remote_endp = targets.begin()->endpoint();
 						latest_domain = domain;
+						latest_port = port;
+						has_latest_target = true;
 					}
 				}
 				else if (atyp == SOCKS5_ATYP_IPV6)
