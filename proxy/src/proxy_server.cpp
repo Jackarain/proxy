@@ -3866,10 +3866,12 @@ void proxy_server::send_response_to_client(udp_tproxy_flow_ptr flow, const char*
 	//  | 2  |  1   |  1   | Variable |    2      | Variable |
 	//  +----+------+------+----------+-----------+----------+
 
-	const char* p = data;
+	// 跳过 RSV(2)
+	if (read<uint16_t>(data) != 0)
+		return;
 
-	// 跳过 RSV(2) + FRAG(1)
-	read<uint16_t>(p);
+	// 跳过 FRAG(1)
+	const char* p = data + 2;
 	if (read<uint8_t>(p) != 0)
 		return; // 不支持分片
 
@@ -3878,12 +3880,11 @@ void proxy_server::send_response_to_client(udp_tproxy_flow_ptr flow, const char*
 	switch (read<uint8_t>(p))
 	{
 	case proxy::SOCKS5_ATYP_IPV4:
-		p += 4; header_size = 10; break; // 4+2+4
+		header_size = 10; break; // 4+2+4
 	case proxy::SOCKS5_ATYP_DOMAINNAME:
-		header_size = 7 + static_cast<uint8_t>(*p);
-		p += 1 + static_cast<uint8_t>(*p); break; // len(1)+domain
+		header_size = 7 + static_cast<uint8_t>(*p); break; // 4+len(1)+domain+2
 	case proxy::SOCKS5_ATYP_IPV6:
-		p += 16; header_size = 22; break; // 4+2+16
+		header_size = 22; break; // 4+2+16
 	default:
 		return; // 未知地址类型
 	}
