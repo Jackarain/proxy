@@ -3294,6 +3294,9 @@ void proxy_server::backend_thread_run() noexcept
 bool proxy_server::parse_udp_tproxy_packet(struct msghdr& msg,
 	udp::endpoint& client_ep, udp::endpoint& original_dest)
 {
+	if ((msg.msg_flags & MSG_CTRUNC) || !msg.msg_name)
+		return false;
+
 	// 提取原始目标地址, IP_ORIGDSTADDR / IPV6_ORIGDSTADDR 处理逻辑相同.
 	for (auto* cmsg = CMSG_FIRSTHDR(&msg); cmsg;
 		 cmsg = CMSG_NXTHDR(&msg, cmsg))
@@ -3303,9 +3306,11 @@ bool proxy_server::parse_udp_tproxy_packet(struct msghdr& msg,
 			(cmsg->cmsg_level == IPPROTO_IPV6 &&
 			cmsg->cmsg_type == IPV6_ORIGDSTADDR))
 		{
-			const auto& ss = *reinterpret_cast<const sockaddr_storage*>(
-				CMSG_DATA(cmsg));
-			original_dest = sockaddr_to_udp_endpoint(ss);
+			const auto data_len = cmsg->cmsg_len > CMSG_LEN(0)
+				? cmsg->cmsg_len - CMSG_LEN(0) : 0;
+			original_dest = sockaddr_to_udp_endpoint(
+				reinterpret_cast<const sockaddr*>(CMSG_DATA(cmsg)),
+				data_len);
 			break;
 		}
 	}
@@ -3314,8 +3319,9 @@ bool proxy_server::parse_udp_tproxy_packet(struct msghdr& msg,
 		return false;
 
 	// 提取客户端端点.
-	auto* ss = (struct sockaddr_storage*)msg.msg_name;
-	client_ep = sockaddr_to_udp_endpoint(*ss);
+	client_ep = sockaddr_to_udp_endpoint(
+		reinterpret_cast<const sockaddr*>(msg.msg_name),
+		msg.msg_namelen);
 	if (client_ep.address().is_unspecified())
 		return false;
 

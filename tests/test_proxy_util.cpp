@@ -169,6 +169,44 @@ namespace {
 		auto endpoint = sockaddr_to_udp_endpoint(storage);
 		BOOST_TEST(endpoint.port() == 0);
 	}
+
+	BOOST_AUTO_TEST_CASE(sockaddr_to_udp_endpoint_bounded_ipv4)
+	{
+		sockaddr_in addr4{};
+		addr4.sin_family = AF_INET;
+		addr4.sin_addr.s_addr = htonl(0xc0000201);
+		addr4.sin_port = htons(5353);
+
+		auto endpoint = sockaddr_to_udp_endpoint(
+			reinterpret_cast<const sockaddr*>(&addr4), sizeof(addr4));
+		BOOST_TEST(endpoint.address().to_string() == "192.0.2.1");
+		BOOST_TEST(endpoint.port() == 5353);
+
+		auto short_input = sockaddr_to_udp_endpoint(
+			reinterpret_cast<const sockaddr*>(&addr4), sizeof(addr4) - 1);
+		BOOST_TEST(short_input.address().is_unspecified());
+		BOOST_TEST(short_input.port() == 0);
+	}
+
+	BOOST_AUTO_TEST_CASE(sockaddr_to_udp_endpoint_bounded_ipv6)
+	{
+		sockaddr_in6 addr6{};
+		addr6.sin6_family = AF_INET6;
+		addr6.sin6_addr.s6_addr[0] = 0x20;
+		addr6.sin6_addr.s6_addr[1] = 0x01;
+		addr6.sin6_addr.s6_addr[15] = 1;
+		addr6.sin6_port = htons(8443);
+
+		auto endpoint = sockaddr_to_udp_endpoint(
+			reinterpret_cast<const sockaddr*>(&addr6), sizeof(addr6));
+		BOOST_TEST(endpoint.address().to_string() == "2001::1");
+		BOOST_TEST(endpoint.port() == 8443);
+
+		auto short_input = sockaddr_to_udp_endpoint(
+			reinterpret_cast<const sockaddr*>(&addr6), sizeof(addr6) - 1);
+		BOOST_TEST(short_input.address().is_unspecified());
+		BOOST_TEST(short_input.port() == 0);
+	}
 #endif
 
 	BOOST_AUTO_TEST_SUITE_END()

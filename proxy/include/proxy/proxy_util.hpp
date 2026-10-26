@@ -208,19 +208,32 @@ namespace proxy {
 
 	//////////////////////////////////////////////////////////////////////////
 
-	// 将 sockaddr_storage 转换为 udp::endpoint.
-	inline udp::endpoint sockaddr_to_udp_endpoint(const sockaddr_storage& addr) noexcept
+	// 将长度受限的 sockaddr 转换为 udp::endpoint.
+	// 长度不足或地址族未知时返回未指定端点.
+	inline udp::endpoint sockaddr_to_udp_endpoint(
+		const sockaddr* addr, std::size_t len) noexcept
 	{
-		if (addr.ss_family == AF_INET)
+		if (!addr || len < sizeof(addr->sa_family))
+			return {};
+
+		if (addr->sa_family == AF_INET)
 		{
-			const auto& addr4 = reinterpret_cast<const sockaddr_in&>(addr);
+			if (len < sizeof(sockaddr_in))
+				return {};
+
+			sockaddr_in addr4{};
+			std::memcpy(&addr4, addr, sizeof(addr4));
 			return udp::endpoint(
 				net::ip::address_v4(ntohl(addr4.sin_addr.s_addr)),
 				ntohs(addr4.sin_port));
 		}
-		if (addr.ss_family == AF_INET6)
+		if (addr->sa_family == AF_INET6)
 		{
-			const auto& addr6 = reinterpret_cast<const sockaddr_in6&>(addr);
+			if (len < sizeof(sockaddr_in6))
+				return {};
+
+			sockaddr_in6 addr6{};
+			std::memcpy(&addr6, addr, sizeof(addr6));
 			net::ip::address_v6::bytes_type bt;
 			std::memcpy(bt.data(), &addr6.sin6_addr, 16);
 			return udp::endpoint(
@@ -229,6 +242,13 @@ namespace proxy {
 		}
 
 		return {};
+	}
+
+	// 将 sockaddr_storage 转换为 udp::endpoint.
+	inline udp::endpoint sockaddr_to_udp_endpoint(const sockaddr_storage& addr) noexcept
+	{
+		return sockaddr_to_udp_endpoint(
+			reinterpret_cast<const sockaddr*>(&addr), sizeof(addr));
 	}
 
 	//////////////////////////////////////////////////////////////////////////
