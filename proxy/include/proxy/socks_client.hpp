@@ -302,14 +302,13 @@ namespace proxy {
 			bytes = co_await net::async_read(
 				socket,
 				response,
-				net::transfer_exactly(10),
+				net::transfer_exactly(4),
 				net_awaitable[ec]);
 			if (ec) co_return endp;
-			BOOST_ASSERT(response.size() == bytes);
 
 			resp = static_cast<const char*>(response.data().data());
 			version = read<uint8_t>(resp);
-			/*auto rep = */read<uint8_t>(resp);
+			read<uint8_t>(resp);
 			read<uint8_t>(resp);    // skip RSV.
 			int atyp = read<uint8_t>(resp);
 
@@ -325,24 +324,35 @@ namespace proxy {
 				ec = errc::socks_general_failure;
 				co_return endp;
 			}
-			else if (atyp == SOCKS5_ATYP_DOMAINNAME)
-			{
-				auto domain_length = read<uint8_t>(resp);
 
-				bytes = co_await net::async_read(socket,
-					response,
-					net::transfer_exactly(domain_length - 3),
-					net_awaitable[ec]);
-				if (ec) co_return endp;
+			size_t address_size = 0;
+			uint8_t domain_length = 0;
+			if (atyp == SOCKS5_ATYP_IPV4)
+			{
+				address_size = 6;
 			}
 			else if (atyp == SOCKS5_ATYP_IPV6)
 			{
+				address_size = 18;
+			}
+			else
+			{
 				bytes = co_await net::async_read(socket,
 					response,
-					net::transfer_exactly(12),
+					net::transfer_exactly(1),
 					net_awaitable[ec]);
 				if (ec) co_return endp;
+
+				resp = static_cast<const char*>(response.data().data()) + 4;
+				domain_length = read<uint8_t>(resp);
+				address_size = static_cast<size_t>(domain_length) + 2;
 			}
+
+			bytes = co_await net::async_read(socket,
+				response,
+				net::transfer_exactly(address_size),
+				net_awaitable[ec]);
+			if (ec) co_return endp;
 
 			resp = static_cast<const char*>(response.data().data());
 			read<uint8_t>(resp);
@@ -352,11 +362,7 @@ namespace proxy {
 
 			if (atyp == SOCKS5_ATYP_DOMAINNAME)
 			{
-				auto domain_length = read<uint8_t>(resp);
-
-				std::string domain;
-				for (int i = 0; i < domain_length; i++)
-					domain.push_back(read<uint8_t>(resp));
+				resp += 1 + domain_length;
 				port = read<uint16_t>(resp);
 			}
 			else if (atyp == SOCKS5_ATYP_IPV4)
