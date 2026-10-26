@@ -5,6 +5,7 @@ add_library(libproxy STATIC)
 
 target_sources(libproxy
 	PRIVATE
+	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/authority.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/async_connect.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/variant_stream.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/default_cert.hpp
