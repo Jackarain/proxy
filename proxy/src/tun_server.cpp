@@ -1668,12 +1668,11 @@ namespace proxy {
 
 		auto& http_sock = *m_control;
 
-		beast::flat_buffer resp_buf;
 		http::response_parser<http::empty_body> resp_parser;
 		resp_parser.skip(true);
 
 		co_await http::async_read_header(
-			http_sock, resp_buf, resp_parser, net_awaitable[ec]);
+			http_sock, m_capsule_buffer, resp_parser, net_awaitable[ec]);
 		if (ec)
 		{
 			XLOG_WARN << "tun udp read connect-udp response: " << ec.message();
@@ -1812,7 +1811,8 @@ namespace proxy {
 			else
 			{
 				auto [capsule_type, capsule_value] = co_await
-					read_capsule_from_stream(*m_control, ec);
+					read_capsule_from_stream(
+						*m_control, m_capsule_buffer, ec);
 				if (ec)
 					break;
 

@@ -351,6 +351,9 @@ namespace proxy {
 		// m_control 保存 SOCKS5 ASSOCIATE 控制连接（代理模式）.
 		std::optional<variant_stream_type> m_control;
 
+		// m_capsule_buffer 保存读取 CONNECT-UDP 响应头后剩余的 capsule 数据.
+		beast::flat_buffer m_capsule_buffer;
+
 		// m_backend_endp 保存代理返回的 UDP 中继地址.
 		net::ip::udp::endpoint m_backend_endp;
 

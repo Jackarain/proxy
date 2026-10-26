@@ -4388,8 +4388,8 @@ net::awaitable<void> proxy_server::udp_tproxy_http_udp_loop(udp_tproxy_flow_ptr 
 	while (!m_abort)
 	{
 		// 读取一个完整 capsule (type + value).
-		auto [capsule_type, capsule_value] =
-			co_await read_capsule_from_stream(http_sock, ec);
+			auto [capsule_type, capsule_value] = co_await
+				read_capsule_from_stream(http_sock, resp_buf, ec);
 		if (ec)
 			break;
 

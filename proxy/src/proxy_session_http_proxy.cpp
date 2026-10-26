@@ -1158,7 +1158,7 @@ namespace proxy {
 			while (!m_abort)
 			{
 				auto [type, value] = co_await read_capsule_from_stream(
-					m_local_socket, ec);
+					m_local_socket, m_local_buffer, ec);
 				if (ec)
 					break;
 
@@ -1398,7 +1398,8 @@ namespace proxy {
 			{
 				// 读取一个完整 capsule (type + value).
 				auto [capsule_type, capsule_value] = co_await
-					read_capsule_from_stream(m_local_socket, ec);
+					read_capsule_from_stream(
+						m_local_socket, m_local_buffer, ec);
 				if (ec)
 				{
 					log_conn_warning()
@@ -1832,7 +1833,8 @@ namespace proxy {
 				{
 					// 读取一个完整 capsule (type + value).
 					auto [capsule_type, capsule_value] = co_await
-						read_capsule_from_stream(m_local_socket, ec);
+						read_capsule_from_stream(
+							m_local_socket, m_local_buffer, ec);
 					if (ec) break;
 
 					// 仅处理 DATAGRAM capsule.

@@ -16,6 +16,7 @@
 #include <boost/asio/readable_pipe.hpp>
 #include <boost/asio/writable_pipe.hpp>
 #include <boost/asio/write.hpp>
+#include <boost/beast/core/flat_buffer.hpp>
 #include <boost/test/unit_test.hpp>
 
 #include <array>
@@ -255,6 +256,90 @@ namespace {
 		BOOST_TEST(!ec);
 		BOOST_TEST(type == udp_proxy_capsule_type);
 		BOOST_TEST(std::string(decode_datagram_capsule(value)) == payload);
+	}
+
+	BOOST_AUTO_TEST_CASE(read_capsule_consumes_buffered_bytes_first)
+	{
+		net::io_context ioc;
+		net::readable_pipe reader(ioc);
+		net::writable_pipe writer(ioc);
+		net::connect_pipe(reader, writer);
+
+		const std::string payload = "buffered capsule payload";
+		std::vector<uint8_t> encoded(
+			datagram_capsule_header_size(payload.size()) + payload.size());
+		auto encoded_len = encode_datagram_capsule(
+			payload.data(), payload.size(), encoded.data(), encoded.size());
+		auto buffered_len = datagram_capsule_header_size(payload.size()) + 5;
+		BOOST_TEST(buffered_len < encoded_len);
+
+		boost::beast::flat_buffer buffer;
+		buffer.commit(net::buffer_copy(
+			buffer.prepare(buffered_len),
+			net::buffer(encoded.data(), buffered_len)));
+		net::write(writer,
+			net::buffer(encoded.data() + buffered_len, encoded_len - buffered_len));
+
+		boost::system::error_code ec;
+		uint64_t type = 0;
+		std::vector<char> value;
+		bool finished = false;
+
+		net::co_spawn(reader.get_executor(),
+			[&]() -> net::awaitable<void>
+			{
+				auto result = co_await
+					read_capsule_from_stream(reader, buffer, ec);
+				type = result.first;
+				value = std::move(result.second);
+				finished = true;
+				co_return;
+			}, net::detached);
+
+		ioc.run();
+
+		BOOST_TEST(finished);
+		BOOST_TEST(!ec);
+		BOOST_TEST(buffer.size() == 0u);
+		BOOST_TEST(type == udp_proxy_capsule_type);
+		BOOST_TEST(std::string(decode_datagram_capsule(value)) == payload);
+	}
+
+	BOOST_AUTO_TEST_CASE(read_capsule_from_buffer_without_stream_read)
+	{
+		net::io_context ioc;
+		net::readable_pipe reader(ioc);
+
+		const std::string payload = "fully buffered";
+		std::vector<uint8_t> encoded(
+			datagram_capsule_header_size(payload.size()) + payload.size());
+		auto encoded_len = encode_datagram_capsule(
+			payload.data(), payload.size(), encoded.data(), encoded.size());
+
+		boost::beast::flat_buffer buffer;
+		buffer.commit(net::buffer_copy(
+			buffer.prepare(encoded_len), net::buffer(encoded)));
+
+		boost::system::error_code ec;
+		bool finished = false;
+
+		net::co_spawn(reader.get_executor(),
+			[&]() -> net::awaitable<void>
+			{
+				auto result = co_await
+					read_capsule_from_stream(reader, buffer, ec);
+				BOOST_TEST(result.first == udp_proxy_capsule_type);
+				BOOST_TEST(std::string(
+					decode_datagram_capsule(result.second)) == payload);
+				finished = true;
+				co_return;
+			}, net::detached);
+
+		ioc.run();
+
+		BOOST_TEST(finished);
+		BOOST_TEST(!ec);
+		BOOST_TEST(buffer.size() == 0u);
 	}
 
 	BOOST_AUTO_TEST_CASE(read_capsule_rejects_oversized_length)

@@ -137,6 +137,51 @@ namespace proxy {
 	// 从流中读取一个 QUIC 变长整数 (varint), 用于 RFC 9298 capsule 协议解析.
 	// 注意: 需要调用方已包含 proxy_stream.hpp 和 use_awaitable.hpp.
 	// 返回读取到的值, ec 非零表示读取失败.
+	template <typename Stream, typename DynamicBuffer>
+	inline net::awaitable<void> read_capsule_bytes(Stream& stream,
+		DynamicBuffer& buffer, void* data, std::size_t len,
+		boost::system::error_code& ec)
+	{
+		auto* out = static_cast<uint8_t*>(data);
+		auto copied = net::buffer_copy(
+			net::buffer(out, len), buffer.data());
+		buffer.consume(copied);
+
+		if (copied < len)
+		{
+			co_await net::async_read(stream,
+				net::buffer(out + copied, len - copied),
+				net_awaitable[ec]);
+		}
+
+		co_return;
+	}
+
+	template <typename Stream, typename DynamicBuffer>
+	inline net::awaitable<uint64_t>
+	read_varint_from_stream(Stream& stream, DynamicBuffer& buffer,
+		boost::system::error_code& ec)
+	{
+		uint8_t buf[8];
+
+		co_await read_capsule_bytes(stream, buffer, buf, 1, ec);
+		if (ec)
+			co_return 0;
+
+		uint8_t prefix = buf[0] >> 6;
+		size_t len = 1 << prefix;
+
+		if (len > 1)
+		{
+			co_await read_capsule_bytes(
+				stream, buffer, buf + 1, len - 1, ec);
+			if (ec)
+				co_return 0;
+		}
+
+		co_return varint_int_decode(buf).second;
+	}
+
 	template <typename Stream>
 	inline net::awaitable<uint64_t>
 	read_varint_from_stream(Stream& stream, boost::system::error_code& ec)
@@ -273,6 +318,42 @@ namespace proxy {
 
 	// 从流中读取一个完整 capsule, 返回 {capsule type, capsule value}.
 	// capsule 长度超过上限时置 ec 为 invalid_argument.
+	template <typename Stream, typename DynamicBuffer>
+	inline net::awaitable<std::pair<uint64_t, std::vector<char>>>
+	read_capsule_from_stream(Stream& stream, DynamicBuffer& buffer,
+		boost::system::error_code& ec)
+	{
+		using capsule_pair = std::pair<uint64_t, std::vector<char>>;
+		ec = {};
+
+		auto capsule_type = co_await
+			read_varint_from_stream(stream, buffer, ec);
+		if (ec)
+			co_return capsule_pair{};
+
+		auto capsule_length = co_await
+			read_varint_from_stream(stream, buffer, ec);
+		if (ec)
+			co_return capsule_pair{};
+
+		if (capsule_length > datagram_capsule_max_length)
+		{
+			ec = net::error::invalid_argument;
+			co_return capsule_pair{};
+		}
+
+		std::vector<char> value(static_cast<size_t>(capsule_length));
+		if (capsule_length > 0)
+		{
+			co_await read_capsule_bytes(
+				stream, buffer, value.data(), value.size(), ec);
+			if (ec)
+				co_return capsule_pair{};
+		}
+
+		co_return capsule_pair{ capsule_type, std::move(value) };
+	}
+
 	template <typename Stream>
 	inline net::awaitable<std::pair<uint64_t, std::vector<char>>>
 	read_capsule_from_stream(Stream& stream, boost::system::error_code& ec)
