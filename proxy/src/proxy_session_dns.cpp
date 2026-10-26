@@ -10,6 +10,7 @@
 
 #include "proxy/proxy_session.hpp"
 #include "proxy/async_connect.hpp"
+#include "proxy/authority.hpp"
 #include "proxy/doh_http.hpp"
 #include "proxy/dns_server.hpp"
 #include "proxy/http_error_body.hpp"
@@ -739,7 +740,8 @@ namespace proxy {
 
 		int doh_status = 0;
 		if (!co_await doh_http_post(
-			ssl_stream, doh_host, doh_path, dns_query, output, &doh_status))
+			ssl_stream, authority::format_authority(doh_host, doh_port),
+			doh_path, dns_query, output, &doh_status))
 		{
 			if (doh_status != 0)
 				log_conn_warning()
