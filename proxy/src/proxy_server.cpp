@@ -3434,7 +3434,7 @@ net::awaitable<void> proxy_server::udp_tproxy_socks5_connect() noexcept
 net::awaitable<std::optional<tcp::resolver::results_type>>
 proxy_server::resolve_proxy_pass(const boost::urls::url& proxy_pass)
 {
-	auto proxy_host = std::string(proxy_pass.host());
+	auto proxy_host = std::string(proxy_pass.host_address());
 	uint16_t proxy_port = 0;
 
 	if (proxy_pass.port_number() == 0)

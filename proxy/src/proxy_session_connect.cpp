@@ -343,7 +343,7 @@ namespace proxy {
 		if (!m_proxy_pass)
 			co_return targets;
 
-		auto proxy_host = std::string(m_proxy_pass->host());
+		auto proxy_host = std::string(m_proxy_pass->host_address());
 		uint16_t proxy_port_number = 0;
 
 		if (m_proxy_pass->port_number() == 0)
