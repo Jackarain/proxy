@@ -2029,10 +2029,12 @@ namespace proxy {
 		}
 
 		// 将 m_remote_socket 初始化为 TCP 流类型.
+		const bool use_ssl = m_option.proxy_pass_use_ssl_ ||
+			proxy_scheme_use_ssl(scheme);
 		m_remote_socket = std::move(
 			co_await instantiate_proxy_pass(
 				std::move(remote_socket),
-				m_option.proxy_pass_use_ssl_));
+				use_ssl));
 
 		// 转发到上游前替换下游代理认证信息.
 		auto upstream_req = req;
