@@ -248,6 +248,31 @@ namespace {
 		BOOST_TEST(!is_connect_udp_upgrade_response(not_switching));
 	}
 
+	BOOST_AUTO_TEST_CASE(connect_udp_upgrade_request_validation)
+	{
+		using namespace boost::beast::http;
+
+		request<empty_body> req{ verb::get, "/", 11 };
+		req.set(field::connection, "keep-alive, Upgrade");
+		req.set(field::upgrade, " Connect-UDP ");
+		BOOST_TEST(is_connect_udp_upgrade_request(req));
+
+		req.set(field::connection, "notupgrade");
+		BOOST_TEST(!is_connect_udp_upgrade_request(req));
+
+		req.set(field::connection, "Upgrade");
+		req.method(verb::post);
+		BOOST_TEST(!is_connect_udp_upgrade_request(req));
+
+		req.method(verb::get);
+		req.set(field::upgrade, "websocket");
+		BOOST_TEST(!is_connect_udp_upgrade_request(req));
+
+		req.set(field::upgrade, "connect-udp");
+		req.insert(field::upgrade, "connect-udp");
+		BOOST_TEST(!is_connect_udp_upgrade_request(req));
+	}
+
 	BOOST_AUTO_TEST_CASE(read_capsule_from_stream_valid)
 	{
 		net::io_context ioc;

@@ -112,6 +112,33 @@ namespace proxy {
 		return false;
 	}
 
+	// 校验 RFC 9298 HTTP/1.1 CONNECT-UDP 请求. Capsule-Protocol 是
+	// SHOULD 头, Upgrade token 本身已足以标识 Capsule Protocol.
+	template <typename Body, typename Fields>
+	inline bool is_connect_udp_upgrade_request(
+		const boost::beast::http::request<Body, Fields>& req) noexcept
+	{
+		using namespace boost::beast::http;
+
+		if (req.method() != verb::get ||
+			req.count(field::upgrade) != 1)
+			return false;
+
+		auto upgrade = req.find(field::upgrade);
+		if (!detail::ascii_iequals(
+			detail::trim_ows(upgrade->value()), "connect-udp"))
+			return false;
+
+		for (auto it = req.begin(); it != req.end(); ++it)
+		{
+			if (it->name() == field::connection &&
+				detail::header_has_token(it->value(), "upgrade"))
+				return true;
+		}
+
+		return false;
+	}
+
 
 	//////////////////////////////////////////////////////////////////////////
 	// QUIC 可变长度整数编码/解码 (RFC 9298 capsule 协议)

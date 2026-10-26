@@ -215,31 +215,8 @@ namespace proxy {
 			auto [scheme, user, passwd, host, port, resource] = *expect_url;
 			std::string request_host(host);
 
-			bool http_connect_udp = false;
-
 			// RFC 9298 CONNECT-UDP 检测: 检查是否为 connect-udp upgrade 请求.
-			{
-				auto upgrade = req.find("Upgrade");
-				auto capsule_proto = req.find("Capsule-Protocol");
-				auto connection = req.find("Connection");
-
-				if (mth == "GET" &&
-					upgrade != req.end() &&
-					capsule_proto != req.end() &&
-					connection != req.end())
-				{
-					std::string upgrade_val = std::string(upgrade->value());
-					std::string conn_val = std::string(connection->value());
-					std::string cap_val = std::string(capsule_proto->value());
-
-					if (boost::iequals(upgrade_val, "connect-udp") &&
-						boost::icontains(conn_val, "upgrade") &&
-						cap_val == "?1")
-					{
-						http_connect_udp = true;
-					}
-				}
-			}
+			bool http_connect_udp = is_connect_udp_upgrade_request(req);
 
 			if (http_connect_udp)
 			{
