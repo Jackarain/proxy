@@ -402,12 +402,14 @@ namespace proxy {
 	{
 		// 解析 DoH 目标（未配置 dns_doh_ 时把 proxy_pass 当作 DoH 服务）.
 		const auto& proxy_url = *m_option.proxy_pass_;
+		const bool proxy_uses_ssl = proxy_use_ssl(proxy_url, m_option);
 		m_doh_host = std::string(proxy_url.host_address());
 		m_doh_port = proxy_url.port_number();
 		if (m_doh_port == 0)
 			m_doh_port = urls::default_port(proxy_url.scheme_id());
 		if (m_doh_port == 0)
 			m_doh_port = 443;
+		m_doh_https = proxy_uses_ssl;
 		m_doh_path = "/dns-query";
 
 		if (!m_option.dns_doh_.empty())
@@ -435,7 +437,8 @@ namespace proxy {
 			proxy_port = proxy_pass_default_port(proxy_url);
 		auto doh_host = boost::to_lower_copy(m_doh_host);
 		m_doh_via_proxy = !doh_host.empty() &&
-			(doh_host != proxy_host || m_doh_port != proxy_port);
+			(doh_host != proxy_host || m_doh_port != proxy_port ||
+				m_doh_https != proxy_uses_ssl);
 		m_doh_authority = authority::format_authority(m_doh_host, m_doh_port);
 
 		m_auth_user = std::string(proxy_url.user());
