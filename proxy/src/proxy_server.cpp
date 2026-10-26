@@ -739,8 +739,6 @@ void proxy_server::init_acceptor() noexcept
 	{
 		for (const auto& [tcp_endp, v6only] : m_option.listens_)
 		{
-			(void)v6only;
-
 			if (!m_option.proxy_pass_->scheme().starts_with("socks5") &&
 				!m_option.proxy_pass_->scheme().starts_with("http") &&
 				!proxy_scheme_is_websocket(m_option.proxy_pass_->scheme()))
@@ -763,6 +761,17 @@ void proxy_server::init_acceptor() noexcept
 
 			udp_sock.set_option(
 				net::socket_base::reuse_address(true), ec);
+
+			if (v6only)
+			{
+				udp_sock.set_option(net::ip::v6_only(true), ec);
+				if (ec)
+				{
+					XLOG_ERR << "UDP server listen "
+						<< "set v6_only failed: " << ec.message();
+					continue;
+				}
+			}
 
 			// 设置 IP_RECVORIGDSTADDR 以接收原始目标地址.
 			int opt = 1;
