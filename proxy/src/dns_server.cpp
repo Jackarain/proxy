@@ -9,6 +9,7 @@
 //
 
 #include "proxy/dns_server.hpp"
+#include "proxy/authority.hpp"
 #include "proxy/proxy_util.hpp"
 #include "proxy/socks_io.hpp"
 
@@ -1407,10 +1408,11 @@ namespace proxy {
 
 		doh_url_info info;
 		info.scheme = std::string(u->scheme());
-		info.host = std::string(u->encoded_host());
+		info.host = std::string(u->host_address());
 		info.port = u->port_number();
 		if (info.port == 0)
 			info.port = boost::urls::default_port(u->scheme_id());
+		info.host_header = authority::format_authority(info.host, info.port);
 
 		// 请求路径（不含 query）.
 		info.path = "/dns-query";
@@ -1426,7 +1428,6 @@ namespace proxy {
 
 		// TLS 校验与 SNI 使用的主机名：配置了 sni 参数时优先使用.
 		info.tls_host = doh_sni.empty() ? info.host : doh_sni;
-		info.host_header = info.host;
 
 		return info;
 	}

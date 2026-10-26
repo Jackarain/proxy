@@ -195,7 +195,7 @@ namespace proxy {
 		struct doh_url_info
 		{
 			std::string scheme;    // 上游协议: http 或 https.
-			std::string host;      // 服务器主机名（IP 或域名）.
+			std::string host;      // 服务器主机名（IP 或域名，IPv6 不带方括号）.
 			uint16_t port { 443 }; // 端口.
 			std::string path;      // 请求路径（不含 query）.
 			std::string host_header; // HTTP Host 头.
