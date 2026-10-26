@@ -212,7 +212,8 @@ namespace proxy {
 		// 构造 RFC 9298 CONNECT-UDP 请求（absolute-form URI）.
 		http::request<http::empty_body> build_connect_udp_request(
 			const urls::url& proxy_url,
-			const net::ip::udp::endpoint& target)
+			const net::ip::udp::endpoint& target,
+			bool use_ssl)
 		{
 			std::string proxy_host(proxy_url.encoded_host());
 			uint16_t proxy_port = proxy_url.port_number();
@@ -224,7 +225,8 @@ namespace proxy {
 				boost::replace_all(target_host, ":", "%3A");
 
 			std::string uri =
-				"https://" + proxy_host + ":" + std::to_string(proxy_port) +
+				std::string(use_ssl ? "https://" : "http://") +
+				proxy_host + ":" + std::to_string(proxy_port) +
 				"/.well-known/masque/udp/" + target_host + "/" +
 				std::to_string(target.port()) + "/";
 
@@ -1644,7 +1646,8 @@ namespace proxy {
 		boost::system::error_code ec;
 
 		const auto& proxy_url = *m_option.proxy_pass_;
-		auto req = build_connect_udp_request(proxy_url, m_target);
+		auto req = build_connect_udp_request(
+			proxy_url, m_target, proxy_use_ssl(proxy_url, m_option));
 
 		auto& http_sock = *m_control;
 

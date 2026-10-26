@@ -4220,7 +4220,8 @@ net::awaitable<void> proxy_server::udp_tproxy_http_udp_loop(udp_tproxy_flow_ptr 
 
 	// 使用 boost.beast 构建 HTTP 请求.
 	std::string target =
-		"https://" + proxy_host + ":" + std::to_string(proxy_port) +
+		std::string(use_ssl ? "https://" : "http://") +
+		proxy_host + ":" + std::to_string(proxy_port) +
 		"/.well-known/masque/udp/" + target_host + "/" +
 		std::to_string(target_port) + "/";
 
