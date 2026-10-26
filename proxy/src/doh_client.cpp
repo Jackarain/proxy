@@ -430,8 +430,12 @@ namespace proxy {
 		// 与 proxy_pass 同服务为直连 DoH，否则经代理 CONNECT 隧道转发.
 		auto proxy_host = boost::to_lower_copy(
 			std::string(proxy_url.host_address()));
+		auto proxy_port = proxy_url.port_number();
+		if (proxy_port == 0)
+			proxy_port = proxy_pass_default_port(proxy_url);
 		auto doh_host = boost::to_lower_copy(m_doh_host);
-		m_doh_via_proxy = !doh_host.empty() && doh_host != proxy_host;
+		m_doh_via_proxy = !doh_host.empty() &&
+			(doh_host != proxy_host || m_doh_port != proxy_port);
 		m_doh_authority = authority::format_authority(m_doh_host, m_doh_port);
 
 		m_auth_user = std::string(proxy_url.user());
