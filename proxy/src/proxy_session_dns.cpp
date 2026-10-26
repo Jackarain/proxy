@@ -16,6 +16,9 @@
 #include "proxy/http_error_body.hpp"
 #include "proxy/proxy_util.hpp"
 
+#include <boost/asio/steady_timer.hpp>
+
+#include <chrono>
 #include <vector>
 
 
@@ -309,7 +312,8 @@ namespace proxy {
 		}
 
 		// 通过 UDP 转发 DNS 查询到上游服务器.
-		udp::socket dns_socket(co_await net::this_coro::executor);
+		auto dns_socket = std::make_shared<udp::socket>(
+			co_await net::this_coro::executor);
 		udp::endpoint dns_endpoint(
 			net::ip::make_address(dns_host, ec), dns_port);
 		if (ec)
@@ -319,7 +323,7 @@ namespace proxy {
 			co_return;
 		}
 
-		dns_socket.open(dns_endpoint.protocol(), ec);
+		dns_socket->open(dns_endpoint.protocol(), ec);
 		if (ec)
 		{
 			co_await default_http_route(
@@ -327,7 +331,7 @@ namespace proxy {
 			co_return;
 		}
 
-		co_await dns_socket.async_send_to(
+		co_await dns_socket->async_send_to(
 			net::buffer(dns_query), dns_endpoint, net_awaitable[ec]);
 		if (ec)
 		{
@@ -336,13 +340,30 @@ namespace proxy {
 			co_return;
 		}
 
+		// 5 秒超时：上游无响应时关闭 socket，使接收操作立即失败返回.
+		net::steady_timer timer(co_await net::this_coro::executor);
+		timer.expires_after(std::chrono::seconds(5));
+		std::weak_ptr<udp::socket> weak_socket(dns_socket);
+		timer.async_wait([weak_socket](const boost::system::error_code& tec)
+		{
+			if (!tec)
+			{
+				if (auto socket = weak_socket.lock())
+				{
+					boost::system::error_code close_ec;
+					socket->close(close_ec);
+				}
+			}
+		});
+
 		// 接收 DNS 响应.
 		// UDP DNS 报文最大可达 65535 字节，固定 4096 会截断携带大 payload
 		// （如 DNSSEC）的响应.
 		std::array<char, 65535> recv_buf{};
 		udp::endpoint recv_endp;
-		auto recv_len = co_await dns_socket.async_receive_from(
+		auto recv_len = co_await dns_socket->async_receive_from(
 			net::buffer(recv_buf), recv_endp, net_awaitable[ec]);
+		timer.cancel();
 		if (ec)
 		{
 			co_await default_http_route(
@@ -359,7 +380,7 @@ namespace proxy {
 			co_return;
 		}
 
-		dns_socket.close(ec);
+		dns_socket->close(ec);
 
 		auto body = std::string(recv_buf.data(), recv_len);
 		if (output)
@@ -648,27 +669,45 @@ namespace proxy {
 		if (!authority::parse_authority(upstream, dns_host, dns_port))
 			co_return false;
 
-		udp::socket dns_socket(co_await net::this_coro::executor);
+		auto dns_socket = std::make_shared<udp::socket>(
+			co_await net::this_coro::executor);
 		udp::endpoint dns_endpoint(
 			net::ip::make_address(dns_host, ec), dns_port);
 		if (ec)
 			co_return false;
 
-		dns_socket.open(dns_endpoint.protocol(), ec);
+		dns_socket->open(dns_endpoint.protocol(), ec);
 		if (ec)
 			co_return false;
 
-		co_await dns_socket.async_send_to(
+		co_await dns_socket->async_send_to(
 			net::buffer(dns_query), dns_endpoint, net_awaitable[ec]);
 		if (ec)
 			co_return false;
+
+		// 5 秒超时：上游无响应时关闭 socket，使接收操作立即失败返回.
+		net::steady_timer timer(co_await net::this_coro::executor);
+		timer.expires_after(std::chrono::seconds(5));
+		std::weak_ptr<udp::socket> weak_socket(dns_socket);
+		timer.async_wait([weak_socket](const boost::system::error_code& tec)
+		{
+			if (!tec)
+			{
+				if (auto socket = weak_socket.lock())
+				{
+					boost::system::error_code close_ec;
+					socket->close(close_ec);
+				}
+			}
+		});
 
 		// UDP DNS 报文最大可达 65535 字节，固定 4096 会截断携带大 payload
 		// （如 DNSSEC）的响应.
 		std::array<char, 65535> recv_buf{};
 		udp::endpoint recv_endp;
-		auto recv_len = co_await dns_socket.async_receive_from(
+		auto recv_len = co_await dns_socket->async_receive_from(
 			net::buffer(recv_buf), recv_endp, net_awaitable[ec]);
+		timer.cancel();
 		if (ec)
 			co_return false;
 		if (recv_endp != dns_endpoint)
@@ -679,7 +718,7 @@ namespace proxy {
 			co_return false;
 		}
 
-		dns_socket.close(ec);
+		dns_socket->close(ec);
 
 		output.assign(recv_buf.data(), recv_len);
 		co_return true;
