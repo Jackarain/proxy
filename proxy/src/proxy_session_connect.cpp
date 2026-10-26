@@ -118,7 +118,7 @@ namespace proxy {
 				if (m_remote_udp_endpoint.address() == net::ip::make_address_v4("0.0.0.0") ||
 					m_remote_udp_endpoint.address() == net::ip::make_address_v6("::0"))
 				{
-					m_remote_udp_endpoint.address(remote_socket.remote_endpoint().address());
+					m_remote_udp_endpoint.address(tcp_remote_endpoint(m_remote_socket).address());
 				}
 			}
 		}
