@@ -11,7 +11,66 @@
 #include "proxy/proxy_session.hpp"
 #include "proxy/http_error_body.hpp"
 
+#include <cstring>
+
 namespace proxy {
+
+	namespace {
+
+		template <typename Stream>
+		net::awaitable<bool> async_read_cstring(
+			Stream& socket,
+			net::streambuf& buffer,
+			std::size_t max_length,
+			std::string& value,
+			boost::system::error_code& ec)
+		{
+			value.clear();
+
+			for (;;)
+			{
+				if (buffer.size() != 0)
+				{
+					auto data = static_cast<const char*>(
+						buffer.data().data());
+					auto nul = static_cast<const char*>(
+						std::memchr(data, '\0', buffer.size()));
+
+					if (nul != nullptr)
+					{
+						auto length = static_cast<std::size_t>(nul - data);
+						if (length > max_length)
+						{
+							ec = boost::system::errc::make_error_code(
+								boost::system::errc::message_size);
+							co_return false;
+						}
+
+						value.assign(data, length);
+						buffer.consume(length + 1);
+						co_return true;
+					}
+
+					if (buffer.size() > max_length)
+					{
+						ec = boost::system::errc::make_error_code(
+							boost::system::errc::message_size);
+						co_return false;
+					}
+				}
+
+				auto dest = buffer.prepare(
+					max_length + 1 - buffer.size());
+				auto bytes = co_await socket.async_read_some(
+					dest, net_awaitable[ec]);
+				if (ec)
+					co_return false;
+
+				buffer.commit(bytes);
+			}
+		}
+
+	} // namespace
 
 	//////////////////////////////////////////////////////////////////////////
 	// SOCKS 协议处理与 UDP 转发
@@ -910,9 +969,9 @@ namespace proxy {
 		//  +----+----+----+----+----+----+----+----+----+----+....+----+
 		//                                          [                   ]
 		m_local_buffer.consume(m_local_buffer.size());
-		bytes = co_await net::async_read_until(m_local_socket,
-			m_local_buffer, '\0', net_awaitable[ec]);
-		if (ec)
+		std::string userid;
+		if (!co_await async_read_cstring(m_local_socket,
+			m_local_buffer, 255, userid, ec))
 		{
 			log_conn_warning()
 				<< ", read socks4 userid: "
@@ -920,31 +979,16 @@ namespace proxy {
 			co_return;
 		}
 
-		std::string userid;
-		if (bytes > 1)
-		{
-			userid.resize(bytes - 1);
-			m_local_buffer.sgetn(&userid[0], bytes - 1);
-		}
-		m_local_buffer.consume(1); // consume `null`
-
 		std::string hostname;
 		if (socks4a)
 		{
-			bytes = co_await net::async_read_until(m_local_socket,
-				m_local_buffer, '\0', net_awaitable[ec]);
-			if (ec)
+			if (!co_await async_read_cstring(m_local_socket,
+				m_local_buffer, 255, hostname, ec))
 			{
 				log_conn_warning()
 					<< ", read socks4a hostname: "
 					<< ec.message();
 				co_return;
-			}
-
-			if (bytes > 1)
-			{
-				hostname.resize(bytes - 1);
-				m_local_buffer.sgetn(&hostname[0], bytes - 1);
 			}
 		}
 
