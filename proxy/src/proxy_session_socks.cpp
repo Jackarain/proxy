@@ -663,6 +663,7 @@ namespace proxy {
 			}
 
 			auto rp = rbuf;
+			const auto packet_end = rbuf + bytes;
 
 			// 如果数据包来自 socks 客户端, 则解析数据包并将数据转发给目标主机.
 			if (remote_endp.address() == m_local_udp_endpoint.address())
@@ -676,6 +677,14 @@ namespace proxy {
 				//  +----+------+------+----------+-----------+----------+
 
 				// 去掉包头转发至远程主机.
+				if (static_cast<size_t>(packet_end - rp) < 4)
+				{
+					log_conn_warning()
+						<< ", truncated SOCKS5 UDP header, packet_size: "
+						<< bytes;
+					continue;
+				}
+
 				read<uint16_t>(rp); // rsv
 				auto frag = read<uint8_t>(rp);  // frag
 
@@ -687,14 +696,38 @@ namespace proxy {
 
 				if (atyp == SOCKS5_ATYP_IPV4)
 				{
+					if (static_cast<size_t>(packet_end - rp) < 6)
+					{
+						log_conn_warning()
+							<< ", truncated SOCKS5 UDP IPv4 header, packet_size: "
+							<< bytes;
+						continue;
+					}
+
 					final_remote_endp.address(
 						net::ip::address_v4(read<uint32_t>(rp)));
 					final_remote_endp.port(read<uint16_t>(rp));
 				}
 				else if (atyp == SOCKS5_ATYP_DOMAINNAME)
 				{
+					if (static_cast<size_t>(packet_end - rp) < 1)
+					{
+						log_conn_warning()
+							<< ", truncated SOCKS5 UDP domain header, packet_size: "
+							<< bytes;
+						continue;
+					}
+
 					auto length = read<uint8_t>(rp);
 					std::string domain;
+
+					if (static_cast<size_t>(packet_end - rp) < length + 2u)
+					{
+						log_conn_warning()
+							<< ", truncated SOCKS5 UDP domain address, packet_size: "
+							<< bytes;
+						continue;
+					}
 
 					for (size_t i = 0; i < length; i++)
 						domain.push_back(read<int8_t>(rp));
@@ -726,6 +759,14 @@ namespace proxy {
 				}
 				else if (atyp == SOCKS5_ATYP_IPV6)
 				{
+					if (static_cast<size_t>(packet_end - rp) < 18)
+					{
+						log_conn_warning()
+							<< ", truncated SOCKS5 UDP IPv6 header, packet_size: "
+							<< bytes;
+						continue;
+					}
+
 					net::ip::address_v6::bytes_type addr;
 					for (auto i = addr.begin();
 						i != addr.end(); ++i)
