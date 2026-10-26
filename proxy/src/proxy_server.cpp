@@ -3843,11 +3843,21 @@ net::awaitable<void> proxy_server::udp_tproxy_response_loop(udp_tproxy_flow_ptr 
 	while (!m_abort)
 	{
 		char recv_buf[65535];
+		udp::endpoint sender;
 
-		auto bytes = co_await backend_sock->async_receive(
-			net::buffer(recv_buf), net_awaitable[ec]);
+		auto bytes = co_await backend_sock->async_receive_from(
+			net::buffer(recv_buf), sender, net_awaitable[ec]);
 		if (ec)
 			break;
+
+		// SOCKS5 UDP 应答必须来自 UDP ASSOCIATE 返回的中继端点.
+		if (sender != m_backend_endp)
+		{
+			XLOG_DBG << "tproxy flow: " << flow->flow_key_
+				<< ", ignore unexpected UDP source: " << sender
+				<< ", expected: " << m_backend_endp;
+			continue;
+		}
 
 		flow->expire_ = 0; // 收到数据包重置过期计数.
 		send_response_to_client(flow, recv_buf, bytes);
