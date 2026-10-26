@@ -20,6 +20,7 @@
 #include <memory>
 #include <mutex>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 
 // ASN1_STRING_get_length() 仅在 OpenSSL 4.1+ 和 BoringSSL 中提供.
@@ -47,6 +48,14 @@ namespace proxy {
 #else
 	namespace fs = std::filesystem;
 #endif
+
+	// 设置客户端 SNI. OpenSSL 接口要求空结尾字符串.
+	inline bool set_client_sni(SSL* ssl, std::string_view sni)
+	{
+		std::string terminated_sni(sni);
+		return SSL_set_tlsext_host_name(
+			ssl, terminated_sni.c_str()) == 1;
+	}
 
 	//////////////////////////////////////////////////////////////////////////
 

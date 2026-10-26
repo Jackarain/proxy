@@ -57,7 +57,7 @@ namespace proxy {
 		auto& ssl_socket = boost::variant2::get<ssl_tcp_stream>(*ssl_sock);
 
 		// 设置 SNI 主机名以兼容需要 SNI 的服务器.
-		SSL_set_tlsext_host_name(ssl_socket.native_handle(), sni.data());
+		set_client_sni(ssl_socket.native_handle(), sni);
 
 		// 握手超时: 服务器无响应时关闭底层连接, 使握手失败返回.
 		net::steady_timer tls_timer(ssl_socket.get_executor());

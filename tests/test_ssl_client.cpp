@@ -12,7 +12,9 @@
 
 #include <boost/test/unit_test.hpp>
 
+#include <memory>
 #include <string>
+#include <string_view>
 
 
 namespace {
@@ -96,6 +98,24 @@ namespace {
 
 		BOOST_TEST(a1.value().get() == a2.value().get());
 		BOOST_TEST(a1.value().get() != b.value().get());
+	}
+
+	BOOST_AUTO_TEST_CASE(client_sni_uses_terminated_string)
+	{
+		net::ssl::context ctx(net::ssl::context::sslv23_client);
+		std::unique_ptr<SSL, decltype(&SSL_free)> ssl(
+			SSL_new(ctx.native_handle()), &SSL_free);
+		BOOST_REQUIRE(ssl);
+
+		constexpr std::string_view expected = "unit-test.example.com";
+		const std::string source = std::string(expected) + "-trailing";
+		BOOST_TEST(set_client_sni(ssl.get(),
+			std::string_view(source.data(), expected.size())));
+
+		auto* sni = SSL_get_servername(
+			ssl.get(), TLSEXT_NAMETYPE_host_name);
+		BOOST_REQUIRE(sni);
+		BOOST_TEST(std::string_view(sni) == expected);
 	}
 
 	BOOST_AUTO_TEST_SUITE_END()
