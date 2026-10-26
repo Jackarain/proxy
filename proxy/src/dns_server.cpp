@@ -1098,7 +1098,8 @@ namespace proxy {
 
 		while (!m_abort)
 		{
-			std::array<char, 4096> recv_buf{};
+			// UDP DNS 报文最大可达 65535 字节，避免截断带 EDNS 扩展的查询.
+			std::array<char, 65535> recv_buf{};
 			udp::endpoint peer;
 
 			auto recv_len = co_await sock->async_receive_from(

@@ -337,7 +337,9 @@ namespace proxy {
 		}
 
 		// 接收 DNS 响应.
-		std::array<char, 4096> recv_buf{};
+		// UDP DNS 报文最大可达 65535 字节，固定 4096 会截断携带大 payload
+		// （如 DNSSEC）的响应.
+		std::array<char, 65535> recv_buf{};
 		udp::endpoint recv_endp;
 		auto recv_len = co_await dns_socket.async_receive_from(
 			net::buffer(recv_buf), recv_endp, net_awaitable[ec]);
@@ -661,7 +663,9 @@ namespace proxy {
 		if (ec)
 			co_return false;
 
-		std::array<char, 4096> recv_buf{};
+		// UDP DNS 报文最大可达 65535 字节，固定 4096 会截断携带大 payload
+		// （如 DNSSEC）的响应.
+		std::array<char, 65535> recv_buf{};
 		udp::endpoint recv_endp;
 		auto recv_len = co_await dns_socket.async_receive_from(
 			net::buffer(recv_buf), recv_endp, net_awaitable[ec]);
