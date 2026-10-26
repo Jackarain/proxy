@@ -35,18 +35,16 @@ namespace proxy {
 		auto type = pa.substr(0, pos);
 		auto auth = pa.substr(pos + 1);
 
-		if (type != "Basic")
+		if (!boost::iequals(type, "Basic"))
 			co_return PROXY_AUTH_ILLEGAL;
 
-		std::string userinfo(
-			beast::detail::base64::decoded_size(auth.size()), 0);
-		auto [len, _] = beast::detail::base64::decode(
-			(char*)userinfo.data(),
-			auth.data(),
-			auth.size());
-		userinfo.resize(len);
+		std::string userinfo;
+		if (!strutil::base64_decode_strict(auth, userinfo))
+			co_return PROXY_AUTH_ILLEGAL;
 
 		pos = userinfo.find(':');
+		if (pos == std::string::npos)
+			co_return PROXY_AUTH_ILLEGAL;
 
 		std::string uname = userinfo.substr(0, pos);
 		std::string passwd = userinfo.substr(pos + 1);

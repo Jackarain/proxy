@@ -37,6 +37,34 @@ namespace {
 		BOOST_TEST(strutil::base64_decode(encoded) == binary);
 	}
 
+	BOOST_AUTO_TEST_CASE(base64_decode_strict_accepts_padding_variants)
+	{
+		std::string output;
+		BOOST_TEST(strutil::base64_decode_strict("Zg==", output));
+		BOOST_TEST(output == "f");
+		BOOST_TEST(strutil::base64_decode_strict("Zm8=", output));
+		BOOST_TEST(output == "fo");
+		BOOST_TEST(strutil::base64_decode_strict("Zm9v", output));
+		BOOST_TEST(output == "foo");
+		BOOST_TEST(strutil::base64_decode_strict("Zm9vYmE", output));
+		BOOST_TEST(output == "fooba");
+		BOOST_TEST(strutil::base64_decode_strict("dXNlcjpwYXNz", output));
+		BOOST_TEST(output == "user:pass");
+	}
+
+	BOOST_AUTO_TEST_CASE(base64_decode_strict_rejects_malformed_input)
+	{
+		std::string output;
+		BOOST_TEST(!strutil::base64_decode_strict("Zg=", output));
+		BOOST_TEST(output.empty());
+		BOOST_TEST(!strutil::base64_decode_strict("Zg===", output));
+		BOOST_TEST(!strutil::base64_decode_strict("Z", output));
+		BOOST_TEST(!strutil::base64_decode_strict("Zg$=", output));
+		BOOST_TEST(!strutil::base64_decode_strict("Zh", output));
+		BOOST_TEST(!strutil::base64_decode_strict("=", output));
+		BOOST_TEST(output.empty());
+	}
+
 	BOOST_AUTO_TEST_CASE(base64_character_class)
 	{
 		BOOST_TEST(strutil::is_base64('A'));

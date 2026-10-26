@@ -1778,6 +1778,59 @@ namespace strutil
 		return ret;
 	}
 
+	// 严格解码标准 Base64. 仅接受 Base64 字符与末尾正确的 '=' 填充,
+	// 并校验未使用位为 0. 成功时写入 output, 失败时保持 output 为空.
+	inline bool base64_decode_strict(std::string_view input, std::string& output)
+	{
+		output.clear();
+
+		auto data = input;
+		std::size_t padding = 0;
+		while (!data.empty() && data.back() == '=')
+		{
+			++padding;
+			data.remove_suffix(1);
+		}
+
+		if (padding > 2 || data.size() % 4 == 1)
+			return false;
+		if (padding != 0 &&
+			padding != (4 - data.size() % 4) % 4)
+			return false;
+
+		output.reserve(data.size() / 4 * 3 + 2);
+
+		uint32_t accumulator = 0;
+		int bits = 0;
+		for (char ch : data)
+		{
+			auto const index = base64_chars.find(ch);
+			if (index == std::string::npos)
+			{
+				output.clear();
+				return false;
+			}
+
+			accumulator = (accumulator << 6) |
+				static_cast<uint32_t>(index);
+			bits += 6;
+			if (bits >= 8)
+			{
+				bits -= 8;
+				output.push_back(static_cast<char>(
+					(accumulator >> bits) & 0xff));
+			}
+		}
+
+		if (bits != 0 && (accumulator & ((1u << bits) - 1)) != 0)
+		{
+			output.clear();
+			return false;
+		}
+
+		return true;
+	}
+
 }
 
 #endif // INCLUDE__2023_10_18__STRUTIL_HPP
