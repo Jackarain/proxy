@@ -656,7 +656,7 @@ namespace proxy {
 	{
 		boost::system::error_code ec;
 		const auto& proxy_url = *m_option.proxy_pass_;
-		std::string proxy_host(proxy_url.encoded_host());
+		std::string proxy_host(proxy_url.host_address());
 		uint16_t proxy_port = proxy_url.port_number();
 		if (proxy_port == 0)
 			proxy_port = proxy_pass_default_port(proxy_url);
