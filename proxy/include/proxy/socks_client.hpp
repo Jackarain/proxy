@@ -86,6 +86,13 @@ namespace proxy {
 			[[maybe_unused]] auto& hostname = opt.target_host;
 			[[maybe_unused]] auto& port = opt.target_port;
 
+			if (username.size() > 255 || passwd.size() > 255)
+			{
+				ec = boost::system::errc::make_error_code(
+					boost::system::errc::message_size);
+				co_return endp;
+			}
+
 			std::size_t bytes_to_write = username.empty() ? 3 : 4;
 			net::streambuf request;
 			auto req = static_cast<char*>(
