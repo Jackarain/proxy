@@ -1721,8 +1721,21 @@ net::awaitable<void> proxy_server::launcher_worker()
 // 单次连接流程. 返回 true 表示成功建立了连接（尽管之后断开）.
 net::awaitable<bool> proxy_server::launcher_run_once()
 {
-	boost::urls::url_view u = boost::urls::parse_uri(m_option.launcher_url_).value();
+	auto parsed = boost::urls::parse_uri(m_option.launcher_url_);
+	if (!parsed)
+	{
+		XLOG_WARN << "launcher invalid url: "
+			<< m_option.launcher_url_;
+		co_return false;
+	}
+
+	boost::urls::url_view u = *parsed;
 	std::string scheme = std::string(u.scheme());
+	if (scheme != "ws" && scheme != "wss")
+	{
+		XLOG_WARN << "launcher unsupported scheme: " << scheme;
+		co_return false;
+	}
 	std::string host = std::string(u.host());
 	std::string port;
 	if (u.has_port())
