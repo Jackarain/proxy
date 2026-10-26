@@ -324,7 +324,8 @@ namespace proxy {
 			udp::endpoint& client_ep, udp::endpoint& original_dest);
 
 		// 用 (client_ep, original_dest) 计算查找 flow 的 key.
-		static size_t make_udp_flow_key(const udp::endpoint& client, const udp::endpoint& dest);
+		static udp_tproxy_flow_key make_udp_flow_key(
+			const udp::endpoint& client, const udp::endpoint& dest);
 
 		// 清理过期的 UDP TPROXY flow.
 		net::awaitable<void> udp_tproxy_check() noexcept;
@@ -477,7 +478,7 @@ namespace proxy {
 		std::vector<udp::socket> m_udp_tproxy_listeners;
 
 		// 存储每个 UDP TPROXY flow 的状态信息, 包括客户端地址、原始目标地址和 backend socket 等等.
-		std::unordered_map<size_t, udp_tproxy_flow_ptr> m_udp_tproxy_flows;
+		udp_tproxy_flow_map m_udp_tproxy_flows;
 
 		// proxy_pass 返回侦听的 UDP 端口地址信息, 所有 UDP TPROXY
 		// flow 共享这个地址信息将数据转发到 proxy_pass.

@@ -2116,7 +2116,7 @@ void proxy_server::close() noexcept
 		net::post(m_executor,
 			[this, self = shared_from_this()]()
 			{
-				std::unordered_map<size_t, udp_tproxy_flow_ptr> tmp_flows;
+				udp_tproxy_flow_map tmp_flows;
 				tmp_flows.swap(m_udp_tproxy_flows);
 
 				for (auto& [_, flow] : tmp_flows)
@@ -3328,28 +3328,11 @@ bool proxy_server::parse_udp_tproxy_packet(struct msghdr& msg,
 	return true;
 }
 
-// 用 (client_ep, original_dest) 计算查找 flow 的 key.
-// 使用 boost::hash_combine 以获得更好的哈希分布.
-size_t proxy_server::make_udp_flow_key(const udp::endpoint& client, const udp::endpoint& dest)
+// 用 (client_ep, original_dest) 构造 flow 表的查找 key.
+udp_tproxy_flow_key proxy_server::make_udp_flow_key(
+	const udp::endpoint& client, const udp::endpoint& dest)
 {
-	size_t h = 0;
-
-	auto hash_addr = [&h](const net::ip::address& addr) {
-		if (addr.is_v4())
-			boost::hash_combine(h, addr.to_v4().to_uint());
-		else
-		{
-			auto b = addr.to_v6().to_bytes();
-			boost::hash_combine(h, std::string_view((const char*)b.data(), b.size()));
-		}
-	};
-
-	hash_addr(client.address());
-	boost::hash_combine(h, client.port());
-	hash_addr(dest.address());
-	boost::hash_combine(h, dest.port());
-
-	return h;
+	return { client, dest };
 }
 
 void proxy_server::abort_udp_tproxy_flow(const udp_tproxy_flow_ptr& flow) noexcept
@@ -3385,14 +3368,15 @@ void proxy_server::erase_udp_tproxy_flow(const udp_tproxy_flow_ptr& flow) noexce
 	if (!flow)
 		return;
 
-	auto it = m_udp_tproxy_flows.find(flow->flow_key_);
+	auto it = m_udp_tproxy_flows.find(
+		{ flow->client_endp_, flow->original_endp_ });
 	if (it != m_udp_tproxy_flows.end() && it->second == flow)
 		m_udp_tproxy_flows.erase(it);
 }
 
 net::awaitable<void> proxy_server::udp_tproxy_check() noexcept
 {
-	std::vector<size_t> expired_keys;
+	std::vector<udp_tproxy_flow_key> expired_keys;
 
 	for (const auto& [key, flow] : m_udp_tproxy_flows)
 	{
@@ -4085,7 +4069,8 @@ net::awaitable<void> proxy_server::start_udp_tproxy_listen(udp::socket& udp_sock
 			continue;
 
 		// 计算 flow 表的 key.
-		size_t flow_key = make_udp_flow_key(client_ep, original_dest);
+		auto flow_key = make_udp_flow_key(client_ep, original_dest);
+		auto flow_hash = udp_tproxy_flow_key_hash{}(flow_key);
 
 		std::shared_ptr<udp_tproxy_flow> flow;
 
@@ -4099,7 +4084,7 @@ net::awaitable<void> proxy_server::start_udp_tproxy_listen(udp::socket& udp_sock
 			}
 
 			flow = std::make_shared<udp_tproxy_flow>(
-				client_ep, original_dest, flow_key);
+				client_ep, original_dest);
 
 			m_udp_tproxy_flows[flow_key] = flow;
 
@@ -4134,10 +4119,10 @@ net::awaitable<void> proxy_server::start_udp_tproxy_listen(udp::socket& udp_sock
 					udp_tproxy_response_loop(flow), net::detached);
 			}
 
-			XLOG_DBG << "tproxy flow: " << flow_key
+			XLOG_DBG << "tproxy flow: " << flow_hash
 				<< ", client: " << client_ep
 				<< ", original dest: " << original_dest
-				<< ", flow key: " << flow_key
+				<< ", flow key: " << flow_hash
 				<< ", mode: " << (using_websocket_udp ? "websocket-udp" :
 					(using_connect_udp ? "connect-udp" : "socks5"));
 		}

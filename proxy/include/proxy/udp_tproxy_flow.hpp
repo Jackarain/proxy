@@ -16,10 +16,13 @@
 
 #include <boost/asio/ip/udp.hpp>
 #include <boost/asio/steady_timer.hpp>
+#include <boost/container_hash/hash.hpp>
 
 #include <deque>
+#include <functional>
 #include <memory>
 #include <optional>
+#include <unordered_map>
 #include <vector>
 
 
@@ -32,14 +35,49 @@ namespace proxy {
 #ifdef __linux__
 	using util::variant_stream_type;
 
+	// udp_tproxy_flow_key 由客户端地址和原始目标地址组成. flow 表以完整端点判等,
+	// 哈希值只用于定位桶, 避免哈希碰撞导致不同 flow 被误认为同一个.
+	struct udp_tproxy_flow_key
+	{
+		udp::endpoint client_endp;
+		udp::endpoint original_endp;
+
+		bool operator==(const udp_tproxy_flow_key&) const = default;
+	};
+
+	struct udp_tproxy_flow_key_hash
+	{
+		size_t operator()(const udp_tproxy_flow_key& key) const noexcept
+		{
+			size_t h = hash_endpoint(key.client_endp);
+			boost::hash_combine(h, hash_endpoint(key.original_endp));
+			return h;
+		}
+
+	private:
+		static size_t hash_endpoint(const udp::endpoint& endp) noexcept
+		{
+			size_t h = std::hash<net::ip::address>{}(endp.address());
+			boost::hash_combine(h, endp.port());
+			if (endp.address().is_v6())
+				boost::hash_combine(h, endp.address().to_v6().scope_id());
+			return h;
+		}
+	};
+
+	using udp_tproxy_flow_map = std::unordered_map<
+		udp_tproxy_flow_key, std::shared_ptr<struct udp_tproxy_flow>,
+		udp_tproxy_flow_key_hash>;
+
 	// udp_tproxy_flow 结构体保存每个 UDP TPROXY flow 的状态信息, 包括客户端地址、原始目标地址和 relay socket 等等.
 	struct udp_tproxy_flow
 	{
 		udp_tproxy_flow(const udp::endpoint& client_endp,
-			const udp::endpoint& original_endp, size_t flow_key)
+			const udp::endpoint& original_endp)
 			: client_endp_(client_endp)
 			, original_endp_(original_endp)
-			, flow_key_(flow_key)
+			, flow_key_(udp_tproxy_flow_key_hash{}(
+				{ client_endp, original_endp }))
 		{}
 
 		// client_endp_ 保存客户端的地址.
@@ -56,8 +94,8 @@ namespace proxy {
 		// 与客户端通信, 从而让客户端认为自己直接与目标服务器通信一样.
 		std::optional<udp::socket> relay_sock_;
 
-		// flow_key_ 是 flow 的唯一标识, 可以根据客户端地址和原始目标地址计算得到, 用于在 flow
-		// 管理容器中快速查找对应的 flow.
+		// flow_key_ 是客户端端点与原始目标端点的哈希值, 仅用于日志;
+		// flow 表的查找和判等使用完整的 udp_tproxy_flow_key.
 		size_t flow_key_{ 0 };
 
 		// expire 用于检查 flow 是否已过期.
