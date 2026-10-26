@@ -12,6 +12,7 @@
 #define INCLUDE__2023_10_18__HTTP_PROXY_CLIENT_HPP
 
 
+#include "proxy/authority.hpp"
 #include "proxy/use_awaitable.hpp"
 #include "proxy/strutil.hpp"
 
@@ -76,8 +77,8 @@ namespace proxy {
 		{
 			boost::system::error_code ec;
 
-			std::string target_host =
-				opt.target_host + ":" + std::to_string(opt.target_port);
+			auto target_host = authority::format_authority(
+				opt.target_host, opt.target_port);
 
 			http_request req{ beast::http::verb::connect, target_host, 11 };
 			req.set(http::field::proxy_connection, "Keep-Alive");
