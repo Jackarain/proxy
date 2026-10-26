@@ -544,8 +544,9 @@ namespace proxy {
 			co_return true;
 		}
 
-		auto pos = target_view.find(':');
-		if (pos == std::string::npos)
+		std::string host;
+		uint16_t port = 0;
+		if (!ws_tunnel::parse_authority(target_view, host, port))
 		{
 			log_conn_error()
 				<< ", illegal target: "
@@ -553,10 +554,7 @@ namespace proxy {
 			co_return false;
 		}
 
-		std::string host(target_view.substr(0, pos));
-		std::string port(target_view.substr(pos + 1));
-
-		ec = co_await start_connect_host(host, static_cast<uint16_t>(std::atol(port.c_str())), false);
+		ec = co_await start_connect_host(host, port, false);
 		if (ec)
 		{
 			log_conn_warning()
