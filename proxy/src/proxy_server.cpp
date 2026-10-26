@@ -4334,10 +4334,10 @@ net::awaitable<void> proxy_server::udp_tproxy_http_udp_loop(udp_tproxy_flow_ptr 
 	}
 
 	auto resp = resp_parser.release();
-	if (resp.result() != http::status::switching_protocols)
+	if (!is_connect_udp_upgrade_response(resp))
 	{
 		XLOG_WARN << "tproxy flow: " << flow->flow_key_
-			<< ", connect-udp rejected: "
+			<< ", invalid connect-udp response: "
 			<< static_cast<int>(resp.result());
 		co_return;
 	}

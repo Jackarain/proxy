@@ -17,6 +17,7 @@
 #include <boost/asio/writable_pipe.hpp>
 #include <boost/asio/write.hpp>
 #include <boost/beast/core/flat_buffer.hpp>
+#include <boost/beast/http/empty_body.hpp>
 #include <boost/test/unit_test.hpp>
 
 #include <array>
@@ -219,6 +220,32 @@ namespace {
 		BOOST_TEST(!decode_datagram_message(std::string_view(
 			reinterpret_cast<const char*>(wrong_type.data()),
 			wrong_type.size()), decoded));
+	}
+
+	BOOST_AUTO_TEST_CASE(connect_udp_upgrade_response_validation)
+	{
+		using namespace boost::beast::http;
+
+		response<empty_body> res{ status::switching_protocols, 11 };
+		res.set(field::connection, "keep-alive, Upgrade");
+		res.set(field::upgrade, " Connect-UDP ");
+		BOOST_TEST(is_connect_udp_upgrade_response(res));
+
+		res.set(field::connection, "notupgrade");
+		BOOST_TEST(!is_connect_udp_upgrade_response(res));
+
+		res.set(field::connection, "Upgrade");
+		res.set(field::upgrade, "websocket");
+		BOOST_TEST(!is_connect_udp_upgrade_response(res));
+
+		res.set(field::upgrade, "connect-udp");
+		res.insert(field::upgrade, "connect-udp");
+		BOOST_TEST(!is_connect_udp_upgrade_response(res));
+
+		response<empty_body> not_switching{ status::ok, 11 };
+		not_switching.set(field::connection, "Upgrade");
+		not_switching.set(field::upgrade, "connect-udp");
+		BOOST_TEST(!is_connect_udp_upgrade_response(not_switching));
 	}
 
 	BOOST_AUTO_TEST_CASE(read_capsule_from_stream_valid)

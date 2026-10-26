@@ -1701,9 +1701,9 @@ namespace proxy {
 		}
 
 		auto resp = resp_parser.release();
-		if (resp.result() != http::status::switching_protocols)
+		if (!is_connect_udp_upgrade_response(resp))
 		{
-			XLOG_WARN << "tun udp connect-udp rejected: "
+			XLOG_WARN << "tun udp invalid connect-udp response: "
 				<< static_cast<int>(resp.result());
 			co_return false;
 		}

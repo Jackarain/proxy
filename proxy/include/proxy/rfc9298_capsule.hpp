@@ -19,6 +19,9 @@
 #include <boost/asio/error.hpp>
 #include <boost/asio/read.hpp>
 #include <boost/system/error_code.hpp>
+#include <boost/beast/http/field.hpp>
+#include <boost/beast/http/message.hpp>
+#include <boost/beast/http/status.hpp>
 
 #include <cstddef>
 #include <cstdint>
@@ -33,6 +36,81 @@ namespace proxy {
 	namespace net = boost::asio;
 
 	static constexpr uint64_t udp_proxy_capsule_type = 0x00; // RFC 9297 DATAGRAM
+
+	namespace detail {
+
+		inline char ascii_lower(char c) noexcept
+		{
+			return c >= 'A' && c <= 'Z' ? static_cast<char>(c - 'A' + 'a') : c;
+		}
+
+		inline bool ascii_iequals(std::string_view lhs,
+			std::string_view rhs) noexcept
+		{
+			if (lhs.size() != rhs.size())
+				return false;
+			for (size_t i = 0; i < lhs.size(); ++i)
+			{
+				if (ascii_lower(lhs[i]) != ascii_lower(rhs[i]))
+					return false;
+			}
+			return true;
+		}
+
+		inline std::string_view trim_ows(std::string_view value) noexcept
+		{
+			while (!value.empty() &&
+				(value.front() == ' ' || value.front() == '\t'))
+				value.remove_prefix(1);
+			while (!value.empty() &&
+				(value.back() == ' ' || value.back() == '\t'))
+				value.remove_suffix(1);
+			return value;
+		}
+
+		inline bool header_has_token(std::string_view value,
+			std::string_view token) noexcept
+		{
+			while (!value.empty())
+			{
+				auto comma = value.find(',');
+				auto item = trim_ows(value.substr(0, comma));
+				if (ascii_iequals(item, token))
+					return true;
+				if (comma == std::string_view::npos)
+					break;
+				value.remove_prefix(comma + 1);
+			}
+			return false;
+		}
+
+	} // namespace detail
+
+	// 校验 RFC 9298 HTTP/1.1 CONNECT-UDP 成功响应.
+	template <typename Body, typename Fields>
+	inline bool is_connect_udp_upgrade_response(
+		const boost::beast::http::response<Body, Fields>& resp) noexcept
+	{
+		using namespace boost::beast::http;
+
+		if (resp.result() != status::switching_protocols ||
+			resp.count(field::upgrade) != 1)
+			return false;
+
+		auto upgrade = resp.find(field::upgrade);
+		if (!detail::ascii_iequals(
+			detail::trim_ows(upgrade->value()), "connect-udp"))
+			return false;
+
+		for (auto it = resp.begin(); it != resp.end(); ++it)
+		{
+			if (it->name() == field::connection &&
+				detail::header_has_token(it->value(), "upgrade"))
+				return true;
+		}
+
+		return false;
+	}
 
 
 	//////////////////////////////////////////////////////////////////////////
