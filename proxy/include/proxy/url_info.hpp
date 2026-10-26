@@ -13,6 +13,7 @@
 #define INCLUDE__2025_11_23__URL_INFO_HPP
 
 #include <boost/url.hpp>
+#include <charconv>
 #include <tuple>
 #include <string_view>
 
@@ -111,12 +112,15 @@ namespace proxy {
 				port = std::string_view(port_start, port_end - port_start);
 				if (!port.empty())
 				{
-					try {
-						port_num = static_cast<uint16_t>(std::stoul(std::string(port)));
-					}
-					catch (...) {
+					uint32_t port_value = 0;
+					auto [ptr, ec] = std::from_chars(
+						port.data(), port.data() + port.size(), port_value);
+					if (ec != std::errc{} ||
+						ptr != port.data() + port.size() ||
+						port_value == 0 || port_value > 65535)
 						return boost::urls::grammar::error::invalid;
-					}
+
+					port_num = static_cast<uint16_t>(port_value);
 				}
 
 				host_end = host_start + found;

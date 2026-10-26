@@ -83,6 +83,8 @@ namespace {
 		BOOST_TEST(!parse_urlinfo("example.com").has_value());
 		BOOST_TEST(!parse_urlinfo("http://").has_value());
 		BOOST_TEST(!parse_urlinfo("http://example.com:abc/").has_value());
+		BOOST_TEST(!parse_urlinfo("http://example.com:0/").has_value());
+		BOOST_TEST(!parse_urlinfo("http://example.com:65536/").has_value());
 		BOOST_TEST(!parse_urlinfo("").has_value());
 	}
 
