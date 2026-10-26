@@ -98,7 +98,7 @@ namespace proxy {
 
 			opt.target_host = target_host;
 			opt.target_port = target_port;
-			opt.proxy_hostname = true;
+			opt.proxy_hostname = is_hostname(target_host);
 			opt.command = command;
 			opt.username = std::string(proxy_url.user());
 			opt.password = std::string(proxy_url.password());

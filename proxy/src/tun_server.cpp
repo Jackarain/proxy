@@ -1529,7 +1529,7 @@ namespace proxy {
 		socks_client_option opt;
 		opt.target_host = "0.0.0.0";
 		opt.target_port = 21;
-		opt.proxy_hostname = true;
+		opt.proxy_hostname = false;
 		opt.command = SOCKS5_CMD_UDP;
 		opt.username = std::string(proxy_url.user());
 		opt.password = std::string(proxy_url.password());

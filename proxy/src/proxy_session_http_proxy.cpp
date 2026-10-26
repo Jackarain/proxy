@@ -1587,7 +1587,7 @@ namespace proxy {
 			socks_client_option opt;
 			opt.target_host = target_host;
 			opt.target_port = target_port;
-			opt.proxy_hostname = true;
+			opt.proxy_hostname = is_hostname(target_host);
 			opt.command = SOCKS5_CMD_UDP;
 			opt.username = std::string(m_proxy_pass->user());
 			opt.password = std::string(m_proxy_pass->password());
