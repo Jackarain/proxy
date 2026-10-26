@@ -9,6 +9,7 @@
 //
 
 #include "proxy/proxy_session.hpp"
+#include "proxy/authority.hpp"
 #include "proxy/http_error_body.hpp"
 #include "proxy/proxy_websocket_client.hpp"
 
@@ -303,7 +304,8 @@ namespace proxy {
 			else
 				req.target(std::string(resource));
 
-			req.set(http::field::host, host);
+			req.set(http::field::host,
+				authority::format_authority(host, port));
 
 			if (req.find(http::field::connection) == req.end() &&
 				req.find(http::field::proxy_connection) != req.end())
