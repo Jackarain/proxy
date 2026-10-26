@@ -1883,7 +1883,7 @@ namespace proxy {
 
 			// SOCKS5 UDP 应答头：RSV(2) + FRAG(1) + ATYP(1) + 地址 + 端口.
 			size_t header_size = socks5_udp_header_size(buf, n);
-			if (n <= header_size)
+			if (header_size == 0 || n <= header_size)
 				continue;
 
 			co_await reply(buf + header_size, n - header_size);
