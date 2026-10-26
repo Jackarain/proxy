@@ -737,16 +737,22 @@ namespace proxy {
 			websocket_plain_stream websocket(
 				std::move(boost::variant2::get<proxy_tcp_socket>(m_local_socket)));
 			m_local_socket = init_proxy_stream(std::move(websocket));
+			auto buffered = m_local_buffer.size();
 			ec = co_await boost::variant2::get<websocket_plain_stream>(
 				m_local_socket).async_accept(req, m_local_buffer.data());
+			if (!ec)
+				m_local_buffer.consume(buffered);
 		}
 		else
 		{
 			websocket_tls_stream websocket(
 				std::move(boost::variant2::get<ssl_tcp_stream>(m_local_socket)));
 			m_local_socket = init_proxy_stream(std::move(websocket));
+			auto buffered = m_local_buffer.size();
 			ec = co_await boost::variant2::get<websocket_tls_stream>(
 				m_local_socket).async_accept(req, m_local_buffer.data());
+			if (!ec)
+				m_local_buffer.consume(buffered);
 		}
 
 		if (ec)
@@ -880,9 +886,13 @@ namespace proxy {
 			websocket_plain_stream websocket(std::move(
 				boost::variant2::get<proxy_tcp_socket>(m_local_socket)));
 			m_local_socket = init_proxy_stream(std::move(websocket));
-			co_return co_await boost::variant2::get<websocket_plain_stream>(
+			auto buffered = m_local_buffer.size();
+			auto ec = co_await boost::variant2::get<websocket_plain_stream>(
 				m_local_socket).async_accept(req, m_local_buffer.data(),
 					ws_tunnel::proxy_connect_udp_subprotocol);
+			if (!ec)
+				m_local_buffer.consume(buffered);
+			co_return ec;
 		}
 
 		if (boost::variant2::holds_alternative<ssl_tcp_stream>(m_local_socket))
@@ -890,9 +900,13 @@ namespace proxy {
 			websocket_tls_stream websocket(std::move(
 				boost::variant2::get<ssl_tcp_stream>(m_local_socket)));
 			m_local_socket = init_proxy_stream(std::move(websocket));
-			co_return co_await boost::variant2::get<websocket_tls_stream>(
+			auto buffered = m_local_buffer.size();
+			auto ec = co_await boost::variant2::get<websocket_tls_stream>(
 				m_local_socket).async_accept(req, m_local_buffer.data(),
 					ws_tunnel::proxy_connect_udp_subprotocol);
+			if (!ec)
+				m_local_buffer.consume(buffered);
+			co_return ec;
 		}
 
 		co_return make_error_code(boost::system::errc::operation_not_supported);
@@ -2065,7 +2079,6 @@ namespace proxy {
 		}
 
 		// 读取上游的响应.
-		m_local_buffer.consume(m_local_buffer.size());
 		beast::flat_buffer buf;
 
 		http::response_parser<http::string_body> parser;
@@ -2097,6 +2110,14 @@ namespace proxy {
 		// 如果上游返回 101, 则开始原始 TCP 双向转发 (上游负责 capsule ↔ UDP).
 		if (upstream_res.result() == http::status::switching_protocols)
 		{
+			// 响应头之后可能已预读到隧道首包, 交给并发转发前补发.
+			if (buf.size() > 0)
+			{
+				m_remote_buffer.commit(net::buffer_copy(
+					m_remote_buffer.prepare(buf.size()), buf.data()));
+				buf.consume(buf.size());
+			}
+
 			log_conn_debug()
 				<< ", connect-udp: tunnel established via upstream, "
 				<< "starting raw tcp forwarding";

@@ -73,9 +73,13 @@ namespace proxy {
 
 		template <typename Stream>
 		net::awaitable<boost::system::error_code>
-		do_http_proxy_handshake(Stream& socket, http_proxy_client_option opt = {})
+		do_http_proxy_handshake(Stream& socket, http_proxy_client_option opt = {},
+			beast::flat_buffer* leftover = nullptr)
 		{
 			boost::system::error_code ec;
+			beast::flat_buffer discard;
+			auto& buffer = leftover ? *leftover : discard;
+			buffer.consume(buffer.size());
 
 			auto target_host = authority::format_authority(
 				opt.target_host, opt.target_port);
@@ -102,7 +106,6 @@ namespace proxy {
 				co_return ec;
 
 			http::response_parser<http_response::body_type> p;
-			beast::flat_buffer buffer{ 1024 };
 
 			do {
 				co_await http::async_read_header(
@@ -122,14 +125,16 @@ namespace proxy {
 		{
 			template <typename Stream, typename Handler>
 			void operator()(Handler&& handler,
-				Stream* socket, const http_proxy_client_option& opt) const
+				Stream* socket, const http_proxy_client_option& opt,
+				beast::flat_buffer* leftover) const
 			{
 				auto executor = net::get_associated_executor(handler);
 				net::co_spawn(executor,
-					[socket, opt, handler = std::move(handler)]
+					[socket, opt, leftover, handler = std::move(handler)]
 				() mutable->net::awaitable<void>
 				{
-					auto ec = co_await do_http_proxy_handshake(*socket, opt);
+					auto ec = co_await do_http_proxy_handshake(
+						*socket, opt, leftover);
 					handler(ec);
 					co_return;
 				}, net::detached);
@@ -140,11 +145,13 @@ namespace proxy {
 
 	template <typename Stream, typename Handler>
 	auto async_http_proxy_handshake(Stream& socket,
-		http_proxy_client_option opt, Handler&& handler)
+		http_proxy_client_option opt, Handler&& handler,
+		beast::flat_buffer* leftover = nullptr)
 	{
 		return net::async_initiate<Handler,
 			void(boost::system::error_code)>(
-				detail::initiate_do_http_proxy(), handler, &socket, opt);
+				detail::initiate_do_http_proxy(), handler,
+				&socket, opt, leftover);
 	}
 }
 

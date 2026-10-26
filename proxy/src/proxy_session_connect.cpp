@@ -156,7 +156,8 @@ namespace proxy {
 				co_await async_http_proxy_handshake(
 					m_remote_socket,
 					opt,
-					net_awaitable[ec]);
+					net_awaitable[ec],
+					&m_remote_buffer);
 			}
 		}
 		else if (scheme == "ws" || scheme == "wss")
@@ -931,6 +932,46 @@ namespace proxy {
 
 		// 保存超时配置.
 		m_transfer_timeout.store(m_option.tcp_timeout_, std::memory_order_relaxed);
+
+		// 补发协议握手阶段被 Beast 预读到缓冲区中的数据.
+		boost::system::error_code buffer_ec;
+		if (m_local_buffer.size() > 0)
+		{
+			auto bytes = m_local_buffer.size();
+			co_await net::async_write(m_remote_socket,
+				m_local_buffer.data(), net_awaitable[buffer_ec]);
+			m_local_buffer.consume(bytes);
+			if (buffer_ec)
+			{
+				log_conn_warning()
+					<< ", write buffered local data error: "
+					<< buffer_ec.message();
+				close();
+				co_return;
+			}
+
+			m_total_rx += static_cast<uint64_t>(bytes);
+			m_last_activity.store(0, std::memory_order_relaxed);
+		}
+
+		if (m_remote_buffer.size() > 0)
+		{
+			auto bytes = m_remote_buffer.size();
+			co_await net::async_write(m_local_socket,
+				m_remote_buffer.data(), net_awaitable[buffer_ec]);
+			m_remote_buffer.consume(bytes);
+			if (buffer_ec)
+			{
+				log_conn_warning()
+					<< ", write buffered remote data error: "
+					<< buffer_ec.message();
+				close();
+				co_return;
+			}
+
+			m_total_tx += static_cast<uint64_t>(bytes);
+			m_last_activity.store(0, std::memory_order_relaxed);
+		}
 
 		// 并发读写, 在 local 和 remote 之间互传数据.
 		// 同时运行 idle_timeout 检测整体连接空闲超时.

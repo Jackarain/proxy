@@ -792,6 +792,9 @@ namespace proxy {
 		// m_local_buffer 本地缓冲区, 用于接收客户端的数据的 buffer.
 		net::streambuf m_local_buffer;
 
+		// m_remote_buffer 保存代理握手响应头之后预读的上游数据.
+		beast::flat_buffer m_remote_buffer;
+
 		// m_server_rx_key 用于身份为服务端时, 解密接收到的混淆数据的 key.
 		std::array<uint8_t, 16> m_server_rx_key{};
 		// m_server_tx_key 用于身份为服务端时, 加密发送的混淆数据的 key.

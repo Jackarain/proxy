@@ -177,6 +177,9 @@ namespace proxy {
 		// m_upstream 保存与上游代理或目标的连接.
 		variant_stream_type m_upstream;
 
+		// m_upstream_buffer 保存代理握手响应头之后预读的上游数据.
+		beast::flat_buffer m_upstream_buffer;
+
 		// 连接状态.
 		bool m_closed { false };
 		bool m_connected { false };

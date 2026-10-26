@@ -8,6 +8,7 @@ add_executable(proxy_unit_tests
 	test_rfc9298_capsule.cpp
 	test_http_date.cpp
 	test_http_error_body.cpp
+	test_http_proxy_client.cpp
 	test_proxy_util.cpp
 	test_strutil.cpp
 	test_strutil_extra.cpp

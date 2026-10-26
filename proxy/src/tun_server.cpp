@@ -447,6 +447,26 @@ namespace proxy {
 			close();
 			co_return;
 		}
+
+		if (m_upstream_buffer.size() > 0)
+		{
+			boost::system::error_code ec;
+			auto bytes = m_upstream_buffer.size();
+			co_await net::async_write(m_client_stream,
+				m_upstream_buffer.data(), net_awaitable[ec]);
+			m_upstream_buffer.consume(bytes);
+			if (ec)
+			{
+				XLOG_WARN << "tun write buffered upstream data: "
+					<< ec.message();
+				conn_timer.cancel();
+				close();
+				co_return;
+			}
+
+			m_tx_bytes += static_cast<uint64_t>(bytes);
+		}
+
 		conn_timer.cancel();
 
 		m_connected = true;
@@ -618,7 +638,8 @@ namespace proxy {
 			opt.username = std::string(proxy_url.user());
 			opt.password = std::string(proxy_url.password());
 
-			co_await async_http_proxy_handshake(m_upstream, opt, net_awaitable[ec]);
+			co_await async_http_proxy_handshake(
+				m_upstream, opt, net_awaitable[ec], &m_upstream_buffer);
 		}
 		else if (scheme == "ws" || scheme == "wss")
 		{
