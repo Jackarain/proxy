@@ -234,7 +234,8 @@ namespace proxy {
 		// 会话对象由调用方（launcher_run_once）持有, 后续均通过引用访问.
 		template <typename WsStream>
 		net::awaitable<std::optional<jsonrpc::jsonrpc_session<WsStream>>>
-		launcher_connect(const std::string& host, const std::string& port,
+		launcher_connect(const std::string& host,
+			const std::string& handshake_host, const std::string& port,
 			const std::string& target);
 
 		// 一次连接的服务流程: 注册实例信息、启动读循环、状态上报循环,

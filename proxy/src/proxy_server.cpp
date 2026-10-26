@@ -9,6 +9,7 @@
 //
 
 #include "proxy/proxy_server.hpp"
+#include "proxy/authority.hpp"
 #include "proxy/proxy_websocket_client.hpp"
 #include "proxy/proxy_util.hpp"
 #include "proxy/ssl_connect.hpp"
@@ -1082,7 +1083,9 @@ std::string proxy_server::launcher_parse_instance_id(const std::string& url)
 // 使异步操作失败）. 会话对象由调用方持有, 后续均通过引用访问.
 template <typename WsStream>
 net::awaitable<std::optional<jsonrpc::jsonrpc_session<WsStream>>>
-proxy_server::launcher_connect(const std::string& host, const std::string& port, const std::string& target)
+proxy_server::launcher_connect(const std::string& host,
+	const std::string& handshake_host, const std::string& port,
+	const std::string& target)
 {
 	auto ex = co_await net::this_coro::executor;
 	boost::system::error_code ec;
@@ -1127,7 +1130,7 @@ proxy_server::launcher_connect(const std::string& host, const std::string& port,
 			co_return std::nullopt;
 
 		// WebSocket 握手.
-		co_await ws.async_handshake(host, target, net_awaitable[ec]);
+		co_await ws.async_handshake(handshake_host, target, net_awaitable[ec]);
 		dial_timer.cancel();
 		if (ec)
 			co_return std::nullopt;
@@ -1156,7 +1159,7 @@ proxy_server::launcher_connect(const std::string& host, const std::string& port,
 			co_return std::nullopt;
 
 		// WebSocket 握手.
-		co_await ws.async_handshake(host, target, net_awaitable[ec]);
+		co_await ws.async_handshake(handshake_host, target, net_awaitable[ec]);
 		dial_timer.cancel();
 		if (ec)
 			co_return std::nullopt;
@@ -1736,24 +1739,26 @@ net::awaitable<bool> proxy_server::launcher_run_once()
 		XLOG_WARN << "launcher unsupported scheme: " << scheme;
 		co_return false;
 	}
-	std::string host = std::string(u.host());
-	std::string port;
-	if (u.has_port())
-		port = std::string(u.port());
-	else
-		port = std::to_string(urls::default_port(u.scheme_id()));
+	std::string host = std::string(u.host_address());
+	uint16_t port_number = u.port_number();
+	if (port_number == 0)
+		port_number = urls::default_port(u.scheme_id());
+	std::string port = std::to_string(port_number);
+	std::string handshake_host = authority::format_authority(host, port_number);
 	std::string target = std::string(u.encoded_target().empty() ? "/" : u.encoded_target());
 
 	if (scheme == "wss")
 	{
-		auto sess = co_await launcher_connect<launcher_wss>(host, port, target);
+		auto sess = co_await launcher_connect<launcher_wss>(
+			host, handshake_host, port, target);
 		if (!sess)
 			co_return false;
 		co_await launcher_serve(*sess);
 	}
 	else
 	{
-		auto sess = co_await launcher_connect<launcher_ws>(host, port, target);
+		auto sess = co_await launcher_connect<launcher_ws>(
+			host, handshake_host, port, target);
 		if (!sess)
 			co_return false;
 		co_await launcher_serve(*sess);
@@ -1764,9 +1769,13 @@ net::awaitable<bool> proxy_server::launcher_run_once()
 
 // 显式实例化模板 launcher_connect
 template net::awaitable<std::optional<jsonrpc::jsonrpc_session<launcher_ws>>>
-proxy_server::launcher_connect<launcher_ws>(const std::string& host, const std::string& port, const std::string& target);
+proxy_server::launcher_connect<launcher_ws>(const std::string& host,
+	const std::string& handshake_host, const std::string& port,
+	const std::string& target);
 template net::awaitable<std::optional<jsonrpc::jsonrpc_session<launcher_wss>>>
-proxy_server::launcher_connect<launcher_wss>(const std::string& host, const std::string& port, const std::string& target);
+proxy_server::launcher_connect<launcher_wss>(const std::string& host,
+	const std::string& handshake_host, const std::string& port,
+	const std::string& target);
 
 // 显式实例化模板 launcher_serve
 template net::awaitable<void> proxy_server::launcher_serve<launcher_ws>(jsonrpc::jsonrpc_session<launcher_ws>& sess);
