@@ -282,7 +282,7 @@ namespace proxy {
 					}
 
 					auto it = *target_endpoints.begin();
-					endpoint = it.endpoint().address().to_v4();
+					endpoint = it.endpoint().address();
 				}
 
 				if (endpoint.is_v4())
