@@ -690,6 +690,21 @@ namespace proxy {
 
 		const char* rbuf = &read_buffer[udp_max_header_size];
 
+		auto from_client = [this](const udp::endpoint& remote_endp) noexcept
+		{
+			if (remote_endp == m_local_udp_endpoint)
+				return true;
+
+			if (m_local_udp_endpoint.port() == 0 &&
+				remote_endp.address() == m_local_udp_endpoint.address())
+			{
+				m_local_udp_endpoint = remote_endp;
+				return true;
+			}
+
+			return false;
+		};
+
 		while (!m_abort)
 		{
 			auto bytes = co_await client.async_receive_from(
@@ -702,10 +717,8 @@ namespace proxy {
 			// 桥接代理模式下, 直接转发数据包到桥接服务器.
 			if (m_proxy_pass)
 			{
-				if (remote_endp.address() == m_local_udp_endpoint.address())
+				if (from_client(remote_endp))
 				{
-					m_local_udp_endpoint = remote_endp;
-
 					send_total++;
 					co_await server.async_send_to(
 						net::buffer(rbuf, bytes),
@@ -728,10 +741,8 @@ namespace proxy {
 			const auto packet_end = rbuf + bytes;
 
 			// 如果数据包来自 socks 客户端, 则解析数据包并将数据转发给目标主机.
-			if (remote_endp.address() == m_local_udp_endpoint.address())
+			if (from_client(remote_endp))
 			{
-				m_local_udp_endpoint = remote_endp;
-
 				//  +----+------+------+----------+-----------+----------+
 				//  |RSV | FRAG | ATYP | DST.ADDR | DST.PORT  |   DATA   |
 				//  +----+------+------+----------+-----------+----------+
