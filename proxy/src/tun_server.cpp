@@ -1747,12 +1747,12 @@ namespace proxy {
 
 	void tun_udp_flow::push_capsule(const char* data, size_t len)
 	{
-		uint8_t buf[65536];
+		std::array<uint8_t, datagram_capsule_max_size> buf{};
 
 		AXLOG_DBG << "tun udp tx capsule to " << m_target.address().to_string()
 			<< ":" << m_target.port() << " len=" << len;
 
-		auto pos = encode_datagram_capsule(data, len, buf, sizeof(buf));
+		auto pos = encode_datagram_capsule(data, len, buf.data(), buf.size());
 		if (pos == 0)
 		{
 			close();
@@ -1764,7 +1764,7 @@ namespace proxy {
 			// 发送协程消费速度跟不上时丢弃新包, 防止队列无界增长.
 			if (m_tx_queue.size() >= k_max_udp_pending)
 				return;
-			m_tx_queue.emplace_back(buf, buf + pos);
+			m_tx_queue.emplace_back(buf.data(), buf.data() + pos);
 		}
 
 		if (m_tx_signal)

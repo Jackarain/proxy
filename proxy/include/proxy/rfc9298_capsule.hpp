@@ -317,8 +317,17 @@ namespace proxy {
 	//////////////////////////////////////////////////////////////////////////
 	// RFC 9297/9298 DATAGRAM capsule 封装与解析
 
-	// capsule 长度上限, 与 UDP 报文最大长度一致.
-	inline constexpr size_t datagram_capsule_max_length = 65535;
+	inline constexpr size_t max_udp_payload_size = 65535;
+
+	// capsule value 由 context ID 和 UDP payload 组成.
+	inline constexpr size_t datagram_capsule_max_length =
+		max_udp_payload_size + 1;
+
+	// 最大 UDP payload 对应的完整 DATAGRAM capsule 长度.
+	inline constexpr size_t datagram_capsule_max_size =
+		varint_encoded_length(udp_proxy_capsule_type) +
+		varint_encoded_length(datagram_capsule_max_length) +
+		datagram_capsule_max_length;
 
 	// 计算 DATAGRAM capsule 头部字节数. 头部由三个 varint 组成:
 	//   capsule type, capsule length (1 + payload), context ID (固定为 0).
@@ -345,6 +354,9 @@ namespace proxy {
 	inline size_t encode_datagram_capsule(const void* data, size_t len,
 		uint8_t* out, size_t out_size) noexcept
 	{
+		if (len > max_udp_payload_size)
+			return 0;
+
 		auto header = datagram_capsule_header_size(len);
 		if (len > out_size || header > out_size - len)
 			return 0;

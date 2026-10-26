@@ -4176,9 +4176,9 @@ void proxy_server::udp_tproxy_forward_packet_http(
 	if (!flow || flow->closing_)
 		return;
 
-	uint8_t buf[65536];
+	std::array<uint8_t, datagram_capsule_max_size> buf{};
 
-	auto pos = encode_datagram_capsule(data, len, buf, sizeof(buf));
+	auto pos = encode_datagram_capsule(data, len, buf.data(), buf.size());
 	if (pos == 0)
 	{
 		XLOG_WARN << "tproxy flow: " << flow->flow_key_
@@ -4192,7 +4192,7 @@ void proxy_server::udp_tproxy_forward_packet_http(
 
 	// 推入发送队列并通知发送协程.
 	{
-		flow->send_queue_.emplace_back(buf, buf + pos);
+		flow->send_queue_.emplace_back(buf.data(), buf.data() + pos);
 
 		// 通知发送协程有新数据到达.
 		if (flow->notify_timer_)

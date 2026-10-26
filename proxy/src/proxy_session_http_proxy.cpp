@@ -1008,7 +1008,7 @@ namespace proxy {
 			-> net::awaitable<void>
 		{
 			std::array<char, 65535> payload{};
-			std::array<uint8_t, 65536> capsule{};
+			std::array<uint8_t, datagram_capsule_max_size> capsule{};
 			boost::system::error_code ec;
 			while (!m_abort)
 			{
@@ -1144,7 +1144,7 @@ namespace proxy {
 
 		auto http_to_websocket = [this, self]() -> net::awaitable<void>
 		{
-			std::array<uint8_t, 65536> capsule{};
+			std::array<uint8_t, datagram_capsule_max_size> capsule{};
 			boost::system::error_code ec;
 			while (!m_abort)
 			{
@@ -1446,7 +1446,7 @@ namespace proxy {
 		{
 			boost::system::error_code ec;
 			// 最大 UDP payload + capsule header (type + length + ctx_id).
-			uint8_t buf[32 + 65535];
+			uint8_t buf[32 + max_udp_payload_size];
 
 			while (!m_abort)
 			{

@@ -94,6 +94,10 @@ namespace {
 
 	BOOST_AUTO_TEST_CASE(datagram_capsule_header_layout)
 	{
+		BOOST_TEST(max_udp_payload_size == 65535u);
+		BOOST_TEST(datagram_capsule_max_length == 65536u);
+		BOOST_TEST(datagram_capsule_max_size == 65541u);
+
 		// 空负载: length = 1, 变长整数占 1 字节, 头部共 3 字节.
 		BOOST_TEST(datagram_capsule_header_size(0) == 3u);
 
@@ -168,6 +172,13 @@ namespace {
 		std::vector<uint8_t> no_space(2);
 		BOOST_TEST(encode_datagram_capsule(
 			payload.data(), 0, no_space.data(), no_space.size()) == 0u);
+
+		std::vector<uint8_t> oversized(
+			datagram_capsule_header_size(max_udp_payload_size + 1) +
+			max_udp_payload_size + 1);
+		BOOST_TEST(encode_datagram_capsule(payload.data(),
+			max_udp_payload_size + 1, oversized.data(),
+			oversized.size()) == 0u);
 	}
 
 	BOOST_AUTO_TEST_CASE(datagram_capsule_value_edge_cases)
@@ -392,6 +403,43 @@ namespace {
 		BOOST_TEST(finished);
 		BOOST_TEST(!ec);
 		BOOST_TEST(buffer.size() == 0u);
+	}
+
+	BOOST_AUTO_TEST_CASE(read_capsule_accepts_max_udp_payload)
+	{
+		net::io_context ioc;
+		net::readable_pipe reader(ioc);
+
+		const std::string payload(65535, 'm');
+		std::vector<uint8_t> encoded(
+			datagram_capsule_header_size(payload.size()) + payload.size());
+		auto encoded_len = encode_datagram_capsule(
+			payload.data(), payload.size(), encoded.data(), encoded.size());
+		BOOST_TEST(encoded_len == encoded.size());
+
+		boost::beast::flat_buffer buffer;
+		buffer.commit(net::buffer_copy(
+			buffer.prepare(encoded_len), net::buffer(encoded)));
+
+		boost::system::error_code ec;
+		bool finished = false;
+
+		net::co_spawn(reader.get_executor(),
+			[&]() -> net::awaitable<void>
+			{
+				auto result = co_await
+					read_capsule_from_stream(reader, buffer, ec);
+				BOOST_TEST(result.first == udp_proxy_capsule_type);
+				BOOST_TEST(std::string(
+					decode_datagram_capsule(result.second)) == payload);
+				finished = true;
+				co_return;
+			}, net::detached);
+
+		ioc.run();
+
+		BOOST_TEST(finished);
+		BOOST_TEST(!ec);
 	}
 
 	BOOST_AUTO_TEST_CASE(read_capsule_rejects_oversized_length)
