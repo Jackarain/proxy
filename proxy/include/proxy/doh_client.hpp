@@ -265,7 +265,8 @@ namespace proxy {
 		std::shared_ptr<proxy_pass_pool> m_proxy_pool;
 
 		// DoH 目标（构造时解析）.
-		std::string m_doh_host;
+		std::string m_doh_host;     // 裸主机名，用于 DNS 解析与 TLS 校验.
+		std::string m_doh_authority; // 带方括号和端口的权威段.
 		std::string m_doh_path;
 		uint16_t m_doh_port { 443 };
 		bool m_doh_https { true };

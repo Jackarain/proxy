@@ -9,6 +9,7 @@
 //
 
 #include "proxy/doh_client.hpp"
+#include "proxy/authority.hpp"
 #include "proxy/proxy_websocket_client.hpp"
 
 #include <boost/algorithm/string/case_conv.hpp>
@@ -401,7 +402,7 @@ namespace proxy {
 	{
 		// 解析 DoH 目标（未配置 dns_doh_ 时把 proxy_pass 当作 DoH 服务）.
 		const auto& proxy_url = *m_option.proxy_pass_;
-		m_doh_host = std::string(proxy_url.encoded_host());
+		m_doh_host = std::string(proxy_url.host_address());
 		m_doh_port = proxy_url.port_number();
 		if (m_doh_port == 0)
 			m_doh_port = urls::default_port(proxy_url.scheme_id());
@@ -413,7 +414,7 @@ namespace proxy {
 		{
 			if (auto r = urls::parse_uri(m_option.dns_doh_); r.has_value())
 			{
-				m_doh_host = std::string(r->encoded_host());
+				m_doh_host = std::string(r->host_address());
 				if (!r->path().empty())
 					m_doh_path = std::string(r->path());
 				m_doh_port = r->port_number();
@@ -428,9 +429,10 @@ namespace proxy {
 
 		// 与 proxy_pass 同服务为直连 DoH，否则经代理 CONNECT 隧道转发.
 		auto proxy_host = boost::to_lower_copy(
-			std::string(proxy_url.encoded_host()));
+			std::string(proxy_url.host_address()));
 		auto doh_host = boost::to_lower_copy(m_doh_host);
 		m_doh_via_proxy = !doh_host.empty() && doh_host != proxy_host;
+		m_doh_authority = authority::format_authority(m_doh_host, m_doh_port);
 
 		m_auth_user = std::string(proxy_url.user());
 		m_auth_pass = std::string(proxy_url.password());
@@ -725,8 +727,7 @@ namespace proxy {
 			co_return true;  // 同服务: 池连接即为 DoH 连接.
 
 		// 经代理 CONNECT 隧道转发到 DoH 服务.
-		const std::string authority =
-			m_doh_host + ":" + std::to_string(m_doh_port);
+		const std::string& authority = m_doh_authority;
 		if (proxy_scheme_is_websocket(proxy_url.scheme()))
 		{
 			co_return co_await connect_websocket_tunnel(
@@ -764,8 +765,7 @@ namespace proxy {
 	{
 		const auto& proxy_url = *m_option.proxy_pass_;
 		const std::string proxy_host(proxy_url.host_address());
-		const std::string authority =
-			m_doh_host + ":" + std::to_string(m_doh_port);
+		const std::string& authority = m_doh_authority;
 		const std::string proxy_sni = m_option.proxy_ssl_name_.empty() ?
 			proxy_host : m_option.proxy_ssl_name_;
 
@@ -968,7 +968,7 @@ namespace proxy {
 
 		// 经代理隧道转发时认证头仅用于代理 CONNECT（由 http_connect_tunnel
 		// 发送），不向 DoH 服务器附带；直连同服务时透传 proxy 的 Basic 认证.
-		bool ok = co_await doh_post(*m_stream, m_doh_host, m_doh_path,
+		bool ok = co_await doh_post(*m_stream, m_doh_authority, m_doh_path,
 			dns_query, output,
 			m_doh_via_proxy ? std::string{} : m_auth_user,
 			m_doh_via_proxy ? std::string{} : m_auth_pass);
