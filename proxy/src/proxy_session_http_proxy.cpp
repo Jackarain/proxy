@@ -2143,6 +2143,10 @@ namespace proxy {
 			}
 		}
 
+		// SOCKS5 UDP 域名长度字段为 1 字节.
+		if (target_host.size() > 255)
+			return false;
+
 		return true;
 	}
 
