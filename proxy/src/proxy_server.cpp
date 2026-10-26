@@ -3916,7 +3916,7 @@ bool proxy_server::init_relay_socket(udp_tproxy_flow_ptr flow)
 // 去掉 SOCKS5 UDP 头, 然后使用 sendmsg + IP_PKTINFO 将原始数据送回客户端.
 void proxy_server::send_response_to_client(udp_tproxy_flow_ptr flow, const char* data, std::size_t len)
 {
-	if (len < 6)
+	if (len < 4)
 		return;
 
 	//  +----+------+------+----------+-----------+----------+
@@ -3925,12 +3925,13 @@ void proxy_server::send_response_to_client(udp_tproxy_flow_ptr flow, const char*
 	//  | 2  |  1   |  1   | Variable |    2      | Variable |
 	//  +----+------+------+----------+-----------+----------+
 
+	const char* p = data;
+
 	// 跳过 RSV(2)
-	if (read<uint16_t>(data) != 0)
+	if (read<uint16_t>(p) != 0)
 		return;
 
-	// 跳过 FRAG(1)
-	const char* p = data + 2;
+	// FRAG(1)
 	if (read<uint8_t>(p) != 0)
 		return; // 不支持分片
 
@@ -3948,7 +3949,7 @@ void proxy_server::send_response_to_client(udp_tproxy_flow_ptr flow, const char*
 		return; // 未知地址类型
 	}
 
-	if (len <= header_size)
+	if (header_size > len)
 		return;
 
 	auto payload = data + header_size;
