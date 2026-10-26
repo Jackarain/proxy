@@ -3593,7 +3593,7 @@ net::awaitable<bool> proxy_server::do_socks5_associate()
 {
 	auto proxy_pass = *m_option.proxy_pass_;
 
-	auto proxy_host = std::string(proxy_pass.host());
+	auto proxy_host = std::string(proxy_pass.host_address());
 	auto sni = m_option.proxy_ssl_name_.empty() ? proxy_host : m_option.proxy_ssl_name_;
 	auto scheme = boost::to_lower_copy(std::string(proxy_pass.scheme()));
 
@@ -4193,7 +4193,8 @@ net::awaitable<void> proxy_server::udp_tproxy_http_udp_loop(udp_tproxy_flow_ptr 
 
 	if (use_ssl)
 	{
-		auto sni = m_option.proxy_ssl_name_.empty() ? proxy_host : m_option.proxy_ssl_name_;
+		auto sni = m_option.proxy_ssl_name_.empty() ?
+			std::string(proxy_pass.host_address()) : m_option.proxy_ssl_name_;
 		auto res = co_await make_ssl_socket(remote_socket, sni, http_sock_opt);
 		if (res.has_error())
 		{
@@ -4394,7 +4395,7 @@ net::awaitable<void> proxy_server::udp_tproxy_http_udp_loop(udp_tproxy_flow_ptr 
 		}
 
 		auto proxy_pass = *m_option.proxy_pass_;
-		auto proxy_host = std::string(proxy_pass.host());
+		auto proxy_host = std::string(proxy_pass.host_address());
 		auto targets = co_await resolve_proxy_pass(proxy_pass);
 		if (!targets || targets->empty())
 			co_return;

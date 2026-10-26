@@ -1598,7 +1598,7 @@ namespace proxy {
 			if (use_ssl)
 			{
 				// 获取 proxy_pass 的主机名作为 SNI.
-				auto proxy_host = std::string(m_proxy_pass->host());
+				auto proxy_host = std::string(m_proxy_pass->host_address());
 				auto sni = m_option.proxy_ssl_name_.empty()
 					? proxy_host : m_option.proxy_ssl_name_;
 

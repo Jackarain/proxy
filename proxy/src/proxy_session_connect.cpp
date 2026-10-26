@@ -618,7 +618,7 @@ namespace proxy {
 		}
 
 		// 获取 proxy_pass 的主机名称.
-		auto proxy_host = std::string(m_proxy_pass->host());
+		auto proxy_host = std::string(m_proxy_pass->host_address());
 
 		// 若用户配置了 SNI, 则使用用户配置的 SNI 否则使用默认 hostname.
 		std::string sni = m_option.proxy_ssl_name_.empty() ? proxy_host : m_option.proxy_ssl_name_;

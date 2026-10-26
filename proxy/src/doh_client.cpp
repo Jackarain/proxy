@@ -273,7 +273,7 @@ namespace proxy {
 		{
 			boost::system::error_code ec;
 
-			std::string proxy_host(proxy_url.encoded_host());
+			std::string proxy_host(proxy_url.host_address());
 			const std::string sni = m_option.proxy_ssl_name_.empty() ?
 				proxy_host : m_option.proxy_ssl_name_;
 
@@ -763,7 +763,7 @@ namespace proxy {
 	net::awaitable<bool> doh_connection::connect_via_proxy()
 	{
 		const auto& proxy_url = *m_option.proxy_pass_;
-		const std::string proxy_host(proxy_url.encoded_host());
+		const std::string proxy_host(proxy_url.host_address());
 		const std::string authority =
 			m_doh_host + ":" + std::to_string(m_doh_port);
 		const std::string proxy_sni = m_option.proxy_ssl_name_.empty() ?
@@ -866,7 +866,7 @@ namespace proxy {
 		if (!proxy_use_ssl(proxy_url, m_option))
 			co_return true;  // 明文直连: m_stream 已是连接好的明文流.
 
-		const std::string proxy_host(proxy_url.encoded_host());
+		const std::string proxy_host(proxy_url.host_address());
 		const std::string sni = m_option.proxy_ssl_name_.empty() ?
 			proxy_host : m_option.proxy_ssl_name_;
 

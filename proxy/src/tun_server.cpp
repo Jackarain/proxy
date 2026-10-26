@@ -553,7 +553,7 @@ namespace proxy {
 			if (!m_owner)
 				co_return false;
 
-			std::string proxy_host(proxy_url.encoded_host());
+			std::string proxy_host(proxy_url.host_address());
 			auto sni = m_option.proxy_ssl_name_.empty() ?
 				proxy_host : m_option.proxy_ssl_name_;
 			std::optional<variant_stream_type> ssl_stream;
@@ -1509,7 +1509,7 @@ namespace proxy {
 		{
 			if (!m_owner)
 				co_return false;
-			std::string proxy_host(proxy_url.encoded_host());
+			std::string proxy_host(proxy_url.host_address());
 			auto sni = m_option.proxy_ssl_name_.empty() ?
 				proxy_host : m_option.proxy_ssl_name_;
 			auto res = co_await m_owner->make_ssl_socket(sock, sni, m_control);
@@ -1565,7 +1565,7 @@ namespace proxy {
 		auto self = shared_from_this();
 
 		const auto& proxy_url = *m_option.proxy_pass_;
-		std::string proxy_host(proxy_url.encoded_host());
+		std::string proxy_host(proxy_url.host_address());
 
 		// 判断是否使用 SSL：显式配置 proxy_pass_ssl 或 scheme 以 's' 结尾（https/wss）.
 		if (proxy_use_ssl(proxy_url, m_option))
@@ -1608,7 +1608,7 @@ namespace proxy {
 			if (!m_owner)
 				co_return false;
 
-			auto proxy_host = std::string(proxy_url.encoded_host());
+			auto proxy_host = std::string(proxy_url.host_address());
 			auto sni = m_option.proxy_ssl_name_.empty() ?
 				proxy_host : m_option.proxy_ssl_name_;
 			auto res = co_await m_owner->make_ssl_socket(sock, sni, m_control);
