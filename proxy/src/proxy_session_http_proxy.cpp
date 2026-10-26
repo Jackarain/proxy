@@ -2132,29 +2132,52 @@ namespace proxy {
 		auto [ptr, ec] = std::from_chars(
 			r_port.data(), r_port.data() + r_port.size(), target_port);
 
-		if (ec != std::errc{} || ptr != r_port.data() + r_port.size())
+		if (ec != std::errc{} || ptr != r_port.data() + r_port.size() ||
+			target_port == 0)
 			return false;
 
 		// 还原 Host, 处理 IPv6 中的 %3A 等情况.
 		target_host.clear();
 		target_host.reserve(r_host.size());
 
+		auto hex_value = [](char c) noexcept -> int
+		{
+			if (c >= '0' && c <= '9')
+				return c - '0';
+			if (c >= 'a' && c <= 'f')
+				return c - 'a' + 10;
+			if (c >= 'A' && c <= 'F')
+				return c - 'A' + 10;
+			return -1;
+		};
+
 		for (size_t i = 0; i < r_host.size(); ++i)
 		{
-			if (r_host[i] == '%' && i + 2 < r_host.size())
+			char ch = r_host[i];
+			if (ch == '%')
 			{
-				char hex[3] = {r_host[i + 1], r_host[i + 2], 0};
-				target_host += static_cast<char>(std::strtol(hex, nullptr, 16));
+				if (i + 2 >= r_host.size())
+					return false;
+
+				auto high = hex_value(r_host[i + 1]);
+				auto low = hex_value(r_host[i + 2]);
+				if (high < 0 || low < 0)
+					return false;
+
+				ch = static_cast<char>((high << 4) | low);
 				i += 2;
 			}
-			else
-			{
-				target_host += r_host[i];
-			}
+
+			auto uch = static_cast<unsigned char>(ch);
+			if (uch <= 0x20 || uch >= 0x7f || ch == '/' || ch == '@' ||
+				ch == '?' || ch == '#' || ch == '[' || ch == ']')
+				return false;
+
+			target_host.push_back(ch);
 		}
 
 		// SOCKS5 UDP 域名长度字段为 1 字节.
-		if (target_host.size() > 255)
+		if (target_host.empty() || target_host.size() > 255)
 			return false;
 
 		return true;
