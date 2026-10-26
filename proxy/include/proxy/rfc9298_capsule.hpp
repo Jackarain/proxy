@@ -23,6 +23,7 @@
 #include <boost/beast/http/message.hpp>
 #include <boost/beast/http/status.hpp>
 
+#include <charconv>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -72,6 +73,112 @@ namespace proxy {
 		path += std::to_string(port);
 		path.push_back('/');
 		return path;
+	}
+
+	inline bool decode_connect_udp_host(std::string_view encoded,
+		std::string& host)
+	{
+		auto hex_value = [](char c) noexcept -> int
+		{
+			if (c >= '0' && c <= '9')
+				return c - '0';
+			if (c >= 'a' && c <= 'f')
+				return c - 'a' + 10;
+			if (c >= 'A' && c <= 'F')
+				return c - 'A' + 10;
+			return -1;
+		};
+
+		host.clear();
+		host.reserve(encoded.size());
+		for (size_t i = 0; i < encoded.size(); ++i)
+		{
+			char ch = encoded[i];
+			if (ch == '%')
+			{
+				if (i + 2 >= encoded.size())
+					return false;
+
+				auto high = hex_value(encoded[i + 1]);
+				auto low = hex_value(encoded[i + 2]);
+				if (high < 0 || low < 0)
+					return false;
+
+				ch = static_cast<char>((high << 4) | low);
+				i += 2;
+			}
+
+			auto uch = static_cast<unsigned char>(ch);
+			if (uch <= 0x20 || uch >= 0x7f || ch == '/' || ch == '@' ||
+				ch == '?' || ch == '#' || ch == '[' || ch == ']')
+				return false;
+
+			host.push_back(ch);
+		}
+		return !host.empty();
+	}
+
+	inline bool parse_connect_udp_target(std::string_view path,
+		std::string& target_host, uint16_t& target_port)
+	{
+		if (path.empty() || path.front() != '/')
+			return false;
+
+		std::string_view encoded_host;
+		std::string_view encoded_port;
+
+		if (path.starts_with(connect_udp_path_prefix))
+		{
+			auto sub = path.substr(connect_udp_path_prefix.size());
+			auto slash = sub.find('/');
+			if (slash == std::string_view::npos || slash == 0)
+				return false;
+
+			encoded_host = sub.substr(0, slash);
+			encoded_port = sub.substr(slash + 1);
+			if (!encoded_port.empty() && encoded_port.back() == '/')
+				encoded_port.remove_suffix(1);
+		}
+		else if (auto q_pos = path.find('?'); q_pos != std::string_view::npos)
+		{
+			std::string_view query = path.substr(q_pos + 1);
+			size_t pos = 0;
+
+			while (pos < query.size())
+			{
+				auto next = query.find_first_of("&,", pos);
+				auto pair = query.substr(
+					pos, next == std::string_view::npos ? next : next - pos);
+				pos = next == std::string_view::npos ? next : next + 1;
+
+				if (auto eq = pair.find('='); eq != std::string_view::npos)
+				{
+					auto key = pair.substr(0, eq);
+					auto value = pair.substr(eq + 1);
+
+					if (key == "h" || key == "target_host")
+						encoded_host = value;
+					else if (key == "p" || key == "target_port")
+						encoded_port = value;
+				}
+			}
+		}
+
+		if (encoded_host.empty() || encoded_port.empty())
+			return false;
+
+		auto [ptr, ec] = std::from_chars(encoded_port.data(),
+			encoded_port.data() + encoded_port.size(), target_port);
+		if (ec != std::errc{} ||
+			ptr != encoded_port.data() + encoded_port.size() ||
+			target_port == 0)
+			return false;
+
+		if (!decode_connect_udp_host(encoded_host, target_host))
+			return false;
+
+		// SOCKS5 UDP 域名长度字段为 1 字节.
+		return target_host.size() <= 255;
 	}
 
 	namespace detail {

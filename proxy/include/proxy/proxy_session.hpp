@@ -518,10 +518,6 @@ namespace proxy {
 			uint16_t target_port
 		);
 
-		// 解析 HTTP CONNECT-UDP 请求的目标地址.
-		bool parse_connect_udp_target(std::string_view path,
-			std::string& target_host, uint16_t& target_port);
-
 		// SOCKS5 用户名/密码认证处理.
 		net::awaitable<bool> socks_auth() noexcept;
 

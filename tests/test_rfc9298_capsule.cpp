@@ -64,6 +64,41 @@ namespace {
 			"/.well-known/masque/udp/fe80%3A%3A1%25eth0/53/");
 	}
 
+	BOOST_AUTO_TEST_CASE(connect_udp_target_path_parsing)
+	{
+		std::string host;
+		uint16_t port = 0;
+
+		BOOST_TEST(parse_connect_udp_target(
+			"/.well-known/masque/udp/192.0.2.1/53/", host, port));
+		BOOST_TEST(host == "192.0.2.1");
+		BOOST_TEST(port == 53);
+
+		BOOST_TEST(parse_connect_udp_target(
+			"/.well-known/masque/udp/2001%3Adb8%3A%3A1/443/", host, port));
+		BOOST_TEST(host == "2001:db8::1");
+		BOOST_TEST(port == 443);
+
+		BOOST_TEST(parse_connect_udp_target(
+			"/.well-known/masque/udp/fe80%3A%3A1%25eth0/53/", host, port));
+		BOOST_TEST(host == "fe80::1%eth0");
+		BOOST_TEST(port == 53);
+
+		BOOST_TEST(!parse_connect_udp_target(
+			"/prefix/.well-known/masque/udp/192.0.2.1/53/", host, port));
+		BOOST_TEST(!parse_connect_udp_target(
+			"/.well-known/masque/udp/192.0.2.1/53/extra", host, port));
+		BOOST_TEST(!parse_connect_udp_target(
+			"/.well-known/masque/udp/192.0.2.1/0/", host, port));
+		BOOST_TEST(!parse_connect_udp_target(
+			"/.well-known/masque/udp/192.0.2.1%2F/53/", host, port));
+
+		BOOST_TEST(parse_connect_udp_target(
+			"/?target_host=192.0.2.1&target_port=53", host, port));
+		BOOST_TEST(host == "192.0.2.1");
+		BOOST_TEST(port == 53);
+	}
+
 	BOOST_AUTO_TEST_CASE(varint_round_trip_all_widths)
 	{
 		const uint64_t values[] = {
