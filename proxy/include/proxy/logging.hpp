@@ -179,6 +179,7 @@ namespace xlogger {
 #endif
 
 #include <cassert>
+#include <cerrno>
 #include <codecvt>
 #include <clocale>
 #include <sstream>
@@ -1002,14 +1003,29 @@ private:
 
 	inline void write_file(const char* str, std::streamsize size)
 	{
-		if (size <= 0)
-			return;
-
+		constexpr std::streamsize max_write_chunk = 1024 * 1024 * 1024;
+		while (size > 0)
+		{
+			auto chunk = size < max_write_chunk ? size : max_write_chunk;
 #ifdef WIN32
-		(void)::_write(m_fd, str, static_cast<unsigned int>(size));
+			auto written = ::_write(
+				m_fd, str, static_cast<unsigned int>(chunk));
 #else
-		(void)::write(m_fd, str, static_cast<size_t>(size));
+			auto written = ::write(
+				m_fd, str, static_cast<size_t>(chunk));
 #endif
+			if (written < 0)
+			{
+				if (errno == EINTR)
+					continue;
+				return;
+			}
+			if (written == 0)
+				return;
+
+			str += written;
+			size -= written;
+		}
 	}
 
 	fs::path m_log_path{"./logs"};
