@@ -6,10 +6,13 @@
 add_executable(proxy_unit_tests
 	main.cpp
 	test_rfc9298_capsule.cpp
+	test_authority.cpp
 	test_http_date.cpp
 	test_http_error_body.cpp
 	test_http_proxy_client.cpp
+	test_logging.cpp
 	test_proxy_util.cpp
+	test_socks_io.cpp
 	test_strutil.cpp
 	test_strutil_extra.cpp
 	test_url_info.cpp
