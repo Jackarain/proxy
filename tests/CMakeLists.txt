@@ -12,7 +12,7 @@ add_executable(proxy_unit_tests
 	test_http_proxy_client.cpp
 	test_logging.cpp
 	test_proxy_util.cpp
-	test_socks_io.cpp
+	test_network_order.cpp
 	test_strutil.cpp
 	test_strutil_extra.cpp
 	test_url_info.cpp

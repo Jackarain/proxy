@@ -1,8 +1,8 @@
 ﻿//
-// test_socks_io.cpp
-// ~~~~~~~~~~~~~~~~~
+// test_network_order.cpp
+// ~~~~~~~~~~~~~~~~~~~~~~
 
-#include "proxy/socks_io.hpp"
+#include "proxy/network_order.hpp"
 
 #include <boost/test/unit_test.hpp>
 
@@ -12,7 +12,7 @@
 
 namespace {
 
-	BOOST_AUTO_TEST_SUITE(socks_io_suite)
+	BOOST_AUTO_TEST_SUITE(network_order_suite)
 
 	BOOST_AUTO_TEST_CASE(write_encodes_big_endian_and_advances_pointer)
 	{

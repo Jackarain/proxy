@@ -25,7 +25,7 @@
 #include "proxy/socks_enums.hpp"
 #include "proxy/socks_client.hpp"
 #include "proxy/http_proxy_client.hpp"
-#include "proxy/socks_io.hpp"
+#include "proxy/network_order.hpp"
 
 #include "proxy/xxhash.hpp"
 #include "proxy/scramble.hpp"

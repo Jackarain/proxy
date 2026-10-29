@@ -17,7 +17,7 @@
 #include "proxy/proxy_util.hpp"
 #include "proxy/socks_client.hpp"
 #include "proxy/ssl_connect.hpp"
-#include "proxy/socks_io.hpp"
+#include "proxy/network_order.hpp"
 #include "proxy/wintun_install.hpp"
 
 #include <boost/algorithm/string/case_conv.hpp>

@@ -14,7 +14,7 @@
 
 #include "proxy/socks_error_code.hpp"
 #include "proxy/socks_enums.hpp"
-#include "proxy/socks_io.hpp"
+#include "proxy/network_order.hpp"
 #include "proxy/use_awaitable.hpp"
 
 #include <boost/system/error_code.hpp>

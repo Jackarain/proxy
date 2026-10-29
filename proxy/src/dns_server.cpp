@@ -11,7 +11,7 @@
 #include "proxy/dns_server.hpp"
 #include "proxy/authority.hpp"
 #include "proxy/proxy_util.hpp"
-#include "proxy/socks_io.hpp"
+#include "proxy/network_order.hpp"
 
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/detached.hpp>

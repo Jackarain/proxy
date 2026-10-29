@@ -1,6 +1,6 @@
 ﻿//
-// socks_io.hpp
-// ~~~~~~~~~~~~
+// network_order.hpp
+// ~~~~~~~~~~~~~~~~~
 //
 // Copyright (c) 2019 Jack (jack dot wgm at gmail dot com)
 //
@@ -8,8 +8,8 @@
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 
-#ifndef INCLUDE__2023_10_18__SOCKS_IO_HPP
-#define INCLUDE__2023_10_18__SOCKS_IO_HPP
+#ifndef INCLUDE__2026_10_29__NETWORK_ORDER_HPP
+#define INCLUDE__2026_10_29__NETWORK_ORDER_HPP
 
 #include <type_traits>
 #include <concepts>
@@ -37,4 +37,4 @@ namespace io_util {
 
 }
 
-#endif // INCLUDE__2023_10_18__SOCKS_IO_HPP
+#endif // INCLUDE__2026_10_29__NETWORK_ORDER_HPP

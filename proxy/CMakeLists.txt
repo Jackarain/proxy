@@ -16,7 +16,7 @@ target_sources(libproxy
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/socks_client.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/socks_enums.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/socks_error_code.hpp
-	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/socks_io.hpp
+	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/network_order.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/scramble.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/ssl_stream.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/stdio_stream.hpp
