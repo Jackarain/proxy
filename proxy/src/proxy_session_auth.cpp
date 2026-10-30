@@ -144,31 +144,30 @@ namespace proxy {
 		// 检查用户名和密码是否匹配.
 		for (const auto& [user, pwd, addr, proxy_pass] : m_option.auth_users_)
 		{
-			if (username == user)
+			if (username != user)
+				continue;
+			if (!skip_passwd && passwd != pwd)
+				continue;
+
+			// 用户连接数限制: 已达该用户连接数上限则视为认证失败.
+			if (!user_conn_acquire(user))
 			{
-				if (!skip_passwd && passwd != pwd)
-					continue;
-
-				// 用户连接数限制: 已达该用户连接数上限则视为认证失败.
-				if (!user_conn_acquire(user))
-				{
-					log_conn_warning()
-						<< ", user connection limit exceeded, user: "
-						<< user;
-					co_return false;
-				}
-
-				// 记录认证用户（供 launcher 状态按用户统计）.
-				m_auth_user = user;
-
-				user_rate_limit_config(user);
-				update_bind_interface(addr);
-
-				if (proxy_pass)
-					m_proxy_pass = proxy_pass;
-
-				co_return true;
+				log_conn_warning()
+					<< ", user connection limit exceeded, user: "
+					<< user;
+				co_return false;
 			}
+
+			// 记录认证用户（供 launcher 状态按用户统计）.
+			m_auth_user = user;
+
+			user_rate_limit_config(user);
+			update_bind_interface(addr);
+
+			if (proxy_pass)
+				m_proxy_pass = proxy_pass;
+
+			co_return true;
 		}
 
 		// 如果启用了 PAM 认证, 则尝试使用 PAM 认证.
