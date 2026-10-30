@@ -103,13 +103,21 @@ namespace proxy {
 		char month_name[4] = { 0 };
 		int year = 0, month = 0, day = 0, hour = 0, minute = 0, second = 0;
 
+		auto make_parsed_time = [&]() -> std::optional<std::time_t>
+		{
+			month = http_month_from_name(month_name);
+			if (month == 0)
+				return std::nullopt;
+			return make_utc_time(
+				year, month, day, hour, minute, second);
+		};
+
 		// IMF-fixdate: "Sun, 06 Nov 1994 08:49:37 GMT".
 		if (std::sscanf(text.c_str(), "%*3s, %d %3s %d %d:%d:%d",
 			&day, month_name, &year, &hour, &minute, &second) == 6)
 		{
-			if ((month = http_month_from_name(month_name)) != 0)
-				if (auto time_c = make_utc_time(year, month, day, hour, minute, second))
-					return time_c;
+			if (auto time_c = make_parsed_time())
+				return time_c;
 		}
 
 		// RFC 850: "Sunday, 06-Nov-94 08:49:37 GMT".
@@ -119,9 +127,8 @@ namespace proxy {
 		{
 			if (year < 100)
 				year += (year < 70) ? 2000 : 1900;
-			if ((month = http_month_from_name(month_name)) != 0)
-				if (auto time_c = make_utc_time(year, month, day, hour, minute, second))
-					return time_c;
+			if (auto time_c = make_parsed_time())
+				return time_c;
 		}
 
 		// asctime: "Sun Nov  6 08:49:37 1994".
@@ -131,9 +138,8 @@ namespace proxy {
 			if (std::sscanf(text.c_str(), "%3s %3s %d %d:%d:%d %d",
 				weekday, month_name, &day, &hour, &minute, &second, &year) == 7)
 			{
-				if ((month = http_month_from_name(month_name)) != 0)
-					if (auto time_c = make_utc_time(year, month, day, hour, minute, second))
-						return time_c;
+				if (auto time_c = make_parsed_time())
+					return time_c;
 			}
 		}
 
