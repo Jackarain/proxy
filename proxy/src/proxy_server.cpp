@@ -2671,50 +2671,44 @@ boost::json::object proxy_server::apply_options(const boost::json::object& optio
 			// 1) 关闭并移除接收参数中已不存在的 acceptor.
 			// 被关闭的 acceptor 转移到 m_closed_tcp_acceptors 中保持对象存活,
 			// 直到其监听协程退出, 避免引用悬空 (UAF).
+			auto listens_endpoint = [&new_listens](const tcp::endpoint& endp)
+			{
+				return std::any_of(new_listens.begin(), new_listens.end(),
+					[&endp](const auto& item)
+					{
+						return std::get<0>(item) == endp;
+					});
+			};
 			auto it = m_tcp_acceptors.begin();
 			while (it != m_tcp_acceptors.end())
 			{
 				boost::system::error_code lec;
 				auto local_ep = (*it)->local_endpoint(lec);
-				bool keep = false;
-				if (!lec)
-				{
-					for (const auto& [endp, v6only] : new_listens)
-					{
-						if (local_ep == endp)
-						{
-							keep = true;
-							break;
-						}
-					}
-				}
-				if (keep)
+				if (!lec && listens_endpoint(local_ep))
 				{
 					++it;
+					continue;
 				}
-				else
-				{
-					(*it)->close(lec);
-					XLOG_WARN << "server_listen, stop listening: " << local_ep;
-					m_closed_tcp_acceptors.emplace_back(std::move(*it));
-					it = m_tcp_acceptors.erase(it);
-				}
+
+				(*it)->close(lec);
+				XLOG_WARN << "server_listen, stop listening: " << local_ep;
+				m_closed_tcp_acceptors.emplace_back(std::move(*it));
+				it = m_tcp_acceptors.erase(it);
 			}
 
 			// 2) 为接收参数中新增的 endpoint 创建 acceptor 并启动监听.
+			auto is_listening = [this](const tcp::endpoint& endp)
+			{
+				return std::any_of(m_tcp_acceptors.begin(),
+					m_tcp_acceptors.end(), [&endp](const auto& acc)
+					{
+						boost::system::error_code lec;
+						return acc->local_endpoint(lec) == endp;
+					});
+			};
 			for (const auto& [endp, v6only] : new_listens)
 			{
-				bool exists = false;
-				for (auto& acc : m_tcp_acceptors)
-				{
-					boost::system::error_code lec;
-					if (acc->local_endpoint(lec) == endp)
-					{
-						exists = true;
-						break;
-					}
-				}
-				if (exists)
+				if (is_listening(endp))
 					continue;
 
 				tcp_acceptor acceptor(m_executor);
