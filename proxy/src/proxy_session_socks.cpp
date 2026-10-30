@@ -120,22 +120,17 @@ namespace proxy {
 		while (bytes != 0)
 		{
 			int m = read<int8_t>(p);
+			const bool selected = (!is_auth_required && m == SOCKS5_AUTH_NONE) ||
+				(is_auth_required && m == SOCKS5_AUTH);
 
-			if (!is_auth_required)
-			{
-				if (m == SOCKS5_AUTH_NONE)
-				{
-					method = m;
-					break;
-				}
-
-				method = m;
-			}
-			else if (m == SOCKS5_AUTH)
+			if (selected)
 			{
 				method = m;
 				break;
 			}
+
+			if (!is_auth_required)
+				method = m;
 
 			bytes--;
 		}
