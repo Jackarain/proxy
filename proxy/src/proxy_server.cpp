@@ -1530,6 +1530,155 @@ json::value proxy_server::launcher_dispatch(const std::string& method, const jso
 	throw launcher_error{ -32601, "method not found: " + method };
 }
 
+namespace detail {
+
+using traffic_totals = std::pair<int64_t, int64_t>;
+using user_traffic_totals = std::map<std::string, traffic_totals>;
+using connection_traffic_totals = std::map<int64_t, traffic_totals>;
+
+inline user_traffic_totals collect_user_traffic(const json::value& report)
+{
+	user_traffic_totals totals;
+	if (!report.is_object())
+		return totals;
+
+	auto users = report.as_object().if_contains("users");
+	if (!users || !users->is_array())
+		return totals;
+
+	for (const auto& user : users->as_array())
+	{
+		if (!user.is_object())
+			continue;
+
+		const auto& obj = user.as_object();
+		auto name = obj.find("user");
+		if (name == obj.end() || !name->value().is_string())
+			continue;
+
+		std::string user_name(name->value().as_string());
+		totals[std::move(user_name)] = {
+			json_num(obj, "rx_bytes"),
+			json_num(obj, "tx_bytes")
+		};
+	}
+	return totals;
+}
+
+inline connection_traffic_totals collect_connection_traffic(
+	const json::value& report)
+{
+	connection_traffic_totals totals;
+	if (!report.is_object())
+		return totals;
+
+	auto users = report.as_object().if_contains("users");
+	if (!users || !users->is_array())
+		return totals;
+
+	for (const auto& user : users->as_array())
+	{
+		if (!user.is_object())
+			continue;
+
+		auto connections = user.as_object().if_contains("connections");
+		if (!connections || !connections->is_array())
+			continue;
+
+		for (const auto& connection : connections->as_array())
+		{
+			if (!connection.is_object())
+				continue;
+
+			const auto& obj = connection.as_object();
+			auto id = obj.find("id");
+			if (id == obj.end() || !id->value().is_int64())
+				continue;
+
+			totals[id->value().as_int64()] = {
+				json_num(obj, "rx_bytes"),
+				json_num(obj, "tx_bytes")
+			};
+		}
+	}
+	return totals;
+}
+
+inline void apply_user_rates(const json::object& report,
+	const user_traffic_totals& previous, double seconds, json::object& rates)
+{
+	auto users = report.if_contains("users");
+	if (!users || !users->is_array())
+		return;
+
+	for (const auto& user : users->as_array())
+	{
+		if (!user.is_object())
+			continue;
+
+		const auto& obj = user.as_object();
+		auto name = obj.find("user");
+		if (name == obj.end() || !name->value().is_string())
+			continue;
+
+		std::string user_name(name->value().as_string());
+		auto prev = previous.find(user_name);
+		if (prev == previous.end())
+			continue;
+
+		int64_t rx = json_num(obj, "rx_bytes");
+		int64_t tx = json_num(obj, "tx_bytes");
+		json::object user_rate;
+		user_rate["rx_rate_bps"] = rx > prev->second.first
+			? (rx - prev->second.first) / seconds : 0;
+		user_rate["tx_rate_bps"] = tx > prev->second.second
+			? (tx - prev->second.second) / seconds : 0;
+		rates[std::move(user_name)] = std::move(user_rate);
+	}
+}
+
+inline void apply_connection_rates(json::object& report,
+	const connection_traffic_totals& previous, double seconds)
+{
+	auto users = report.if_contains("users");
+	if (!users || !users->is_array())
+		return;
+
+	for (auto& user : users->as_array())
+	{
+		if (!user.is_object())
+			continue;
+
+		auto connections = user.as_object().if_contains("connections");
+		if (!connections || !connections->is_array())
+			continue;
+
+		for (auto& connection : connections->as_array())
+		{
+			if (!connection.is_object())
+				continue;
+
+			auto& obj = connection.as_object();
+			auto id = obj.find("id");
+			if (id == obj.end() || !id->value().is_int64())
+				continue;
+
+			auto prev = previous.find(id->value().as_int64());
+			if (prev == previous.end())
+				continue;
+
+			int64_t rx = json_num(obj, "rx_bytes");
+			int64_t tx = json_num(obj, "tx_bytes");
+			obj["rx_rate_bps"] = rx > prev->second.first
+				? (rx - prev->second.first) / seconds : 0;
+			obj["tx_rate_bps"] = tx > prev->second.second
+				? (tx - prev->second.second) / seconds : 0;
+		}
+	}
+}
+
+} // namespace detail
+
 // 采集快照、计算速率并上报.
 template <typename WsStream>
 void proxy_server::launcher_update_report(jsonrpc::jsonrpc_session<WsStream>& sess)
@@ -1568,107 +1717,15 @@ void proxy_server::launcher_update_report(jsonrpc::jsonrpc_session<WsStream>& se
 
 				// 单用户速率: 对上一份报告存在且计数不回退的用户计算差分
 				// （回退时钳制为 0, 如用户被删除重建）.
-				std::map<std::string, std::pair<int64_t, int64_t>> prev_users;
-				if (auto pu = m_launcher_state->last_report_.as_object().if_contains("users");
-					pu && pu->is_array())
-				{
-					for (const auto& u : pu->as_array())
-					{
-						if (!u.is_object())
-							continue;
-						const auto& uo = u.as_object();
-						auto it = uo.find("user");
-						if (it == uo.end() || !it->value().is_string())
-							continue;
-						std::string name(it->value().as_string());
-						prev_users[name] = {
-							detail::json_num(uo, "rx_bytes"),
-							detail::json_num(uo, "tx_bytes")
-						};
-					}
-				}
-				if (auto cu = rep.if_contains("users"); cu && cu->is_array())
-				{
-					for (const auto& u : cu->as_array())
-					{
-						if (!u.is_object())
-							continue;
-						const auto& uo = u.as_object();
-						auto it = uo.find("user");
-						if (it == uo.end() || !it->value().is_string())
-							continue;
-						std::string name(it->value().as_string());
-						auto p = prev_users.find(name);
-						if (p == prev_users.end())
-							continue;
-						int64_t cur_r = detail::json_num(uo, "rx_bytes");
-						int64_t cur_t = detail::json_num(uo, "tx_bytes");
-						json::object ur;
-						ur["rx_rate_bps"] = cur_r > p->second.first ? (cur_r - p->second.first) / sec : 0;
-						ur["tx_rate_bps"] = cur_t > p->second.second ? (cur_t - p->second.second) / sec : 0;
-						user_rates[name] = std::move(ur);
-					}
-				}
+				auto prev_users = detail::collect_user_traffic(
+					m_launcher_state->last_report_);
+				detail::apply_user_rates(rep, prev_users, sec, user_rates);
 
 				// 连接级速率: 按连接 id 对上一份快照差分, 与全局/用户速率
 				// 同口径 (计数回退或新连接时钳制为 0).
-				std::map<int64_t, std::pair<int64_t, int64_t>> prev_conns;
-				if (auto pu = m_launcher_state->last_report_.as_object().if_contains("users");
-					pu && pu->is_array())
-				{
-					for (const auto& u : pu->as_array())
-					{
-						if (!u.is_object())
-							continue;
-						auto cit = u.as_object().if_contains("connections");
-						if (!cit || !cit->is_array())
-							continue;
-						for (const auto& c : cit->as_array())
-						{
-							if (!c.is_object())
-								continue;
-							const auto& co = c.as_object();
-							auto it = co.find("id");
-							if (it == co.end() || !it->value().is_int64())
-								continue;
-							int64_t cid = it->value().as_int64();
-							prev_conns[cid] = {
-								detail::json_num(co, "rx_bytes"),
-								detail::json_num(co, "tx_bytes")
-							};
-						}
-					}
-				}
-				if (auto cu = rep.if_contains("users"); cu && cu->is_array())
-				{
-					for (auto& u : cu->as_array())
-					{
-						if (!u.is_object())
-							continue;
-						auto cit = u.as_object().if_contains("connections");
-						if (!cit || !cit->is_array())
-							continue;
-						for (auto& c : cit->as_array())
-						{
-							if (!c.is_object())
-								continue;
-							auto& co = c.as_object();
-							auto it = co.find("id");
-							if (it == co.end() || !it->value().is_int64())
-								continue;
-							int64_t cid = it->value().as_int64();
-							auto p = prev_conns.find(cid);
-							if (p == prev_conns.end())
-								continue;
-							int64_t cur_r = detail::json_num(co, "rx_bytes");
-							int64_t cur_t = detail::json_num(co, "tx_bytes");
-							co["rx_rate_bps"] = cur_r > p->second.first
-								? (cur_r - p->second.first) / sec : 0;
-							co["tx_rate_bps"] = cur_t > p->second.second
-								? (cur_t - p->second.second) / sec : 0;
-						}
-					}
-				}
+				auto prev_conns = detail::collect_connection_traffic(
+					m_launcher_state->last_report_);
+				detail::apply_connection_rates(rep, prev_conns, sec);
 			}
 		}
 	}
