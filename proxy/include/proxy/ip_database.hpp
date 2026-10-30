@@ -81,6 +81,7 @@ namespace proxy {
 		ip_result lookup(net::ip::address ip) override;
 
 	private:
+		void load_database(const std::string& filename);
 		void parse_meta(const std::string& json);
 		int read_node(int node, int bit) const;
 		int search_tree(const uint8_t* ip, int bits, int startNode) const;

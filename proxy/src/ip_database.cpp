@@ -179,49 +179,53 @@ namespace proxy {
 		return res;
 	}
 
+	void ip_ipdb::load_database(const std::string& filename)
+	{
+		std::ifstream fs(filename, std::ios::binary);
+		if (!fs)
+			throw ErrFileOpen;
+
+		// 1. 读取 4 字节元数据长度
+		uint32_t meta_len_be = 0;
+		fs.read(reinterpret_cast<char*>(&meta_len_be), 4);
+		uint32_t meta_len = be32_to_host(meta_len_be);
+
+		// 2. 读取并解析 JSON 元数据
+		std::string meta_json(meta_len, '\0');
+		fs.read(&meta_json[0], meta_len);
+		if (!fs)
+			throw ErrFileSize;
+		parse_meta(meta_json);
+
+		// 3. 校验并读取数据库主体
+		fs.seekg(0, std::ios::end);
+		if ((int64_t)fs.tellg() != (int64_t)4 + meta_len + m_total_size)
+			throw ErrFileSize;
+
+		m_data.resize((size_t)m_total_size);
+		fs.seekg(4 + meta_len, std::ios::beg);
+		fs.read(reinterpret_cast<char*>(m_data.data()), m_total_size);
+
+		// 4. 预计算 IPv4 偏移 (Trie 树 96 位深度处)
+		m_v4offset = 0;
+		for (int i = 0; i < 96 && m_v4offset < m_node_count; ++i)
+			m_v4offset = read_node(m_v4offset, (i >= 80) ? 1 : 0);
+
+		// 5. 自动配置默认语言和 ISP 字段索引
+		m_current_lang = "CN";
+		if (m_languages.find(m_current_lang) == m_languages.end() &&
+			!m_languages.empty())
+			m_current_lang = m_languages.begin()->first;
+		m_isp_idx = guess_isp_index();
+
+		m_loaded = true;
+	}
+
 	bool ip_ipdb::load(const std::string& filename)
 	{
 		try
 		{
-			std::ifstream fs(filename, std::ios::binary);
-			if (!fs)
-				throw ErrFileOpen;
-
-			// 1. 读取 4 字节元数据长度
-			uint32_t meta_len_be = 0;
-			fs.read(reinterpret_cast<char*>(&meta_len_be), 4);
-			uint32_t meta_len = be32_to_host(meta_len_be);
-
-			// 2. 读取并解析 JSON 元数据
-			std::string meta_json(meta_len, '\0');
-			fs.read(&meta_json[0], meta_len);
-			if (!fs)
-				throw ErrFileSize;
-			parse_meta(meta_json);
-
-			// 3. 校验并读取数据库主体
-			fs.seekg(0, std::ios::end);
-			if ((int64_t)fs.tellg() !=
-				(int64_t)4 + meta_len + m_total_size)
-				throw ErrFileSize;
-
-			m_data.resize((size_t)m_total_size);
-			fs.seekg(4 + meta_len, std::ios::beg);
-			fs.read(reinterpret_cast<char*>(m_data.data()), m_total_size);
-
-			// 4. 预计算 IPv4 偏移 (Trie 树 96 位深度处)
-			m_v4offset = 0;
-			for (int i = 0; i < 96 && m_v4offset < m_node_count; ++i)
-				m_v4offset = read_node(m_v4offset, (i >= 80) ? 1 : 0);
-
-			// 5. 自动配置默认语言和 ISP 字段索引
-			m_current_lang = "CN";
-			if (m_languages.find(m_current_lang) == m_languages.end() &&
-				!m_languages.empty())
-				m_current_lang = m_languages.begin()->first;
-			m_isp_idx = guess_isp_index();
-
-			m_loaded = true;
+			load_database(filename);
 		}
 		catch (...)
 		{
