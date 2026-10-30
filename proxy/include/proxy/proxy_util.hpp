@@ -73,7 +73,7 @@
 
 namespace proxy {
 
-    namespace net = boost::asio;
+	namespace net = boost::asio;
 	using udp = net::ip::udp;               // from <boost/asio/ip/udp.hpp>
 
 	namespace urls = boost::urls;			// form <boost/url.hpp>
@@ -289,7 +289,7 @@ constexpr std::size_t custom_default_transfer_size = 1024 * 1024;
 // 用于单次向系统提交最大的发送数据量, 以提高效率.
 inline std::size_t custom_write_all(const boost::system::error_code& ec, std::size_t) noexcept
 {
-    return ec ? 0 : (std::numeric_limits<std::size_t>::max)();
+	return ec ? 0 : (std::numeric_limits<std::size_t>::max)();
 }
 
 #endif // INCLUDE__2026_06_08__PROXY_UTIL_HPP

@@ -189,7 +189,7 @@ namespace util {
 			return core_.output_buffer();
 		}
 
-  		// Put input data that was read from the transport.
+		// Put input data that was read from the transport.
 		boost::asio::const_buffer put_input(const boost::asio::const_buffer& data)
 		{
 			return core_.engine_.put_input(data);
