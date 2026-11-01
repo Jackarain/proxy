@@ -18,9 +18,26 @@
 #include <algorithm>
 #include <cstring>
 #include <future>
+#include <utility>
 
 namespace tunio {
 namespace detail {
+
+namespace {
+
+template <typename Fn>
+void invoke_cleanup_noexcept(Fn&& fn) noexcept
+{
+    try
+    {
+        std::forward<Fn>(fn)();
+    }
+    catch (...)
+    {
+    }
+}
+
+} // namespace
 
 // ---- accept 取消（自动派发到 Strand）----
 
@@ -59,14 +76,30 @@ tunio_impl::~tunio_impl()
     // 关闭引擎以打破定时器回调（self 捕获）形成的引用环：sweep/ack/expiry
     // 定时器用 shared_from_this 自持有，未显式调用 close() 直接析构时若不
     // 在此取消，引擎及流表将无法释放，io_context 也不会退出。
-    if (tcp_)
-        tcp_->close_all();
-    if (udp_)
-        udp_->close_all();
-    if (writer_)
-        writer_->cancel_all();
-    if (device_)
-        device_->close();
+    invoke_cleanup_noexcept(
+        [this]
+        {
+            if (tcp_)
+                tcp_->close_all();
+        });
+    invoke_cleanup_noexcept(
+        [this]
+        {
+            if (udp_)
+                udp_->close_all();
+        });
+    invoke_cleanup_noexcept(
+        [this]
+        {
+            if (writer_)
+                writer_->cancel_all();
+        });
+    invoke_cleanup_noexcept(
+        [this]
+        {
+            if (device_)
+                device_->close();
+        });
 }
 
 bool tunio_impl::open(const tun_config& cfg, boost::system::error_code& ec)
@@ -82,14 +115,30 @@ bool tunio_impl::open(const tun_config& cfg, boost::system::error_code& ec)
         net::dispatch(strand_ex_,
             [this, &done]()
             {
-                if (tcp_)
-                    tcp_->close_all();
-                if (udp_)
-                    udp_->close_all();
-                if (writer_)
-                    writer_->cancel_all();
-                if (device_)
-                    device_->close();
+                invoke_cleanup_noexcept(
+                    [this]
+                    {
+                        if (tcp_)
+                            tcp_->close_all();
+                    });
+                invoke_cleanup_noexcept(
+                    [this]
+                    {
+                        if (udp_)
+                            udp_->close_all();
+                    });
+                invoke_cleanup_noexcept(
+                    [this]
+                    {
+                        if (writer_)
+                            writer_->cancel_all();
+                    });
+                invoke_cleanup_noexcept(
+                    [this]
+                    {
+                        if (device_)
+                            device_->close();
+                    });
                 done.set_value();
             });
         done.get_future().wait();
@@ -140,71 +189,124 @@ bool tunio_impl::open(const tun_config& cfg, boost::system::error_code& ec)
         have_ip6_ = true;
     }
 
-    // 设备初始化：优先多句柄注入（Linux TUN 多队列），其次单句柄注入，
-    // 最后自主打开。
-    if (!cfg.external_handles.empty())
+    try
     {
-        if (!device_->assign_queues(
-                cfg.external_handles, cfg.external_mtu, cfg.utun_prefix, ec))
+        // 设备初始化：优先多句柄注入（Linux TUN 多队列），其次单句柄注入，
+        // 最后自主打开。
+        if (!cfg.external_handles.empty())
         {
-            return false;
+            if (!device_->assign_queues(
+                    cfg.external_handles, cfg.external_mtu, cfg.utun_prefix, ec))
+            {
+                reset_open_state();
+                return false;
+            }
         }
-    }
-    else if (cfg.external_handle != invalid_native_handle)
-    {
-        if (!device_->assign(
-                cfg.external_handle, cfg.external_mtu, cfg.utun_prefix, ec))
+        else if (cfg.external_handle != invalid_native_handle)
         {
-            return false;
+            if (!device_->assign(
+                    cfg.external_handle, cfg.external_mtu, cfg.utun_prefix, ec))
+            {
+                reset_open_state();
+                return false;
+            }
         }
-    }
-    else
-    {
-        device_config dc;
-        dc.name = cfg.dev_name;
-        dc.ipv4 = cfg.ipv4_addr;
-        dc.netmask = cfg.netmask;
-        dc.ipv6 = cfg.ipv6_addr;
-        dc.ipv6_prefix_len = cfg.ipv6_prefix_len;
-        dc.mtu = cfg.mtu;
-        dc.num_queues = cfg.num_queues;
-        if (!device_->open(dc, ec))
-            return false;
-    }
+        else
+        {
+            device_config dc;
+            dc.name = cfg.dev_name;
+            dc.ipv4 = cfg.ipv4_addr;
+            dc.netmask = cfg.netmask;
+            dc.ipv6 = cfg.ipv6_addr;
+            dc.ipv6_prefix_len = cfg.ipv6_prefix_len;
+            dc.mtu = cfg.mtu;
+            dc.num_queues = cfg.num_queues;
+            if (!device_->open(dc, ec))
+            {
+                reset_open_state();
+                return false;
+            }
+        }
 
-    mtu_ = device_->mtu();
-    // 并发读槽按队列数分配：每队列均分 k_read_slots（至少 1 个），单队列
-    // 保持原有 32 槽行为；旧代际残留的 in-flight 标记一律清空，确保重建后
-    // start_read() 能为全部槽重新发起读取（旧设备迟到回调由代际检查拦截）.
-    num_queues_ = std::clamp(device_->queue_count(), size_t{1}, k_max_queues);
-    slots_per_queue_ = std::max<size_t>(1, k_read_slots / num_queues_);
+        mtu_ = device_->mtu();
+        // 并发读槽按队列数分配：每队列均分 k_read_slots（至少 1 个），单队列
+        // 保持原有 32 槽行为；旧代际残留的 in-flight 标记一律清空，确保重建后
+        // start_read() 能为全部槽重新发起读取（旧设备迟到回调由代际检查拦截）.
+        num_queues_ = std::clamp(device_->queue_count(), size_t{1}, k_max_queues);
+        slots_per_queue_ = std::max<size_t>(1, k_read_slots / num_queues_);
+        read_bufs_.clear();
+        read_bufs_.reserve(num_queues_ * slots_per_queue_);
+        // 读槽容量须容纳单次读取返回的全部字节：utun 注入路径每帧含 4 字节
+        // 家族前缀（read_size_hint = mtu + 4），读槽 headroom 为 64、容量取
+        // hint + 64，reset 后 writable_size 恰为 hint，避免满 MTU 帧读入时被
+        // 截断后按残缺报文丢弃.
+        const size_t read_capacity = device_->read_size_hint() + 64;
+        for (size_t i = 0; i < num_queues_ * slots_per_queue_; ++i)
+        {
+            read_bufs_.emplace_back(read_capacity, 64);
+        }
+        read_inflight_.assign(num_queues_ * slots_per_queue_, false);
+
+        account_ = std::make_shared<buffer_accountant>();
+        account_->limit = cfg.max_total_buffer;
+        writer_ = std::make_shared<tun_queue_writer>(strand_ex_, device_, stats_);
+        tcp_ = std::make_shared<tcp_engine>(
+            strand_ex_, writer_, cfg_, *stats_, account_);
+        udp_ = std::make_shared<udp_engine>(
+            strand_ex_, writer_, cfg_, *stats_, account_);
+        tcp_->start_sweep();
+
+        epoch_.store(epoch_.load(std::memory_order_relaxed) + 1,
+            std::memory_order_release);
+        open_.store(true, std::memory_order_release);
+        start_read();
+        return true;
+    }
+    catch (...)
+    {
+        reset_open_state();
+        throw;
+    }
+}
+
+void tunio_impl::reset_open_state() noexcept
+{
+    open_.store(false, std::memory_order_release);
+
+    invoke_cleanup_noexcept(
+        [this]
+        {
+            if (tcp_)
+                tcp_->close_all();
+        });
+    invoke_cleanup_noexcept(
+        [this]
+        {
+            if (udp_)
+                udp_->close_all();
+        });
+    invoke_cleanup_noexcept(
+        [this]
+        {
+            if (writer_)
+                writer_->cancel_all();
+        });
+    invoke_cleanup_noexcept(
+        [this]
+        {
+            if (device_)
+                device_->close();
+        });
+
+    tcp_.reset();
+    udp_.reset();
+    writer_.reset();
+    account_.reset();
     read_bufs_.clear();
-    read_bufs_.reserve(num_queues_ * slots_per_queue_);
-    // 读槽容量须容纳单次读取返回的全部字节：utun 注入路径每帧含 4 字节
-    // 家族前缀（read_size_hint = mtu + 4），读槽 headroom 为 64、容量取
-    // hint + 64，reset 后 writable_size 恰为 hint，避免满 MTU 帧读入时被
-    // 截断后按残缺报文丢弃.
-    const size_t read_capacity = device_->read_size_hint() + 64;
-    for (size_t i = 0; i < num_queues_ * slots_per_queue_; ++i)
-    {
-        read_bufs_.emplace_back(read_capacity, 64);
-    }
-    read_inflight_.assign(num_queues_ * slots_per_queue_, false);
-
-    account_ = std::make_shared<buffer_accountant>();
-    account_->limit = cfg.max_total_buffer;
-    writer_ = std::make_shared<tun_queue_writer>(strand_ex_, device_, stats_);
-    tcp_ = std::make_shared<tcp_engine>(
-        strand_ex_, writer_, cfg_, *stats_, account_);
-    udp_ = std::make_shared<udp_engine>(
-        strand_ex_, writer_, cfg_, *stats_, account_);
-    tcp_->start_sweep();
-
-    epoch_.store(
-        epoch_.load(std::memory_order_relaxed) + 1, std::memory_order_release);
-    open_.store(true, std::memory_order_release);
-    start_read();
-    return true;
+    read_inflight_.clear();
+    mtu_ = 1500;
+    num_queues_ = 1;
+    slots_per_queue_ = k_read_slots;
 }
 
 // ---- 打开与关闭 ----
@@ -225,10 +327,9 @@ void tunio_impl::close()
     net::dispatch(strand_ex_,
         [self = shared_from_this(), epoch, tcp, udp]()
         {
-            // 引擎会话清理（close_all 触发完成回调恢复上层协程）可能抛异常
-            //（如协程访问已释放对象），必须捕获，确保设备与写队列一定被
-            // 关闭/取消：否则旧引擎的读循环继续运行，注入的 tun fd 无法
-            // 撤销，反复启停后 io_context 残留任务忙跑。
+            // 会话清理中的完成投递可能失败，必须隔离异常，确保设备与写
+            // 队列一定被关闭/取消：否则旧引擎的读循环继续运行，注入的
+            // tun fd 无法撤销，反复启停后 io_context 残留任务忙跑。
             try
             {
                 if (tcp)
@@ -236,7 +337,7 @@ void tunio_impl::close()
             }
             catch (...)
             {
-                // 忽略会话清理异常，保证设备与写队列一定被关闭/取消。
+                // 忽略清理异常，保证设备与写队列一定被关闭/取消。
             }
 
             try
@@ -246,7 +347,7 @@ void tunio_impl::close()
             }
             catch (...)
             {
-                // 忽略会话清理异常，保证设备与写队列一定被关闭/取消。
+                // 忽略清理异常，保证设备与写队列一定被关闭/取消。
             }
 
             // 设备与写队列指向共享成员（reopen 后可能已指向新实例），
@@ -263,8 +364,12 @@ void tunio_impl::close()
                     // 忽略取消异常，设备仍须关闭。
                 }
 
-                if (self->device_)
-                    self->device_->close();
+                invoke_cleanup_noexcept(
+                    [self]
+                    {
+                        if (self->device_)
+                            self->device_->close();
+                    });
             }
         });
 }
@@ -332,9 +437,10 @@ void tunio_impl::on_read(
     read_inflight_[index] = false;
     if (ec)
     {
-        // 非取消错误视为设备故障：关闭引擎，避免读循环空转。
+        // 非取消错误视为设备故障：走完整 close 清理设备、写队列与会话，
+        // 避免只置 open_ 后资源残留到析构。
         if (ec != net::error::operation_aborted)
-            open_.store(false, std::memory_order_release);
+            close();
         if (open_.load(std::memory_order_acquire))
             start_read_slot(index); // 设备被 close 后重新 open 的场景：续读
         return;
@@ -394,15 +500,25 @@ void tunio_impl::on_read(
         return;
     }
     stats_->rx_packets.fetch_add(1, std::memory_order_relaxed);
-    // 用户完成回调（如 TCP 直投路径）可能抛异常：捕获后仍复位读槽并
-    // 继续读泵，避免单个回调异常使 32 槽读路径整体停摆；异常被吞掉
-    //（不再经 io.run() 传播），以换读取循环的持续可用。
+    // 完成回调已统一异步派发，handle_packet 内不会执行用户代码。这里不再
+    // 吞掉报文处理异常：先复位读槽并尝试恢复读取，再把异常交给
+    // io_context::run() 的调用方。
     try
     {
         handle_packet(base, total_len);
     }
     catch (...)
     {
+        buf.reset();
+        try
+        {
+            start_read_slot(index);
+        }
+        catch (...)
+        {
+            // 保留并传播原始处理异常。
+        }
+        throw;
     }
     buf.reset();
     start_read_slot(index);

@@ -23,21 +23,7 @@ namespace {
 
 boost::system::error_code win_last_error()
 {
-    DWORD err = GetLastError();
-
-    char buf[512] = {0};
-    DWORD n = FormatMessageA(
-        FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-        nullptr,
-        err,
-        0,
-        buf,
-        sizeof(buf),
-        nullptr);
-    while (n > 0 &&
-        (buf[n - 1] == '\r' || buf[n - 1] == '\n' || buf[n - 1] == ' '))
-        buf[--n] = 0;
-
+    const DWORD err = GetLastError();
     return boost::system::error_code(
         static_cast<int>(err), boost::system::system_category());
 }
@@ -48,12 +34,12 @@ static std::string narrow_from_wide(const wchar_t* ws)
         return {};
 
     int len =
-        WideCharToMultiByte(CP_ACP, 0, ws, -1, nullptr, 0, nullptr, nullptr);
+        WideCharToMultiByte(CP_UTF8, 0, ws, -1, nullptr, 0, nullptr, nullptr);
     if (len <= 0)
         return {};
 
     std::string result(static_cast<size_t>(len), '\0');
-    WideCharToMultiByte(CP_ACP,
+    WideCharToMultiByte(CP_UTF8,
         0,
         ws,
         -1,
@@ -71,12 +57,12 @@ static std::wstring wide_from_narrow(const char* ns)
 {
     if (!ns)
         return {};
-    int len = MultiByteToWideChar(CP_ACP, 0, ns, -1, nullptr, 0);
+    int len = MultiByteToWideChar(CP_UTF8, 0, ns, -1, nullptr, 0);
     if (len <= 0)
         return {};
     std::wstring result(static_cast<size_t>(len), L'\0');
     MultiByteToWideChar(
-        CP_ACP, 0, ns, -1, &result[0], static_cast<int>(result.size()));
+        CP_UTF8, 0, ns, -1, &result[0], static_cast<int>(result.size()));
     while (!result.empty() && result.back() == L'\0')
         result.pop_back();
     return result;
@@ -389,16 +375,29 @@ inline ULONG wintun_ring_packet_align(ULONG size)
     return (size + (WINTUN_PACKET_ALIGN - 1)) & ~(WINTUN_PACKET_ALIGN - 1);
 }
 
-int wintun_tun_device_impl::recv_one(std::string_view buf)
+int wintun_tun_device_impl::recv_one(
+    std::string_view buf, boost::system::error_code& ec)
 {
-    if (!opened_ || !recv_ring_)
+    ec = {};
+    if (!opened_)
+    {
+        ec = net::error::operation_aborted;
         return -1;
+    }
+    if (!recv_ring_)
+    {
+        ec = net::error::bad_descriptor;
+        return -1;
+    }
 
     ULONG head = recv_ring_->head;
     ULONG tail = recv_ring_->tail;
 
     if (head >= WINTUN_RING_CAPACITY || tail >= WINTUN_RING_CAPACITY)
+    {
+        ec = net::error::invalid_argument;
         return -1;
+    }
     if (head == tail)
         return 0;
 
@@ -407,18 +406,35 @@ int wintun_tun_device_impl::recv_one(std::string_view buf)
     std::atomic_thread_fence(std::memory_order_acquire);
     ULONG content_len = wintun_ring_wrap(tail - head);
     if (content_len < sizeof(struct TUN_PACKET_HEADER))
+    {
+        ec = net::error::invalid_argument;
         return -1;
+    }
 
     auto* pkt = reinterpret_cast<struct TUN_PACKET*>(&recv_ring_->data[head]);
     if (pkt->size > WINTUN_MAX_IP_PACKET_SIZE)
+    {
+        ec = net::error::message_size;
         return -1;
+    }
 
     ULONG aligned =
         wintun_ring_packet_align(sizeof(struct TUN_PACKET_HEADER) + pkt->size);
     if (aligned > content_len)
+    {
+        ec = net::error::invalid_argument;
         return -1;
-    if (static_cast<ULONG>(buf.size()) < pkt->size)
+    }
+    if (head + aligned > sizeof(recv_ring_->data))
+    {
+        ec = net::error::invalid_argument;
         return -1;
+    }
+    if (buf.size() < pkt->size)
+    {
+        ec = net::error::message_size;
+        return -1;
+    }
 
     memcpy(const_cast<char*>(buf.data()), pkt->data, pkt->size);
     head = wintun_ring_wrap(head + aligned);
@@ -430,22 +446,45 @@ int wintun_tun_device_impl::recv_one(std::string_view buf)
     return static_cast<int>(pkt->size);
 }
 
-int wintun_tun_device_impl::send_try(std::string_view buf)
+int wintun_tun_device_impl::send_try(
+    std::string_view buf, boost::system::error_code& ec)
 {
-    if (!opened_ || !send_ring_)
+    ec = {};
+    if (!opened_)
+    {
+        ec = net::error::operation_aborted;
         return -1;
+    }
+    if (!send_ring_)
+    {
+        ec = net::error::bad_descriptor;
+        return -1;
+    }
+    if (buf.size() > WINTUN_MAX_IP_PACKET_SIZE)
+    {
+        ec = net::error::message_size;
+        return -1;
+    }
 
     ULONG head = send_ring_->head;
     ULONG tail = send_ring_->tail;
 
     if (head >= WINTUN_RING_CAPACITY || tail >= WINTUN_RING_CAPACITY)
+    {
+        ec = net::error::invalid_argument;
         return -1;
+    }
 
     // acquire 屏障：读取 head（驱动的消费进度）后、计算可用空间前，
     // 确保驱动释放的区域对本线程可见。
     std::atomic_thread_fence(std::memory_order_acquire);
     ULONG aligned = wintun_ring_packet_align(
         sizeof(struct TUN_PACKET_HEADER) + static_cast<ULONG>(buf.size()));
+    if (tail + aligned > sizeof(send_ring_->data))
+    {
+        ec = net::error::invalid_argument;
+        return -1;
+    }
     ULONG avail = wintun_ring_wrap(head - tail - WINTUN_PACKET_ALIGN);
     if (aligned > avail)
         return 0;
@@ -496,34 +535,34 @@ void wintun_tun_device_impl::cleanup_rings()
     if (send_evt_)
     {
         CloseHandle(send_evt_);
-        send_evt_ = INVALID_HANDLE_VALUE;
+        send_evt_ = nullptr;
     }
     if (recv_evt_)
     {
         CloseHandle(recv_evt_);
-        recv_evt_ = INVALID_HANDLE_VALUE;
+        recv_evt_ = nullptr;
     }
 
     // 关闭环形缓冲映射句柄
     if (send_ring_fh_)
     {
         CloseHandle(send_ring_fh_);
-        send_ring_fh_ = INVALID_HANDLE_VALUE;
+        send_ring_fh_ = nullptr;
     }
     if (recv_ring_fh_)
     {
         CloseHandle(recv_ring_fh_);
-        recv_ring_fh_ = INVALID_HANDLE_VALUE;
+        recv_ring_fh_ = nullptr;
     }
 }
 
 void wintun_tun_device_impl::setup_mtu(int mtu)
 {
-    if (!g_api || !wintun_handle_)
+    if (!api_ || !wintun_handle_)
         return;
 
     NET_LUID luid;
-    g_api->get_adapter_luid(wintun_handle_, &luid);
+    api_->get_adapter_luid(wintun_handle_, &luid);
 
     NET_IFINDEX index = 0;
     if (ConvertInterfaceLuidToIndex(&luid, &index) != NO_ERROR)
@@ -553,15 +592,17 @@ bool wintun_tun_device_impl::open(
     close();
 
     std::string adapter_name = cfg.name.empty() ? "tunio" : cfg.name;
-    g_api = wintun_api::load();
+    api_ = wintun_api::instance(ec);
 
-    if (!g_api)
+    if (!api_)
+        return false;
+
+    std::wstring wname = wide_from_narrow(adapter_name.c_str());
+    if (wname.empty())
     {
-        ec = win_last_error();
+        ec = make_error_code(boost::system::errc::invalid_argument);
         return false;
     }
-
-    std::wstring wname(adapter_name.begin(), adapter_name.end());
 
     static const GUID adapter_guid = {0xDEADBA11,
         0xCAFE,
@@ -571,28 +612,28 @@ bool wintun_tun_device_impl::open(
     for (int n = 0; n < 5; ++n)
     {
         wintun_handle_ =
-            g_api->create_adapter(wname.c_str(), L"Wintun", &adapter_guid);
+            api_->create_adapter(wname.c_str(), L"Wintun", &adapter_guid);
         if (wintun_handle_)
             break;
-        wintun_handle_ = g_api->open_adapter(wname.c_str());
+        wintun_handle_ = api_->open_adapter(wname.c_str());
         if (wintun_handle_)
             break;
     }
 
     if (!wintun_handle_)
     {
-        cleanup_rings();
         ec = win_last_error();
+        cleanup_rings();
         return false;
     }
 
     dev_handle_ = open_wintun_device(wname);
     if (dev_handle_ == INVALID_HANDLE_VALUE)
     {
-        cleanup_rings();
-        g_api->close_adapter(wintun_handle_);
-        wintun_handle_ = nullptr;
         ec = win_last_error();
+        cleanup_rings();
+        api_->close_adapter(wintun_handle_);
+        wintun_handle_ = nullptr;
         return false;
     }
 
@@ -610,12 +651,12 @@ bool wintun_tun_device_impl::open(
         nullptr);
     if (!send_ring_fh_ || !recv_ring_fh_)
     {
+        ec = win_last_error();
         cleanup_rings();
         CloseHandle(dev_handle_);
         dev_handle_ = INVALID_HANDLE_VALUE;
-        g_api->close_adapter(wintun_handle_);
+        api_->close_adapter(wintun_handle_);
         wintun_handle_ = nullptr;
-        ec = win_last_error();
         return false;
     }
 
@@ -625,12 +666,12 @@ bool wintun_tun_device_impl::open(
         recv_ring_fh_, FILE_MAP_ALL_ACCESS, 0, 0, sizeof(struct tun_ring)));
     if (!send_ring_ || !recv_ring_)
     {
+        ec = win_last_error();
         cleanup_rings();
         CloseHandle(dev_handle_);
         dev_handle_ = INVALID_HANDLE_VALUE;
-        g_api->close_adapter(wintun_handle_);
+        api_->close_adapter(wintun_handle_);
         wintun_handle_ = nullptr;
-        ec = win_last_error();
         return false;
     }
 
@@ -638,24 +679,24 @@ bool wintun_tun_device_impl::open(
     recv_evt_ = CreateEventW(nullptr, FALSE, FALSE, nullptr);
     if (!send_evt_ || !recv_evt_)
     {
+        ec = win_last_error();
         cleanup_rings();
         CloseHandle(dev_handle_);
         dev_handle_ = INVALID_HANDLE_VALUE;
-        g_api->close_adapter(wintun_handle_);
+        api_->close_adapter(wintun_handle_);
         wintun_handle_ = nullptr;
-        ec = win_last_error();
         return false;
     }
 
     if (!register_rings_ioct(
             dev_handle_, send_ring_, recv_ring_, send_evt_, recv_evt_))
     {
+        ec = win_last_error();
         cleanup_rings();
         CloseHandle(dev_handle_);
         dev_handle_ = INVALID_HANDLE_VALUE;
-        g_api->close_adapter(wintun_handle_);
+        api_->close_adapter(wintun_handle_);
         wintun_handle_ = nullptr;
-        ec = win_last_error();
         return false;
     }
 
@@ -699,10 +740,9 @@ bool wintun_tun_device_impl::assign(
     if (!send_ring_fh_ || !recv_ring_fh_)
     {
         // 可能仅一个 mapping 创建成功：清理已创建的句柄，避免泄漏
-        cleanup_rings();
-        CloseHandle(dev_handle_);
-        dev_handle_ = INVALID_HANDLE_VALUE;
         ec = win_last_error();
+        cleanup_rings();
+        dev_handle_ = INVALID_HANDLE_VALUE;
         return false;
     }
 
@@ -712,10 +752,9 @@ bool wintun_tun_device_impl::assign(
         recv_ring_fh_, FILE_MAP_ALL_ACCESS, 0, 0, sizeof(struct tun_ring)));
     if (!send_ring_ || !recv_ring_)
     {
-        cleanup_rings();
-        CloseHandle(dev_handle_);
-        dev_handle_ = INVALID_HANDLE_VALUE;
         ec = win_last_error();
+        cleanup_rings();
+        dev_handle_ = INVALID_HANDLE_VALUE;
         return false;
     }
 
@@ -723,10 +762,9 @@ bool wintun_tun_device_impl::assign(
     recv_evt_ = CreateEventW(nullptr, FALSE, FALSE, nullptr);
     if (!send_evt_ || !recv_evt_)
     {
-        cleanup_rings();
-        CloseHandle(dev_handle_);
-        dev_handle_ = INVALID_HANDLE_VALUE;
         ec = win_last_error();
+        cleanup_rings();
+        dev_handle_ = INVALID_HANDLE_VALUE;
         return false;
     }
 
@@ -750,10 +788,9 @@ bool wintun_tun_device_impl::assign(
                 nullptr))
         {
             // 注入句柄非 Wintun 或驱动拒绝注册：失败而非静默置 opened_
-            cleanup_rings();
-            CloseHandle(dev_handle_);
-            dev_handle_ = INVALID_HANDLE_VALUE;
             ec = win_last_error();
+            cleanup_rings();
+            dev_handle_ = INVALID_HANDLE_VALUE;
             return false;
         }
     }
@@ -779,8 +816,20 @@ void wintun_tun_device_impl::close()
     // 先取消轮询定时器：挂起的读/写将以 operation_aborted 完成，而非
     // 误导性的"成功读 0 字节"；同时杜绝 close 后陈旧回调携带旧 &buf
     // 在新 ring / 已释放缓冲上继续轮询。
-    recv_timer_.cancel();
-    send_timer_.cancel();
+    try
+    {
+        recv_timer_.cancel();
+    }
+    catch (...)
+    {
+    }
+    try
+    {
+        send_timer_.cancel();
+    }
+    catch (...)
+    {
+    }
 
     // 先关闭设备句柄（触发驱动 IRP_MJ_CLOSE 释放对 ring 的引用），再解除
     // ring 映射并关闭事件，与官方 WintunEndSession 的清理顺序一致，避免
@@ -795,7 +844,7 @@ void wintun_tun_device_impl::close()
 
     if (wintun_handle_)
     {
-        g_api->close_adapter(wintun_handle_);
+        api_->close_adapter(wintun_handle_);
         wintun_handle_ = nullptr;
     }
 }

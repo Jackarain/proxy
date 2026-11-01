@@ -12,6 +12,7 @@
 
 #include <cstring>
 #include <stdexcept>
+#include <utility>
 
 #if defined(_WIN32)
 #include <winsock2.h>
@@ -215,6 +216,55 @@ size_t build_ip_header(uint8_t* buf,
 
 // ---- ip_packet ----
 
+ip_packet::ip_packet(ip_packet&& other) noexcept
+    : buf_(std::move(other.buf_))
+{
+    take_state_from(other);
+}
+
+ip_packet& ip_packet::operator=(ip_packet&& other) noexcept
+{
+    if (this != &other)
+    {
+        buf_ = std::move(other.buf_);
+        take_state_from(other);
+    }
+    return *this;
+}
+
+void ip_packet::rebase_payload() noexcept
+{
+    if (payload_ != nullptr)
+        payload_ = buf_.data() + (total_len_ - payload_len_);
+}
+
+void ip_packet::take_state_from(ip_packet& other) noexcept
+{
+    parse_error_ = other.parse_error_;
+    version_ = other.version_;
+    protocol_ = other.protocol_;
+    std::memcpy(src_ip_, other.src_ip_, sizeof(src_ip_));
+    std::memcpy(dst_ip_, other.dst_ip_, sizeof(dst_ip_));
+    total_len_ = other.total_len_;
+    fragmented_ = other.fragmented_;
+    frag_offset_ = other.frag_offset_;
+    v4_ = other.v4_;
+    v6_ = other.v6_;
+    tcp_ = other.tcp_;
+    udp_ = other.udp_;
+    icmp_type_ = other.icmp_type_;
+    icmp_code_ = other.icmp_code_;
+    icmp_checksum_ = other.icmp_checksum_;
+    icmp_echo_id_ = other.icmp_echo_id_;
+    icmp_echo_seq_ = other.icmp_echo_seq_;
+    payload_ = other.payload_;
+    payload_len_ = other.payload_len_;
+    transport_parsed_ = other.transport_parsed_;
+    bld_ = other.bld_;
+    rebase_payload();
+    other.clear_state();
+}
+
 const char* ip_packet::error_message(parse_error e) noexcept
 {
     switch (e)
@@ -271,6 +321,8 @@ void ip_packet::reset() noexcept
 void ip_packet::copy_and_parse(const uint8_t* data, size_t len)
 {
     buf_.reset();
+    clear_state();
+    bld_ = builder_state{};
     if (len > buf_.writable_size())
     {
         parse_error_ = parse_error::buffer_too_small;
@@ -281,8 +333,6 @@ void ip_packet::copy_and_parse(const uint8_t* data, size_t len)
     std::memmove(buf_.data(), data, len);
     buf_.commit(len);
 
-    // 解析与构造状态互斥：解析后残留的 builder 状态不再可用于 finalize
-    bld_ = builder_state{};
     do_parse(buf_.data(), len);
 }
 
@@ -293,6 +343,7 @@ void ip_packet::parse(const packet_buffer& src, size_t len)
     // 已位于 data() 处。
     if (len > src.capacity() - src.headroom())
     {
+        reset();
         parse_error_ = parse_error::buffer_too_small;
         return;
     }
@@ -372,9 +423,7 @@ size_t ip_packet::transport_data_size() const noexcept
             ? payload_len_ - tcp_.header_len()
             : 0;
     if (is_udp() && transport_parsed_)
-        return payload_len_ > sizeof(udp_header)
-            ? payload_len_ - sizeof(udp_header)
-            : 0;
+        return static_cast<size_t>(ntohs(udp_.length)) - sizeof(udp_header);
     if ((is_icmp() || is_icmpv6()) && transport_parsed_)
         return payload_len_ > 8 ? payload_len_ - 8 : 0;
     return payload_len_;
@@ -519,6 +568,12 @@ void ip_packet::finalize()
 
     const size_t payload_len = buf_.size() - bld_.ip_hlen - bld_.transport_hlen;
     const size_t total = bld_.ip_hlen + bld_.transport_hlen + payload_len;
+    if (bld_.version == 4 && total > 0xffff)
+        throw std::length_error("ip_packet: IPv4 total length exceeds 65535");
+    if (bld_.version == 6 && total - bld_.ip_hlen > 0xffff)
+        throw std::length_error(
+            "ip_packet: IPv6 payload length exceeds 65535");
+
     uint8_t* out = buf_.data();
     const int family = bld_.version == 4 ? 4 : 6;
 

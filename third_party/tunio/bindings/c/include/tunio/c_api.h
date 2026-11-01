@@ -31,7 +31,8 @@
 //   并发。异步 accept 下发的连接/会话可再使用阻塞或异步接口（同一连接
 //   上建议固定一种风格）。引擎 close()/free() 会以 TUNIO_ECLOSED 完成全部
 //   挂起的异步操作回调。
-// - 异步读/写语义与 Boost.Asio async_read_some/async_write_some 一致：
+// - 异步读/写的单挂起、零拷贝缓冲与完成签名与 Boost.Asio 一致，但 TCP
+//   写完成表示全部数据已被对端 ACK：
 //   同一连接同时只允许一个挂起读与一个挂起写（重叠发起返回 TUNIO_EPARAM），
 //   引擎零拷贝引用调用方缓冲，缓冲须存活至回调；回调内可续发或释放句柄。
 //   对端 RST/FIN 以 err 报告（FIN 为 err == 0 且 n == 0）；两次操作间隙
@@ -84,7 +85,7 @@ typedef void (*tunio_tcp_recv_cb)(
     tunio_engine* engine, tunio_tcp_conn* conn, int err, size_t n,
     void* user);
 
-// 异步写完成：err == 0 表示 len 字节已被引擎接收；err < 0 为错误。
+// 异步写完成：err == 0 表示 len 字节已被对端 ACK；err < 0 为错误。
 typedef void (*tunio_tcp_send_cb)(
     tunio_engine* engine, tunio_tcp_conn* conn, int err, size_t n,
     void* user);
@@ -93,7 +94,7 @@ typedef void (*tunio_tcp_send_cb)(
 typedef void (*tunio_udp_session_cb)(
     tunio_engine* engine, tunio_udp_session* session, int err, void* user);
 
-// UDP 异步收包完成：err == 0 时 n 为数据报字节数，remote 为该数据报的
+// UDP 异步收包完成：err == 0 时 n 为实际复制字节数，remote 为该数据报的
 // 目标远端端点（语义与阻塞 tunio_udp_recvfrom 的输出一致）。
 typedef void (*tunio_udp_recv_cb)(tunio_engine* engine,
     tunio_udp_session* session, int err, size_t n,
@@ -182,9 +183,10 @@ int tunio_engine_stats(const tunio_engine* engine, tunio_stats* stats);
 tunio_tcp_conn* tunio_tcp_accept(tunio_engine* engine);
 // 阻塞读取；成功返回读取字节数（>0），对端关闭返回 0，失败返回负错误码。
 int tunio_tcp_recv(tunio_tcp_conn* conn, void* buf, size_t len);
-// 阻塞发送；成功返回写入字节数（等于 len），失败返回负错误码。
+// 阻塞发送；成功返回写入字节数（等于 len，且已由对端 ACK），失败返回负错误码。
 int tunio_tcp_send(tunio_tcp_conn* conn, const void* data, size_t len);
-int tunio_tcp_close(tunio_tcp_conn* conn); // 优雅关闭（发送 FIN）
+// 关闭连接：取消挂起读写；仍有未确认数据时发送 RST，否则发送 FIN。
+int tunio_tcp_close(tunio_tcp_conn* conn);
 int tunio_tcp_reset(tunio_tcp_conn* conn); // 中止（发送 RST）
 int tunio_tcp_is_open(const tunio_tcp_conn* conn);
 int tunio_tcp_original_destination(const tunio_tcp_conn* conn,
@@ -196,7 +198,8 @@ void tunio_tcp_free(tunio_tcp_conn* conn);
 // ---- UDP ----
 // 阻塞等待一条新的 UDP 会话（客户端首个数据报已到达）。
 tunio_udp_session* tunio_udp_accept(tunio_engine* engine);
-// 阻塞接收一个完整数据报；remote_ip/remote_port 输出数据报的目标远端端点。
+// 阻塞接收一个数据报；缓冲区不足时复制前缀并返回实际字节数；
+// remote_ip/remote_port 输出数据报的目标远端端点。
 int tunio_udp_recvfrom(tunio_udp_session* session,
     void* buf, size_t len,
     char* remote_ip, size_t ip_size, uint16_t* remote_port);
@@ -227,7 +230,7 @@ int tunio_tcp_async_accept(
 int tunio_tcp_async_recv(tunio_tcp_conn* conn, void* buf, size_t cap,
     tunio_tcp_recv_cb cb, void* user);
 
-// 异步写（单挂起写）：err == 0 表示 len 字节已被引擎接收。
+// 异步写（单挂起写）：err == 0 表示 len 字节已被对端 ACK。
 int tunio_tcp_async_send(tunio_tcp_conn* conn, const void* data, size_t len,
     tunio_tcp_send_cb cb, void* user);
 
@@ -236,7 +239,7 @@ int tunio_tcp_async_send(tunio_tcp_conn* conn, const void* data, size_t len,
 int tunio_udp_async_accept(
     tunio_engine* engine, tunio_udp_session_cb on_session, void* user);
 
-// 异步接收一个完整数据报（单挂起 recv）；remote 经回调参数输出。
+// 异步接收一个数据报（单挂起 recv）；缓冲区不足时截断；remote 经回调输出。
 int tunio_udp_async_recvfrom(tunio_udp_session* session,
     void* buf, size_t cap,
     tunio_udp_recv_cb cb, void* user);

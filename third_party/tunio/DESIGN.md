@@ -509,7 +509,8 @@ Linux TUN 驱动支持多队列模式（`IFF_MULTI_QUEUE`，内核 ≥ 2.6.30）
 #### 5.5 连接终止
 
 - 收到 FIN 段时，引擎回复 ACK，状态进入 `CLOSE_WAIT`，并向应用层指示 `EOF`。FIN 可与数据同段（其序号为 `SEQ + 载荷长度`），引擎按 RFC 语义一并确认。
-- 当应用层关闭 `tun_tcp_socket` 时，引擎发送 FIN 段，完成四次挥手。
+- 当应用层关闭 `tun_tcp_socket` 时，引擎取消挂起读写；无未确认数据时发送
+  FIN 进入四次挥手，仍有未确认数据时发送 RST 快速释放连接。
 - 收到 RST 段时，直接销毁 TCB 并通知应用层连接重置。
 - 半开连接（`SYN_RCVD` / `SYN_ACK_SENT`）在 `tcp_syn_timeout`（默认 30 秒）后清理；关闭流程
   （`FIN_WAIT_1` / `FIN_WAIT_2` / `LAST_ACK`）在 `tcp_close_timeout`（默认 30 秒）
@@ -523,7 +524,10 @@ UDP 引擎将无连接的 UDP 协议映射为有状态的会话，采用标准�
 
 #### 6.1 Datagram 语义
 
-UDP 是数据报协议，其 API 严格遵循一次收发对应一个完整数据报的语义。一次 `async_receive_from` 返回且仅返回一个完整的原始 UDP Datagram（包含 UDP 头载荷），并通过出参返回该数据报的目标远端端点。
+UDP 是数据报协议，其 API 严格遵循一次收包消费一个数据报的语义。一次
+`async_receive_from` 消费一个完整原始 UDP Datagram（包含 UDP 头载荷），并
+通过出参返回该数据报的目标远端端点；用户缓冲区不足时复制可容纳的前缀并
+返回实际复制字节数，不报 `message_size`（与 Asio/POSIX UDP 截断语义一致）。
 
 #### 6.2 会话模型（1 对 N）
 
@@ -605,6 +609,7 @@ public:
     }
 
     void shutdown(boost::asio::ip::tcp::socket::shutdown_type what, error_code& ec);
+    // 取消挂起读写；有未确认数据时发送 RST，否则发送 FIN。
     void close();
     bool is_open() const noexcept;
 

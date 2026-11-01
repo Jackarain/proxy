@@ -392,8 +392,8 @@ executor_type get_executor() const noexcept;   // 引擎内部串行执行器
 
 ### 套接字抽象
 
-四个套接字类型的行为与 Boost.Asio 对应类型对齐，全部异步操作均支持
-CompletionToken（协程 `co_await` 或 `net::use_future` 等）：
+四个套接字类型提供与 Boost.Asio 对应类型一致的异步接口模型，全部异步操作
+均支持 CompletionToken（协程 `co_await` 或 `net::use_future` 等）：
 
 - `tun_tcp_socket`：`async_read_some` / `async_write_some` /
   `original_destination()` / `remote_endpoint()` / `accept()` / `reject()` /
@@ -408,6 +408,11 @@ CompletionToken（协程 `co_await` 或 `net::use_future` 等）：
 首次读写隐式批准）决定握手结果；三次握手完成前的读写操作会缓冲，完成后
 交付。TCP 转发为按序交付（乱序段经重排缓存补齐），超时与资源上限见
 `tun_config`。
+
+`async_write_some` 在对端 ACK 全部数据后才完成。`close()` 会取消挂起读写：
+仍有未确认数据时发送 RST，否则发送 FIN，不等同于 `shutdown(send)`。TCP
+`async_accept` 在收到客户端 SYN 时完成（连接处于 `SYN_RCVD`），不是 Asio
+acceptor 的握手完成语义。
 
 ### 设备层 `tun_device` 与 `ip_packet`
 

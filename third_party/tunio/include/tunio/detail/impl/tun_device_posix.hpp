@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include "tunio/detail/completion.hpp"
 #include "tunio/packet_buffer.hpp"
 #include "tunio/tun_config.hpp"
 
@@ -95,8 +96,10 @@ public:
     {
         if (queue >= descs_.size())
         {
-            std::forward<Handler>(handler)(
-                make_error_code(net::error::bad_descriptor), 0);
+            post_completion_on(ctx_.get_executor(),
+                std::forward<Handler>(handler),
+                make_error_code(net::error::bad_descriptor),
+                0);
             return;
         }
         auto& desc = descs_[queue];
@@ -104,22 +107,25 @@ public:
         {
             // macOS utun 每次读取携带 4 字节家族前缀（大端 AF_INET/AF_INET6）：
             // 读入后跳过前缀，引擎仍按"完整 IP 报文"解析。
+            auto h = std::forward<Handler>(handler);
+            auto ex = net::get_associated_executor(h, ctx_.get_executor());
             desc.async_read_some(
                 net::buffer(buf.writable_data(), buf.writable_size()),
-                [h = std::forward<Handler>(handler), &buf](
-                    const boost::system::error_code& ec, size_t n) mutable
-                {
-                    size_t pkt_n = n;
-                    if (!ec && n > 4)
+                net::bind_executor(std::move(ex),
+                    [h = std::move(h), &buf](
+                        const boost::system::error_code& ec, size_t n) mutable
                     {
-                        // 从实际读入位置（writable_data）剥离前缀，兼容
-                        // 调用方未 reset 时 data() != 读入位置的场景。
-                        uint8_t* base = buf.writable_data();
-                        std::memmove(base, base + 4, n - 4);
-                        pkt_n = n - 4;
-                    }
-                    std::move(h)(ec, pkt_n);
-                });
+                        size_t pkt_n = n;
+                        if (!ec && n > 4)
+                        {
+                            // 从实际读入位置（writable_data）剥离前缀，兼容
+                            // 调用方未 reset 时 data() != 读入位置的场景。
+                            uint8_t* base = buf.writable_data();
+                            std::memmove(base, base + 4, n - 4);
+                            pkt_n = n - 4;
+                        }
+                        std::move(h)(ec, pkt_n);
+                    }));
         }
         else
             desc.async_read_some(
@@ -138,8 +144,10 @@ public:
     {
         if (queue >= descs_.size())
         {
-            std::forward<Handler>(handler)(
-                make_error_code(net::error::bad_descriptor), 0);
+            post_completion_on(ctx_.get_executor(),
+                std::forward<Handler>(handler),
+                make_error_code(net::error::bad_descriptor),
+                0);
             return;
         }
         auto& desc = descs_[queue];
@@ -150,8 +158,10 @@ public:
             // headroom 不足 4 字节时写入会越过堆分配起始地址（下溢），拒绝。
             if (buf.headroom() < 4)
             {
-                std::forward<Handler>(handler)(
-                    make_error_code(net::error::invalid_argument), 0);
+                post_completion_on(ctx_.get_executor(),
+                    std::forward<Handler>(handler),
+                    make_error_code(net::error::invalid_argument),
+                    0);
                 return;
             }
             uint8_t* prefix = buf.data() - 4;

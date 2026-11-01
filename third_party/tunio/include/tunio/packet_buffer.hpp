@@ -85,7 +85,7 @@ public:
     // 直接设定数据长度（写报文场景）
     void resize(size_t len)
     {
-        if (len > capacity_ - data_offset_ - data_size_)
+        if (len > capacity_ - data_offset_)
             throw std::length_error("packet_buffer::resize exceeds capacity");
         data_size_ = len;
     }

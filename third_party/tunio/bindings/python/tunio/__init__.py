@@ -334,7 +334,7 @@ class TcpSocket(_SocketBase):
         return buf.raw[:rc]
 
     def send(self, data: bytes | bytearray | memoryview | str) -> int:
-        """阻塞发送；成功返回写入字节数。传入 str 时按 UTF-8 编码。"""
+        """阻塞发送；全部数据被对端 ACK 后返回写入字节数。传入 str 时按 UTF-8 编码。"""
         self._closed_guard("send")
         if isinstance(data, str):
             data = data.encode("utf-8")
@@ -347,7 +347,7 @@ class TcpSocket(_SocketBase):
         return rc
 
     def close(self) -> None:
-        """优雅关闭（发送 FIN，完成四次挥手）。"""
+        """关闭连接：取消挂起读写；有未确认数据时发送 RST，否则发送 FIN。"""
         if self._handle:
             tunio_tcp_close(self._handle)
 
@@ -379,7 +379,7 @@ class UdpSocket(_SocketBase):
     _free_fn = staticmethod(tunio_udp_free)
 
     def recvfrom(self, size: int = 65535) -> tuple[bytes, tuple[str, int]]:
-        """阻塞接收一个完整数据报，返回 (数据, (远端地址, 端口))。"""
+        """阻塞接收一个数据报，返回 (截断到 size 的数据, (远端地址, 端口))。"""
         self._closed_guard("recvfrom")
         if size <= 0:
             raise ValueError("size 必须 > 0")

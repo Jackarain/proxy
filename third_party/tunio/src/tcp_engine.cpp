@@ -121,7 +121,13 @@ tcp_engine::tcp_engine(net::any_io_executor strand,
 
 tcp_engine::~tcp_engine()
 {
-    sweep_timer_.cancel();
+    try
+    {
+        sweep_timer_.cancel();
+    }
+    catch (...)
+    {
+    }
 }
 
 // ---- 会话清扫定时器 ----
@@ -296,9 +302,8 @@ void tcp_engine::on_packet(
         notify_accept(*f);
         return;
     }
-    // 持有强引用：handle_segment 内会内联调用用户完成回调（当流绑定引擎
-    // Strand 时），回调中 reset() 后销毁流可能擦除 flows_ 并释放最后引用；
-    // 强引用保证回调返回后 f 仍然有效，避免 use-after-free。
+    // 持有强引用：完成回调可能与流关闭交错排队，强引用保证处理期间流
+    // 对象仍然有效，避免 use-after-free。
     tcp_flow_ptr f = it->second;
     handle_segment(f, th, data, data_len);
 }
@@ -375,7 +380,16 @@ void tcp_engine::handle_segment(const tcp_flow_ptr& f,
     {
         // FIN 序号 = seq + data_len（FIN 消耗一个序列号，可与数据同段）
         const uint32_t fin_seq = seq + static_cast<uint32_t>(data_len);
-        handle_fin(*f, fin_seq);
+        if (data_len == 0 && seq_gt(fin_seq, f->rcv_nxt))
+        {
+            // 无数据的乱序 FIN 也必须入缓存，否则缺失段补齐后无法交付 EOF。
+            if (ooo_append(*f, fin_seq, nullptr, 0, true))
+                stats_.rx_ooo.fetch_add(1, std::memory_order_relaxed);
+            else
+                send_ack(*f);
+        }
+        else
+            handle_fin(*f, fin_seq);
     }
 
     signal_write(*f);
@@ -529,9 +543,10 @@ void tcp_engine::deliver_data(tcp_flow& f, const uint8_t* data, size_t len)
             f.rx_data.insert(f.rx_data.end(), data + n, data + len);
             f.rx_bytes += len - n;
         }
-        op.handler(boost::system::error_code{}, n);
-        // 回调内可重入 close()/reset()：关闭路径已发 FIN/RST 并清理流，
-        // 不再交付残留数据或补发 ACK.
+        post_completion_on(
+            strand_, std::move(op.handler), boost::system::error_code{}, n);
+        // 完成回调异步执行；关闭可能已由其他回调触发，不再交付残留数据
+        // 或补发 ACK.
         if (f.state == tcp_state::CLOSED)
             return;
         if (n < len)
@@ -576,7 +591,10 @@ void tcp_engine::flush_reads(tcp_flow& f)
         f.rx_head += copied;
         f.rx_bytes -= copied;
         account_->release(copied);
-        op.handler(boost::system::error_code{}, copied);
+        post_completion_on(strand_,
+            std::move(op.handler),
+            boost::system::error_code{},
+            copied);
         notify_window_updated(f);
         // 读完成：补发挂起的 ACK，应用稍后读取的单段数据也能及时确认.
         flush_pending_ack(f);
@@ -598,17 +616,64 @@ void tcp_engine::flush_reads(tcp_flow& f)
     {
         auto op = std::move(*f.active_read);
         f.active_read.reset();
-        op.handler(net::error::eof, 0);
+        post_completion_on(
+            strand_, std::move(op.handler), net::error::eof, 0);
     }
 }
 
 void tcp_engine::flush_ooo(tcp_flow& f)
 {
+    // 清理已被 rcv_nxt 完整越过的缓存段。旧实现仅在段与 rcv_nxt 相交时
+    // 取出，完全落在其后的重复/裁剪残段会永久占用窗口和缓冲记账。
+    bool pruned = false;
+    for (auto it = f.ooo_cache.begin(); it != f.ooo_cache.end();)
+    {
+        const size_t len = it->second.data.size();
+        const uint32_t end = it->first + static_cast<uint32_t>(len);
+        if (!seq_ge(f.rcv_nxt, end))
+        {
+            ++it;
+            continue;
+        }
+        if (it->second.fin && end == f.rcv_nxt)
+            handle_fin(f, end);
+        if (f.state == tcp_state::CLOSED)
+            return;
+        if (len > 0)
+        {
+            f.ooo_bytes -= len;
+            account_->release(len);
+        }
+        it = f.ooo_cache.erase(it);
+        pruned = true;
+    }
+    f.ooo_count = f.ooo_cache.size();
+
     bool delivered = false;
 
     for (;;)
     {
-        auto it = f.ooo_cache.find(f.rcv_nxt);
+        // 精确命中优先；若没有，选择覆盖 rcv_nxt 的重叠段并只交付其尾部。
+        // 仅按精确 seq 查找会在 [seq, end) 与缺失区间交叉时永久遗留后缀。
+        auto it = f.ooo_cache.end();
+        for (auto candidate = f.ooo_cache.begin();
+            candidate != f.ooo_cache.end();
+            ++candidate)
+        {
+            const uint32_t seq = candidate->first;
+            if (seq == f.rcv_nxt)
+            {
+                it = candidate;
+                break;
+            }
+            const uint32_t end =
+                seq + static_cast<uint32_t>(candidate->second.data.size());
+            if (seq_gt(f.rcv_nxt, seq) && seq_gt(end, f.rcv_nxt))
+            {
+                it = candidate;
+                break;
+            }
+        }
         if (it == f.ooo_cache.end())
             break;
 
@@ -624,12 +689,19 @@ void tcp_engine::flush_ooo(tcp_flow& f)
         account_->release(len);
         notify_window_updated(f);
 
-        if (len > 0)
-            deliver_data(f, seg.data.data(), len);
+        const size_t skip = seg_seq == f.rcv_nxt
+            ? 0
+            : static_cast<size_t>(f.rcv_nxt - seg_seq);
+        if (skip < len)
+            deliver_data(f, seg.data.data() + skip, len - skip);
 
         // FIN 序号 = 段首 seq + 数据长度（FIN 消耗一个序列号）
-        if (seg.fin)
-            handle_fin(f, seg_seq + static_cast<uint32_t>(len));
+        const uint32_t seg_end = seg_seq + static_cast<uint32_t>(len);
+        if (seg.fin && seg_end == f.rcv_nxt)
+            handle_fin(f, seg_end);
+
+        if (f.state == tcp_state::CLOSED)
+            return;
 
         delivered = true;
     }
@@ -639,27 +711,209 @@ void tcp_engine::flush_ooo(tcp_flow& f)
     // 重入关闭连接时不再补发.
     if (delivered && f.state != tcp_state::CLOSED)
         send_ack(f);
+    else if (pruned && f.state != tcp_state::CLOSED)
+        notify_window_updated(f);
 }
 
 bool tcp_engine::ooo_append(
     tcp_flow& f, uint32_t seq, const uint8_t* data, size_t len, bool fin)
 {
-    if (f.ooo_cache.find(seq) != f.ooo_cache.end())
-        return false; // 重复乱序段：忽略
-    if (f.ooo_count >= cfg_.tcp_ooo_max_segments ||
-        f.rx_bytes + f.ooo_bytes + len > cfg_.max_rx_queue_per_flow ||
-        !account_->reserve(len))
+    // 以本次段首为原点计算相对偏移，序列号回绕时仍可做普通区间比较。
+    const auto offset = [seq](uint32_t v) -> int64_t
+    {
+        return static_cast<int32_t>(v - seq);
+    };
+
+    if (len == 0)
+    {
+        if (!fin)
+            return false;
+        for (auto it = f.ooo_cache.begin(); it != f.ooo_cache.end(); ++it)
+        {
+            const int64_t start = offset(it->first);
+            const int64_t end =
+                start + static_cast<int64_t>(it->second.data.size());
+            if (end == 0)
+            {
+                if (it->second.fin)
+                    return false;
+                it->second.fin = true;
+                return true;
+            }
+            if (start <= 0 && end > 0)
+                return false; // FIN 落在数据中间或数据之前，忽略非法段
+        }
+        if (f.ooo_cache.size() >= cfg_.tcp_ooo_max_segments)
+        {
+            stats_.rx_dropped.fetch_add(1, std::memory_order_relaxed);
+            return false;
+        }
+        f.ooo_cache.emplace(seq, tcp_flow::ooo_segment{{}, true});
+        f.ooo_count = f.ooo_cache.size();
+        return true;
+    }
+
+    size_t overlap = 0;
+    bool fin_covered = false;
+    bool touches_existing = false;
+    tcp_flow::ooo_segment* fin_extension = nullptr;
+    for (auto& [old_seq, old_seg] : f.ooo_cache)
+    {
+        const int64_t start = offset(old_seq);
+        const int64_t end = start + static_cast<int64_t>(old_seg.data.size());
+        const int64_t lo = std::max<int64_t>(start, 0);
+        const int64_t hi = std::min<int64_t>(end, static_cast<int64_t>(len));
+        if (lo < hi)
+            overlap += static_cast<size_t>(hi - lo);
+        if (start <= static_cast<int64_t>(len) && end >= 0)
+            touches_existing = true;
+        if (end == static_cast<int64_t>(len))
+        {
+            if (old_seg.fin)
+                fin_covered = true;
+            else
+                fin_extension = &old_seg;
+        }
+    }
+
+    const size_t net_add = len - overlap;
+    if (net_add == 0)
+    {
+        if (!fin || fin_covered)
+            return false; // 完全重复：保留先到数据并触发 re-ACK
+        if (!fin_extension)
+            return false; // FIN 位于已缓存数据中间，忽略非法段
+        fin_extension->fin = true;
+        return true;
+    }
+
+    // 与本段重叠或相邻的旧段会在插入后合并，段数不会增加；仅全新区间
+    // 才受段数上限约束.
+    if ((f.ooo_cache.size() >= cfg_.tcp_ooo_max_segments &&
+            !touches_existing) ||
+        f.rx_bytes + f.ooo_bytes + net_add > cfg_.max_rx_queue_per_flow ||
+        !account_->reserve(net_add))
     {
         // 缓存超限：丢弃并依赖对端重传（调用方随后发 Dup-ACK）
         stats_.rx_dropped.fetch_add(1, std::memory_order_relaxed);
         return false;
     }
-    tcp_flow::ooo_segment seg;
-    seg.data.assign(data, data + len);
-    seg.fin = fin;
-    f.ooo_cache.emplace(seq, std::move(seg));
-    f.ooo_bytes += len;
-    ++f.ooo_count;
+
+    tcp_flow::ooo_segment incoming;
+    incoming.data.assign(data, data + len);
+    incoming.fin = fin || fin_covered;
+
+    // 裁剪与新段重叠的旧数据：保留左侧和右侧未覆盖部分，完全包含的旧段
+    // 删除。这样重复/覆盖段不再各自占用缓存与通告窗口。
+    for (auto it = f.ooo_cache.begin(); it != f.ooo_cache.end();)
+    {
+        const int64_t start = offset(it->first);
+        const int64_t old_len = static_cast<int64_t>(it->second.data.size());
+        const int64_t end = start + old_len;
+        const int64_t lo = std::max<int64_t>(start, 0);
+        const int64_t hi = std::min<int64_t>(end, static_cast<int64_t>(len));
+        const bool data_overlap = lo < hi;
+        const bool fin_inside = old_len == 0 && it->second.fin &&
+            start >= 0 && start < static_cast<int64_t>(len);
+        if (!data_overlap && !fin_inside)
+        {
+            ++it;
+            continue;
+        }
+
+        if (start < 0 && end > static_cast<int64_t>(len))
+        {
+            // 旧段横跨新段两侧：拆成左前缀和右后缀。
+            const size_t left_len = static_cast<size_t>(-start);
+            const size_t right_skip = static_cast<size_t>(
+                static_cast<int64_t>(len) - start);
+            std::vector<uint8_t> right_data(
+                it->second.data.begin() + right_skip, it->second.data.end());
+            const bool right_fin = it->second.fin;
+            it->second.data.resize(left_len);
+            it->second.fin = false;
+            const uint32_t right_seq = seq + static_cast<uint32_t>(len);
+            f.ooo_cache.emplace(right_seq,
+                tcp_flow::ooo_segment{std::move(right_data), right_fin});
+            ++it;
+        }
+        else if (start < 0)
+        {
+            // 只与旧段右侧重叠：保留左侧前缀。
+            it->second.data.resize(static_cast<size_t>(-start));
+            it->second.fin = false;
+            ++it;
+        }
+        else if (end > static_cast<int64_t>(len))
+        {
+            // 只与旧段左侧重叠：裁掉前缀并移动段首到新段尾。
+            const size_t skip = static_cast<size_t>(
+                static_cast<int64_t>(len) - start);
+            auto node = f.ooo_cache.extract(it++);
+            node.key() = seq + static_cast<uint32_t>(len);
+            node.mapped().data.erase(node.mapped().data.begin(),
+                node.mapped().data.begin() + static_cast<std::ptrdiff_t>(skip));
+            f.ooo_cache.insert(std::move(node));
+        }
+        else
+        {
+            // 旧段完全包含于新段（含同起点短重传）。
+            it = f.ooo_cache.erase(it);
+        }
+    }
+
+    auto cur = f.ooo_cache.emplace(seq, std::move(incoming)).first;
+    f.ooo_bytes += net_add;
+
+    // 与相邻区间合并，避免连续重传形成大量首尾相接的小段。
+    for (;;)
+    {
+        bool merged = false;
+        for (auto it = f.ooo_cache.begin(); it != f.ooo_cache.end(); ++it)
+        {
+            if (it == cur || it->second.fin)
+                continue;
+            const uint32_t end = it->first +
+                static_cast<uint32_t>(it->second.data.size());
+            if (end != cur->first)
+                continue;
+            it->second.data.insert(it->second.data.end(),
+                cur->second.data.begin(), cur->second.data.end());
+            it->second.fin = cur->second.fin;
+            f.ooo_cache.erase(cur);
+            cur = it;
+            merged = true;
+            break;
+        }
+        if (merged)
+            continue;
+
+        const uint32_t cur_end =
+            cur->first + static_cast<uint32_t>(cur->second.data.size());
+        for (auto it = f.ooo_cache.begin(); it != f.ooo_cache.end(); ++it)
+        {
+            if (it == cur || it->first != cur_end)
+                continue;
+            if (cur->second.fin)
+            {
+                if (it->second.data.empty() && it->second.fin)
+                {
+                    f.ooo_cache.erase(it);
+                    merged = true;
+                }
+                break;
+            }
+            cur->second.data.insert(cur->second.data.end(),
+                it->second.data.begin(), it->second.data.end());
+            cur->second.fin = it->second.fin;
+            f.ooo_cache.erase(it);
+            merged = true;
+            break;
+        }
+        if (!merged)
+            break;
+    }
+    f.ooo_count = f.ooo_cache.size();
     return true;
 }
 
@@ -801,9 +1055,9 @@ void tcp_engine::send_segment(tcp_flow& f,
     size_t len,
     bool with_mss)
 {
-    // 状态守卫：连接已关闭（reset/引擎 close/超时回收）后不再出段。用户
-    // 完成回调可重入关闭路径，收尾代码恢复执行时流可能已 CLOSED；RST 在
-    // abort_flow 中先于置 CLOSED 发出，不受此守卫影响.
+    // 状态守卫：连接已关闭（reset/引擎 close/超时回收）后不再出段。关闭
+    // 可能发生在同一次入包处理的较早阶段，收尾代码继续执行时流可能已
+    // CLOSED；RST 在 abort_flow 中先于置 CLOSED 发出，不受此守卫影响。
     if (f.state == tcp_state::CLOSED)
         return;
 
@@ -932,7 +1186,8 @@ net::awaitable<void> tcp_engine::write_loop(tcp_flow_ptr f)
                 auto h = std::move(flow.active_write->handler);
                 const size_t done = flow.active_write->total;
                 flow.active_write.reset();
-                h(boost::system::error_code{}, done);
+                post_completion_on(
+                    strand_, std::move(h), boost::system::error_code{}, done);
                 co_return;
             }
             if (flow.state != tcp_state::ESTABLISHED &&
@@ -1071,7 +1326,7 @@ net::awaitable<void> tcp_engine::write_loop(tcp_flow_ptr f)
                             : net::error::bad_descriptor;
         auto h = std::move(flow.active_write->handler);
         flow.active_write.reset();
-        h(err, 0);
+        post_completion_on(strand_, std::move(h), err, 0);
     }
     co_return;
 }
@@ -1308,9 +1563,19 @@ void tcp_engine::close_flow(tcp_flow& f, const boost::system::error_code& err)
     if (f.state == tcp_state::CLOSED)
         return;
 
+    [[maybe_unused]] auto keep_alive = f.shared_from_this();
+
     // 关闭后不再补发延迟确认。
     if (f.ack_timer)
-        f.ack_timer->cancel();
+    {
+        try
+        {
+            f.ack_timer->cancel();
+        }
+        catch (...)
+        {
+        }
+    }
 
     if (f.pending_accept)
     {
@@ -1324,24 +1589,19 @@ void tcp_engine::close_flow(tcp_flow& f, const boost::system::error_code& err)
             pending_flows_.erase(it);
     }
 
+    std::optional<tcp_read_handler> read_handler;
     if (f.active_read)
     {
-        auto op = std::move(*f.active_read);
+        read_handler.emplace(std::move(f.active_read->handler));
         f.active_read.reset();
-        op.handler(err, 0);
     }
 
+    std::optional<tcp_write_handler> write_handler;
     if (f.active_write)
     {
-        auto h = std::move(f.active_write->handler);
+        write_handler.emplace(std::move(f.active_write->handler));
         f.active_write.reset();
-        h(err, 0);
     }
-
-    // 关闭信号通道：唤醒挂起等待窗口的发送协程，协程恢复后
-    // 因 active_write 已清空而直接退出。
-    if (f.write_ch)
-        f.write_ch->close();
 
     if (f.rx_bytes > 0)
     {
@@ -1364,6 +1624,15 @@ void tcp_engine::close_flow(tcp_flow& f, const boost::system::error_code& err)
 
     f.state = tcp_state::CLOSED;
     flows_.erase(f.key);
+
+    // 状态、资源与流表均已清理完毕，再唤醒发送协程并投递完成回调。
+    // 回调异常只会从 io_context::run() 传播，不会中断本函数的清理。
+    if (f.write_ch)
+        f.write_ch->close();
+    if (read_handler)
+        post_completion_on(strand_, std::move(*read_handler), err, 0);
+    if (write_handler)
+        post_completion_on(strand_, std::move(*write_handler), err, 0);
 }
 
 void tcp_engine::notify_accept(tcp_flow& f)
@@ -1373,7 +1642,10 @@ void tcp_engine::notify_accept(tcp_flow& f)
         auto h = std::move(pending_accepts_.front());
         pending_accepts_.pop_front();
         f.accepted = true;
-        h(boost::system::error_code{}, f.shared_from_this());
+        post_completion_on(strand_,
+            std::move(h),
+            boost::system::error_code{},
+            f.shared_from_this());
     }
     else
     {
@@ -1388,13 +1660,22 @@ void tcp_engine::cancel_accepts()
     {
         auto h = std::move(pending_accepts_.front());
         pending_accepts_.pop_front();
-        h(boost::system::error_code(net::error::operation_aborted), nullptr);
+        post_completion_on(strand_,
+            std::move(h),
+            boost::system::error_code(net::error::operation_aborted),
+            nullptr);
     }
 }
 
 void tcp_engine::close_all()
 {
-    sweep_timer_.cancel();
+    try
+    {
+        sweep_timer_.cancel();
+    }
+    catch (...)
+    {
+    }
 
     std::vector<tcp_flow_ptr> all;
     all.reserve(flows_.size());
@@ -1453,13 +1734,11 @@ void tcp_flow_shutdown_receive(tcp_flow_ptr flow)
 
             f.rx_shutdown = true;
 
+            std::optional<tcp_read_handler> read_handler;
             if (f.active_read)
             {
-                auto op = std::move(*f.active_read);
+                read_handler.emplace(std::move(f.active_read->handler));
                 f.active_read.reset();
-                op.handler(
-                    boost::system::error_code(net::error::operation_aborted),
-                    0);
             }
 
             if (f.rx_bytes > 0)
@@ -1477,6 +1756,12 @@ void tcp_flow_shutdown_receive(tcp_flow_ptr flow)
             }
             f.ooo_cache.clear();
             f.ooo_count = 0;
+
+            if (read_handler)
+                post_completion_on(eng->strand(),
+                    std::move(*read_handler),
+                    boost::system::error_code(net::error::operation_aborted),
+                    0);
         });
 }
 
@@ -1498,20 +1783,18 @@ void tcp_flow_close(tcp_flow_ptr flow)
 
             f.app_closed = true;
 
+            std::optional<tcp_read_handler> read_handler;
             if (f.active_read)
             {
-                auto op = std::move(*f.active_read);
+                read_handler.emplace(std::move(f.active_read->handler));
                 f.active_read.reset();
-                op.handler(
-                    boost::system::error_code(net::error::operation_aborted),
-                    0);
             }
 
+            std::optional<tcp_write_handler> write_handler;
             if (f.active_write)
             {
-                auto h = std::move(f.active_write->handler);
+                write_handler.emplace(std::move(f.active_write->handler));
                 f.active_write.reset();
-                h(boost::system::error_code(net::error::operation_aborted), 0);
             }
 
             if (f.write_ch)
@@ -1539,6 +1822,17 @@ void tcp_flow_close(tcp_flow_ptr flow)
                 eng->abort_flow(f);
             else
                 eng->send_fin(f);
+
+            if (read_handler)
+                post_completion_on(eng->strand(),
+                    std::move(*read_handler),
+                    boost::system::error_code(net::error::operation_aborted),
+                    0);
+            if (write_handler)
+                post_completion_on(eng->strand(),
+                    std::move(*write_handler),
+                    boost::system::error_code(net::error::operation_aborted),
+                    0);
         });
 }
 

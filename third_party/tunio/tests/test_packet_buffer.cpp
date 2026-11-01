@@ -39,8 +39,10 @@ BOOST_AUTO_TEST_CASE(packet_buffer)
     // resize
     buf.resize(10);
     TEST_ASSERT(buf.size() == 10);
+    buf.resize(80); // 绝对长度：可扩展至尾部剩余容量
+    TEST_ASSERT(buf.size() == 80);
     try {
-        buf.resize(100); // 超出尾部容量
+        buf.resize(81); // 超出尾部容量
         TEST_ASSERT(false && "should throw");
     } catch (const std::length_error &) {
     }

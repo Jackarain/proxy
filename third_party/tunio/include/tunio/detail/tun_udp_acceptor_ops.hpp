@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include "tunio/detail/completion.hpp"
 #include "tunio/tun_udp_acceptor.hpp"
 #include "tunio/detail/tunio_impl.hpp"
 
@@ -27,13 +28,15 @@ void tun_udp_acceptor::do_accept(tun_udp_socket& peer, Handler handler)
             // 读写处于同一执行上下文，避免跨 Strand 写共享状态。
             net::dispatch(ex,
                 [&peer,
+                    ex,
                     handler = std::move(handler),
                     ec,
                     s = std::move(s)]() mutable
                 {
                     if (!ec && s)
                         peer.session_ = std::move(s);
-                    handler(ec);
+                    detail::post_completion_on(
+                        ex, std::move(handler), ec);
                 });
         });
 }

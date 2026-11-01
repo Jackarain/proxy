@@ -140,7 +140,7 @@ inline bool operator!=(
 // 设备配置：自主打开 TUN 设备时使用
 struct device_config
 {
-    std::string name;
+    std::string name; // UTF-8 适配器名称
     std::string ipv4;
     std::string netmask;
     std::string ipv6;             // 可选 IPv6 地址，如 "fd00::1"

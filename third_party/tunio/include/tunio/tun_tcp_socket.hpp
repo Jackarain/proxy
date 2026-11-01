@@ -67,7 +67,8 @@ public:
             std::forward<MutableBufferSequence>(buffers));
     }
 
-    // 异步写入：数据被封装为 TCP 段发送，完成时表示数据已被引擎接收。
+    // 异步写入：数据被封装为 TCP 段发送；完成时表示全部数据已被对端 ACK，
+    // 而非仅写入本地 TUN 设备。
     // 调用方必须保证缓冲区在完成 handler 被回调前保持有效（与 Boost.Asio
     // 的 async_write_some 语义一致），引擎在发送期间只引用而不拷贝用户数据。
     template <typename ConstBufferSequence, typename CompletionToken>
@@ -89,7 +90,8 @@ public:
     void shutdown(net::ip::tcp::socket::shutdown_type what,
         boost::system::error_code& ec);
 
-    // 优雅关闭（与 shutdown(send) 等价）
+    // 关闭连接：取消挂起读写；仍有未确认数据时发送 RST，否则发送 FIN。
+    // 不等同于 shutdown(send)。
     void close();
 
     // 中止连接：立即向客户端发送 RST（后端连接失败等场景）

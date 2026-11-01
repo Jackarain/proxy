@@ -87,7 +87,13 @@ udp_engine::udp_engine(net::any_io_executor strand,
 
 udp_engine::~udp_engine()
 {
-    expiry_timer_.cancel();
+    try
+    {
+        expiry_timer_.cancel();
+    }
+    catch (...)
+    {
+    }
 }
 
 // ---- 收包与数据交付 ----
@@ -135,8 +141,8 @@ void udp_engine::on_packet(
     auto it = sessions_.find(key);
     if (it != sessions_.end())
     {
-        // 强引用：deliver_datagram 内联调用用户完成回调时，回调可能关闭并
-        // 擦除会话（remove_session），强引用保证回调返回后 s 仍有效。
+        // 强引用：完成回调可能与会话关闭交错排队，强引用保证收尾期间
+        // 会话对象仍然有效。
         udp_session_ptr s = it->second;
         if (!s->closed)
         {
@@ -147,6 +153,15 @@ void udp_engine::on_packet(
     }
 
     if (sessions_.size() >= cfg_.max_udp_flows)
+    {
+        stats_.rx_dropped.fetch_add(1, std::memory_order_relaxed);
+        return;
+    }
+
+    // 无等待者时新会话必须进入待领取队列；队列达到独立上限后直接丢弃，
+    // 避免应用长期不调用 async_accept 时无界积累不可达会话。
+    if (pending_accepts_.empty() &&
+        pending_new_sessions_.size() >= max_pending_new_sessions)
     {
         stats_.rx_dropped.fetch_add(1, std::memory_order_relaxed);
         return;
@@ -168,10 +183,15 @@ void udp_engine::on_packet(
     {
         auto h = std::move(pending_accepts_.front());
         pending_accepts_.pop_front();
-        h(boost::system::error_code{}, s);
+        post_completion_on(
+            strand_, std::move(h), boost::system::error_code{}, s);
     }
     else
+    {
+        s->pending_accept = true;
         pending_new_sessions_.push_back(s);
+        s->pending_it = std::prev(pending_new_sessions_.end());
+    }
 }
 
 void udp_engine::deliver_datagram(const udp_session_ptr& s,
@@ -189,25 +209,22 @@ void udp_engine::deliver_datagram(const udp_session_ptr& s,
         auto op = std::move(s->pending_reads.front());
         s->pending_reads.pop_front();
 
-        if (len > op.total)
-            op.handler(boost::system::error_code(net::error::message_size), 0);
-        else
+        if (op.sender)
+            *op.sender = sender;
+
+        const size_t copied_len = std::min(len, op.total);
+        size_t copied = 0;
+        for (auto& buf : op.buffers)
         {
-            if (op.sender)
-                *op.sender = sender;
+            if (copied >= copied_len)
+                break;
 
-            size_t copied = 0;
-            for (auto& buf : op.buffers)
-            {
-                if (copied >= len)
-                    break;
-
-                const size_t take = std::min(buf.size(), len - copied);
-                std::memcpy(buf.data(), data + copied, take);
-                copied += take;
-            }
-            op.handler(boost::system::error_code{}, len);
+            const size_t take = std::min(buf.size(), copied_len - copied);
+            std::memcpy(buf.data(), data + copied, take);
+            copied += take;
         }
+        post_completion_on(strand_,
+            std::move(op.handler), boost::system::error_code{}, copied);
         return;
     }
 
@@ -276,7 +293,13 @@ void udp_engine::arm_expiry_timer()
 
     // 取消旧等待并安排新等待；被取消的旧回调通过代次号丢弃
     timer_waiting_ = false;
-    expiry_timer_.cancel();
+    try
+    {
+        expiry_timer_.cancel();
+    }
+    catch (...)
+    {
+    }
     ++wait_gen_;
     const uint64_t gen = wait_gen_;
     armed_target_ = target;
@@ -346,15 +369,18 @@ void udp_engine::remove_session(udp_session_ptr s)
     if (s->closed)
         return;
 
+    auto pending_reads = std::move(s->pending_reads);
+    s->pending_reads.clear();
+
     s->closed = true;
     sessions_.erase(s->key);
     stats_.udp_sessions.fetch_sub(1, std::memory_order_relaxed);
 
-    for (auto& op : s->pending_reads)
+    if (s->pending_accept)
     {
-        op.handler(boost::system::error_code(net::error::operation_aborted), 0);
+        pending_new_sessions_.erase(s->pending_it);
+        s->pending_accept = false;
     }
-    s->pending_reads.clear();
 
     if (s->rx_bytes > 0)
     {
@@ -362,6 +388,16 @@ void udp_engine::remove_session(udp_session_ptr s)
         s->rx_bytes = 0;
     }
     s->rx_datagrams.clear();
+
+    // 会话状态与资源已全部清理，最后再投递读完成；回调异常不会中断
+    // remove_session 或定时器的后续调度。
+    for (auto& op : pending_reads)
+    {
+        post_completion_on(strand_,
+            std::move(op.handler),
+            boost::system::error_code(net::error::operation_aborted),
+            0);
+    }
 }
 
 // ---- 会话批量控制 ----
@@ -372,13 +408,22 @@ void udp_engine::cancel_accepts()
     {
         auto h = std::move(pending_accepts_.front());
         pending_accepts_.pop_front();
-        h(boost::system::error_code(net::error::operation_aborted), nullptr);
+        post_completion_on(strand_,
+            std::move(h),
+            boost::system::error_code(net::error::operation_aborted),
+            nullptr);
     }
 }
 
 void udp_engine::close_all()
 {
-    expiry_timer_.cancel();
+    try
+    {
+        expiry_timer_.cancel();
+    }
+    catch (...)
+    {
+    }
     timer_waiting_ = false;
 
     std::vector<udp_session_ptr> all;

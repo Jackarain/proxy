@@ -24,6 +24,8 @@
 #include <cstdint>
 #include <cstring>
 #include <deque>
+#include <iterator>
+#include <list>
 #include <memory>
 #include <unordered_map>
 #include <vector>
@@ -36,6 +38,7 @@ namespace detail {
 class tun_queue_writer;
 struct buffer_accountant;
 class udp_engine;
+struct udp_session;
 
 // ---- UDP 引擎常用类型 ----
 // 时间统一采用单调时钟（steady_clock），不受系统时间调整影响
@@ -44,6 +47,8 @@ using udp_time_point = udp_clock::time_point;
 // UDP 数据报读完成处理器（与 Boost.Asio 异步操作完成签名一致）
 using udp_read_handler =
     net::any_completion_handler<void(boost::system::error_code, size_t)>;
+using udp_session_ptr = std::shared_ptr<udp_session>;
+using udp_pending_sessions = std::list<udp_session_ptr>;
 
 // UDP 会话：由客户端三元组唯一标识（1 对 N，可向任意远端收发），承载
 // 数据报收发与空闲超时
@@ -55,6 +60,10 @@ struct udp_session : public std::enable_shared_from_this<udp_session>
     std::weak_ptr<udp_engine> eng;
 
     bool closed = false;
+    // 位于引擎待领取队列时记录节点位置，会话超时/关闭可 O(1) 撤销，
+    // 避免未调用 async_accept 时已关闭会话被强引用长期滞留.
+    bool pending_accept = false;
+    udp_pending_sessions::iterator pending_it;
     std::chrono::seconds timeout{30};
     udp_time_point expiry;
     uint64_t expiry_gen = 0; // 与堆条目配对，用于懒失效
@@ -93,7 +102,6 @@ struct udp_session : public std::enable_shared_from_this<udp_session>
 };
 
 // 会话指针 / accept 完成处理器 / 会话表（依赖 udp_session 定义）
-using udp_session_ptr = std::shared_ptr<udp_session>;
 using udp_accept_handler = net::any_completion_handler<void(
     boost::system::error_code, udp_session_ptr)>;
 using udp_session_map = boost::unordered_flat_map<udp_session_key,
@@ -117,6 +125,10 @@ void udp_session_start_send(udp_session_ptr session,
 class udp_engine : public std::enable_shared_from_this<udp_engine>
 {
 public:
+    // 未被 async_accept 领取的新会话上限：独立于会话表上限，防止应用
+    // 长期不 accept 时待领取队列无界积累。
+    static constexpr size_t max_pending_new_sessions = 1024;
+
     udp_engine(net::any_io_executor strand,
         std::shared_ptr<tun_queue_writer> writer,
         const tun_config& cfg,
@@ -136,6 +148,11 @@ public:
     size_t session_count() const
     {
         return sessions_.size();
+    }
+    // 仅限在 io 线程（或引擎 Strand 上）调用：待领取会话数。
+    size_t pending_session_count() const
+    {
+        return pending_new_sessions_.size();
     }
 
     net::any_io_executor strand() const
@@ -199,7 +216,7 @@ private:
 
     udp_session_map sessions_;
     std::deque<udp_accept_handler> pending_accepts_;
-    std::deque<udp_session_ptr> pending_new_sessions_;
+    udp_pending_sessions pending_new_sessions_;
 
     // 最小堆：堆顶为最早即将过期的会话
     struct expiry_entry
@@ -382,7 +399,8 @@ void udp_write_ipv4_fragments(tun_queue_writer& writer,
 }
 
 // 单报文发送（载荷不超 MTU，热路径）：构造 IP + UDP 报文并异步写入设备。
-// tun_queue_writer 保证完成回调在引擎 Strand 上触发，无需再派发。
+// tun_queue_writer 在引擎 Strand 上完成写操作，随后再按完成处理器的关联
+// 执行器派发用户回调。
 template <typename Handler>
 void udp_send_single(udp_session& session,
     udp_engine& eng,
@@ -423,7 +441,7 @@ void udp_send_single(udp_session& session,
             const boost::system::error_code& ec, size_t) mutable
         {
             // 设备写失败时透传错误码，避免向调用方误报成功
-            std::move(h)(ec, ec ? 0 : sent);
+            post_completion(std::move(h), ec, ec ? 0 : sent);
         });
 }
 
@@ -458,13 +476,13 @@ void udp_send_fragmented(udp_session& session,
         [h = std::move(handler), total](boost::system::error_code ec) mutable
         {
             // 成功时报告完整数据报长度；失败时长度为 0（与单包路径一致）
-            std::move(h)(ec, ec ? 0 : total);
+            post_completion(std::move(h), ec, ec ? 0 : total);
         });
 }
 
 // 出队一条排队数据报并交付给本次读请求；无排队数据报时返回 false，由
-// 调用方将读操作挂入 pending_reads。数据报大于用户缓冲区时按 UDP 截断
-// 丢弃并以 message_size 完成本次读。
+// 调用方将读操作挂入 pending_reads。数据报大于用户缓冲区时复制可容纳的
+// 前缀，并以实际复制字节数成功完成本次读。
 template <typename Handler>
 bool udp_pop_queued_datagram(udp_session& session,
     udp_engine& eng,
@@ -481,26 +499,24 @@ bool udp_pop_queued_datagram(udp_session& session,
     session.rx_bytes -= dg.data.size();
     eng.account().release(dg.data.size());
 
-    if (dg.data.size() > total)
-    {
-        handler(boost::system::error_code(net::error::message_size), 0);
-        return true;
-    }
-
     sender = dg.sender;
 
+    const size_t copied_len = std::min(dg.data.size(), total);
     size_t copied = 0;
     for (const auto& buf : buffers)
     {
-        if (copied >= dg.data.size())
+        if (copied >= copied_len)
             break;
 
-        const size_t take = std::min(buf.size(), dg.data.size() - copied);
+        const size_t take = std::min(buf.size(), copied_len - copied);
         std::memcpy(buf.data(), dg.data.data() + copied, take);
         copied += take;
     }
 
-    handler(boost::system::error_code{}, dg.data.size());
+    post_completion_on(eng.strand(),
+        std::move(handler),
+        boost::system::error_code{},
+        copied);
     return true;
 }
 
@@ -514,14 +530,18 @@ void udp_session_start_receive(udp_session_ptr session,
 {
     if (!session)
     {
-        handler(boost::system::error_code(net::error::bad_descriptor), 0);
+        post_completion(std::move(handler),
+            boost::system::error_code(net::error::bad_descriptor),
+            0);
         return;
     }
 
     auto eng = session->eng.lock();
     if (!eng)
     {
-        handler(boost::system::error_code(net::error::bad_descriptor), 0);
+        post_completion(std::move(handler),
+            boost::system::error_code(net::error::bad_descriptor),
+            0);
         return;
     }
 
@@ -532,20 +552,16 @@ void udp_session_start_receive(udp_session_ptr session,
             buffers = std::move(buffers),
             total,
             &sender,
-            handler = std::move(handler)]() mutable
+            handler = std::move(handler),
+            strand]() mutable
         {
             auto& session = *s;
 
             if (session.closed)
             {
-                handler(
+                post_completion_on(strand,
+                    std::move(handler),
                     boost::system::error_code(net::error::bad_descriptor), 0);
-                return;
-            }
-
-            if (total == 0)
-            {
-                handler(boost::system::error_code{}, 0);
                 return;
             }
 
@@ -569,14 +585,18 @@ void udp_session_start_send(udp_session_ptr session,
 {
     if (!session)
     {
-        handler(boost::system::error_code(net::error::bad_descriptor), 0);
+        post_completion(std::move(handler),
+            boost::system::error_code(net::error::bad_descriptor),
+            0);
         return;
     }
 
     auto eng = session->eng.lock();
     if (!eng)
     {
-        handler(boost::system::error_code(net::error::bad_descriptor), 0);
+        post_completion(std::move(handler),
+            boost::system::error_code(net::error::bad_descriptor),
+            0);
         return;
     }
 
@@ -587,13 +607,15 @@ void udp_session_start_send(udp_session_ptr session,
             remote,
             buffers = std::move(buffers),
             total,
-            handler = std::move(handler)]() mutable
+            handler = std::move(handler),
+            strand]() mutable
         {
             auto& session = *s;
 
             if (session.closed)
             {
-                handler(
+                post_completion_on(strand,
+                    std::move(handler),
                     boost::system::error_code(net::error::bad_descriptor), 0);
                 return;
             }
@@ -603,7 +625,9 @@ void udp_session_start_send(udp_session_ptr session,
             const int family = session.key.family;
             if (family != udp_endpoint_to_addr_bytes(remote, src_addr))
             {
-                handler(boost::system::error_code(
+                post_completion_on(strand,
+                    std::move(handler),
+                    boost::system::error_code(
                             net::error::address_family_not_supported),
                     0);
                 return;
@@ -616,7 +640,10 @@ void udp_session_start_send(udp_session_ptr session,
             // 否则长度字段截断损坏。
             if (sizeof(udp_header) + total > 65535)
             {
-                handler(boost::system::error_code(net::error::message_size), 0);
+                post_completion_on(strand,
+                    std::move(handler),
+                    boost::system::error_code(net::error::message_size),
+                    0);
                 return;
             }
 
@@ -630,7 +657,8 @@ void udp_session_start_send(udp_session_ptr session,
             if (oversized && family != 4)
             {
                 // IPv6 无扩展头分片支持：拒绝超出 MTU 的报文
-                handler(
+                post_completion_on(strand,
+                    std::move(handler),
                     boost::system::error_code(net::error::message_size), 0);
                 return;
             }
@@ -670,11 +698,15 @@ template <typename Handler> void udp_engine::async_accept(Handler handler)
     {
         auto s = std::move(pending_new_sessions_.front());
         pending_new_sessions_.pop_front();
+        s->pending_accept = false;
 
         if (s->closed)
             continue;
 
-        handler(boost::system::error_code{}, std::move(s));
+        post_completion_on(strand_,
+            std::move(handler),
+            boost::system::error_code{},
+            std::move(s));
         return;
     }
 

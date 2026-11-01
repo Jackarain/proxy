@@ -661,7 +661,8 @@ struct engine_env
         int rto_max_retransmits = 8,
         size_t queues = 1,
         bool utun_prefix = false,
-        int persist_max_probes = 15)
+        int persist_max_probes = 15,
+        size_t tcp_ooo_max_segments = 4096)
         : engine(io)
         , dev(queues)
         , guard(net::make_work_guard(io))
@@ -682,6 +683,7 @@ struct engine_env
         cfg.tcp_rto_max_retransmits = rto_max_retransmits;
         cfg.utun_prefix = utun_prefix;
         cfg.tcp_persist_max_probes = persist_max_probes;
+        cfg.tcp_ooo_max_segments = tcp_ooo_max_segments;
         boost::system::error_code ec;
         if (!engine.open(cfg, ec)) {
             TEST_THROW("engine open failed: " + ec.message());

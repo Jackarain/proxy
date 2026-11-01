@@ -28,7 +28,7 @@ struct udp_session;
 //
 // 表示引擎 UDP 会话表中绑定一个客户端套接字的会话（由客户端三元组唯一
 // 标识，1 对 N：可向任意远端收发）。async_receive_from / async_send_to
-// 严格遵循一次收发对应一个完整数据报的语义。
+// 严格遵循一次操作消费或发送一个数据报的语义。
 class tun_udp_socket
 {
 public:
@@ -42,10 +42,10 @@ public:
 
     executor_type get_executor() const noexcept;
 
-    // 异步接收一个完整数据报；sender 输出该数据报的目标远端端点（发送者
-    // 恒为会话绑定的客户端）。调用方必须保证 sender 在完成 handler 被回调
-    // 前保持有效，失败路径不保证填充（与 Boost.Asio 的 async_receive_from
-    // 语义一致）。
+    // 异步接收一个数据报；sender 输出该数据报的目标远端端点（发送者恒为
+    // 会话绑定的客户端）。缓冲区不足时复制可容纳的前缀，成功完成并返回
+    // 实际复制字节数（与 Asio/POSIX UDP 截断语义一致）。调用方必须保证
+    // sender 在完成 handler 被回调前保持有效，失败路径不保证填充。
     template <typename MutableBufferSequence, typename CompletionToken>
     auto async_receive_from(MutableBufferSequence&& buffers,
         net::ip::udp::endpoint& sender,

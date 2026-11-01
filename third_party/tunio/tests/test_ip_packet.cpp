@@ -15,8 +15,10 @@
 
 #include "tunio/ip_packet.hpp"
 #include "tunio/tun_device.hpp"
+#include "tunio/detail/impl/tun_device_unsupported.hpp"
 
 #include <array>
+#include <atomic>
 #include <cassert>
 #include <cstdint>
 #include <cstring>
@@ -75,6 +77,24 @@ BOOST_AUTO_TEST_CASE(test_parse_ipv4_udp)
     TEST_ASSERT(ntohs(p.udp()->length) == 8 + 5);
     TEST_ASSERT(p.transport_data_size() == 5);
     TEST_ASSERT(std::memcmp(p.transport_data(), data.data(), 5) == 0);
+}
+
+BOOST_AUTO_TEST_CASE(test_parse_udp_ignores_ip_padding)
+{
+    const std::vector<uint8_t> data = {1, 2, 3, 4, 5};
+    auto vec = make_udp(0x0a000002, 0x08080808, 30000, 53, data);
+    vec.insert(vec.end(), {0xaa, 0xbb, 0xcc});
+    vec[2] = static_cast<uint8_t>(vec.size() >> 8);
+    vec[3] = static_cast<uint8_t>(vec.size() & 0xff);
+
+    ip_packet p;
+    p.parse(vec.data(), vec.size());
+    TEST_ASSERT(p.valid() && p.is_udp());
+    TEST_ASSERT(p.payload_size() == sizeof(tunio::udp_header) + data.size() + 3);
+    TEST_ASSERT(ntohs(p.udp()->length) ==
+        sizeof(tunio::udp_header) + data.size());
+    TEST_ASSERT(p.transport_data_size() == data.size());
+    TEST_ASSERT(std::memcmp(p.transport_data(), data.data(), data.size()) == 0);
 }
 
 BOOST_AUTO_TEST_CASE(test_parse_ipv4_icmp)
@@ -153,6 +173,40 @@ BOOST_AUTO_TEST_CASE(test_parse_zero_copy)
     // 应用数据在 TCP 头之后
     TEST_ASSERT(p.transport_data() == p.buffer().data() + 20 + 20);
     TEST_ASSERT(p.transport_data_size() == 3);
+}
+
+BOOST_AUTO_TEST_CASE(test_move_rebases_payload)
+{
+    const std::vector<uint8_t> data = {1, 2, 3, 4};
+    auto vec = make_tcp(0x0a000002, 0x08080808, 20000, 443, 0x12, 100, 0,
+        65535, data);
+
+    ip_packet moved;
+    {
+        ip_packet source;
+        source.parse(vec.data(), vec.size());
+        TEST_ASSERT(source.valid());
+        moved = std::move(source);
+    }
+    TEST_ASSERT(moved.valid() && moved.is_tcp());
+    TEST_ASSERT(moved.payload() == moved.buffer().data() + 20);
+    TEST_ASSERT(moved.transport_data() == moved.buffer().data() + 40);
+    TEST_ASSERT(moved.transport_data_size() == data.size());
+    TEST_ASSERT(std::memcmp(moved.transport_data(), data.data(), data.size()) ==
+        0);
+
+    ip_packet constructed;
+    {
+        ip_packet source;
+        source.parse(vec.data(), vec.size());
+        TEST_ASSERT(source.valid());
+        constructed = ip_packet(std::move(source));
+    }
+    TEST_ASSERT(constructed.valid() && constructed.is_tcp());
+    TEST_ASSERT(constructed.payload() == constructed.buffer().data() + 20);
+    TEST_ASSERT(constructed.transport_data() == constructed.buffer().data() + 40);
+    TEST_ASSERT(std::memcmp(constructed.transport_data(), data.data(),
+                    data.size()) == 0);
 }
 
 BOOST_AUTO_TEST_CASE(test_parse_malformed)
@@ -293,6 +347,29 @@ BOOST_AUTO_TEST_CASE(test_parse_buffer_too_small)
     p.parse(vec.data(), vec.size());
     TEST_ASSERT(!p.valid());
     TEST_ASSERT(p.error() == ip_packet::parse_error::buffer_too_small);
+}
+
+BOOST_AUTO_TEST_CASE(test_parse_buffer_too_small_clears_previous_state)
+{
+    auto vec = make_udp(0x0a000002, 0x08080808, 30000, 53, {1, 2, 3});
+    ip_packet p;
+    p.parse(vec.data(), vec.size());
+    TEST_ASSERT(p.valid() && p.is_udp());
+
+    std::vector<uint8_t> oversized(
+        p.buffer().capacity() - p.buffer().headroom() + 1, 0);
+    p.parse(oversized.data(), oversized.size());
+    TEST_ASSERT(p.error() == ip_packet::parse_error::buffer_too_small);
+    TEST_ASSERT(p.version() == 0 && p.ip_protocol() == 0);
+    TEST_ASSERT(p.payload() == nullptr && p.transport_data() == nullptr);
+    TEST_ASSERT(p.payload_size() == 0 && p.transport_data_size() == 0);
+
+    p.parse(vec.data(), vec.size());
+    TEST_ASSERT(p.valid() && p.is_udp());
+    packet_buffer undersized(64, 16);
+    p.parse(undersized, 64);
+    TEST_ASSERT(p.error() == ip_packet::parse_error::buffer_too_small);
+    TEST_ASSERT(p.version() == 0 && p.payload() == nullptr);
 }
 
 // ---- 字段构造（builder）测试 ----
@@ -561,6 +638,49 @@ BOOST_AUTO_TEST_CASE(test_builder_capacity_guard)
     }
 }
 
+BOOST_AUTO_TEST_CASE(test_builder_rejects_oversized_packet)
+{
+    const std::vector<uint8_t> payload(65528, 0);
+    {
+        ip_packet p(70000, 0);
+        p.begin_ipv4(net::ip::make_address_v4("10.0.0.1"),
+            net::ip::make_address_v4("10.0.0.2"));
+        p.begin_udp(1, 2);
+        p.append_payload(payload.data(), payload.size());
+        bool threw = false;
+        try {
+            p.finalize();
+        } catch (const std::length_error &) {
+            threw = true;
+        }
+        TEST_ASSERT(threw);
+    }
+    {
+        ip_packet p(70000, 0);
+        p.begin_ipv6(net::ip::make_address_v6("fd00::1"),
+            net::ip::make_address_v6("fd00::2"));
+        p.begin_udp(1, 2);
+        p.append_payload(payload.data(), payload.size());
+        bool threw = false;
+        try {
+            p.finalize();
+        } catch (const std::length_error &) {
+            threw = true;
+        }
+        TEST_ASSERT(threw);
+    }
+    {
+        const std::vector<uint8_t> max_payload(65507, 0);
+        ip_packet p(70000, 0);
+        p.begin_ipv4(net::ip::make_address_v4("10.0.0.1"),
+            net::ip::make_address_v4("10.0.0.2"));
+        p.begin_udp(1, 2);
+        p.append_payload(max_payload.data(), max_payload.size());
+        p.finalize();
+        TEST_ASSERT(p.valid() && p.total_length() == 65535);
+    }
+}
+
 BOOST_AUTO_TEST_CASE(test_parse_clears_builder_state)
 {
     // 构造一个包
@@ -598,7 +718,7 @@ struct dev_env
     std::thread thread;
     net::executor_work_guard<net::io_context::executor_type> guard;
 
-    dev_env()
+    explicit dev_env(bool utun_prefix = false)
         : dev(io)
         , guard(net::make_work_guard(io))
     {
@@ -608,7 +728,7 @@ struct dev_env
         }
         peer = sv[1];
         boost::system::error_code ec;
-        if (!dev.assign(sv[0], 1500, false, ec)) {
+        if (!dev.assign(sv[0], 1500, utun_prefix, ec)) {
             TEST_THROW(
                 "tun_device assign failed: " + ec.message());
         }
@@ -670,6 +790,158 @@ BOOST_AUTO_TEST_CASE(test_device_read_ip)
     TEST_ASSERT(pkt.destination_address() == net::ip::make_address("8.8.8.8"));
     TEST_ASSERT(pkt.transport_data_size() == 4);
     TEST_ASSERT(std::memcmp(pkt.transport_data(), vec.data() + 40, 4) == 0);
+}
+
+BOOST_AUTO_TEST_CASE(test_device_read_completion_uses_associated_executor)
+{
+    dev_env env;
+    ip_packet pkt;
+    net::io_context target_io;
+    auto target_strand = net::make_strand(target_io);
+    auto target_guard = net::make_work_guard(target_io);
+    std::atomic<bool> called{false};
+    bool on_target = false;
+    boost::system::error_code result;
+
+    auto vec = make_tcp(0x0a000002, 0x08080808, 20000, 443, 0x12, 100, 0,
+        65535, {1, 2, 3, 4});
+    env.dev.async_read_ip(pkt,
+        net::bind_executor(target_strand,
+            [&](boost::system::error_code ec, size_t) {
+                result = ec;
+                on_target = target_strand.running_in_this_thread();
+                called.store(true, std::memory_order_release);
+            }));
+    (void)::write(env.peer, vec.data(), vec.size());
+
+    const auto deadline = std::chrono::steady_clock::now() +
+        std::chrono::seconds(3);
+    while (!called.load(std::memory_order_acquire) &&
+        std::chrono::steady_clock::now() < deadline) {
+        target_io.run_for(std::chrono::milliseconds(10));
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+
+    TEST_ASSERT(called.load(std::memory_order_acquire));
+    TEST_ASSERT(on_target);
+    TEST_ASSERT(!result);
+    target_guard.reset();
+}
+
+BOOST_AUTO_TEST_CASE(test_device_utun_read_uses_associated_executor)
+{
+    dev_env env(true);
+    ip_packet pkt;
+    net::io_context target_io;
+    auto target_strand = net::make_strand(target_io);
+    auto target_guard = net::make_work_guard(target_io);
+    std::atomic<bool> called{false};
+    bool on_target = false;
+    boost::system::error_code result;
+
+    auto packet = make_udp(0x0a000002, 0x08080808, 30000, 53, {1, 2, 3});
+    std::vector<uint8_t> frame{0, 0, 0, 2};
+    frame.insert(frame.end(), packet.begin(), packet.end());
+    env.dev.async_read_ip(pkt,
+        net::bind_executor(target_strand,
+            [&](boost::system::error_code ec, size_t) {
+                result = ec;
+                on_target = target_strand.running_in_this_thread();
+                called.store(true, std::memory_order_release);
+            }));
+    (void)::write(env.peer, frame.data(), frame.size());
+
+    const auto deadline = std::chrono::steady_clock::now() +
+        std::chrono::seconds(3);
+    while (!called.load(std::memory_order_acquire) &&
+        std::chrono::steady_clock::now() < deadline) {
+        target_io.run_for(std::chrono::milliseconds(10));
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+
+    TEST_ASSERT(called.load(std::memory_order_acquire));
+    TEST_ASSERT(on_target);
+    TEST_ASSERT(!result);
+    TEST_ASSERT(pkt.valid() && pkt.is_udp());
+    target_guard.reset();
+}
+
+BOOST_AUTO_TEST_CASE(test_device_utun_write_error_uses_associated_executor)
+{
+    dev_env env(true);
+    tunio::packet_buffer buf(64, 0);
+    buf.resize(20);
+    std::memset(buf.data(), 0, buf.size());
+    buf.data()[0] = 0x45;
+    net::io_context target_io;
+    auto target_strand = net::make_strand(target_io);
+    auto target_guard = net::make_work_guard(target_io);
+    std::atomic<bool> called{false};
+    bool on_target = false;
+    boost::system::error_code result;
+
+    env.dev.async_write_packet(buf,
+        net::bind_executor(target_strand,
+            [&](boost::system::error_code ec, size_t) {
+                result = ec;
+                on_target = target_strand.running_in_this_thread();
+                called.store(true, std::memory_order_release);
+            }));
+
+    TEST_ASSERT(!called.load(std::memory_order_acquire));
+    const auto deadline = std::chrono::steady_clock::now() +
+        std::chrono::seconds(3);
+    while (!called.load(std::memory_order_acquire) &&
+        std::chrono::steady_clock::now() < deadline) {
+        target_io.run_for(std::chrono::milliseconds(10));
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+
+    TEST_ASSERT(called.load(std::memory_order_acquire));
+    TEST_ASSERT(on_target);
+    TEST_ASSERT(result == net::error::invalid_argument);
+    target_guard.reset();
+}
+
+BOOST_AUTO_TEST_CASE(test_unsupported_device_completion_uses_associated_executor)
+{
+    net::io_context io;
+    tunio::detail::unsupported_tun_device dev(io);
+    tunio::packet_buffer buf;
+    net::io_context target_io;
+    auto target_strand = net::make_strand(target_io);
+    int completed = 0;
+    bool read_on_target = false;
+    bool write_on_target = false;
+    boost::system::error_code read_ec;
+    boost::system::error_code write_ec;
+
+    dev.async_read(buf,
+        net::bind_executor(target_strand,
+            [&](boost::system::error_code ec, size_t) {
+                ++completed;
+                read_ec = ec;
+                read_on_target = target_strand.running_in_this_thread();
+            }));
+    dev.async_write(buf,
+        net::bind_executor(target_strand,
+            [&](boost::system::error_code ec, size_t) {
+                ++completed;
+                write_ec = ec;
+                write_on_target = target_strand.running_in_this_thread();
+            }));
+
+    TEST_ASSERT(completed == 0);
+    // 完成回调先从设备执行器出栈，再切到处理器关联执行器；两段都必须
+    // 被驱动，且切换前不得调用用户处理器。
+    io.run();
+    TEST_ASSERT(completed == 0);
+    target_io.run();
+    TEST_ASSERT(completed == 2);
+    TEST_ASSERT(read_on_target);
+    TEST_ASSERT(write_on_target);
+    TEST_ASSERT(read_ec == net::error::bad_descriptor);
+    TEST_ASSERT(write_ec == net::error::bad_descriptor);
 }
 
 BOOST_AUTO_TEST_CASE(test_device_write_ip)
@@ -754,6 +1026,56 @@ BOOST_AUTO_TEST_CASE(test_device_read_capacity_guard)
     }
     TEST_ASSERT(threw);
     TEST_ASSERT(ec == net::error::message_size);
+}
+
+BOOST_AUTO_TEST_CASE(test_device_immediate_completion_uses_associated_executor)
+{
+    dev_env env;
+    ip_packet pkt(1024, 128);
+    net::io_context target_io;
+    auto target_strand = net::make_strand(target_io);
+    bool called = false;
+    boost::system::error_code result;
+
+    env.dev.async_read_ip(pkt,
+        net::bind_executor(target_strand,
+            [&](boost::system::error_code ec, size_t) {
+                called = true;
+                result = ec;
+                TEST_ASSERT(target_strand.running_in_this_thread());
+            }));
+    TEST_ASSERT(!called);
+
+    target_io.run();
+    TEST_ASSERT(called);
+    TEST_ASSERT(result == net::error::message_size);
+}
+
+BOOST_AUTO_TEST_CASE(test_device_immediate_error_is_not_inline_with_inline_executor)
+{
+    net::io_context io;
+    tun_device dev(io);
+    int sv[2];
+    if (::socketpair(AF_UNIX, SOCK_DGRAM, 0, sv) != 0) {
+        TEST_THROW("socketpair failed");
+    }
+    boost::system::error_code assign_ec;
+    TEST_ASSERT(dev.assign(sv[0], 1500, false, assign_ec));
+
+    ip_packet pkt(1024, 128);
+    bool called = false;
+    dev.async_read_ip(pkt,
+        net::bind_executor(net::inline_executor(),
+            [&](boost::system::error_code, size_t) {
+                called = true;
+            }));
+    TEST_ASSERT(!called);
+
+    io.run();
+    TEST_ASSERT(called);
+
+    dev.close();
+    ::close(sv[1]);
 }
 
 } // namespace

@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include "tunio/detail/completion.hpp"
 #include "tunio/packet_buffer.hpp"
 #include "tunio/tun_config.hpp"
 
@@ -121,31 +122,21 @@ namespace tunio {
 namespace net = boost::asio;
 namespace detail {
 
-// Post helper that captures ec and bytes into a closure — works with any
-// Boost.Asio version (post(executor, token) only).
-template <typename ExecutorT, typename HandlerT, typename EcT, typename BytesT>
+template <typename FallbackExecutor, typename HandlerT, typename EcT, typename BytesT>
 void async_post_with_result(
-    const ExecutorT& ex, HandlerT&& h, EcT ec, BytesT bytes)
+    const FallbackExecutor& fallback, HandlerT&& h, EcT ec, BytesT bytes)
 {
-    net::post(ex,
-        [h = std::forward<HandlerT>(h),
-            ec = std::move(ec),
-            bytes = std::move(bytes)]() mutable
-        {
-            h(ec, bytes);
-        });
+    post_completion_on(fallback,
+        std::forward<HandlerT>(h),
+        std::move(ec),
+        std::move(bytes));
 }
 
-// Post helper that captures an error_code into a closure.
-template <typename ExecutorT, typename HandlerT>
+template <typename FallbackExecutor, typename HandlerT>
 void async_post_with_error(
-    const ExecutorT& ex, HandlerT&& h, boost::system::error_code ec)
+    const FallbackExecutor& fallback, HandlerT&& h, boost::system::error_code ec)
 {
-    net::post(ex,
-        [h = std::forward<HandlerT>(h), ec]() mutable
-        {
-            h(ec, 0);
-        });
+    post_completion_on(fallback, std::forward<HandlerT>(h), ec, 0);
 }
 
 // Wintun DLL 动态加载的 API 指针表。
@@ -164,12 +155,15 @@ struct wintun_api
             FreeLibrary(module);
     }
 
-    static std::unique_ptr<wintun_api> load()
+    static std::unique_ptr<wintun_api> load(DWORD& err)
     {
         auto api = std::make_unique<wintun_api>();
         api->module = LoadLibraryW(L"wintun.dll");
         if (!api->module)
+        {
+            err = GetLastError();
             return nullptr;
+        }
 
 #define BIND_WINTUN_FN(symbol, member)                                                    \
     do                                                                                    \
@@ -181,8 +175,7 @@ struct wintun_api
         }                                                                                 \
         else                                                                              \
         {                                                                                 \
-            /* 保留 api->module：unique_ptr 析构时仍会 FreeLibrary，           \
-             * 避免 LoadLibrary 成功而 GetProcAddress 失败时 DLL 泄漏 */ \
+            err = GetLastError();                                                         \
             api->member = nullptr;                                                        \
             return nullptr;                                                               \
         }                                                                                 \
@@ -195,22 +188,44 @@ struct wintun_api
 
 #undef BIND_WINTUN_FN
 
+        err = ERROR_SUCCESS;
         return api;
+    }
+
+    static wintun_api* instance(boost::system::error_code& ec)
+    {
+        static std::once_flag once;
+        static std::unique_ptr<wintun_api> api;
+        static DWORD load_error = ERROR_SUCCESS;
+        std::call_once(once,
+            []
+            {
+                api = load(load_error);
+            });
+        ec.clear();
+        if (!api)
+            ec.assign(static_cast<int>(load_error),
+                boost::system::system_category());
+        return api.get();
     }
 };
 
-class wintun_tun_device_impl :
-    public std::enable_shared_from_this<wintun_tun_device_impl>
+class wintun_tun_device_impl
 {
 public:
     explicit wintun_tun_device_impl(net::io_context& ctx)
         : strand_(ctx.get_executor())
-        , recv_timer_(ctx)
-        , send_timer_(ctx)
+        , recv_timer_(strand_)
+        , send_timer_(strand_)
     {
+    }
+    ~wintun_tun_device_impl()
+    {
+        close();
     }
 
     bool open(const device_config& cfg, boost::system::error_code& ec);
+    // 失败时不关闭注入句柄（所有权始终归调用方）.
     bool assign(native_handle_type handle,
         size_t mtu,
         bool,
@@ -240,15 +255,15 @@ public:
         return opened_;
     }
 
+    // 设备由 tun_device 按值持有；与 Boost.Asio 异步操作契约一致，调用方
+    // 须保证设备、缓冲区和完成处理器在操作完成前有效。
     template <typename Handler>
     void async_read(packet_buffer& buf, Handler&& handler)
     {
         net::post(strand_,
-            [self = shared_from_this(),
-                &buf,
-                h = std::forward<Handler>(handler)]() mutable
+            [this, &buf, h = std::forward<Handler>(handler)]() mutable
             {
-                self->recv_poll_loop(buf, std::move(h));
+                recv_poll_loop(buf, std::move(h));
             });
     }
 
@@ -262,11 +277,9 @@ public:
     void async_write(packet_buffer& buf, Handler&& handler)
     {
         net::post(strand_,
-            [self = shared_from_this(),
-                &buf,
-                h = std::forward<Handler>(handler)]() mutable
+            [this, &buf, h = std::forward<Handler>(handler)]() mutable
             {
-                self->send_try_and_maybe_retry(buf, std::move(h));
+                send_try_and_maybe_retry(buf, std::move(h));
             });
     }
 
@@ -277,16 +290,19 @@ public:
     }
 
 private:
-    int recv_one(std::string_view buf);
-    int send_try(std::string_view buf);
+    int recv_one(std::string_view buf, boost::system::error_code& ec);
+    int send_try(std::string_view buf, boost::system::error_code& ec);
     void cleanup_rings();
     void setup_mtu(int mtu);
 
     template <typename Handler>
     void recv_poll_loop(packet_buffer& buf, Handler&& handler)
     {
-        int n = recv_one({reinterpret_cast<const char*>(buf.writable_data()),
-            buf.writable_size()});
+        boost::system::error_code ec;
+        int n = recv_one(
+            {reinterpret_cast<const char*>(buf.writable_data()),
+                buf.writable_size()},
+            ec);
 
         if (n > 0)
         {
@@ -304,42 +320,42 @@ private:
 
         if (n < 0)
         {
-            DWORD err = GetLastError();
-            async_post_with_error(strand_,
-                std::forward<Handler>(handler),
-                boost::system::error_code(
-                    static_cast<int>(err), boost::system::system_category()));
+            async_post_with_error(strand_, std::forward<Handler>(handler), ec);
             return;
         }
 
         // 无数据，定时重试。
         recv_timer_.expires_after(std::chrono::milliseconds(1));
         recv_timer_.async_wait(
-            [self = shared_from_this(),
-                &buf,
-                h = std::forward<Handler>(handler)](
+            [this, &buf, h = std::forward<Handler>(handler)](
                 boost::system::error_code timer_ec) mutable
             {
-                if (!timer_ec && self->is_open())
-                    self->recv_poll_loop(buf, std::move(h));
-                else
-                    h(timer_ec ? timer_ec : boost::system::error_code{}, 0);
+                if (timer_ec)
+                {
+                    async_post_with_error(
+                        strand_, std::move(h), timer_ec);
+                    return;
+                }
+                if (!is_open())
+                {
+                    async_post_with_error(
+                        strand_, std::move(h), net::error::operation_aborted);
+                    return;
+                }
+                recv_poll_loop(buf, std::move(h));
             });
     }
 
     template <typename Handler>
     void send_try_and_maybe_retry(packet_buffer& buf, Handler&& handler)
     {
-        int n =
-            send_try({reinterpret_cast<const char*>(buf.data()), buf.size()});
+        boost::system::error_code ec;
+        int n = send_try(
+            {reinterpret_cast<const char*>(buf.data()), buf.size()}, ec);
 
         if (n < 0)
         {
-            DWORD err = GetLastError();
-            async_post_with_error(strand_,
-                std::forward<Handler>(handler),
-                boost::system::error_code(
-                    static_cast<int>(err), boost::system::system_category()));
+            async_post_with_error(strand_, std::forward<Handler>(handler), ec);
             return;
         }
 
@@ -354,31 +370,30 @@ private:
 
         send_timer_.expires_after(std::chrono::milliseconds(1));
         send_timer_.async_wait(
-            [self = shared_from_this(), &buf, h = std::move(handler)](
+            [this, &buf, h = std::move(handler)](
                 boost::system::error_code timer_ec) mutable
             {
                 if (timer_ec)
                 {
-                    h(timer_ec, 0);
+                    async_post_with_error(
+                        strand_, std::move(h), timer_ec);
                     return;
                 }
-                int n2 = self->send_try(
-                    {reinterpret_cast<const char*>(buf.data()), buf.size()});
+                boost::system::error_code ec;
+                int n2 = send_try(
+                    {reinterpret_cast<const char*>(buf.data()), buf.size()},
+                    ec);
                 if (n2 < 0)
                 {
-                    DWORD err = GetLastError();
-                    async_post_with_error(self->strand_,
-                        std::move(h),
-                        boost::system::error_code(static_cast<int>(err),
-                            boost::system::system_category()));
+                    async_post_with_error(strand_, std::move(h), ec);
                     return;
                 }
                 if (n2 == 0)
                 {
-                    self->send_try_and_maybe_retry(buf, std::move(h));
+                    send_try_and_maybe_retry(buf, std::move(h));
                     return;
                 }
-                async_post_with_result(self->strand_,
+                async_post_with_result(strand_,
                     std::move(h),
                     boost::system::error_code{},
                     static_cast<size_t>(n2));
@@ -387,16 +402,14 @@ private:
 
     net::strand<net::io_context::executor_type> strand_;
 
-    static inline std::once_flag init_flag_;
-    static inline std::unique_ptr<wintun_api> g_api{nullptr};
-
+    wintun_api* api_{nullptr};
     WINTUN_ADAPTER_HANDLE wintun_handle_{nullptr};
     HANDLE dev_handle_{INVALID_HANDLE_VALUE};
 
-    HANDLE send_ring_fh_{INVALID_HANDLE_VALUE};
-    HANDLE recv_ring_fh_{INVALID_HANDLE_VALUE};
-    HANDLE send_evt_{INVALID_HANDLE_VALUE};
-    HANDLE recv_evt_{INVALID_HANDLE_VALUE};
+    HANDLE send_ring_fh_{nullptr};
+    HANDLE recv_ring_fh_{nullptr};
+    HANDLE send_evt_{nullptr};
+    HANDLE recv_evt_{nullptr};
     struct tun_ring* send_ring_{nullptr};
     struct tun_ring* recv_ring_{nullptr};
 

@@ -13,7 +13,8 @@
 namespace tunio {
 
 tun_device::tun_device(net::io_context& ctx)
-    : impl_(ctx)
+    : ex_(ctx.get_executor())
+    , impl_(ctx)
 {
 }
 

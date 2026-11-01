@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include "tunio/detail/completion.hpp"
 #include "tunio/tun_tcp_acceptor.hpp"
 #include "tunio/detail/tunio_impl.hpp"
 
@@ -28,13 +29,15 @@ void tun_tcp_acceptor::do_accept(tun_tcp_socket& peer, Handler handler)
             //（多线程模式下构成数据竞争）.
             net::dispatch(ex,
                 [&peer,
+                    ex,
                     handler = std::move(handler),
                     ec,
                     f = std::move(f)]() mutable
                 {
                     if (!ec && f)
                         peer.flow_ = std::move(f);
-                    handler(ec);
+                    detail::post_completion_on(
+                        ex, std::move(handler), ec);
                 });
         });
 }

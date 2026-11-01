@@ -13,6 +13,8 @@
 #include "test_harness.hpp"
 #include "tunio/detail/udp_engine.hpp"
 
+#include <algorithm>
+#include <atomic>
 #include <cassert>
 #include <chrono>
 #include <cstdint>
@@ -101,6 +103,237 @@ BOOST_AUTO_TEST_CASE(test_datagram_roundtrip)
     TEST_ASSERT(std::string(reinterpret_cast<const char *>(ui.data), ui.n) == reply);
 
     session.close();
+}
+
+BOOST_AUTO_TEST_CASE(test_receive_truncates_queued_datagram)
+{
+    engine_env env;
+    tun_udp_acceptor acceptor(env.engine);
+    tun_udp_socket session(env.io.get_executor());
+
+    std::promise<boost::system::error_code> accept_done;
+    acceptor.async_accept(session, [&](boost::system::error_code ec) {
+        accept_done.set_value(ec);
+    });
+
+    env.dev.send(make_udp(CLIENT_IP, DEST_IP, 53210, 53,
+        std::vector<uint8_t>{1, 2, 3, 4, 5}));
+    TEST_ASSERT(!future_get(accept_done.get_future()));
+
+    char buf[3] = {};
+    net::ip::udp::endpoint sender;
+    std::promise<std::pair<boost::system::error_code, size_t>> recv_done;
+    session.async_receive_from(net::buffer(buf), sender,
+        [&](boost::system::error_code ec, size_t n) {
+            recv_done.set_value({ec, n});
+        });
+
+    auto [ec, n] = future_get(recv_done.get_future());
+    TEST_ASSERT(!ec);
+    TEST_ASSERT(n == sizeof(buf));
+    TEST_ASSERT(buf[0] == 1 && buf[1] == 2 && buf[2] == 3);
+    TEST_ASSERT(sender == net::ip::udp::endpoint(
+        net::ip::make_address_v4("8.8.8.8"), 53));
+
+    session.close();
+}
+
+BOOST_AUTO_TEST_CASE(test_receive_truncates_pending_datagram)
+{
+    engine_env env;
+    tun_udp_acceptor acceptor(env.engine);
+    tun_udp_socket session(env.io.get_executor());
+
+    std::promise<boost::system::error_code> accept_done;
+    acceptor.async_accept(session, [&](boost::system::error_code ec) {
+        accept_done.set_value(ec);
+    });
+    env.dev.send(make_udp(
+        CLIENT_IP, DEST_IP, 53211, 53, std::vector<uint8_t>{0}));
+    TEST_ASSERT(!future_get(accept_done.get_future()));
+
+    // 消费会话建立时的首个数据报，确保后续读进入挂起路径。
+    char drain[1];
+    net::ip::udp::endpoint sender;
+    std::promise<std::pair<boost::system::error_code, size_t>> drain_done;
+    session.async_receive_from(net::buffer(drain), sender,
+        [&](boost::system::error_code ec, size_t n) {
+            drain_done.set_value({ec, n});
+        });
+    auto [drain_ec, drain_n] = future_get(drain_done.get_future());
+    TEST_ASSERT(!drain_ec && drain_n == 1);
+
+    char buf[2] = {};
+    std::promise<std::pair<boost::system::error_code, size_t>> recv_done;
+    session.async_receive_from(net::buffer(buf), sender,
+        [&](boost::system::error_code ec, size_t n) {
+            recv_done.set_value({ec, n});
+        });
+
+    env.dev.send(make_udp(CLIENT_IP, DEST_IP, 53211, 53,
+        std::vector<uint8_t>{9, 8, 7, 6}));
+    auto [ec, n] = future_get(recv_done.get_future());
+    TEST_ASSERT(!ec);
+    TEST_ASSERT(n == sizeof(buf));
+    TEST_ASSERT(buf[0] == 9 && buf[1] == 8);
+
+    // 零长度接收同样消费一个数据报，并成功返回 0。
+    std::promise<std::pair<boost::system::error_code, size_t>> zero_done;
+    session.async_receive_from(net::buffer(buf, 0), sender,
+        [&](boost::system::error_code zero_ec, size_t zero_n) {
+            zero_done.set_value({zero_ec, zero_n});
+        });
+    env.dev.send(make_udp(
+        CLIENT_IP, DEST_IP, 53211, 53, std::vector<uint8_t>{5, 4, 3}));
+    auto [zero_ec, zero_n] = future_get(zero_done.get_future());
+    TEST_ASSERT(!zero_ec);
+    TEST_ASSERT(zero_n == 0);
+
+    // 下一个数据报仍可正常读取，证明零长度读已消费前一个数据报。
+    std::promise<std::pair<boost::system::error_code, size_t>> next_done;
+    session.async_receive_from(net::buffer(buf, 1), sender,
+        [&](boost::system::error_code next_ec, size_t next_n) {
+            next_done.set_value({next_ec, next_n});
+        });
+    env.dev.send(make_udp(
+        CLIENT_IP, DEST_IP, 53211, 53, std::vector<uint8_t>{6}));
+    auto [next_ec, next_n] = future_get(next_done.get_future());
+    TEST_ASSERT(!next_ec && next_n == 1 && buf[0] == 6);
+
+    session.close();
+}
+
+BOOST_AUTO_TEST_CASE(test_completion_honors_socket_executor_without_session)
+{
+    net::io_context io;
+    auto strand = net::make_strand(io);
+    tun_udp_socket session(strand);
+
+    int completed = 0;
+    bool send_on_strand = false;
+    bool receive_on_strand = false;
+    boost::system::error_code send_ec;
+    boost::system::error_code receive_ec;
+    char buf[1];
+    net::ip::udp::endpoint sender;
+
+    session.async_send_to(net::ip::udp::endpoint(
+                              net::ip::make_address_v4("8.8.8.8"), 53),
+        net::buffer("x", 1),
+        [&](boost::system::error_code ec, size_t)
+        {
+            ++completed;
+            send_ec = ec;
+            send_on_strand = strand.running_in_this_thread();
+        });
+    session.async_receive_from(net::buffer(buf),
+        sender,
+        [&](boost::system::error_code ec, size_t)
+        {
+            ++completed;
+            receive_ec = ec;
+            receive_on_strand = strand.running_in_this_thread();
+        });
+
+    TEST_ASSERT(completed == 0);
+    io.run();
+    TEST_ASSERT(completed == 2);
+    TEST_ASSERT(send_on_strand);
+    TEST_ASSERT(receive_on_strand);
+    TEST_ASSERT(send_ec == net::error::bad_descriptor);
+    TEST_ASSERT(receive_ec == net::error::bad_descriptor);
+}
+
+BOOST_AUTO_TEST_CASE(test_immediate_completion_is_not_inline)
+{
+    net::io_context io;
+    auto strand = net::make_strand(io);
+    tun_udp_socket session(strand);
+    bool send_called = false;
+    bool receive_called = false;
+    char buf[1];
+    net::ip::udp::endpoint sender;
+
+    net::dispatch(strand,
+        [&]
+        {
+            session.async_send_to(net::ip::udp::endpoint(
+                                      net::ip::make_address_v4("8.8.8.8"), 53),
+                net::buffer("x", 1),
+                [&](boost::system::error_code, size_t)
+                {
+                    send_called = true;
+                });
+            TEST_ASSERT(!send_called);
+
+            session.async_receive_from(net::buffer(buf),
+                sender,
+                [&](boost::system::error_code, size_t)
+                {
+                    receive_called = true;
+                });
+            TEST_ASSERT(!receive_called);
+        });
+
+    io.run();
+    TEST_ASSERT(send_called);
+    TEST_ASSERT(receive_called);
+}
+
+BOOST_AUTO_TEST_CASE(test_accept_completion_honors_associated_executor)
+{
+    engine_env env;
+    tun_udp_acceptor acceptor(env.engine);
+    auto peer_strand = net::make_strand(env.io);
+    tun_udp_socket session(peer_strand);
+
+    net::io_context target_io;
+    auto target_strand = net::make_strand(target_io);
+    auto target_guard = net::make_work_guard(target_io);
+    std::atomic<bool> called{false};
+    bool on_target = false;
+    boost::system::error_code result;
+
+    acceptor.async_accept(session,
+        net::bind_executor(target_strand,
+            [&](boost::system::error_code ec) {
+                result = ec;
+                on_target = target_strand.running_in_this_thread();
+                called.store(true, std::memory_order_release);
+            }));
+    env.dev.send(make_udp(
+        CLIENT_IP, DEST_IP, 53200, 53, std::vector<uint8_t>{1, 2, 3}));
+
+    const auto deadline = std::chrono::steady_clock::now() +
+        std::chrono::seconds(3);
+    while (!called.load(std::memory_order_acquire) &&
+        std::chrono::steady_clock::now() < deadline) {
+        target_io.run_for(std::chrono::milliseconds(10));
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+
+    TEST_ASSERT(called.load(std::memory_order_acquire));
+    TEST_ASSERT(on_target);
+    TEST_ASSERT(!result);
+    TEST_ASSERT(session.is_open());
+    target_guard.reset();
+    session.close();
+}
+
+BOOST_AUTO_TEST_CASE(test_accept_after_close_completes)
+{
+    engine_env env;
+    tun_udp_acceptor acceptor(env.engine);
+    tun_udp_socket session(env.io.get_executor());
+    std::promise<boost::system::error_code> done;
+
+    env.engine.close();
+    acceptor.async_accept(session, [&](boost::system::error_code ec) {
+        done.set_value(ec);
+    });
+
+    TEST_ASSERT(future_get(done.get_future(), 1000) ==
+        net::error::bad_descriptor);
 }
 
 BOOST_AUTO_TEST_CASE(test_multiple_remotes)
@@ -239,6 +472,83 @@ BOOST_AUTO_TEST_CASE(test_session_timeout)
     TEST_ASSERT(!session.is_open());
 }
 
+namespace {
+
+struct udp_engine_fixture
+{
+    net::io_context io;
+    std::shared_ptr<engine_stats> stats = std::make_shared<engine_stats>();
+    std::shared_ptr<tunio::tun_device> dev;
+    std::shared_ptr<tunio::detail::tun_queue_writer> writer;
+    std::shared_ptr<tunio::detail::buffer_accountant> account;
+    tun_config cfg;
+    std::shared_ptr<tunio::detail::udp_engine> engine;
+
+    explicit udp_engine_fixture(std::chrono::seconds timeout)
+    {
+        cfg.udp_idle_timeout = timeout;
+        cfg.max_total_buffer = 8 * 1024 * 1024;
+        dev = std::make_shared<tunio::tun_device>(io);
+        writer = std::make_shared<tunio::detail::tun_queue_writer>(
+            io.get_executor(), dev, stats);
+        account = std::make_shared<tunio::detail::buffer_accountant>();
+        account->limit = cfg.max_total_buffer;
+        engine = std::make_shared<tunio::detail::udp_engine>(
+            io.get_executor(), writer, cfg, *stats, account);
+    }
+
+    ~udp_engine_fixture()
+    {
+        engine->close_all();
+    }
+};
+
+void feed_udp(tunio::detail::udp_engine& engine, uint16_t sport)
+{
+    const auto pkt = make_udp(CLIENT_IP, DEST_IP, sport, 53, {1});
+    tunio::detail::ip_packet_info ipi;
+    ipi.family = 4;
+    ipi.protocol = tunio::detail::IPPROTO_UDP_V;
+    const auto src = net::ip::address_v4(CLIENT_IP).to_bytes();
+    const auto dst = net::ip::address_v4(DEST_IP).to_bytes();
+    std::copy(src.begin(), src.end(), ipi.src_ip);
+    std::copy(dst.begin(), dst.end(), ipi.dst_ip);
+    engine.on_packet(ipi, pkt.data() + 20, pkt.size() - 20);
+}
+
+} // namespace
+
+BOOST_AUTO_TEST_CASE(test_expired_pending_session_released)
+{
+    udp_engine_fixture f(std::chrono::seconds(1));
+    feed_udp(*f.engine, 53110);
+    TEST_ASSERT(f.engine->session_count() == 1);
+    TEST_ASSERT(f.engine->pending_session_count() == 1);
+
+    f.io.run_for(std::chrono::milliseconds(1500));
+
+    TEST_ASSERT(f.engine->session_count() == 0);
+    TEST_ASSERT(f.engine->pending_session_count() == 0);
+}
+
+BOOST_AUTO_TEST_CASE(test_pending_session_limit)
+{
+    udp_engine_fixture f(std::chrono::seconds(30));
+    constexpr size_t extra = 32;
+    for (size_t i = 0;
+        i < tunio::detail::udp_engine::max_pending_new_sessions + extra;
+        ++i)
+    {
+        feed_udp(*f.engine, static_cast<uint16_t>(20000 + i));
+    }
+
+    TEST_ASSERT(f.engine->session_count() ==
+        tunio::detail::udp_engine::max_pending_new_sessions);
+    TEST_ASSERT(f.engine->pending_session_count() ==
+        tunio::detail::udp_engine::max_pending_new_sessions);
+    TEST_ASSERT(f.stats->rx_dropped.load(std::memory_order_relaxed) == extra);
+}
+
 BOOST_AUTO_TEST_CASE(test_session_recreated_after_expiry)
 {
     engine_env env(1500, std::chrono::seconds(1));
@@ -372,6 +682,7 @@ BOOST_AUTO_TEST_CASE(test_fragmented_write_failure_reported)
             called = true;
             result = ec;
         });
+    io.run();
 
     TEST_ASSERT(called);
     TEST_ASSERT(result == net::error::bad_descriptor);

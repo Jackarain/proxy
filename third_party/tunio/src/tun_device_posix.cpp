@@ -758,7 +758,8 @@ void posix_tun_device_impl::close()
     {
         for (auto& d : descs_)
         {
-            d.close();
+            boost::system::error_code ignore;
+            d.close(ignore);
         }
         descs_.clear();
         open_ = false;
