@@ -732,12 +732,12 @@ namespace util {
 		using StreamType = std::decay_t<Stream>;
 		if constexpr (std::same_as<StreamType, variant_stream_type>)
 		{
-			if (boost::variant2::holds_alternative<proxy_tcp_socket>(socket))
+			if (boost::variant2::holds_alternative<proxy_uds_socket>(socket))
 			{
 				return static_cast<net::local::stream_protocol::socket&>(
 					boost::variant2::get<proxy_uds_socket>(socket).lowest_layer());
 			}
-			else if (boost::variant2::holds_alternative<ssl_tcp_stream>(socket))
+			else if (boost::variant2::holds_alternative<ssl_uds_stream>(socket))
 			{
 				return static_cast<net::local::stream_protocol::socket&>(
 					boost::variant2::get<ssl_uds_stream>(socket).lowest_layer());
