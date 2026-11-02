@@ -100,7 +100,11 @@ namespace {
 
 	BOOST_AUTO_TEST_CASE(rejects_invalid_input)
 	{
+		BOOST_TEST(!parse_urlinfo("://example.com/").has_value());
 		BOOST_TEST(!parse_urlinfo("example.com").has_value());
+		BOOST_TEST(!parse_urlinfo("1http://example.com/").has_value());
+		BOOST_TEST(!parse_urlinfo("+http://example.com/").has_value());
+		BOOST_TEST(!parse_urlinfo(".http://example.com/").has_value());
 		BOOST_TEST(!parse_urlinfo("http://").has_value());
 		BOOST_TEST(!parse_urlinfo("http://example.com:abc/").has_value());
 		BOOST_TEST(!parse_urlinfo("http://example.com:0/").has_value());

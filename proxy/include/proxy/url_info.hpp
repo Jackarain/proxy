@@ -49,6 +49,9 @@ namespace proxy {
 				return boost::urls::grammar::error::invalid;
 
 			scheme = *scheme_res;
+			if (!alpha(scheme.front()))
+				return boost::urls::grammar::error::invalid;
+
 			uint16_t port_num = boost::urls::default_port(boost::urls::string_to_scheme(scheme));
 
 			// 匹配 "://"
