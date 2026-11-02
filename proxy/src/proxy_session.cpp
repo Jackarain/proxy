@@ -139,7 +139,8 @@ namespace proxy {
 
 	bool proxy_session::is_crypto_stream() const noexcept
 	{
-		return boost::variant2::holds_alternative<ssl_tcp_stream>(m_remote_socket);
+		return boost::variant2::holds_alternative<ssl_tcp_stream>(m_local_socket) ||
+			boost::variant2::holds_alternative<ssl_uds_stream>(m_local_socket);
 	}
 
 	//////////////////////////////////////////////////////////////////////////

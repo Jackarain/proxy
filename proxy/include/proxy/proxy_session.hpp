@@ -553,7 +553,7 @@ namespace proxy {
 			bool resolved = false,
 			int command = SOCKS_CMD_CONNECT) noexcept;
 
-		// is_crypto_stream 判断当前连接是否为加密连接.
+		// is_crypto_stream 判断客户端连接是否为加密连接.
 		bool is_crypto_stream() const noexcept;
 
 		//////////////////////////////////////////////////////////////////////////
