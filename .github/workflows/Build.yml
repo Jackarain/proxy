@@ -54,12 +54,14 @@ jobs:
 
   ##############################################################################
   # Linux (glibc, gcc): 覆盖 boringssl / openssl(系统) / openssl(内置) / wolfssl
-  # 三种 TLS 后端, 并与 snmalloc / mimalloc / io_uring / PAM 组合.
+  # 四种 TLS 后端, 并与 snmalloc / mimalloc / io_uring / PAM 组合.
   ##############################################################################
   linux-glibc-gcc:
     name: Linux (glibc, gcc) - ${{ matrix.name }}
     runs-on: ubuntu-24.04
     env:
+      CC: gcc
+      CXX: g++
       CMAKE_BUILD_PARALLEL_LEVEL: '2'
     strategy:
       fail-fast: false
@@ -75,7 +77,7 @@ jobs:
           - { name: openssl-bundled, ssl: openssl-bundled }
           - { name: wolfssl, ssl: wolfssl }
           - { name: wolfssl-snmalloc, ssl: wolfssl, alloc: snmalloc }
-          - { name: mimalloc, ssl: boringssl, alloc: mimalloc }
+          - { name: boringssl-mimalloc, ssl: boringssl, alloc: mimalloc }
     steps:
       - uses: actions/checkout@v6
 
@@ -84,7 +86,7 @@ jobs:
         run: |
           set -euxo pipefail
           sudo apt update
-          sudo apt install -y cmake ninja-build
+          sudo apt install -y cmake ninja-build gcc g++
           if [ "${{ matrix.ssl }}" = "openssl-system" ]; then
             sudo apt install -y libssl-dev
           fi
@@ -97,7 +99,7 @@ jobs:
           if [ "${{ matrix.alloc }}" = "mimalloc" ]; then
             git clone --depth 1 --branch v2.1.2 https://github.com/microsoft/mimalloc.git
             cd mimalloc && mkdir build && cd build
-            cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_SNMALLOC_STATIC=OFF \
+            cmake -DCMAKE_BUILD_TYPE=Release \
               -DMI_BUILD_STATIC=ON -DMI_BUILD_SHARED=OFF -DMI_BUILD_TESTS=OFF -DMI_BUILD_OBJECT=ON ..
             make -j4
             sudo make install
@@ -134,7 +136,7 @@ jobs:
       - name: Archive artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: proxy_server-linux_glibc_x64_${{ matrix.name }}
+          name: proxy_server-linux_glibc_x64_gcc_${{ matrix.name }}
           path: |
             build/bin/proxy_server
             build/bin/launcher
