@@ -25,9 +25,11 @@
 #include <openssl/ssl.h>
 
 #include <array>
+#include <charconv>
 #include <cstdint>
 #include <cstdio>
 #include <functional>
+#include <limits>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -113,8 +115,13 @@ namespace proxy {
 				return num;
 		}
 		// 尝试数字.
-		try { return static_cast<uint16_t>(std::stoul(type_name)); }
-		catch (...) { return DNS_TYPE_A; }
+		uint32_t type = 0;
+		auto [ptr, ec] = std::from_chars(
+			type_name.data(), type_name.data() + type_name.size(), type);
+		if (ec == std::errc{} && ptr == type_name.data() + type_name.size() &&
+			type <= std::numeric_limits<uint16_t>::max())
+			return static_cast<uint16_t>(type);
+		return DNS_TYPE_A;
 	}
 
 	std::string dns_type_to_string(uint16_t type) noexcept

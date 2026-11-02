@@ -73,6 +73,14 @@ namespace {
 		// 无法识别的名字退回 A, 数字字符串按数值解析.
 		BOOST_TEST(dns_type_from_string("ZZZ") == DNS_TYPE_A);
 		BOOST_TEST(dns_type_from_string("123") == 123);
+		BOOST_TEST(dns_type_from_string("65535") == 65535);
+		BOOST_TEST(dns_type_from_string("") == DNS_TYPE_A);
+		BOOST_TEST(dns_type_from_string("-1") == DNS_TYPE_A);
+		BOOST_TEST(dns_type_from_string("+1") == DNS_TYPE_A);
+		BOOST_TEST(dns_type_from_string(" 123") == DNS_TYPE_A);
+		BOOST_TEST(dns_type_from_string("123x") == DNS_TYPE_A);
+		BOOST_TEST(dns_type_from_string("65536") == DNS_TYPE_A);
+		BOOST_TEST(dns_type_from_string("999999999999999999999") == DNS_TYPE_A);
 
 		BOOST_TEST(dns_type_to_string(DNS_TYPE_A) == "A");
 		BOOST_TEST(dns_type_to_string(DNS_TYPE_AAAA) == "AAAA");
