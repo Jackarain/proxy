@@ -470,7 +470,7 @@ namespace util {
 			try
 			{
 				auto& lowest_layer = beast::get_lowest_layer(sock);
-				net::local::stream_protocol::endpoint endp = lowest_layer.local_endpoint();
+				net::local::stream_protocol::endpoint endp = lowest_layer.remote_endpoint();
 				return endp;
 			}
 			catch (const std::exception&)
