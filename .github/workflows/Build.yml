@@ -9,6 +9,8 @@ jobs:
   windows-mingw:
     name: Windows (MinGW-w64 cross)
     runs-on: ubuntu-24.04
+    env:
+      CMAKE_BUILD_PARALLEL_LEVEL: '2'
     steps:
       - uses: actions/checkout@v6
 
@@ -57,6 +59,8 @@ jobs:
   linux-glibc-gcc:
     name: Linux (glibc, gcc) - ${{ matrix.name }}
     runs-on: ubuntu-24.04
+    env:
+      CMAKE_BUILD_PARALLEL_LEVEL: '2'
     strategy:
       fail-fast: false
       matrix:
@@ -1179,6 +1183,8 @@ jobs:
           cache: true
 
       - name: Build native libxproxy.so (arm64-v8a, ${{ matrix.name }})
+        env:
+          CMAKE_BUILD_PARALLEL_LEVEL: '2'
         run: |
           sudo apt-get update
           sudo apt-get install -y ninja-build swig cmake
