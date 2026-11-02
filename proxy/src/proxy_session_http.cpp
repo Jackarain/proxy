@@ -1168,62 +1168,62 @@ namespace proxy {
 
 	net::awaitable<void> proxy_session::forbidden_http_route(const string_request& request) noexcept
 	{
-	co_await send_http_string_response(
-		request, http::status::forbidden, "text/html",
-		fake_403_content, true);
-	co_return;
-}
-
-net::awaitable<void> proxy_session::method_not_allowed_http_route(const string_request& request) noexcept
-{
-	boost::system::error_code ec;
-
-	// 405 响应必须携带 Allow 头, 声明服务端支持的方法.
-	string_response res{ http::status::method_not_allowed, request.version() };
-	res.set(http::field::server, version_string);
-	res.set(http::field::date, server_date_string());
-	res.set(http::field::content_type, "text/html");
-	res.set(http::field::allow, "GET, HEAD");
-	res.keep_alive(true);
-	res.body() = fake_405_content;
-	res.prepare_payload();
-
-	http::serializer<false, string_body, http::fields> sr(res);
-	co_await http::async_write(m_local_socket, sr, net_awaitable[ec]);
-	if (ec)
-	{
-		log_conn_warning()
-			<< ", method not allowed http route err: "
-			<< ec.message();
+		co_await send_http_string_response(
+			request, http::status::forbidden, "text/html",
+			fake_403_content, true);
+		co_return;
 	}
 
-	co_return;
-}
-
-net::awaitable<void> proxy_session::unauthorized_http_route(const string_request& request) noexcept
-{
-	boost::system::error_code ec;
-
-	// WWW-Authenticate 头无法通过 send_http_string_response 设置, 需单独构建.
-	string_response res{ http::status::unauthorized, request.version() };
-	res.set(http::field::server, version_string);
-	res.set(http::field::date, server_date_string());
-	res.set(http::field::content_type, "text/html; charset=UTF-8");
-	res.set(http::field::www_authenticate, "Basic realm=\"proxy\"");
-	res.keep_alive(true);
-	res.body() = fake_401_content;
-	res.prepare_payload();
-
-	http::serializer<false, string_body, http::fields> sr(res);
-	co_await http::async_write(m_local_socket, sr, net_awaitable[ec]);
-	if (ec)
+	net::awaitable<void> proxy_session::method_not_allowed_http_route(const string_request& request) noexcept
 	{
-		log_conn_warning()
-			<< ", unauthorized http route err: "
-			<< ec.message();
+		boost::system::error_code ec;
+
+		// 405 响应必须携带 Allow 头, 声明服务端支持的方法.
+		string_response res{ http::status::method_not_allowed, request.version() };
+		res.set(http::field::server, version_string);
+		res.set(http::field::date, server_date_string());
+		res.set(http::field::content_type, "text/html");
+		res.set(http::field::allow, "GET, HEAD");
+		res.keep_alive(true);
+		res.body() = fake_405_content;
+		res.prepare_payload();
+
+		http::serializer<false, string_body, http::fields> sr(res);
+		co_await http::async_write(m_local_socket, sr, net_awaitable[ec]);
+		if (ec)
+		{
+			log_conn_warning()
+				<< ", method not allowed http route err: "
+				<< ec.message();
+		}
+
+		co_return;
 	}
 
-	co_return;
-}
+	net::awaitable<void> proxy_session::unauthorized_http_route(const string_request& request) noexcept
+	{
+		boost::system::error_code ec;
+
+		// WWW-Authenticate 头无法通过 send_http_string_response 设置, 需单独构建.
+		string_response res{ http::status::unauthorized, request.version() };
+		res.set(http::field::server, version_string);
+		res.set(http::field::date, server_date_string());
+		res.set(http::field::content_type, "text/html; charset=UTF-8");
+		res.set(http::field::www_authenticate, "Basic realm=\"proxy\"");
+		res.keep_alive(true);
+		res.body() = fake_401_content;
+		res.prepare_payload();
+
+		http::serializer<false, string_body, http::fields> sr(res);
+		co_await http::async_write(m_local_socket, sr, net_awaitable[ec]);
+		if (ec)
+		{
+			log_conn_warning()
+				<< ", unauthorized http route err: "
+				<< ec.message();
+		}
+
+		co_return;
+	}
 
 } // namespace proxy
