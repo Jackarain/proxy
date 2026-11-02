@@ -14,9 +14,14 @@
 
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/local/connect_pair.hpp>
+#include <boost/asio/read.hpp>
 #include <boost/asio/ssl/context.hpp>
+#include <boost/asio/write.hpp>
 
+#include <array>
+#include <cstdint>
 #include <filesystem>
+#include <string>
 
 
 namespace {
@@ -111,6 +116,94 @@ namespace {
 		}
 
 		remove_paths();
+	}
+
+	BOOST_AUTO_TEST_CASE(scrambled_write_handles_multiple_buffers)
+	{
+		net::io_context ioc;
+		local::socket server(ioc);
+		local::socket client(ioc);
+		net::local::connect_pair(server, client);
+
+		proxy_uds_socket writer(std::move(client));
+		proxy_uds_socket reader(std::move(server));
+
+		std::array<uint8_t, 16> key{};
+		for (size_t i = 0; i < key.size(); ++i)
+			key[i] = static_cast<uint8_t>(i + 1);
+		writer.set_scramble_key(key);
+		reader.set_unscramble_key(key);
+
+		const std::string first = "first-";
+		const std::string second = "second-buffer";
+		const std::string expected = first + second;
+		const std::array<net::const_buffer, 2> buffers{
+			net::buffer(first), net::buffer(second) };
+		std::array<char, 32> received{};
+		boost::system::error_code read_ec;
+		boost::system::error_code write_ec;
+
+		net::async_read(reader, net::buffer(received, expected.size()),
+			[&](const boost::system::error_code& ec, size_t)
+			{
+				read_ec = ec;
+			});
+		net::async_write(writer, buffers,
+			[&](const boost::system::error_code& ec, size_t)
+			{
+				write_ec = ec;
+			});
+
+		ioc.run();
+
+		BOOST_TEST(!write_ec);
+		BOOST_TEST(!read_ec);
+		BOOST_TEST(std::string(received.data(), expected.size()) == expected);
+	}
+
+	BOOST_AUTO_TEST_CASE(scrambled_read_handles_multiple_buffers)
+	{
+		net::io_context ioc;
+		local::socket server(ioc);
+		local::socket client(ioc);
+		net::local::connect_pair(server, client);
+
+		proxy_uds_socket writer(std::move(client));
+		proxy_uds_socket reader(std::move(server));
+
+		std::array<uint8_t, 16> key{};
+		for (size_t i = 0; i < key.size(); ++i)
+			key[i] = static_cast<uint8_t>(i * 3 + 1);
+		writer.set_scramble_key(key);
+		reader.set_unscramble_key(key);
+
+		const std::string plain = "multiple-read-buffers";
+		const std::string expected = plain;
+		std::array<char, 8> first{};
+		std::array<char, 13> second{};
+		const std::array<net::mutable_buffer, 2> buffers{
+			net::buffer(first), net::buffer(second) };
+		boost::system::error_code read_ec;
+		boost::system::error_code write_ec;
+
+		net::async_read(reader, buffers,
+			[&](const boost::system::error_code& ec, size_t)
+			{
+				read_ec = ec;
+			});
+		net::async_write(writer, net::buffer(plain),
+			[&](const boost::system::error_code& ec, size_t)
+			{
+				write_ec = ec;
+			});
+
+		ioc.run();
+
+		std::string received(first.data(), first.size());
+		received.append(second.data(), expected.size() - first.size());
+		BOOST_TEST(!write_ec);
+		BOOST_TEST(!read_ec);
+		BOOST_TEST(received == expected);
 	}
 
 	BOOST_AUTO_TEST_SUITE_END()

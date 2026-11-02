@@ -301,14 +301,18 @@ namespace util {
 						{
 							if (self_->unscramble_.is_valid()) [[likely]]
 							{
-								net::mutable_buffer buffer =
-									net::detail::buffer_sequence_adapter<
-										net::mutable_buffer,
-										decltype(buffers)
-									>::first(buffers);
-
-								self_->unscramble_.scramble(
-									(uint8_t*)buffer.data(), bytes);
+								auto remaining = bytes;
+								for (auto it = net::buffer_sequence_begin(buffers);
+									it != net::buffer_sequence_end(buffers) && remaining != 0;
+									++it)
+								{
+									const auto buffer = *it;
+									const auto size = buffer.size() < remaining ?
+										buffer.size() : remaining;
+									self_->unscramble_.scramble(
+										(uint8_t*)buffer.data(), size);
+									remaining -= size;
+								}
 							}
 
 							handler(ec, bytes);
@@ -341,13 +345,13 @@ namespace util {
 				// 发送数据前, 立即调用 scramble_ 加密数据.
 				if (self_->scramble_.is_valid()) [[likely]]
 				{
-					net::const_buffer buffer =
-						net::detail::buffer_sequence_adapter<
-							net::const_buffer,
-							decltype(buffers)>::first(buffers);
-
-					self_->scramble_.scramble(
-						(uint8_t*)buffer.data(), buffer.size());
+					for (auto it = net::buffer_sequence_begin(buffers);
+						it != net::buffer_sequence_end(buffers); ++it)
+					{
+						const auto buffer = *it;
+						self_->scramble_.scramble(
+							(uint8_t*)buffer.data(), buffer.size());
+					}
 				}
 
 				// 异步发送数据.
