@@ -19,13 +19,21 @@
 
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/ssl/stream.hpp>
+#include <boost/asio/associated_allocator.hpp>
+#include <boost/asio/associated_executor.hpp>
+#include <boost/asio/bind_allocator.hpp>
+#include <boost/asio/bind_executor.hpp>
 #include <boost/asio/buffer.hpp>
 #include <boost/asio/local/stream_protocol.hpp>
+#include <boost/asio/write.hpp>
 
 #include <boost/beast/core/stream_traits.hpp>
 
+#include <cstring>
 #include <cstdint>
+#include <memory>
 #include <type_traits>
+#include <vector>
 
 
 namespace util {
@@ -345,13 +353,36 @@ namespace util {
 				// 发送数据前, 立即调用 scramble_ 加密数据.
 				if (self_->scramble_.is_valid()) [[likely]]
 				{
+					auto cipher = std::make_shared<std::vector<uint8_t>>(
+						net::buffer_size(buffers));
+					auto* dest = cipher->data();
+
 					for (auto it = net::buffer_sequence_begin(buffers);
 						it != net::buffer_sequence_end(buffers); ++it)
 					{
 						const auto buffer = *it;
-						self_->scramble_.scramble(
-							(uint8_t*)buffer.data(), buffer.size());
+						if (buffer.size() == 0)
+							continue;
+						std::memcpy(dest, buffer.data(), buffer.size());
+						dest += buffer.size();
 					}
+
+					self_->scramble_.scramble(cipher->data(), cipher->size());
+
+					auto executor = net::get_associated_executor(
+						handler, self_->get_executor());
+					auto allocator = net::get_associated_allocator(handler);
+					auto completion = net::bind_allocator(allocator,
+						net::bind_executor(executor,
+							[cipher, handler = std::forward<WriteHandler>(handler)]
+							(auto ec, auto bytes) mutable
+							{
+								handler(ec, bytes);
+							}));
+
+					net::async_write(self_->next_layer_, net::buffer(*cipher),
+						std::move(completion));
+					return;
 				}
 
 				// 异步发送数据.

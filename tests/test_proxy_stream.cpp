@@ -158,6 +158,8 @@ namespace {
 
 		BOOST_TEST(!write_ec);
 		BOOST_TEST(!read_ec);
+		BOOST_TEST(first == "first-");
+		BOOST_TEST(second == "second-buffer");
 		BOOST_TEST(std::string(received.data(), expected.size()) == expected);
 	}
 
@@ -203,6 +205,7 @@ namespace {
 		received.append(second.data(), expected.size() - first.size());
 		BOOST_TEST(!write_ec);
 		BOOST_TEST(!read_ec);
+		BOOST_TEST(plain == expected);
 		BOOST_TEST(received == expected);
 	}
 
