@@ -133,6 +133,18 @@ namespace {
 		remove_paths();
 	}
 
+	BOOST_AUTO_TEST_CASE(uds_local_endpoint_handles_closed_socket)
+	{
+		net::io_context ioc;
+
+		proxy_uds_socket plain_socket(ioc);
+		BOOST_TEST(uds_local_endpoint(plain_socket).path().empty());
+
+		proxy_uds_socket variant_uds(ioc);
+		variant_stream_type variant_socket(std::move(variant_uds));
+		BOOST_TEST(uds_local_endpoint(variant_socket).path().empty());
+	}
+
 	BOOST_AUTO_TEST_CASE(scrambled_write_handles_multiple_buffers)
 	{
 		net::io_context ioc;

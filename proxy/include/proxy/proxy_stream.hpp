@@ -548,10 +548,16 @@ namespace util {
 
 		if constexpr (std::same_as<StreamType, proxy_uds_socket> || std::same_as<StreamType, uds_socket>)
 		{
-			auto& lowest_layer = beast::get_lowest_layer(sock);
-			net::local::stream_protocol::endpoint endp = lowest_layer.local_endpoint();
+			try
+			{
+				auto& lowest_layer = beast::get_lowest_layer(sock);
+				net::local::stream_protocol::endpoint endp = lowest_layer.local_endpoint();
+				return endp;
+			}
+			catch (const std::exception&)
+			{}
 
-			return endp;
+			return {};
 		}
 		else if constexpr (std::same_as<StreamType, variant_stream_type>)
 		{
