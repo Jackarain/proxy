@@ -48,12 +48,16 @@ namespace {
 		auto value = make_utc_time(1994, 11, 6, 8, 49, 37);
 		BOOST_TEST(value.has_value());
 		BOOST_TEST(*value == kExampleTime);
+		BOOST_TEST(make_utc_time(2000, 2, 29, 0, 0, 0).has_value());
 
 		BOOST_TEST(!make_utc_time(1969, 1, 1, 0, 0, 0).has_value());
 		BOOST_TEST(!make_utc_time(2000, 0, 1, 0, 0, 0).has_value());
 		BOOST_TEST(!make_utc_time(2000, 13, 1, 0, 0, 0).has_value());
 		BOOST_TEST(!make_utc_time(2000, 1, 0, 0, 0, 0).has_value());
 		BOOST_TEST(!make_utc_time(2000, 1, 32, 0, 0, 0).has_value());
+		BOOST_TEST(!make_utc_time(2000, 2, 30, 0, 0, 0).has_value());
+		BOOST_TEST(!make_utc_time(2100, 2, 29, 0, 0, 0).has_value());
+		BOOST_TEST(!make_utc_time(2000, 4, 31, 0, 0, 0).has_value());
 		BOOST_TEST(!make_utc_time(2000, 1, 1, 24, 0, 0).has_value());
 		BOOST_TEST(!make_utc_time(2000, 1, 1, 0, 60, 0).has_value());
 		BOOST_TEST(!make_utc_time(2000, 1, 1, 0, 0, 61).has_value());

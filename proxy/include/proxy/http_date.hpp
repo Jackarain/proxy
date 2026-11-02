@@ -63,9 +63,18 @@ namespace proxy {
 	inline std::optional<std::time_t> make_utc_time(int year, int month, int day,
 		int hour, int minute, int second) noexcept
 	{
-		if (year < 1970 || month < 1 || month > 12 || day < 1 || day > 31 ||
+		if (year < 1970 || month < 1 || month > 12 || day < 1 ||
 			hour < 0 || hour > 23 || minute < 0 || minute > 59 ||
 			second < 0 || second > 60)
+			return std::nullopt;
+
+		static constexpr int days_in_month[] = {
+			31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
+		};
+		int max_day = days_in_month[month - 1];
+		if (month == 2 && (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0)))
+			max_day = 29;
+		if (day > max_day)
 			return std::nullopt;
 
 		struct tm tm_buf{};
