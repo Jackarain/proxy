@@ -51,6 +51,21 @@ namespace {
 		BOOST_TEST(net_uds_socket(tls_variant).native_handle() == client_handle);
 	}
 
+	BOOST_AUTO_TEST_CASE(init_proxy_stream_tls_preserves_uds_transport)
+	{
+		net::io_context ioc;
+		local::socket server(ioc);
+		local::socket client(ioc);
+		net::local::connect_pair(server, client);
+
+		net::ssl::context ctx(net::ssl::context::tls_server);
+		auto stream = init_proxy_stream(
+			proxy_uds_socket(std::move(server)), ctx);
+
+		BOOST_TEST(boost::variant2::holds_alternative<ssl_uds_stream>(stream));
+		BOOST_TEST(!boost::variant2::holds_alternative<ssl_tcp_stream>(stream));
+	}
+
 	BOOST_AUTO_TEST_CASE(uds_remote_endpoint_returns_peer_path)
 	{
 		const auto server_path = std::filesystem::temp_directory_path() /

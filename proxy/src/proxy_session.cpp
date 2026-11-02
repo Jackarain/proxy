@@ -1132,7 +1132,10 @@ namespace proxy {
 			auto ssl_socks_stream = init_proxy_stream(std::move(socket), srv_ssl_context);
 
 			// get origin ssl stream type.
-			ssl_tcp_stream& ssl_socket = boost::variant2::get<ssl_tcp_stream>(ssl_socks_stream);
+			using ssl_stream_type = std::conditional_t<
+				std::same_as<T, proxy_uds_socket>, ssl_uds_stream, ssl_tcp_stream>;
+			ssl_stream_type& ssl_socket =
+				boost::variant2::get<ssl_stream_type>(ssl_socks_stream);
 
 			// do async ssl handshake.
 			co_await ssl_socket.async_handshake(net::ssl::stream_base::server, net_awaitable[error]);
