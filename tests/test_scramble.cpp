@@ -155,6 +155,34 @@ namespace {
 		BOOST_TEST(scrambled == first);
 	}
 
+	BOOST_AUTO_TEST_CASE(set_key_restarts_keystream)
+	{
+		std::array<uint8_t, 16> first_key{};
+		std::array<uint8_t, 16> second_key{};
+		for (size_t i = 0; i < first_key.size(); ++i)
+		{
+			first_key[i] = static_cast<uint8_t>(i + 1);
+			second_key[i] = static_cast<uint8_t>(i * 3 + 2);
+		}
+
+		std::vector<uint8_t> warmup(32, 0x5A);
+		scramble_stream stream;
+		stream.set_key(first_key);
+		stream.scramble(warmup.data(), warmup.size());
+
+		std::vector<uint8_t> plain(40, 0x3C);
+		auto restarted = plain;
+		stream.set_key(second_key);
+		stream.scramble(restarted.data(), restarted.size());
+
+		scramble_stream fresh;
+		fresh.set_key(second_key);
+		auto expected = plain;
+		fresh.scramble(expected.data(), expected.size());
+
+		BOOST_TEST(restarted == expected);
+	}
+
 	BOOST_AUTO_TEST_SUITE_END()
 
 } // namespace

@@ -156,6 +156,7 @@ namespace proxy {
 		{
 			m_key = key;
 			m_key_set = true;
+			m_pos = 0;
 		}
 
 		// 将数据 data 加解密, 但不改变 scramble_stream 类的状态.
