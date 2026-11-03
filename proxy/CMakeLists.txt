@@ -1,7 +1,13 @@
 ﻿cmake_minimum_required(VERSION 3.16)
 project(libproxy)
 
-add_library(libproxy STATIC)
+if (MSVC)
+	# lib.exe 的 COFF 归档偏移不能超过 4 GiB, 拆分编译单元后 libproxy.lib
+	# 会超出该限制. 直接作为 OBJECT 库参与最终链接, 由链接器合并重复 COMDAT.
+	add_library(libproxy OBJECT)
+else()
+	add_library(libproxy STATIC)
+endif()
 
 target_sources(libproxy
 	PRIVATE
@@ -150,7 +156,9 @@ endif()
 #source_group("Header Files\\proxy" FILES ${libproxy_HEADERS})
 #source_group("Source Files" FILES ${libproxy_SRCS})
 
-set_target_properties(libproxy PROPERTIES OUTPUT_NAME proxy PREFIX "lib" CLEAN_DIRECT_OUTPUT 1)
+if (NOT MSVC)
+	set_target_properties(libproxy PROPERTIES OUTPUT_NAME proxy PREFIX "lib" CLEAN_DIRECT_OUTPUT 1)
+endif()
 
 if (MSVC AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 19.29.30129 AND CMAKE_VERSION VERSION_GREATER 3.20.3)
 	set_property(TARGET libproxy PROPERTY CXX_STANDARD 23)
