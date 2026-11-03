@@ -49,21 +49,51 @@ target_sources(libproxy
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/tun_server.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/doh_client.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/doh_http.hpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/proxy_session_http_detail.hpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/tun_server_detail.hpp
 	$<$<PLATFORM_ID:Windows>:${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/wintun_install.hpp>
 
 	${CMAKE_CURRENT_SOURCE_DIR}/src/lib_asio_beast.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/tun_server.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/tun_server_detail.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/tun_tcp_flow.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/tun_udp_flow.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/doh_client.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/doh_connection.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/doh_connection_connect.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/doh_proxy_pass_pool.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/ip_database.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/launcher_log.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/proxy_session.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/proxy_session_dns.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/proxy_session_http.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/proxy_session_http_dir.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/proxy_session_http_get.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/proxy_session_http_response.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/proxy_session_http_proxy.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/proxy_session_http_proxy_auth.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/proxy_session_http_proxy_connect.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/proxy_session_http_proxy_websocket.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/proxy_session_http_proxy_websocket_udp.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/proxy_session_http_proxy_websocket_udp_bridge.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/proxy_session_http_proxy_websocket_udp_capsule.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/proxy_session_http_proxy_websocket_udp_connect.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/proxy_session_http_proxy_udp.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/proxy_session_http_proxy_udp_direct.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/proxy_session_http_proxy_udp_bridge.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/proxy_session_http_proxy_udp_proxy.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/proxy_session_http_proxy_udp_proxy_websocket.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/proxy_session_http_proxy_udp_proxy_http.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/proxy_session_http_proxy_udp_socks.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/proxy_session_http_proxy_udp_socks_connect.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/proxy_session_socks.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/proxy_session_connect.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/proxy_session_resolve.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/proxy_session_transfer.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/proxy_session_auth.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/proxy_server.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/proxy_server_launcher.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/proxy_server_launcher.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/dns_server.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/default_cert.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/xxhash.cpp
