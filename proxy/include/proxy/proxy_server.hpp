@@ -38,8 +38,8 @@ namespace proxy {
 	// tun_server 前置声明（完整定义在 tun_server.hpp）.
 	class tun_server;
 
-	// launcher 控制通道状态结构体（完整定义在内部 launcher 头文件中，
-	// 避免在公开头文件中暴露其内部声明）.
+	// launcher 控制通道状态结构体（完整定义在 proxy_server.cpp 中，避免在
+	// 头文件中暴露其内部声明，相关成员函数均实现在 proxy_server.cpp）.
 	struct launcher_state;
 
 	//////////////////////////////////////////////////////////////////////////

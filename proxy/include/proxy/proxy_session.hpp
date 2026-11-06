@@ -520,67 +520,6 @@ namespace proxy {
 			uint16_t target_port
 		);
 
-		// 直连目标的 HTTP CONNECT-UDP 处理.
-		net::awaitable<void> http_connect_udp_direct(
-			const http::request<http::string_body>& req,
-			const std::string& target_host,
-			uint16_t target_port) noexcept;
-
-		// 并发转发直连 UDP 与 HTTP capsule 流.
-		net::awaitable<void> run_connected_udp_bridge(
-			udp::socket& udp_socket) noexcept;
-
-		// HTTP capsule 流转发到已连接的 UDP socket.
-		net::awaitable<void> capsule_to_connected_udp(
-			udp::socket& udp_socket) noexcept;
-
-		// 已连接的 UDP socket 数据封装为 HTTP capsule 并转发.
-		net::awaitable<void> connected_udp_to_capsule(
-			udp::socket& udp_socket) noexcept;
-
-		// 上游 WebSocket 代理的 HTTP CONNECT-UDP 处理.
-		net::awaitable<void> http_udp_proxy_pass_websocket(
-			const http::request<http::string_body>& req,
-			const std::string& target_host,
-			uint16_t target_port);
-
-		// 上游 SOCKS5 代理的 HTTP CONNECT-UDP 处理.
-		net::awaitable<void> http_udp_proxy_pass_socks5(
-			const http::request<http::string_body>& req,
-			const std::string& target_host,
-			uint16_t target_port,
-			const std::string& scheme);
-
-		// 上游 HTTP 代理的 HTTP CONNECT-UDP 处理.
-		net::awaitable<void> http_udp_proxy_pass_http(
-			const http::request<http::string_body>& req,
-			const std::string& target_host,
-			uint16_t target_port,
-			const std::string& scheme);
-
-		// 并发转发 SOCKS5 UDP 中继与 HTTP capsule 流.
-		net::awaitable<void> run_socks5_udp_bridge(
-			udp::socket& udp_socket,
-			variant_stream_type& socks5_control,
-			const std::string& target_host,
-			uint16_t target_port) noexcept;
-
-		// HTTP capsule 流转发到 SOCKS5 UDP 中继.
-		net::awaitable<void> capsule_to_socks5_udp(
-			udp::socket& udp_socket,
-			variant_stream_type& socks5_control,
-			const std::vector<uint8_t>& socks5_udp_header) noexcept;
-
-		// SOCKS5 UDP 中继数据封装为 HTTP capsule 并转发.
-		net::awaitable<void> socks5_udp_to_capsule(
-			udp::socket& udp_socket,
-			variant_stream_type& socks5_control) noexcept;
-
-		// 保持 SOCKS5 TCP 控制连接存活.
-		net::awaitable<void> keep_socks5_control_alive(
-			udp::socket& udp_socket,
-			variant_stream_type& socks5_control) noexcept;
-
 		// SOCKS5 用户名/密码认证处理.
 		net::awaitable<bool> socks_auth() noexcept;
 
